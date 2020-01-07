@@ -1,0 +1,6 @@
+hooks requires environmental variables to work
+
+'COM' : os.environ.get('SLACK_COM'),
+'CNN' : os.environ.get('SLACK_CNN')
+'SLACK_API_TOKEN': os.environ.get('SLACK_API_TOKEN')
+'SLACK_BOT_TOKEN': os.environ["SLACK_BOT_TOCKEN"]
