@@ -3,4 +3,4 @@
 
 # import subfolders here
 from utilsJ.Slack.hooks import msger, whisp
-from utilsJ.Behavior import glm2afc
+from utilsJ.Behavior import glm2afc, basics

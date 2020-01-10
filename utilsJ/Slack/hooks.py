@@ -20,7 +20,8 @@ class whisp():
         self.contacts = {
             'jordi' : 'U8J8YA66S',
             'jaime' : 'U7UTKNN0P',
-            'lejla' : 'U7TTEEN4T'
+            'lejla' : 'U7TTEEN4T',
+            'genis' : 'U7U0GRABF'
         }
 
     def whisper(self, dst, text):
@@ -66,7 +67,8 @@ class msger():
         self.contacts = {
             'jordi' : 'U8J8YA66S',
             'jaime' : 'U7UTKNN0P',
-            'lejla' : 'U7TTEEN4T'
+            'lejla' : 'U7TTEEN4T',
+            'genis' : 'U7U0GRABF'
         }
 
     def msg(self, channel, message, uploadpath=None):
