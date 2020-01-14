@@ -11,7 +11,7 @@ def sigmoid(fit_params, x_data, y_data):
     ypred = RL + (1-RL-LL)/(1+np.exp(-(s*x_data+b)))
     return -np.sum(norm.logpdf(y_data, loc=ypred))
 
-def psych_curve(target, coherence, ret_ax=None, xspace=np.linspace(-1,1,50), kwargs_plot={}, kwargs_error={}):
+def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(-1,1,50), kwargs_plot={}, kwargs_error={}):
     """
     function to plot psych curves
     target: binomial target (y), aka R_response, or Repeat
@@ -30,7 +30,7 @@ def psych_curve(target, coherence, ret_ax=None, xspace=np.linspace(-1,1,50), kwa
                 raise ValueError('Nans detected in provided vector')
     if np.unique(target).size>2:
         raise ValueError('target has >2 unique values (invalids?!)')
-        
+
     """ not required
     if not (coherence<0).sum(): # 0 in the sum means there are no values under 0
         coherence = coherence * 2 - 1 # (from 01 to -11)
@@ -76,4 +76,7 @@ def psych_curve(target, coherence, ret_ax=None, xspace=np.linspace(-1,1,50), kwa
                     tab['mean'].values,
                     yerr=np.array([tab.low_ci.values, tab.high_ci.values]),
                     **kwargs_error)
+
+        if annot:
+            ret_ax.annotate(f'bias: {round(b,2)}\nsens: {round(s,2)}\nRπ: {round(RL,2)}\nLπ: {round(LL,2)}', (tab.index.values.min(), 0.55), ha='left')
         return ret_ax
