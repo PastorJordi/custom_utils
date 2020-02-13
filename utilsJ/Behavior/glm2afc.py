@@ -3,6 +3,8 @@
 
 
 """
+## PERHAPS SHOULD PORT IT AS A CLASS SO there's no need to pass noenv, dual etc- always
+
 This script was being copied way too many times. Adding it to a general and united framework
 [+BLACKED VERSION+]
 
@@ -27,92 +29,78 @@ from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
 
 
-#%matplotlib notebook #not working in colab
-
-
 # In[4]:
 
+# create funct for this crp
+def getmodel_cols(cols='all', lateralized=False, noenv=False):
+    """returns list
+    all: all model cols
+    ac: after correct
+    ae: after error"""
+    if cols not in ['all', 'ae', 'ac']:
+        raise ValueError('cols valueshould be in [all, ac, ae]')
+    if lateralized and noenv:
+        raise NotImplementedError('cannot use lateralized and noenv atm')
+    model_cols = [
+        "L+1",
+        "L-1",
+        "L+2",
+        "L-2",
+        "L+3",
+        "L-3",
+        "L+4",
+        "L-4",
+        "L+5",
+        "L-5",
+        "L+6-10",
+        "L-6-10",
+        "T++1",
+        "T+-1",
+        "T-+1",
+        "T--1",
+        "T++2",
+        "T+-2",
+        "T-+2",
+        "T--2",
+        "T++3",
+        "T+-3",
+        "T-+3",
+        "T--3",
+        "T++4",
+        "T+-4",
+        "T-+4",
+        "T--4",
+        "T++5",
+        "T+-5",
+        "T-+5",
+        "T--5",
+        "T++6-10",
+        "T+-6-10",
+        "T-+6-10",
+        "T--6-10",
+        "intercept",
+    ]
+    if lateralized:
+        model_cols = [f'SR{x}' for x in range(1,9)] \
+                    + [f'SL{x}' for x in range(1,9)] \
+                    + [f'afterefR{x}' for x in range(1,11)] \
+                    + [f'afterefL{x}' for x in range(1,11)] \
+                    + model_cols
+    else:
+        if noenv:
+            model_cols = ['S'] + [f'aftereff{x}' for x in range(1,11)] + model_cols
+        else:
+            model_cols = [f'S{x}' for x in range(1,9)] + [f'aftereff{x}' for x in range(1,11)] + model_cols
 
-model_cols = [
-    "SR1",
-    "SR2",
-    "SR3",
-    "SR4",
-    "SR5",
-    "SR6",
-    "SR7",
-    "SR8",
-    "SL1",
-    "SL2",
-    "SL3",
-    "SL4",
-    "SL5",
-    "SL6",
-    "SL7",
-    "SL8",
-    "afterefR1",
-    "afterefL1",
-    "afterefR2",
-    "afterefL2",
-    "afterefR3",
-    "afterefL3",
-    "afterefR4",
-    "afterefL4",
-    "afterefR5",
-    "afterefL5",
-    "afterefR6",
-    "afterefL6",
-    "afterefR7",
-    "afterefL7",
-    "afterefR8",
-    "afterefL8",
-    "afterefR9",
-    "afterefL9",
-    "afterefR10",
-    "afterefL10",
-    "L+1",
-    "L-1",
-    "L+2",
-    "L-2",
-    "L+3",
-    "L-3",
-    "L+4",
-    "L-4",
-    "L+5",
-    "L-5",
-    "L+6-10",
-    "L-6-10",
-    "T++1",
-    "T+-1",
-    "T-+1",
-    "T--1",
-    "T++2",
-    "T+-2",
-    "T-+2",
-    "T--2",
-    "T++3",
-    "T+-3",
-    "T-+3",
-    "T--3",
-    "T++4",
-    "T+-4",
-    "T-+4",
-    "T--4",
-    "T++5",
-    "T+-5",
-    "T-+5",
-    "T--5",
-    "T++6-10",
-    "T+-6-10",
-    "T-+6-10",
-    "T--6-10",
-    "intercept",
-]
-afterc_cols = [x for x in model_cols if x not in ["L+2", "L-1", "T-+1", "T+-1", "T--1"]]
-aftere_cols = [
-    x for x in model_cols if x not in ["L+1", "T++1", "T-+1", "T+-1", "T--1"]
-]
-# preprocess
+    if cols=='all':
+        return model_cols
+    elif cols=='ac':
+        afterc_cols = [x for x in model_cols if x not in ["L+2", "L-1", "T-+1", "T+-1", "T--1"]]
+        return afterc_cols
+    elif cols=='ae':
+        aftere_cols = [x for x in model_cols if x not in ["L+1", "T++1", "T-+1", "T+-1", "T--1"]]
+        return aftere_cols
+
 
 
 def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
@@ -137,13 +125,19 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
     return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
 
 
-def preprocess(in_data, newaftereff=True):  # perhaps use trapz to calc intensity.
+def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to calc intensity.
     """input df object, since it will calculate history*, it must contain consecutive trials
-    returns preprocessed dataframe"""
+    returns preprocessed dataframe
+    noenv = adapted to noenv- sessions
+    laterme: wtf does newaftereff means? (doubled?) # now called lateralized, more mnemonic
+    """
+    model_cols = getmodel_cols(cols='all',lateralized=lateralized, noenv=noenv)
+    if lateralized & noenv:
+        raise NotImplementedError('cannot get sided aftereffects in noenv sessions because cohs are paired')
     df = in_data  # .copy(deep=True)
     df.loc[:, "rep_response"] *= 1  # originally is True/False col
     # expand stim [Sensory module]
-    if not newaftereff:
+    if not lateralized and not noenv:
         df = pd.concat(
             [
                 df,
@@ -157,6 +151,9 @@ def preprocess(in_data, newaftereff=True):  # perhaps use trapz to calc intensit
         )
         if "soundrfail" in df.columns.tolist():
             df.loc[df.soundrfail, ["S" + str(x + 1) for x in range(8)]] = 0
+    elif noenv:
+        df['S']= df['res_sound']
+        df.loc[df.soundrfail, 'S'] = 0
     else:
         df = pd.concat(
             [
@@ -202,29 +199,36 @@ def preprocess(in_data, newaftereff=True):  # perhaps use trapz to calc intensit
     # fuk = frames_mask.flatten().astype(int)
     # frame_mat_mask = np.repeat(nanmat.flatten(), fuk).reshape(-1,20)
     # df['aftereff1'] = np.nansum((frame_mat_mask * envmatrix), axis=1)
-
-    df = pd.concat(
-        [
-            df,
-            pd.DataFrame(
-                df[["lenv", "renv", "sound_len"]]
-                .apply(
-                    lambda x: get_stim_trapz2(x[0], x[1], x[2], samplingR=1000), axis=1
-                )
-                .values.tolist(),
-                columns=["afterL", "afterR", "av_trapz"],
-                index=df.index,
-            ),
-        ],
-        axis=1,
-    )
-    if not newaftereff:
-        df["aftereff1"] = df["afterR"] - df["afterL"]
-        df["aftereff1"] = df.aftereff1.shift(1)
-        df.loc[df.origidx == 1, "aftereff1"] = np.nan
-        for i in range(2, 11):
-            df["aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
-            df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
+    if not noenv:
+        df = pd.concat(
+            [
+                df,
+                pd.DataFrame(
+                    df[["lenv", "renv", "sound_len"]]
+                    .apply(
+                        lambda x: get_stim_trapz2(x[0], x[1], x[2], samplingR=1000), axis=1
+                    )
+                    .values.tolist(),
+                    columns=["afterL", "afterR", "av_trapz"],
+                    index=df.index,
+                ),
+            ],
+            axis=1,
+        )
+    if not lateralized:
+        if noenv:
+            df["aftereff1"] = df.res_sound.shift(1)
+            df.loc[df.origidx == 1, "aftereff1"] = np.nan
+            for i in range(2, 11):
+                df["aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
+        else:
+            df["aftereff1"] = df["afterR"] - df["afterL"]
+            df["aftereff1"] = df.aftereff1.shift(1)
+            df.loc[df.origidx == 1, "aftereff1"] = np.nan
+            for i in range(2, 11):
+                df["aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
     else:
         df["afterefR1"] = df.afterR.shift(1)
         df["afterefL1"] = df.afterL.shift(1)
@@ -338,16 +342,17 @@ def preprocess(in_data, newaftereff=True):  # perhaps use trapz to calc intensit
             df.R_response.shift(1) * 2 - 1
         )  # {0 = Left; 1 = Right, nan=invalid}
 
-    for i in range(8, 0, -1):
-        if not newaftereff:
-            df.loc[df.frames_listened < (i - 1), "S" + str(i)] = 0
-        else:
-            df.loc[df.frames_listened < (i - 1), ["SR" + str(i), "SL" + str(i)]] = 0
+    if not noenv:
+        for i in range(8, 0, -1):
+            if not lateralized:
+                df.loc[df.frames_listened < (i - 1), "S" + str(i)] = 0
+            else:
+                df.loc[df.frames_listened < (i - 1), ["SR" + str(i), "SL" + str(i)]] = 0
 
     df["intercept"] = 1
     df.loc[:, model_cols].fillna(value=0, inplace=True)
 
-    if "soundrfail" in df.columns.tolist():
+    if "soundrfail" in df.columns.tolist() and not noenv:
         # just replace res_sound
         ent_series = df["res_sound"]
         soundrfailidx = df.loc[df.soundrfail == True, "res_sound"].index
@@ -358,9 +363,14 @@ def preprocess(in_data, newaftereff=True):  # perhaps use trapz to calc intensit
     return df  # resulting df with lateralized T+
 
 
-def check_colin(df, dual=True):
-    """df is the preprocessed dframe"""
+def check_colin(df, lateralized=False ,dual=True, noenv=False):
+    """plots matrix
+    df is the preprocessed dframe,
+    dual = aftercorrect/aftererror,
+    noenv = single Stim val (=Coh)"""
     if dual:
+        afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
+        aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
         for j, (t, cols) in enumerate(
             zip(["after correct", "after error"], [afterc_cols, aftere_cols])
         ):
@@ -375,6 +385,8 @@ def check_colin(df, dual=True):
             ax.set_title(t)
             plt.show()
     else:
+        model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
+
         fig, ax = plt.subplots(figsize=(16, 16))
         sns.heatmap(
             df.loc[:, model_cols].fillna(value=0).corr(),
@@ -387,9 +399,16 @@ def check_colin(df, dual=True):
         plt.show()
 
 
-def exec_glm(df, dual=True, split=False):
-    """perhaps iwont implement the splitting but w/e idk atm"""
-
+def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=True, savdir=''):
+    """perhaps iwont implement the splitting but w/e idk atm
+    futureme: wth is split
+    # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
+    """
+    if lateralized and noenv:
+        NotImplementedError('cannot lateralized AND noenv')
+    afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
+    aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
+    
     if dual:
         X_df_ac, y_df_ac = (
             df.loc[
@@ -432,9 +451,10 @@ def exec_glm(df, dual=True, split=False):
         result_ae = sm_logit_ae.fit(
             method="bfgs", maxiter=10 ** 8
         )  # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
-        plot_sensory_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae)
-        plot_lateral_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae)
-        plot_transition_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae)
+        if plot:
+            plot_sensory_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, lateralized=lateralized, savpath=savdir+'sens.png')
+            plot_lateral_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=savdir+'lat.png')
+            plot_transition_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=savdir+'trans.png')
         LRresult_ac = pd.read_html(
             result_ac.summary(xname=X_df_ac.columns.tolist()).tables[1].as_html(),
             header=0,
@@ -478,7 +498,7 @@ def exec_glm(df, dual=True, split=False):
         }
 
     else:
-
+        model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
         X_df, y_df = (
             df.loc[df["R_response"].notna(), model_cols].fillna(value=0),
             df.loc[df["R_response"].notna(), "R_response"],
@@ -497,15 +517,19 @@ def exec_glm(df, dual=True, split=False):
         result = model.fit_regularized(
             start_params=Lreg.coef_, maxiter=10 ** 6, alpha=1
         )
-        plot_sensory(X_df, Lreg, result)
-        plot_lateral(X_df, Lreg, result)
-        plot_transition(X_df, Lreg, result)
+        if plot:
+            plot_sensory(X_df, Lreg, result, lateralized=lateralized, savpath=savdir+'sens.png')
+            plot_lateral(X_df, Lreg, result, savpath=savdir+'lat.png')
+            plot_transition(X_df, Lreg, result, savpath=savdir+'trans.png')
         LRresult = pd.read_html(
             result.summary(xname=X_df.columns.tolist()).tables[1].as_html(),
             header=0,
             index_col=0,
         )[0]
-        return {"skl": Lreg, "sm": result, "mat": LRresult}
+        df["proba"] = np.nan
+        df.loc[df.R_response.notna(), 'proba'] = Lreg.predict_proba(X_df)[:,1]
+
+        return {"skl": Lreg, "sm": result, "mat": LRresult, 'proba': df['proba'].values} 
 
 
 # In[5]:
@@ -513,7 +537,7 @@ def exec_glm(df, dual=True, split=False):
 
 # plotting section
 # tune functions to plot sensory + aftereff; Lateral; Transition
-def plot_sensory(targ_df, model1, model2):
+def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
     """
     models should be fitted previously
     being model1 sklearn and model2 statsmodels
@@ -575,11 +599,11 @@ def plot_sensory(targ_df, model1, model2):
     ax[1].set_title("aftereffect")
     ax[1].set_ylabel("weight")
     ax[1].axhline(y=0, linestyle=":", c="k")
-
+    plt.savefig(savpath)
     plt.show()
 
 
-def plot_lateral(targ_df, model1, model2):
+def plot_lateral(targ_df, model1, model2, savpath=''):
     LRresult = pd.read_html(
         model2.summary(xname=targ_df.columns.tolist()).tables[1].as_html(),
         header=0,
@@ -649,10 +673,11 @@ def plot_lateral(targ_df, model1, model2):
     ax[1].set_xticks(np.arange(numcols))
     ax[1].set_xticklabels(targ_df.columns[interestcols])
     ax[1].axhline(y=0, linestyle=":", c="k")
+    plt.savefig(savpath)
     plt.show()
 
 
-def plot_transition(targ_df, model1, model2):
+def plot_transition(targ_df, model1, model2, savpath=''):
     LRresult = pd.read_html(
         model2.summary(xname=targ_df.columns.tolist()).tables[1].as_html(),
         header=0,
@@ -694,14 +719,16 @@ def plot_transition(targ_df, model1, model2):
         ax[i].set_xticks(np.arange(numcols))
         ax[i].set_xticklabels(targ_df.columns[interestcols])
         ax[i].axhline(y=0, linestyle=":", c="k")
+    plt.savefig(savpath)
     plt.show()
 
 
-def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
+def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, lateralized=False, savpath=''):
     """
     models should be fitted previously
     being modelxa sklearn and modelxb statsmodels
     targ_df is the dataframe, to get index values/colnames
+    # i assume targdf1 = aftercorrect, targdf2 = aftererror
     # being model1=aftercorrect
     """
     colors = sns.color_palette()
@@ -710,144 +737,228 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
         header=0,
         index_col=0,
     )[0]
-    interestcols = np.where(targ_df1.columns.str.startswith("SR"))[0]
-    f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
-    ax = ax.flatten()
-    ax[0].plot(
-        np.arange(interestcols.size),
-        model1a.coef_[0, interestcols],
-        "-o",
-        c=colors[1],
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        np.arange(interestcols.size),
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"],
-        yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[1],
-        label="SR a-corr",
-    )
-    ax[0].set_xticks(np.arange(interestcols.size))
-    ax[0].set_xticklabels(["S" + str(x) for x in range(1, 9)])
-    ax[0].set_title("sensory")
-    ax[0].set_ylabel("weight")
-    ax[0].axhline(y=0, linestyle=":", c="k")
-    # stars
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05)
-    ]
-    ax[0].scatter(
-        signifposition,
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
-        - 0.4,
-        marker="*",
-        c=np.array(colors[1]).reshape(1, -1),
-    )
-
-    interestcols = np.where(targ_df1.columns.str.startswith("SL"))[0]
-    ax[0].plot(
-        np.arange(interestcols.size),
-        model1a.coef_[0, interestcols],
-        "-o",
-        c=colors[2],
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        np.arange(interestcols.size),
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"],
-        yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[2],
-        label="SL a-corr",
-    )
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[0].scatter(
-        signifposition,
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
-        - 0.4,
-        marker="*",
-        c=np.array(colors[2]).reshape(1, -1),
-    )
-
-    ax[0].scatter(
-        8,
-        model1a.coef_[0, np.where(targ_df1.columns == "intercept")[0][0]],
-        c="k",
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        8,
-        LRresult1.loc["intercept", "coef"],
-        yerr=LRresult1.loc["intercept", "std err"],
-        marker="o",
-        c="k",
-        label="intercept ac",
-    )
-    if LRresult1.loc["intercept", "P>|z|"] <= 0.05:
+    if lateralized:
+        interestcols = np.where(targ_df1.columns.str.startswith("SR"))[0]
+    
+        f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
+        ax = ax.flatten()
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[1],
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[1],
+            label="SR a-corr",
+        )
+        ax[0].set_xticks(np.arange(interestcols.size))
+        ax[0].set_xticklabels(["S" + str(x) for x in range(1, 9)])
+        ax[0].set_title("sensory")
+        ax[0].set_ylabel("weight")
+        ax[0].axhline(y=0, linestyle=":", c="k")
+        # stars
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05)
+        ]
         ax[0].scatter(
-            8, LRresult1.loc["intercept", "coef"] - 0.4, marker="*", color="k"
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            - 0.4,
+            marker="*",
+            c=np.array(colors[1]).reshape(1, -1),
         )
 
+        interestcols = np.where(targ_df1.columns.str.startswith("SL"))[0]
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[2],
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[2],
+            label="SL a-corr",
+        )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[0].scatter(
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            - 0.4,
+            marker="*",
+            c=np.array(colors[2]).reshape(1, -1),
+        )
+
+        ax[0].scatter(
+            8,
+            model1a.coef_[0, np.where(targ_df1.columns == "intercept")[0][0]],
+            c="k",
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            8,
+            LRresult1.loc["intercept", "coef"],
+            yerr=LRresult1.loc["intercept", "std err"],
+            marker="o",
+            c="k",
+            label="intercept ac",
+        )
+        if LRresult1.loc["intercept", "P>|z|"] <= 0.05:
+            ax[0].scatter(
+                8, LRresult1.loc["intercept", "coef"] - 0.4, marker="*", color="k"
+            )
+    else:
+        interestcols = np.where(targ_df1.columns.str.startswith("S"))[0]
+        f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
+        ax = ax.flatten()
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[1],
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[1],
+            label="S a-corr",
+        )
+        ax[0].set_xticks(np.arange(interestcols.size).tolist()+[8])
+        ax[0].set_xticklabels([f'S{x+1}' for x in np.arange(interestcols.size)]+['intercept'])
+        ax[0].set_title("sensory")
+        ax[0].set_ylabel("weight")
+        ax[0].axhline(y=0, linestyle=":", c="k")
+        # stars
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05)
+        ]
+        ax[0].scatter(
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            - 0.4,
+            marker="*",
+            c=np.array(colors[1]).reshape(1, -1),
+        )
+        ax[0].scatter(
+            8,
+            model1a.coef_[0, np.where(targ_df1.columns == "intercept")[0][0]],
+            c="tab:orange",
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            8,
+            LRresult1.loc["intercept", "coef"],
+            yerr=LRresult1.loc["intercept", "std err"],
+            marker="o",
+            c="tab:orange",
+            label="intercept ac",
+        )
+        if LRresult1.loc["intercept", "P>|z|"] <= 0.05:
+            ax[0].scatter(
+                8, LRresult1.loc["intercept", "coef"] - 0.4, marker="*", color="tab:orange"
+            )
+
+
     # aftereffects correct R9ight
-    interestcols = np.where(targ_df1.columns.str.startswith("afterefR"))[0]
-    ax[1].errorbar(
-        np.arange(interestcols.size),
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"],
-        yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[1],
-        label="afterefR correct",
-    )
-    ax[1].plot(
-        np.arange(interestcols.size),
-        model1a.coef_[0, interestcols],
-        "-o",
-        c=colors[1],
-        alpha=0.5,
-    )
+    if lateralized:
+        interestcols = np.where(targ_df1.columns.str.startswith("afterefR"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[1],
+            label="afterefR correct",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[1],
+            alpha=0.5,
+        )
 
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[1].scatter(
-        signifposition,
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
-        + 0.05,
-        marker="*",
-        c=colors[1],
-    )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            + 0.05,
+            marker="*",
+            c=colors[1],
+        )
 
-    # Left
-    interestcols = np.where(targ_df1.columns.str.startswith("afterefL"))[0]
-    ax[1].errorbar(
-        np.arange(interestcols.size),
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"],
-        yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[2],
-        label="afterefL correct",
-    )
-    ax[1].plot(
-        np.arange(interestcols.size),
-        model1a.coef_[0, interestcols],
-        "-o",
-        c=colors[2],
-        alpha=0.5,
-    )
+        # Left
+        interestcols = np.where(targ_df1.columns.str.startswith("afterefL"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[2],
+            label="afterefL correct",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[2],
+            alpha=0.5,
+        )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            + 0.05,
+            marker="*",
+            c=colors[2],
+        )
+    else:
+        interestcols = np.where(targ_df1.columns.str.startswith("aftereff"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"],
+            yerr=LRresult1.loc[targ_df1.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[1],
+            label="aftereff correct",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model1a.coef_[0, interestcols],
+            "-o",
+            c=colors[1],
+            alpha=0.5,
+        )
 
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[1].scatter(
-        signifposition,
-        LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
-        + 0.05,
-        marker="*",
-        c=colors[2],
-    )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult1.loc[targ_df1.columns[interestcols], "coef"].values[signifposition]
+            + 0.05,
+            marker="*",
+            c=colors[1],
+        )
     ax[1].set_title("aftereffect")
     ax[1].set_ylabel("weight")
     ax[1].axhline(y=0, linestyle=":", c="k")
@@ -858,142 +969,220 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
         header=0,
         index_col=0,
     )[0]
-    interestcols = np.where(targ_df2.columns.str.startswith("SR"))[0]
-    ax[0].plot(
-        np.arange(interestcols.size),
-        model2a.coef_[0, interestcols],
-        "-o",
-        c=colors[0],
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        np.arange(interestcols.size),
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"],
-        yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[0],
-        label="SR a-err",
-    )
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[0].scatter(
-        signifposition,
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
-        + 0.4,
-        marker="*",
-        c=np.array(colors[0]).reshape(1, -1),
-    )
-
-    interestcols = np.where(targ_df2.columns.str.startswith("SL"))[0]
-    ax[0].plot(
-        np.arange(interestcols.size),
-        model2a.coef_[0, interestcols],
-        "-o",
-        c=colors[3],
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        np.arange(interestcols.size),
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"],
-        yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[3],
-        label="SL a-err",
-    )
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[0].scatter(
-        signifposition,
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
-        + 0.4,
-        marker="*",
-        c=np.array(colors[3]).reshape(1, -1),
-    )
-
-    ax[0].scatter(
-        8,
-        model2a.coef_[0, np.where(targ_df1.columns == "intercept")[0][0]],
-        c="blue",
-        alpha=0.5,
-    )
-    ax[0].errorbar(
-        8,
-        LRresult2.loc["intercept", "coef"],
-        yerr=LRresult2.loc["intercept", "std err"],
-        marker="o",
-        c="blue",
-        label="intercept ae",
-    )
-    if LRresult2.loc["intercept", "P>|z|"] <= 0.05:
+    if lateralized:
+        interestcols = np.where(targ_df2.columns.str.startswith("SR"))[0]
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c=colors[0],
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[0],
+            label="SR a-err",
+        )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
         ax[0].scatter(
-            8, LRresult2.loc["intercept", "coef"] + 0.4, marker="*", color="blue"
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            + 0.4,
+            marker="*",
+            c=np.array(colors[0]).reshape(1, -1),
         )
 
-    # afterR
-    interestcols = np.where(targ_df2.columns.str.startswith("afterefR"))[0]
-    ax[1].errorbar(
-        np.arange(interestcols.size),
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"],
-        yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[0],
-        label="afterefR error",
-    )
-    ax[1].plot(
-        np.arange(interestcols.size),
-        model2a.coef_[0, interestcols],
-        "-o",
-        c=colors[0],
-        alpha=0.5,
-    )
+        interestcols = np.where(targ_df2.columns.str.startswith("SL"))[0]
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c=colors[3],
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[3],
+            label="SL a-err",
+        )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[0].scatter(
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            + 0.4,
+            marker="*",
+            c=np.array(colors[3]).reshape(1, -1),
+        )
 
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[1].scatter(
-        signifposition,
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
-        - 0.05,
-        marker="*",
-        c=colors[0],
-    )
-    # after L
-    interestcols = np.where(targ_df2.columns.str.startswith("afterefL"))[0]
-    ax[1].errorbar(
-        np.arange(interestcols.size),
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"],
-        yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
-        marker="o",
-        c=colors[3],
-        label="afterefL error",
-    )
-    ax[1].plot(
-        np.arange(interestcols.size),
-        model2a.coef_[0, interestcols],
-        "-o",
-        c=colors[3],
-        alpha=0.5,
-    )
+        ax[0].scatter(
+            8,
+            model2a.coef_[0, np.where(targ_df2.columns == "intercept")[0][0]], # changed this to df2
+            c="blue",
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            8,
+            LRresult2.loc["intercept", "coef"],
+            yerr=LRresult2.loc["intercept", "std err"],
+            marker="o",
+            c="blue",
+            label="intercept ae",
+        )
+        if LRresult2.loc["intercept", "P>|z|"] <= 0.05:
+            ax[0].scatter(
+                8, LRresult2.loc["intercept", "coef"] + 0.4, marker="*", color="blue"
+            )
+    else:
+        interestcols = np.where(targ_df2.columns.str.startswith("S"))[0]
+        ax[0].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c='tab:blue',
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c='tab:blue',
+            label="S a-err",
+        )
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[0].scatter(
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            + 0.4,
+            marker="*",
+            c='tab:blue'
+        )
 
-    signifposition = np.arange(interestcols.size)[
-        np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
-    ]
-    ax[1].scatter(
-        signifposition,
-        LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
-        - 0.05,
-        marker="*",
-        c=colors[3],
-    )
+        ax[0].scatter(
+            8,
+            model2a.coef_[0, np.where(targ_df2.columns == "intercept")[0][0]], # changed this to df2
+            c="tab:blue",
+            alpha=0.5,
+        )
+        ax[0].errorbar(
+            8,
+            LRresult2.loc["intercept", "coef"],
+            yerr=LRresult2.loc["intercept", "std err"],
+            marker="o",
+            c="tab:blue",
+            label="intercept ae",
+        )
+        if LRresult2.loc["intercept", "P>|z|"] <= 0.05:
+            ax[0].scatter(
+                8, LRresult2.loc["intercept", "coef"] + 0.4, marker="*", color="tab:blue"
+            )
+        interestcols = np.where(targ_df2.columns.str.startswith("aftereff"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c='tab:blue',
+            label="aftereff error",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c='tab:blue',
+            alpha=0.5,
+        )
+
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            + 0.05,
+            marker="*",
+            c=colors[1],
+        )
+    ax[1].set_title("aftereffect")
+    ax[1].set_ylabel("weight")
+    ax[1].axhline(y=0, linestyle=":", c="k")
+        # now aftereff err
+    if lateralized: # forgot to pack it with previous segment
+        interestcols = np.where(targ_df2.columns.str.startswith("afterefR"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[0],
+            label="afterefR error",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c=colors[0],
+            alpha=0.5,
+        )
+
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            - 0.05,
+            marker="*",
+            c=colors[0],
+        )
+        # after L
+        interestcols = np.where(targ_df2.columns.str.startswith("afterefL"))[0]
+        ax[1].errorbar(
+            np.arange(interestcols.size),
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"],
+            yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
+            marker="o",
+            c=colors[3],
+            label="afterefL error",
+        )
+        ax[1].plot(
+            np.arange(interestcols.size),
+            model2a.coef_[0, interestcols],
+            "-o",
+            c=colors[3],
+            alpha=0.5,
+        )
+
+        signifposition = np.arange(interestcols.size)[
+            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+        ]
+        ax[1].scatter(
+            signifposition,
+            LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
+            - 0.05,
+            marker="*",
+            c=colors[3],
+        )
 
     ax[0].legend()
     ax[1].legend()
+    plt.savefig(savpath)
     plt.show()
 
 
-def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
+def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=''):
     Lp_labels = np.array(["L+1", "L+2", "L+3", "L+4", "L+5", "L+6-10"])
     Ln_labels = np.array(["L-1", "L-2", "L-3", "L-4", "L-5", "L-6-10"])
     f, ax = plt.subplots(ncols=2, nrows=1, sharey=True, sharex=False, figsize=(16, 6))
@@ -1090,11 +1279,11 @@ def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
             marker="*",
             c=batch[3].reshape(1, -1),
         )
-
+    plt.savefig(savpath)
     plt.show()
 
 
-def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b):
+def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=''):
     Tpp_labels = np.array(["T++1", "T++2", "T++3", "T++4", "T++5", "T++6-10"])
     Tpn_labels = np.array(["T+-1", "T+-2", "T+-3", "T+-4", "T+-5", "T+-6-10"])
     Tnp_labels = np.array(["T-+1", "T-+2", "T-+3", "T-+4", "T-+5", "T-+6-10"])
@@ -1161,21 +1350,32 @@ def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b)
                 c=batch[3],
                 s=80,
             )
-
+    plt.savefig(savpath)
     plt.show()
 
 
-def get_module_weight(df, dic):
+def get_module_weight(df, dic, lateralized=False, noenv=False):
     """I FUCKOING DELETED IT because retarded cut icon + copy rather than pasting"""
-    stimcols = ["SR" + str(x) for x in range(1, 9)] + [
-        "SL" + str(x) for x in range(1, 9)
-    ]
-    # aftereffcols = ['aftereff'+str(x) for x in range(1,11)]
-    aftereffcols = ["afterefR" + str(x) for x in range(1, 11)] + [
-        "afterefL" + str(x) for x in range(1, 11)
-    ]
+    if lateralized and noenv:
+        raise NotImplementedError('cannot use lateralized and noenv atm')
+    if lateralized:
+        stimcols = ["SR" + str(x) for x in range(1, 9)] + [
+            "SL" + str(x) for x in range(1, 9)
+        ]
+        # aftereffcols = ['aftereff'+str(x) for x in range(1,11)]
+        aftereffcols = ["afterefR" + str(x) for x in range(1, 11)] + [
+            "afterefL" + str(x) for x in range(1, 11)
+        ]
+    else:
+        aftereffcols = ['aftereff'+str(x) for x in range(1,11)]
+        if not noenv:
+            stimcols = ["S" + str(x) for x in range(1, 9)]
+        else:
+            stimcols = ['S']
     fcolnames = ["stim", "short_s", "lat", "trans"]
-    if len(list(dic.keys())) == 3:  # single
+
+
+    if len(list(dic.keys())) == 4:  # single
         prefix = "sW_"
         # for newcol in [prefix+x for x in fcolnames if (prefix+x) not in df.columns]:
         #    df[newcol] = np.nan
