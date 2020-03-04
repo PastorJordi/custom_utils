@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
+import warnings 
 
 
 # In[4]:
@@ -105,14 +106,15 @@ def getmodel_cols(cols='all', lateralized=False, noenv=False):
 
 def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
     """to begin use double envs (nparray size=20 each)
-    time: ms played stim """
+    time: ms played stim
+    fail = TRUE = buggy sound envelopes (40Hz rather than 20) """
     if fail:
         modwave = np.abs(
             1 * np.sin(2 * np.pi * (20) * np.arange(0, 1, step=1 / samplingR) + np.pi)
         )
     else:
         # correct modwave
-        pass
+        raise NotImplementedError
     if np.isnan(time):
         time = 0
     tot_steps = int(0.001 * time * samplingR)
@@ -404,6 +406,8 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
     futureme: wth is split
     # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
     """
+    warnings.filterwarnings("ignore")
+
     if lateralized and noenv:
         NotImplementedError('cannot lateralized AND noenv')
     afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
@@ -486,7 +490,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
         df.loc[(df.aftererror == 1) & (df["R_response"].notna()), "proba"] = probae[
             :, 1
         ]
-
+        warnings.filterwarnings("default")
         return {
             "skl_ac": Lreg_ac,
             "sm_ac": result_ac,
@@ -528,7 +532,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
         )[0]
         df["proba"] = np.nan
         df.loc[df.R_response.notna(), 'proba'] = Lreg.predict_proba(X_df)[:,1]
-
+        warnings.filterwarnings("default")
         return {"skl": Lreg, "sm": result, "mat": LRresult, 'proba': df['proba'].values} 
 
 

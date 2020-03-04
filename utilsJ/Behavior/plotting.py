@@ -153,7 +153,7 @@ def correcting_kiani(x, rresp, com, ev, **kwargs):
 
 # transition com vs transition regular
 def com_heatmap(x, y, com, flip=False, **kwargs):
-    '''x: priors; y: av_stim, all calculated from tmp dataframe'''
+    '''x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe'''
     warnings.warn("when used alone (ie single axis obj) by default sns y-flips it")
     tmp = pd.DataFrame(np.array([x, y, com]).T, columns=['prior', 'stim', 'com'])
 
@@ -184,14 +184,22 @@ def com_heatmap(x, y, com, flip=False, **kwargs):
         plain_com_mat[i,switch.index.astype(int)]=switch.values
         matrix[i,crow.index.astype(int)]=crow
     
-    if flip:
-        matrix = np.flipud(matrix)
-        nmat = np.flipud(nmat)
-        stimlabels=np.flip(stimlabels)
+    if not kwargs:
+        kwargs = dict(cmap='viridis', fmt='.0f')
+    if flip: # this shit is not workin
+        # just retrieve ax and ax.invert_yaxis
+        # matrix = np.flipud(matrix)
+        # nmat = np.flipud(nmat)
+        # stimlabels=np.flip(stimlabels)
+        (sns.heatmap(np.flipud(matrix), annot=np.flipud(nmat), **kwargs)
+        .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= np.flip(stimlabels))
+        )
+    else:
+        (sns.heatmap(matrix, annot=nmat, **kwargs)
+        .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= stimlabels)
+        )        
         
-    (sns.heatmap(matrix, cmap='viridis', annot=nmat, fmt='.0f')
-    .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= stimlabels)
-    )
+
 
 # com_kde2D
 # import scipy.stats as stats

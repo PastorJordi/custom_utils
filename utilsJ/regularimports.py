@@ -1,15 +1,8 @@
-# !/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-# import subfolders here
-from utilsJ.Slack.hooks import msger, whisp
-from utilsJ.Behavior import glm2afc, plotting, models
-
 import sys
 import os
 import numpy as np
 import pandas as pd
-import swifter
+import swifter as sw
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
