@@ -85,7 +85,11 @@ def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(
     s, b, RL, LL = loglike['x']
     y_fit = RL + (1-RL-LL)/(1+np.exp(-(s*xspace + b)))
     if ret_ax is None:
-        return (tab.index.values,tab['mean'].values), np.array([tab.low_ci.values, tab.high_ci.values]), (xspace, y_fit)
+        return 
+            tab.index.values,tab['mean'].values, 
+            np.array([tab.low_ci.values, tab.high_ci.values]), 
+            (xspace, y_fit),
+            {'sens':s, 'bias':b, 'RL':RL, 'LL':LL}
         # plot it with plot(*3rd_returnvalue) + errorbar(*1st_retval, yerr=2nd_retval, ls='none')
     else:
         #f, ax = plt.subplots()
