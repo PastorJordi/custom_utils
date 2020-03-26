@@ -15,7 +15,7 @@ class whisp():
         try:
             self.slack_bot_token = os.environ['SLACK_BOT_TOKEN']
         except:
-            pint(f'coud not find bot token as "SLACK_BOT_TOKEN" in env vars')
+            print(f'coud not find bot token as "SLACK_BOT_TOKEN" in env vars')
 
         self.contacts = {
             'jordi' : 'U8J8YA66S',
@@ -111,7 +111,7 @@ class msger():
                 'CNN' : os.environ.get('SLACK_CNN')
             }
         except:
-            pint(f'coud not find hooks in envr vars named SLACK_COM and/or SLACK_CNN')
+            print(f'coud not find hooks in envr vars named SLACK_COM and/or SLACK_CNN')
 
 
             if channel in self.hooks.keys():

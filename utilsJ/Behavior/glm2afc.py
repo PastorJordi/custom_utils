@@ -406,14 +406,16 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
     futureme: wth is split
     # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
     """
-    warnings.filterwarnings("ignore")
-
+    #warnings.filterwarnings("ignore")
+    
     if lateralized and noenv:
         NotImplementedError('cannot lateralized AND noenv')
-    afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
-    aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
     
     if dual:
+        print('dual')
+        afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
+        aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
+        
         X_df_ac, y_df_ac = (
             df.loc[
                 (df.aftererror == 0) & (df["R_response"].notna()), afterc_cols
@@ -456,9 +458,13 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
             method="bfgs", maxiter=10 ** 8
         )  # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
         if plot:
-            plot_sensory_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, lateralized=lateralized, savpath=savdir+'sens.png')
-            plot_lateral_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=savdir+'lat.png')
-            plot_transition_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=savdir+'trans.png')
+            if not savdir: # ie savdir==''
+                pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
+            else:
+                pths = ['']*3
+            plot_sensory_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, lateralized=lateralized, savpath=pths[0])
+            plot_lateral_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=pths[1])
+            plot_transition_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=pths[2])
         LRresult_ac = pd.read_html(
             result_ac.summary(xname=X_df_ac.columns.tolist()).tables[1].as_html(),
             header=0,
@@ -500,7 +506,6 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
             "mat_ae": LRresult_ae,
             "proba": df["proba"].values,
         }
-
     else:
         model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
         X_df, y_df = (
@@ -521,10 +526,16 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
         result = model.fit_regularized(
             start_params=Lreg.coef_, maxiter=10 ** 6, alpha=1
         )
+        
         if plot:
-            plot_sensory(X_df, Lreg, result, lateralized=lateralized, savpath=savdir+'sens.png')
-            plot_lateral(X_df, Lreg, result, savpath=savdir+'lat.png')
-            plot_transition(X_df, Lreg, result, savpath=savdir+'trans.png')
+            if not savdir: # ie savdir==''
+                pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
+            else:
+                pths = ['']*3
+            plot_sensory(X_df, Lreg, result, lateralized=lateralized, savpath=pths[0])
+            plot_lateral(X_df, Lreg, result, savpath=pths[1])
+            plot_transition(X_df, Lreg, result, savpath=pths[2])
+
         LRresult = pd.read_html(
             result.summary(xname=X_df.columns.tolist()).tables[1].as_html(),
             header=0,

@@ -9,6 +9,10 @@ import pandas as pd
 import seaborn as sns
 import warnings
 
+
+#class cplot(): # cplot stands for custom plot
+    #def __init__():
+
 def distbysubj(df, data, by, grid_kwargs=dict(col_wrap=2, hue='CoM_sugg', aspect=2), 
                 dist_kwargs=dict(kde=False, norm_hist=True,bins=np.linspace(0,400,50))):
     """
@@ -85,11 +89,12 @@ def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(
     s, b, RL, LL = loglike['x']
     y_fit = RL + (1-RL-LL)/(1+np.exp(-(s*xspace + b)))
     if ret_ax is None:
-        return 
+        return (
             tab.index.values,tab['mean'].values, 
             np.array([tab.low_ci.values, tab.high_ci.values]), 
             (xspace, y_fit),
             {'sens':s, 'bias':b, 'RL':RL, 'LL':LL}
+        )
         # plot it with plot(*3rd_returnvalue) + errorbar(*1st_retval, yerr=2nd_retval, ls='none')
     else:
         #f, ax = plt.subplots()
@@ -121,7 +126,7 @@ def correcting_kiani(x, rresp, com, ev, **kwargs):
     '''x: hithistory, rewside: ....
     now we plot choices because stim, without taking into account reward/correct because of unfair task
     '''
-    pal = sns.color_palette()
+    # pal = sns.color_palette()
     tmp = pd.DataFrame(np.array([x,rresp,com,ev]).T, columns=['hit','R_response','com','ev'])
     tmp['init_choice'] = tmp['R_response']
     tmp.loc[tmp.com==True, 'init_choice'] = (tmp.loc[tmp.com==True, 'init_choice'].values-1)**2
