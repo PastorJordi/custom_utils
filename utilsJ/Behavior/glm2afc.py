@@ -78,20 +78,20 @@ def getmodel_cols(cols='all', lateralized=False, noenv=False):
         "T++6-10",
         "T+-6-10",
         "T-+6-10",
-        "T--6-10",
-        "intercept",
+        "T--6-10"
     ]
     if lateralized:
-        model_cols = [f'SR{x}' for x in range(1,9)] \
+        model_cols = ['intercept'] \
+                    + [f'SR{x}' for x in range(1,9)] \
                     + [f'SL{x}' for x in range(1,9)] \
                     + [f'afterefR{x}' for x in range(1,11)] \
                     + [f'afterefL{x}' for x in range(1,11)] \
                     + model_cols
     else:
         if noenv:
-            model_cols = ['S'] + [f'aftereff{x}' for x in range(1,11)] + model_cols
+            model_cols = ['intercept'] + ['S'] + [f'aftereff{x}' for x in range(1,11)] + model_cols
         else:
-            model_cols = [f'S{x}' for x in range(1,9)] + [f'aftereff{x}' for x in range(1,11)] + model_cols
+            model_cols = ['intercept'] + [f'S{x}' for x in range(1,9)] + [f'aftereff{x}' for x in range(1,11)] + model_cols
 
     if cols=='all':
         return model_cols
@@ -458,7 +458,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
             method="bfgs", maxiter=10 ** 8
         )  # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
         if plot:
-            if not savdir: # ie savdir==''
+            if savdir: # ie savdir==''
                 pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
             else:
                 pths = ['']*3
@@ -528,7 +528,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
         )
         
         if plot:
-            if not savdir: # ie savdir==''
+            if savdir:
                 pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
             else:
                 pths = ['']*3
@@ -558,6 +558,8 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
     being model1 sklearn and model2 statsmodels
     targ_df is the dataframe, to get index values/colnames
     """
+    ## TODO: plot intercept/bias
+
     LRresult = pd.read_html(
         model2.summary(xname=targ_df.columns.tolist()).tables[1].as_html(),
         header=0,
@@ -572,10 +574,18 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
         LRresult.loc[targ_df.columns[interestcols], "coef"],
         yerr=LRresult.loc[targ_df.columns[interestcols], "std err"],
         marker="o",
-        c="b",
+        c="b"
     )
-    ax[0].set_xticks(np.arange(interestcols.size))
-    ax[0].set_xticklabels(targ_df.columns[interestcols])
+    ax[0].errorbar(
+        interestcols.size, 
+        LRresult.loc['intercept', "coef"],
+        yerr=LRresult.loc['intercept', "std err"],
+        marker="o",
+        c="k",
+        alpha=0.6
+    )
+    ax[0].set_xticks(np.arange(interestcols.size+1))
+    ax[0].set_xticklabels(targ_df.columns[interestcols].tolist()+['intercept'])
     ax[0].set_title("sensory")
     ax[0].set_ylabel("weight")
     ax[0].axhline(y=0, linestyle=":", c="k")
@@ -614,7 +624,8 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
     ax[1].set_title("aftereffect")
     ax[1].set_ylabel("weight")
     ax[1].axhline(y=0, linestyle=":", c="k")
-    plt.savefig(savpath)
+    if savpath:
+        plt.savefig(savpath)
     plt.show()
 
 
@@ -688,7 +699,8 @@ def plot_lateral(targ_df, model1, model2, savpath=''):
     ax[1].set_xticks(np.arange(numcols))
     ax[1].set_xticklabels(targ_df.columns[interestcols])
     ax[1].axhline(y=0, linestyle=":", c="k")
-    plt.savefig(savpath)
+    if savpath:
+        plt.savefig(savpath)
     plt.show()
 
 
@@ -734,7 +746,8 @@ def plot_transition(targ_df, model1, model2, savpath=''):
         ax[i].set_xticks(np.arange(numcols))
         ax[i].set_xticklabels(targ_df.columns[interestcols])
         ax[i].axhline(y=0, linestyle=":", c="k")
-    plt.savefig(savpath)
+    if savpath:    
+        plt.savefig(savpath)
     plt.show()
 
 
@@ -1193,7 +1206,8 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
 
     ax[0].legend()
     ax[1].legend()
-    plt.savefig(savpath)
+    if savpath:
+        plt.savefig(savpath) # free debug
     plt.show()
 
 
@@ -1294,7 +1308,8 @@ def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, sa
             marker="*",
             c=batch[3].reshape(1, -1),
         )
-    plt.savefig(savpath)
+    if savpath:
+        plt.savefig(savpath)
     plt.show()
 
 
@@ -1365,7 +1380,8 @@ def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b,
                 c=batch[3],
                 s=80,
             )
-    plt.savefig(savpath)
+    if savpath:
+        plt.savefig(savpath)
     plt.show()
 
 
