@@ -3,7 +3,7 @@
 
 # import subfolders here
 from utilsJ.Slack.hooks import msger, whisp
-from utilsJ.Behavior import glm2afc, plotting, models
+from utilsJ.Behavior import glm2afc, plotting, models, ComPipe
 
 import sys
 import os

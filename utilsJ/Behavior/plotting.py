@@ -122,12 +122,14 @@ def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(
 
 
 # pending: correcting kiani
-def correcting_kiani(x, rresp, com, ev, **kwargs):
-    '''x: hithistory, rewside: ....
+def correcting_kiani(hit, rresp, com, ev, **kwargs):
+    '''
+    this docu sux
+    hit: hithistory: ....
     now we plot choices because stim, without taking into account reward/correct because of unfair task
     '''
     # pal = sns.color_palette()
-    tmp = pd.DataFrame(np.array([x,rresp,com,ev]).T, columns=['hit','R_response','com','ev'])
+    tmp = pd.DataFrame(np.array([hit,rresp,com,ev]).T, columns=['hit','R_response','com','ev'])
     tmp['init_choice'] = tmp['R_response']
     tmp.loc[tmp.com==True, 'init_choice'] = (tmp.loc[tmp.com==True, 'init_choice'].values-1)**2
     # transform to 0_1 space
@@ -137,6 +139,7 @@ def correcting_kiani(x, rresp, com, ev, **kwargs):
     tmp.loc[:, 'ev']=tmp.loc[:, 'ev'].abs()
     
     counts_ac, nobs_ac, mean_ac,counts_ae, nobs_ae, mean_ae =[], [], [], [], [], []
+    ## adapt to noenv sessions, because there are only 4
     evrange = np.linspace(0,1,6)
     for i in range(5):
         counts_ac += [tmp.loc[(tmp.ev>=evrange[i])&(tmp.ev<=evrange[i+1]), 'R_response'].sum()]

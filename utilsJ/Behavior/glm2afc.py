@@ -376,7 +376,7 @@ def check_colin(df, lateralized=False ,dual=True, noenv=False):
         for j, (t, cols) in enumerate(
             zip(["after correct", "after error"], [afterc_cols, aftere_cols])
         ):
-            fig, ax = plt.subplots(figsize=(16, 16))
+            _, ax = plt.subplots(figsize=(16, 16))
             sns.heatmap(
                 df.loc[df.aftererror == j, cols].fillna(value=0).corr(),
                 vmin=-1,
@@ -566,7 +566,7 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
         index_col=0,
     )[0]
     interestcols = np.where(targ_df.columns.str.startswith("S"))[0]
-    f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
+    _, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
     ax = ax.flatten()
     ax[0].plot(np.arange(interestcols.size), model1.coef_[0, interestcols], "-o", c="r")
     ax[0].errorbar(
@@ -637,7 +637,7 @@ def plot_lateral(targ_df, model1, model2, savpath=''):
     )[0]
     interestcols = np.where(targ_df.columns.str.startswith("L+"))[0]
     numcols = interestcols.size
-    f, ax = plt.subplots(ncols=2, nrows=1, sharey=True, figsize=(16, 6))
+    _, ax = plt.subplots(ncols=2, nrows=1, sharey=True, figsize=(16, 6))
     ax = ax.flatten()
     ax[0].plot(
         np.arange(numcols),
@@ -710,7 +710,7 @@ def plot_transition(targ_df, model1, model2, savpath=''):
         header=0,
         index_col=0,
     )[0]
-    f, ax = plt.subplots(ncols=2, nrows=2, figsize=(16, 9))
+    _, ax = plt.subplots(ncols=2, nrows=2, figsize=(16, 9))
     ax = ax.flatten()
     for i, name in enumerate(["T++", "T+-", "T-+", "T--"]):
         interestcols = np.where(targ_df.columns.str.startswith(name))[0]
@@ -768,7 +768,7 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
     if lateralized:
         interestcols = np.where(targ_df1.columns.str.startswith("SR"))[0]
     
-        f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
+        _, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
         ax = ax.flatten()
         ax[0].plot(
             np.arange(interestcols.size),
@@ -1214,7 +1214,7 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
 def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=''):
     Lp_labels = np.array(["L+1", "L+2", "L+3", "L+4", "L+5", "L+6-10"])
     Ln_labels = np.array(["L-1", "L-2", "L-3", "L-4", "L-5", "L-6-10"])
-    f, ax = plt.subplots(ncols=2, nrows=1, sharey=True, sharex=False, figsize=(16, 6))
+    _, ax = plt.subplots(ncols=2, nrows=1, sharey=True, sharex=False, figsize=(16, 6))
     ax = ax.flatten()
     ax[0].set_ylabel("weight")
     for i, tit in enumerate(["L+", "L-"]):
@@ -1320,7 +1320,7 @@ def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b,
     Tnn_labels = np.array(["T--1", "T--2", "T--3", "T--4", "T--5", "T--6-10"])
     label_list = [Tpp_labels, Tpn_labels, Tnp_labels, Tnn_labels]
 
-    f, ax = plt.subplots(ncols=2, nrows=2, figsize=(16, 9), sharey=True)
+    _, ax = plt.subplots(ncols=2, nrows=2, figsize=(16, 9), sharey=True)
     ax = ax.flatten()
 
     for j, name in enumerate(["T++", "T+-", "T-+", "T--"]):
