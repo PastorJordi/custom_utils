@@ -80,6 +80,9 @@ def getmodel_cols(cols='all', lateralized=False, noenv=False):
         "T-+6-10",
         "T--6-10"
     ]
+    # TODO: change above to something sorted by regressor ()
+    # model_cols = [f'L+{x}' for x in range(1,6)] \
+    #             + [f'L-{x}' for x in range(1,6)] ...
     if lateralized:
         model_cols = ['intercept'] \
                     + [f'SR{x}' for x in range(1,9)] \
@@ -130,7 +133,7 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
 def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to calc intensity.
     """input df object, since it will calculate history*, it must contain consecutive trials
     returns preprocessed dataframe
-    noenv = adapted to noenv- sessions
+    noenv = adapted to noenv- sessions # does it work with env sessions if they have 
     laterme: wtf does newaftereff means? (doubled?) # now called lateralized, more mnemonic
     """
     model_cols = getmodel_cols(cols='all',lateralized=lateralized, noenv=noenv)
@@ -154,7 +157,7 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
         if "soundrfail" in df.columns.tolist():
             df.loc[df.soundrfail, ["S" + str(x + 1) for x in range(8)]] = 0
     elif noenv:
-        df['S']= df['res_sound']
+        df.loc[:,'S']= df['res_sound']
         df.loc[df.soundrfail, 'S'] = 0
     else:
         df = pd.concat(
@@ -219,24 +222,24 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
         )
     if not lateralized:
         if noenv:
-            df["aftereff1"] = df.res_sound.shift(1)
+            df.loc[:,"aftereff1"] = df.res_sound.shift(1)
             df.loc[df.origidx == 1, "aftereff1"] = np.nan
             for i in range(2, 11):
-                df["aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[:,"aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
                 df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
         else:
-            df["aftereff1"] = df["afterR"] - df["afterL"]
-            df["aftereff1"] = df.aftereff1.shift(1)
+            df.loc[:,"aftereff1"] = df["afterR"] - df["afterL"]
+            df.loc[:,"aftereff1"] = df.aftereff1.shift(1)
             df.loc[df.origidx == 1, "aftereff1"] = np.nan
             for i in range(2, 11):
-                df["aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[:,"aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
                 df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
     else:
-        df["afterefR1"] = df.afterR.shift(1)
-        df["afterefL1"] = df.afterL.shift(1)
+        df.loc[:,"afterefR1"] = df.afterR.shift(1)
+        df.loc[:,"afterefL1"] = df.afterL.shift(1)
         for i in range(2, 11):
-            df["afterefR" + str(i)] = df["afterefR" + str(i - 1)].shift(1)
-            df["afterefL" + str(i)] = df["afterefL" + str(i - 1)].shift(1)
+            df.loc[:,"afterefR" + str(i)] = df["afterefR" + str(i - 1)].shift(1)
+            df.loc[:,"afterefL" + str(i)] = df["afterefL" + str(i - 1)].shift(1)
             df.loc[df.origidx == 1, "afterefR" + str(i)] = np.nan
             df.loc[df.origidx == 1, "afterefL" + str(i)] = np.nan
 
@@ -245,23 +248,23 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
     #     del obsoletevariable
 
     # Lateral module
-    df["L+1"] = np.nan  # np.nan considering invalids as errors
+    df.loc[:,"L+1"] = np.nan  # np.nan considering invalids as errors
     df.loc[(df.R_response == 1) & (df.hithistory == 1), "L+1"] = 1
     df.loc[(df.R_response == 0) & (df.hithistory == 1), "L+1"] = -1
     df.loc[df.hithistory == 0, "L+1"] = 0
-    df["L+1"] = df["L+1"].shift(1)
+    df.loc[:,"L+1"] = df["L+1"].shift(1)
     df.loc[df.origidx == 1, "L+1"] = np.nan
     # L-
-    df["L-1"] = np.nan
+    df.loc[:,"L-1"] = np.nan
     df.loc[(df.R_response == 1) & (df.hithistory == 0), "L-1"] = 1
     df.loc[(df.R_response == 0) & (df.hithistory == 0), "L-1"] = -1
     df.loc[df.hithistory == 1, "L-1"] = 0
-    df["L-1"] = df["L-1"].shift(1)
+    df.loc[:,"L-1"] = df["L-1"].shift(1)
     df.loc[df.origidx == 1, "L-1"] = np.nan
     # shifts
     for i, item in enumerate([2, 3, 4, 5, 6, 7, 8, 9, 10]):
-        df["L+" + str(item)] = df["L+" + str(item - 1)].shift(1)
-        df["L-" + str(item)] = df["L-" + str(item - 1)].shift(1)
+        df.loc[:,"L+" + str(item)] = df["L+" + str(item - 1)].shift(1)
+        df.loc[:,"L-" + str(item)] = df["L-" + str(item - 1)].shift(1)
         df.loc[df.origidx == 1, "L+" + str(item)] = np.nan
         df.loc[df.origidx == 1, "L-" + str(item)] = np.nan
 
@@ -269,54 +272,54 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
     cols_lp = ["L+" + str(x) for x in range(6, 11)]
     cols_ln = ["L-" + str(x) for x in range(6, 11)]
 
-    df["L+6-10"] = np.nansum(df[cols_lp].values, axis=1)
-    df["L-6-10"] = np.nansum(df[cols_ln].values, axis=1)
+    df.loc[:,"L+6-10"] = np.nansum(df[cols_lp].values, axis=1)
+    df.loc[:,"L-6-10"] = np.nansum(df[cols_ln].values, axis=1)
     df.drop(cols_lp + cols_ln, axis=1, inplace=True)
     df.loc[df.origidx <= 6, "L+6-10"] = np.nan
     df.loc[df.origidx <= 6, "L-6-10"] = np.nan
 
     # pre transition module
     df.loc[df.origidx == 1, "rep_response"] = np.nan
-    df["rep_response_11"] = df.rep_response
+    df.loc[:,"rep_response_11"] = df.rep_response
     df.loc[df.rep_response == 0, "rep_response_11"] = -1
     df.rep_response_11.fillna(value=0, inplace=True)
     df.loc[df.origidx == 1, "aftererror"] = np.nan
 
     # transition module
-    df["T++1"] = np.nan  # np.nan #
+    df.loc[:,"T++1"] = np.nan  # np.nan #
     df.loc[(df.aftererror == 0) & (df.hithistory == 1), "T++1"] = df.loc[
         (df.aftererror == 0) & (df.hithistory == 1), "rep_response_11"
     ]
     df.loc[(df.aftererror == 1) | (df.hithistory == 0), "T++1"] = 0
-    df["T++1"] = df["T++1"].shift(1)
+    df.loc[:,"T++1"] = df["T++1"].shift(1)
 
-    df["T+-1"] = np.nan  # np.nan
+    df.loc[:,"T+-1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 0) & (df.hithistory == 0), "T+-1"] = df.loc[
         (df.aftererror == 0) & (df.hithistory == 0), "rep_response_11"
     ]
     df.loc[(df.aftererror == 1) | (df.hithistory == 1), "T+-1"] = 0
-    df["T+-1"] = df["T+-1"].shift(1)
+    df.loc[:,"T+-1"] = df["T+-1"].shift(1)
 
-    df["T-+1"] = np.nan  # np.nan
+    df.loc[:,"T-+1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 1) & (df.hithistory == 1), "T-+1"] = df.loc[
         (df.aftererror == 1) & (df.hithistory == 1), "rep_response_11"
     ]
     df.loc[(df.aftererror == 0) | (df.hithistory == 0), "T-+1"] = 0
-    df["T-+1"] = df["T-+1"].shift(1)
+    df.loc[:,"T-+1"] = df["T-+1"].shift(1)
 
-    df["T--1"] = np.nan  # np.nan
+    df.loc[:,"T--1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 1) & (df.hithistory == 0), "T--1"] = df.loc[
         (df.aftererror == 1) & (df.hithistory == 0), "rep_response_11"
     ]
     df.loc[(df.aftererror == 0) | (df.hithistory == 1), "T--1"] = 0
-    df["T--1"] = df["T--1"].shift(1)
+    df.loc[:,"T--1"] = df["T--1"].shift(1)
 
     # shifts now
     for i, item in enumerate([2, 3, 4, 5, 6, 7, 8, 9, 10]):
-        df["T++" + str(item)] = df["T++" + str(item - 1)].shift(1)
-        df["T+-" + str(item)] = df["T+-" + str(item - 1)].shift(1)
-        df["T-+" + str(item)] = df["T-+" + str(item - 1)].shift(1)
-        df["T--" + str(item)] = df["T--" + str(item - 1)].shift(1)
+        df.loc[:,"T++" + str(item)] = df["T++" + str(item - 1)].shift(1)
+        df.loc[:,"T+-" + str(item)] = df["T+-" + str(item - 1)].shift(1)
+        df.loc[:,"T-+" + str(item)] = df["T-+" + str(item - 1)].shift(1)
+        df.loc[:,"T--" + str(item)] = df["T--" + str(item - 1)].shift(1)
         df.loc[df.origidx == 1, "T++" + str(item)] = np.nan
         df.loc[df.origidx == 1, "T+-" + str(item)] = np.nan
         df.loc[df.origidx == 1, "T-+" + str(item)] = np.nan
@@ -331,16 +334,16 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
     cols_tnn = ["T--" + str(x) for x in range(6, 11)]
     # cols_tnn = [x for x in df.columns if x.startswith('T--')]
 
-    df["T++6-10"] = np.nansum(df[cols_tpp].values, axis=1)
-    df["T+-6-10"] = np.nansum(df[cols_tpn].values, axis=1)
-    df["T-+6-10"] = np.nansum(df[cols_tnp].values, axis=1)
-    df["T--6-10"] = np.nansum(df[cols_tnn].values, axis=1)
+    df.loc[:,"T++6-10"] = np.nansum(df[cols_tpp].values, axis=1)
+    df.loc[:,"T+-6-10"] = np.nansum(df[cols_tpn].values, axis=1)
+    df.loc[:,"T-+6-10"] = np.nansum(df[cols_tnp].values, axis=1)
+    df.loc[:,"T--6-10"] = np.nansum(df[cols_tnn].values, axis=1)
 
     df.drop(cols_tpp + cols_tpn + cols_tnp + cols_tnn, axis=1, inplace=True)
     df.loc[df.origidx < 6, ["T++6-10", "T+-6-10", "T-+6-10", "T--6-10"]] = np.nan
 
     for col in [x for x in df.columns if x.startswith("T")]:  ## not working?
-        df[col] = df[col] * (
+        df.loc[:,col] = df[col] * (
             df.R_response.shift(1) * 2 - 1
         )  # {0 = Left; 1 = Right, nan=invalid}
 
@@ -351,7 +354,7 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
             else:
                 df.loc[df.frames_listened < (i - 1), ["SR" + str(i), "SL" + str(i)]] = 0
 
-    df["intercept"] = 1
+    df.loc[:,"intercept"] = 1
     df.loc[:, model_cols].fillna(value=0, inplace=True)
 
     if "soundrfail" in df.columns.tolist() and not noenv:
@@ -359,8 +362,8 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
         ent_series = df["res_sound"]
         soundrfailidx = df.loc[df.soundrfail == True, "res_sound"].index
         # df.loc[df.soundrfail==True, 'res_sound'] = np.zeros(df.soundrfail.sum(),20) #* df.soundrfail.sum()
-        ent_series[soundrfailidx] = [np.zeros(20)] * soundrfailidx.size
-        df["res_sound"] = ent_series
+        ent_series.loc[soundrfailidx] = [np.zeros(20)] * soundrfailidx.size
+        df.loc[:,"res_sound"] = ent_series
 
     return df  # resulting df with lateralized T+
 
@@ -1465,3 +1468,71 @@ def get_module_weight(df, dic, lateralized=False, noenv=False):
     else:
         print(f"requires a dict with3or6 keys, this got {len(list(dic.keys()))}")
         return -1
+
+
+# from statsmodels
+# howwever when using sm.api.Logit it returns a P>|z|!!! # keep searching
+    # https://www.statsmodels.org/stable/_modules/statsmodels/regression/process_regression.html
+    # def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+
+    #     df = pd.DataFrame()
+
+    #     df["Type"] = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
+    #                   ["Smooth"] * self.k_smooth + ["SD"] * self.k_noise)
+    #     df["coef"] = self.params
+
+    #     try:
+    #         df["std err"] = np.sqrt(np.diag(self.cov_params())) # this
+    #     except Exception:
+    #         df["std err"] = np.nan
+
+    #     from scipy.stats.distributions import norm
+    #     df["tvalues"] = df.coef / df["std err"] # this
+    #     df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues)) # and this?
+
+    #     f = norm.ppf(1 - alpha / 2)
+    #     df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
+    #     df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+
+    #     df.index = self.model.data.param_names
+
+    #     summ = summary2.Summary()
+    #     if title is None:
+    #         title = "Gaussian process regression results"
+    #     summ.add_title(title)
+    #     summ.add_df(df)
+
+    #     return summ
+
+# from model.py
+    # @cached_value
+    # def llf(self):
+    #     """Log-likelihood of model"""
+    #     return self.model.loglike(self.params)
+
+    # @cached_value
+    # def bse(self):
+    #     """The standard errors of the parameter estimates."""
+    #     # Issue 3299
+    #     if ((not hasattr(self, 'cov_params_default')) and
+    #             (self.normalized_cov_params is None)):
+    #         bse_ = np.empty(len(self.params))
+    #         bse_[:] = np.nan
+    #     else:
+    #         bse_ = np.sqrt(np.diag(self.cov_params()))
+    #     return bse_
+
+    # @cached_value
+    # def tvalues(self):
+    #     """
+    #     Return the t-statistic for a given parameter estimate.
+    #     """
+    #     return self.params / self.bse
+
+    # @    # def pvalues(self):
+    # #     """The two-tailed p values for the t-stats of the params."""
+    # #     if self.use_t:
+    # #         df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+    # #         return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
+    # #     else:
+    # #         return stats.norm.sf(np.abs(self.tvalues)) * 2
