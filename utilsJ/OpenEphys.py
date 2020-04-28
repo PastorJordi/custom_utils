@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-# from openephys repo
+# idk where i took this from but its outdated, code in their repo looks more complete
+# from openephys repo // ah from python3 subfolder
 : https://github.com/open-ephys/analysis-tools
 ------
 Created on Sun Aug  3 15:18:38 2014
@@ -22,6 +23,7 @@ import scipy.io
 import time
 import struct
 from copy import deepcopy
+import tqdm
 
 # constants
 NUM_HEADER_BYTES = 1024
@@ -83,11 +85,20 @@ def loadFolderToArray(folderpath, channels = 'all', chprefix = 'CH',
     if channels == 'all':
         channels = _get_sorted_channels(folderpath, chprefix, session, source)
 
-    if session == '0':
-        filelist = [source + '_'+chprefix + x + '.continuous' for x in map(str,channels)]
+    if chprefix: # ideally chprefix should be a list if containing several prefixes
+        try:
+            if session == '0':
+                filelist = [source + '_'+chprefix + x + '.continuous' for x in map(str,channels)]
+            else:
+                filelist = [source + '_'+chprefix + x + '_' + session + '.continuous' for x in map(str,channels)]
+        except:
+            raise TypeError(f'channels list content:\n{channels}')
     else:
-        filelist = [source + '_'+chprefix + x + '_' + session + '.continuous' for x in map(str,channels)]
-
+        Chs = []
+        for pref, num in zip(['CH', 'ADC', 'AUX'], [32,8,3]):
+            Chs += [f'{source}_{pref}{x}.continuous' for x in range(1,1+num)]
+        filelist = Chs
+    print(f'attempting pack {len(filelist)} files')
     t0 = time.time()
     numFiles = 1
 
@@ -108,12 +119,12 @@ def loadFolderToArray(folderpath, channels = 'all', chprefix = 'CH',
 
     return data_array
 
-def loadContinuous(filepath, dtype = float):
+def loadContinuous(filepath, dtype = float, verbose=True):
 
     assert dtype in (float, np.int16), \
       'Invalid data type specified for loadContinous, valid types are float and np.int16'
-
-    print("Loading continuous data...")
+    if verbose:
+        print(f"Loading continuous data from {os.path.split(filepath)[1]}")
 
     ch = { }
 
@@ -405,7 +416,6 @@ class ProgressBar:
     def __str__(self):
         return str(self.prog_bar)
 #*************************************************************
-
 def pack_2(folderpath, filename = '', channels = 'all', chprefix = 'CH',
            dref = None, session = '0', source = '100'):
 
@@ -413,22 +423,16 @@ def pack_2(folderpath, filename = '', channels = 'all', chprefix = 'CH',
     pack_2 is much faster than pack and avoids quantization noise incurred in pack due
     to conversion of data to float voltages during loadContinous followed by rounding
     back to integers for packing.
-
     filename: Name of the output file. By default, it follows the same layout of continuous files,
               but without the channel number, for example, '100_CHs_3.dat' or '100_ADCs.dat'.
-
     channels:  List of channel numbers specifying order in which channels are packed. By default
                all CH continous files are packed in numerical order.
-
     chprefix:  String name that defines if channels from headstage, auxiliary or ADC inputs
                will be loaded.
-
     dref:  Digital referencing - either supply a channel number or 'ave' to reference to the
            average of packed channels.
-
     source: String name of the source that openephys uses as the prefix. It is usually 100,
             if the headstage is the first source added, but can specify something different.
-
     '''
 
     data_array = loadFolderToArray(folderpath, channels, chprefix, np.int16, session, source)
@@ -468,3 +472,144 @@ def _get_sorted_channels(folderpath, chprefix='CH', session='0', source='100'):
         Chs = sorted([int(f.split('_'+chprefix)[1].split('_')[0]) for f in Files])
 
     return(Chs)
+
+# getting original one again since i'll use pack3
+# def pack_2(folderpath, filename = '', channels = 'all', chprefix = 'CH',
+#            dref = None, session = '0', source = '100', dest=''):
+
+#     '''Alternative version of pack which uses numpy's tofile function to write data.
+#     pack_2 is much faster than pack and avoids quantization noise incurred in pack due
+#     to conversion of data to float voltages during loadContinous followed by rounding
+#     back to integers for packing.
+
+#     filename: Name of the output file. By default, it follows the same layout of continuous files,
+#               but without the channel number, for example, '100_CHs_3.dat' or '100_ADCs.dat'.
+
+#     channels:  List of channel numbers specifying order in which channels are packed. By default
+#                all CH continous files are packed in numerical order.
+
+#     chprefix:  String name that defines if channels from headstage, auxiliary or ADC inputs
+#                will be loaded.
+
+#     dref:  Digital referencing - either supply a channel number or 'ave' to reference to the
+#            average of packed channels.
+
+#     source: String name of the source that openephys uses as the prefix. It is usually 100,
+#             if the headstage is the first source added, but can specify something different.
+
+#     '''
+
+#     data_array = loadFolderToArray(folderpath, channels, chprefix, np.int16, session, source)
+
+#     if dref is not None:
+#         if dref == 'ave':
+#             print('Digital referencing to average of all channels.')
+#             reference = np.mean(data_array,1)
+#         else:
+#             print('Digital referencing to channel ' + str(dref))
+#             if channels == 'all':
+#                 channels = _get_sorted_channels(folderpath, chprefix, session, source)
+#             reference = deepcopy(data_array[:,channels.index(dref)])
+#         for i in range(data_array.shape[1]):
+#             data_array[:,i] = data_array[:,i] - reference
+
+#     if session == '0': session = ''
+#     else: session = '_'+session
+#     if chprefix:
+#         if not filename: filename = source + '_' + chprefix + 's' + session + '.dat'
+#     else:
+#         if not filename:
+#             filename = f'{source}_alltypes{session}.dat'
+#     print('Packing data to file: ' + filename)
+#     if not dest:
+#         data_array.tofile(os.path.join(folderpath,filename))
+#     else:
+#         data_array.tofile(os.path.join(dest,filename))
+
+
+# def _get_sorted_channels(folderpath, chprefix='CH', session='0', source='100'):
+    
+#     # adding this shit in order to be able to mix adc and aux with regular channels
+#     if chprefix:
+#         Files = [f for f in os.listdir(folderpath) if '.continuous' in f
+#                                                     and '_'+chprefix in f
+#                                                     and source in f]
+#     else:
+#         Files = [f for f in os.listdir(folderpath) if f.endswith('.continuous') and f.startswith(source)]
+    
+#     if chprefix:
+#         if session == '0':
+#             Files = [f for f in Files if len(f.split('_')) == 2] # works with CH prefix
+#             try:
+#                 #Chs = sorted([int(f.split('_'+chprefix)[1].split('.')[0]) for f in Files])
+#                 Chs = []
+#                 for f in Files:
+#                     Chs += [int(f.split('_'+chprefix)[1].split('.')[0])]
+
+#                 Chs = sorted(Chs)
+#             except:
+#                 print(f.split('_'+chprefix))
+#                 raise IndexError(f'chprefix = {chprefix}; files\n{Files}')
+#         else:
+#             Files = [f for f in Files if len(f.split('_')) == 3
+#                                     and f.split('.')[0].split('_')[2] == session] # crash se
+
+#             Chs = sorted([int(f.split('_'+chprefix)[1].split('_')[0]) for f in Files])
+
+#         return(Chs) # this returns integers
+#     else:
+#         # no prefix means get CH, ADC and AUX
+#         #write custom
+#         Chs = []
+#         for pref, num in zip(['CH', 'ADC', 'AUX'], [32,8,3]):
+#             Chs += [f'{source}_{pref}{x}.continuous' for x in range(1,1+num)]
+
+#         # this returns nothing how was it working.?!
+
+
+
+
+# this is getting endless trying to debug extended code
+# just write a not flexible one
+
+def pack_3(folderpath, filename = '', channels = 'all', chprefix = 'CH',
+           dref = None, session = '0', source = '101', dest='', dtype=np.int16, returnarray=False):
+    
+    """adapting pack_2 to what i need atm"""
+    files = []
+    if source=='101':
+        for pref, num in zip(['CH', 'ADC', 'AUX'], [32,4,3]):
+                files += [f'{source}_{pref}{x}.continuous' for x in range(1,1+num)]
+    elif source=='100':
+        for pref, num in zip(['CH', 'ADC', 'AUX'], [32,8,3]):
+            files += [f'{source}_{pref}{x}.continuous' for x in range(1,1+num)]
+
+    t0 = time.time()
+    numFiles = 1 # why?
+
+    channel_1_data = loadContinuous(os.path.join(folderpath, files[0]), dtype, verbose=False)['data']
+
+    n_samples  = len(channel_1_data)
+    n_channels = len(files)
+
+    data_array = np.zeros([n_samples, n_channels], dtype)
+    data_array[:,0] = channel_1_data
+    pbar = tqdm.tqdm(files[1:])
+    for i, f in enumerate(pbar):
+            pbar.set_description(f)
+            data_array[:, i + 1] = loadContinuous(os.path.join(folderpath, f), dtype, verbose=False)['data']
+            numFiles += 1
+
+    print(''.join(('Avg. Load Time: ', str((time.time() - t0)/numFiles),' sec')))
+    print(''.join(('Total Load Time: ', str((time.time() - t0)),' sec')))
+
+    # substract reference here
+    if returnarray:
+        return data_array
+    else:
+        if dest:
+            folderpath=dest
+        if not filename:
+            #filename = f'{source}allCHADCAUX.dat' # session missing!
+            filename = os.path.basename(os.path.abspath(folderpath))+'.dat'
+        data_array.tofile(os.path.join(folderpath,filename))
