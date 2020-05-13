@@ -613,3 +613,9 @@ def pack_3(folderpath, filename = '', channels = 'all', chprefix = 'CH',
             #filename = f'{source}allCHADCAUX.dat' # session missing!
             filename = os.path.basename(os.path.abspath(folderpath))+'.dat'
         data_array.tofile(os.path.join(folderpath,filename))
+
+# In [5]: for ses in dlist: 
+#    ...:     try: 
+#    ...:         oe.pack_3(archdir+ses, source='101', dest='/home/jpastor/COVID/electrodat/') 
+#    ...:     except Exception as e: 
+#    ...:         print(f'Coud not with {ses}\n{e}')

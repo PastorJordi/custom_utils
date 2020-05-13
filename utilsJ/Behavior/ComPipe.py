@@ -8,16 +8,20 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
+from concurrent.futures import as_completed, ProcessPoolExecutor
+import tqdm
 
 
+
+# TODO: add all default params in __init__() so we can run the whole pipe with a single call (compipe)
 # TODO: fix pipe for fixationbreak in trajectories.
 # TODO: adapt to _feedback sessions (which may have inverted trials!)
-# just dirty labelling missing
+# just dirty labelling missing ? 
 # TODO: decrease mem usage since working in parallel (7 or 8) can cause OOM | there are some arrays with shape (1e5, 1e6)
 # they are boolean. Can be related to this strided rolling window
-
-# new stuff: get versatile pipe, to include delay sessions trajectories, [hence early/late/regular type] ,
-# to do so, perhaps we could rework everything - extract_trajectories() - and vectorize as much as we can
+# TODO: finish: load_available(plot=True); describe_sessions() 
+# TODO: label my own delay trials
+# TODO: add delay col so eventually we an plot various stuff vs delay in stim onset; 
 
 # GET ALL TRAJECTORIES from transitions (startsound and previous, to get correct fixation) :s; so we get the goddamn trajectories for all trials
 
@@ -53,12 +57,16 @@ class chom:
 
     def polish_median(coordvec2d):
         '''returns median after purging >2sd outliers'''
-        sd = coordvec2d.std(axis=0)
-        median = np.median(coordvec2d, axis=0)
-        to_dismiss = np.logical_or(
-            (coordvec2d > median+(sd*2))[:, 0], (coordvec2d > median+(sd*2))[:, 1])
-        # triggers warnigs
-        return np.median(np.delete(coordvec2d, to_dismiss, axis=0), axis=0)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore')#, r'All-NaN (slice|axis) encountered')
+        
+            sd = coordvec2d.std(axis=0)
+            median = np.median(coordvec2d, axis=0)
+            to_dismiss = np.logical_or(
+                (coordvec2d > median+(sd*2))[:, 0], (coordvec2d > median+(sd*2))[:, 1])
+            # triggers warnigs
+            return np.median(np.delete(coordvec2d, to_dismiss, axis=0), axis=0) # raises warning 
+        # FutureWarning: in the future insert will treat boolean arrays and array-likes as boolean index instead of casting it to integer
 
     def calculate_angle(point_a, point_b, c=(0, 0)):
         """ Calculate angle between two points (assuming vertex=origin)"""
@@ -196,43 +204,8 @@ class chom:
             a = a*normvec
             return a.sum()/frames_listened
 
-    def __init__(self, subject, parentpath='../data/', analyze_trajectories=True):
-        self.available = []
-        self.CSVS_PATH = f'{parentpath}{subject}/sessions/'
-        self.POSES_PATH = f'{parentpath}{subject}/poses/'
-        self.VIDEOS_PATH = f'{parentpath}{subject}/videos/'
-        self.subject = subject
-        self.sess = None
-        self.pose = None
-        self.trial_sess = None  # if not a copy_deep just a ref, ie no more mem req-
-        self.processed = False
-        self.target = None
-        self.trajectories = None
-        self.fixed_framerate = None
-        self.dirty_trajectories_trials = None
-        self.info = {}
-        self.framestamps = None
-        self.normcoords = False
-        self.active_ports = None
-        self.dict_events = dict(zip([x for x in range(68, 85, 2)], [
-                                f'Port{x+1}' for x in range(8)]))
-        self.event_to_int = dict(zip(
-            [f'Port{int(x/2)+1}In' if x % 2 == 0 else f'Port{int(x/2)+1}Out' for x in range(0, 16)], [x for x in range(68, 84)]))
-        self.newSM = False  # new state machine flag aka noenv + feedback sessions
-        self.sound_timings = None
-        self.analyze_trajectories = analyze_trajectories
-        self.switching_idx = []  # 0 based indexing
-        self.fair = False
-
-        doublecheck = [self.POSES_PATH, self.CSVS_PATH, self.VIDEOS_PATH]
-        if not analyze_trajectories:
-            doublecheck = [self.CSVS_PATH]
-        for item in doublecheck:
-            if not os.path.isdir(item):
-                raise ValueError(f'could not find path: {item}')
-        chom.load_available(self, npy=True)
-
-    def help(self, *args):
+    # removing from self
+    def help(*args):
         """this just accept strings, not methods"""
         helpdict = {
             'filestructure': "files should be organized following this structure:\n"
@@ -253,7 +226,7 @@ class chom:
             print(
                 """
                 Usual flow is: 
-                object = chom('LEXX', parent='../data/') # 
+                object = chom('LEXX', parent='../data/', analyze_trajectories) # this last one makes a diff! 
                 .load_available(kwargs) # just required if changing defaults or plotting
                 .load(target) | list of available sessions stored in .available 
                 .process(normcoords=True, interpolate=False)
@@ -266,11 +239,14 @@ class chom:
                     .poses: dlc output
                     .sess: raw bpod output
                     .framestamps: raw npy framestamps
-                    .trajectories: dic containing trial trajectories start & end frame idx 
+                    .trajectories: dic containing trial trajectories start & end frame idx
+
+                or simply:
+                df =  extraction_pipe(subjlist, **kwargs)
                     """
             )
             print(
-                f'use .help(topic) for further info among those: {helpdict.keys()}')
+                f'use .help(topic) for further info among those: {list(helpdict.keys())}')
         else:  # even if args = single arg it is a touple so this should work
             for item in args:
                 if item not in helpdict.keys():
@@ -280,32 +256,79 @@ class chom:
                     print(item)
                     print(helpdict[item])
 
+
+    def __init__(self, subject, parentpath='../data/', analyze_trajectories=True):
+        ## ideally it contains all defaults so we can run whole pipe with a single call
+        # perhaps we should create a 2nd class which inherits shared stuff from chom(subj)
+        # instead of storing non shared stuff in above class (subj)
+        self.available = []
+        self.CSVS_PATH = f'{parentpath}{subject}/sessions/'
+        self.POSES_PATH = f'{parentpath}{subject}/poses/'
+        self.VIDEOS_PATH = f'{parentpath}{subject}/videos/'
+        self.subject = subject
+        self.sess = None # session based
+        self.pose = None # session based
+        self.trial_sess = None  # if not a copy_deep just a ref, ie no more mem req-
+        self.processed = False # session based
+        self.target = None # session id
+        self.trajectories = None # sessuib based
+        self.fixed_framerate = None # session based
+        self.dirty_trajectories_trials = None # session based
+        self.info = {} # session info
+        self.framestamps = None # session based
+        self.normcoords = False
+        self.active_ports = None # session based
+        self.dict_events = dict(zip([x for x in range(68, 85, 2)], [
+                                f'Port{x+1}' for x in range(8)]))
+        self.event_to_int = dict(zip(
+            [f'Port{int(x/2)+1}In' if x % 2 == 0 else f'Port{int(x/2)+1}Out' for x in range(0, 16)], [x for x in range(68, 84)]))
+        self.newSM = False  # new state machine flag aka noenv + feedback sessions
+        self.sound_timings = None
+        self.analyze_trajectories = analyze_trajectories
+        self.switching_idx = []  # 0 based indexing
+        self.fair = False # this is session-based, avoid defining it here because we can use 1 chom instance
+        # to process several sessions in parallell which
+
+        doublecheck = [self.POSES_PATH, self.CSVS_PATH, self.VIDEOS_PATH]
+        if not analyze_trajectories:
+            doublecheck = [self.CSVS_PATH]
+        for item in doublecheck:
+            if not os.path.isdir(item):
+                #raise ValueError(f'could not find path: {item}') # crashes pipes, just warn with a print
+                print(f'could not find path: {item}')
+        chom.load_available(self, npy=analyze_trajectories)
+
+    
     # this could be executed when creating instance
-    def load_available(self, npy=True, plot=False):
+    def load_available(self, npy=True, plot=False, plot_kwargs={}):
         """adapt to self.analyze_trajectories = False"""
-        pose_list = [x[:-len(chom.pose_ext)]
-                     for x in os.listdir(self.POSES_PATH)]
-        csv_list = [x[:-len(chom.csv_ext)] for x in os.listdir(self.CSVS_PATH)]
-        video_list = [x[:-len(chom.video_ext)]
-                      for x in os.listdir(self.VIDEOS_PATH) if x.endswith(self.video_ext)]
-        if npy:
-            npy_list = [x[:-len(chom.video_ext)]
-                        for x in os.listdir(self.VIDEOS_PATH) if x.endswith('.npy')]
-        if not npy:
-            self.available = sorted(
-                [x for x in pose_list if ((x in csv_list) and (x in video_list))])
+        if self.analyze_trajectories:
+            pose_list = [x[:-len(chom.pose_ext)]
+                        for x in os.listdir(self.POSES_PATH)]
+            csv_list = [x[:-len(chom.csv_ext)] for x in os.listdir(self.CSVS_PATH)]
+            video_list = [x[:-len(chom.video_ext)]
+                        for x in os.listdir(self.VIDEOS_PATH) if x.endswith(self.video_ext)]
+            if npy:
+                npy_list = [x[:-len(chom.video_ext)]
+                            for x in os.listdir(self.VIDEOS_PATH) if x.endswith('.npy')]
+            if not npy:
+                self.available = sorted(
+                    [x for x in pose_list if ((x in csv_list) and (x in video_list))])
+            else:
+                self.available = sorted([x for x in pose_list if (
+                    (x in csv_list) and (x in video_list) and (x in npy_list))])
         else:
-            self.available = sorted([x for x in pose_list if (
-                (x in csv_list) and (x in video_list) and (x in npy_list))])
+            self.available = [x[:-len(chom.csv_ext)] for x in os.listdir(self.CSVS_PATH)] # all csvs
 
         if plot:
             # plot perc of available, videos etc./ unmatched stuff, mean filesizes, by unique task (p1,p2,p3,p4_a, p4_b, etc.)
             raise NotImplementedError
 
     # experimenter, box, task, num trials etc.. few descriptives a little more in depth than load available
-    def describe_sessions(self, pattern=None, deep=False, njobs=1):
+    def describe_sessions(self, df=None, pattern=None, deep=False, njobs=1):
         """pattern should be either a string or a function which operates with list of session rawnames (LEXX_....csv) and returns a list
-        deep= whether to look for coms and extra process"""
+        deep= whether to look for coms and extra process
+        df= df which contain already processed sessions, uses pattern in sessid"""
         if not self.available:  # empty list
             print(
                 'no available list yet. Try .load_available() or doublecheck parent / filestructure')
@@ -333,6 +356,7 @@ class chom:
         # sessions with new state machine diagram
         if any([True if x in target else False for x in ['noenv', 'feedback']]):
             self.newSM = True
+            # TODO: adapt to options
         # apparently old api issue, this is not used anyway
         if self.info['sess_id'] == 'not_found':
             self.info['sess_id'] = self.target
@@ -419,6 +443,10 @@ class chom:
         # check if frame timestamps are available
         # first of all get rid of all last incomplete trial
         realendidx = self.sess[self.sess.MSG == 'coherence01'].tail(1).index[0]
+
+        if self.sess.shape[0] > (self.sess.MSG == 'coherence01').sum()*500: # buggy probably. usually raw csv has around 50 rows / trial
+            # else, find out why i get memory errors when processing those buggy sessions
+            raise SystemError(f'session {self.target} is likely to be buggy because raw csv has >500rows/trial')
 
         self.sess['cum_initial'] = np.nan  # kek
         self.sess.loc[(self.sess.TYPE == 'INFO') & (self.sess.MSG == 'TRIAL-BPOD-TIME'), 'cum_initial'] = self.sess.loc[(
@@ -603,7 +631,7 @@ class chom:
                                         'fair_sc_switch_rewside', '+INFO'].values.astype(int)
                 # reasign resulting value
                 rewside[switching_idx] = (rewside[switching_idx]-1)**2
-                self.switching_idx = switching_idx  # 0 based AFAIK
+                self.switching_idx = switching_idx  # 0 based
         hithistory = np.where(
             states[states.MSG == 'Reward']['BPOD-FINAL-TIME'].astype(float) > 0, 1, np.nan)
         hithistory[np.where(states[states.MSG == 'Punish']
@@ -611,10 +639,51 @@ class chom:
         hithistory[np.where(states[states.MSG == 'Invalid']
                             ['BPOD-FINAL-TIME'].astype(float) > 0)[0]] = -1
         if self.fair:
-            hithistory[np.where(states[states.MSG == 'invPunish']
+            hithistory[np.where(states[states.MSG == 'invPunish'] # this does not exist anymore
                                 ['BPOD-FINAL-TIME'].astype(float) > 0)[0]] = 0
-            hithistory[np.where(states[states.MSG == 'invReward']
+            hithistory[np.where(states[states.MSG == 'invReward'] # this still exists
                                 ['BPOD-FINAL-TIME'].astype(float) > 0)[0]] = 1
+        if self.newSM:
+            if len(df1.loc[df1.MSG=='enhance_com_switch']): # likely altered from original reward_side
+                if float(literal_eval(df1.loc[df1.MSG=='TASK','+INFO'].values[0])[1])<0.3:
+                    # task earlier than v0.3 were sub-optimal  
+                    # whether they are correct is fine, just need to make sure side is fine!
+                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values # perhaps not all of them are switch
+                    eventdfwobnc = df1.loc[df1.trial_index.isin(comswitchtrials)&(df1.TYPE=='EVENT')& ~(df1['+INFO'].str.startswith('BNC', na=False))]
+
+                    pat=np.asarray(['Tup', 'Tup', self.active_ports[1]+'Out'])
+                    N = pat.size
+                    arr = eventdfwobnc['+INFO'].values
+                    b = np.all(chom.rolling_window(arr, N) == pat, axis=1)
+                    c = np.mgrid[0:len(b)][b]
+
+                    d = [i  for x in c for i in range(x, x+N)]
+                    eventdfwobnc['onset'] = np.in1d(np.arange(len(arr)), d)
+                    # iterate to avoid weird patterns/coincidences
+                    #switched_responses = [] # no need to keep it
+                    for i, tr in enumerate(comswitchtrials):
+                        try: ## TODO: debug and rerun trials
+                            indx = eventdfwobnc.loc[(eventdfwobnc.trial_index==tr)&eventdfwobnc.onset].index.max()
+                            c_resp = eventdfwobnc.loc[(eventdfwobnc.index>indx+1) &(eventdfwobnc.trial_index==tr)&~(eventdfwobnc['+INFO'].str.startswith(self.active_ports[1])) & (eventdfwobnc.MSG!='104'), '+INFO'].values[0][:5]
+                            if self.active_ports[0]==c_resp: #rat response was left
+                                if hithistory[int(tr)-1]==1: # it was a hit
+                                    rewside[int(tr)-1]= 0
+                                elif hithistory[int(tr)-1]==0: # miss # we do not know with invalids
+                                    rewside[int(tr)-1]= 1
+                            elif self.active_ports[2]==c_resp: # rat response was right
+                                if hithistory[int(tr)-1]==1: # it was a hit
+                                    rewside[int(tr)-1]= 1
+                                elif hithistory[int(tr)-1]==0: # miss # we do not know with invalids
+                                    rewside[int(tr)-1]= 0
+                        except Exception as e:
+                            print(f'could not elucidate which was the reward side in trial {tr}\n{e}')
+                else: # issue solved in vers 0.3!
+                    # just invert rewside in those trials
+                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values.astype(int) # 1 based to keep it the same way than previous if
+                    rewside[comswitchtrials-1] = (rewside[comswitchtrials]-1)**2
+            else:
+                comswitchtrials = np.array([])
+
 
         # get soundR failures
         sr_play = df1.loc[(df1.MSG.str.startswith('SoundR: Play.')) & (
@@ -713,7 +782,13 @@ class chom:
             df1.TYPE == 'STATE')]['+INFO'].astype(float).values  # buggy or faulty bpod?
         kek['sound_len'] = sound_len  # buggy ? # also nan for
         kek['sound_len'] = kek['sound_len'].astype(float)*1000
-        kek['frames_listened'] = kek['sound_len']/50
+        if self.newSM:
+            if 'noenv' in self.target:
+                kek['frames_listened'] = np.nan
+            elif 'feedback' in self.target:
+                kek['frames_listened'] = kek['sound_len']/25
+        else:
+            kek['frames_listened'] = kek['sound_len']/50
 
         if 'uncorrelated' in self.target:
             # uncorrelated silence new [states 0, but it's 0.5]
@@ -730,7 +805,8 @@ class chom:
                                          'prob_repeat']['+INFO'].astype(float).values
             else:
                 # avoid. get rep is not defined
-                kek['prob_repeat'] = get_rep(df1)[:len(trialidx)]
+                print(f'somehow could not get prob_repeat in {self.target}; inferring...\nBbeware, this will lead to wrong results if not .2-.8 and rep-alt')
+                kek['prob_repeat'] = chom.get_rep(df1)[:len(trialidx)]
         # add withinblock index
         blen = int(df1.loc[(df1.TYPE == 'VAL') & (
             df1.MSG == 'VAR_BLEN'), '+INFO'].values[-1])
@@ -799,7 +875,6 @@ class chom:
         self.trial_sess['streak'] = (heh+1).shift(1)
         # for ease of use we'll set first one as 0
         self.trial_sess.streak.iloc[0] = 0  # triggers warning
-        self.trial_sess[['hithistory', 'streak']].head()
         self.trial_sess['rep_response'] = False
         self.trial_sess.loc[self.trial_sess.R_response.diff(
         ).values == False, 'rep_response'] = True
@@ -807,19 +882,32 @@ class chom:
         # tag weird trials -1=early, 0 = regular, 1= delay, 2 = silence TODO: review trajectories are fine for weird trials
         self.trial_sess['special_trial'] = 0
         self.trial_sess['delay_len'] = 0
+
+        # TODO: add negative delay for early trials
         if 'delay' in self.target:
             self.trial_sess['special_trial'] = self.sess.loc[self.sess.MSG ==
                                                              'delay_trial', '+INFO'].astype(int).values[:kek.shape[0]]
             self.trial_sess['delay_len'] = self.sess.loc[(self.sess.TYPE == 'STATE') & (
                 self.sess.MSG == 'Delay'), '+INFO'].astype(float).values[:kek.shape[0]] * 1000
         elif 'silence' in self.target:
-            kek.loc[silent_trial_idx, 'special_trial'] = 2  # silence ones
+            #kek.loc[silent_trial_idx, 'special_trial'] = 2  # silence ones # just replaced this, rollback if crash
+            self.trial_sess.loc[silent_trial_idx, 'special_trial'] = 2
+        elif self.newSM:
+            delay_trials = df1.loc[df1.MSG=='delayed_trial', '+INFO'].values.astype(int)
+            if delay_trials.size:
+                self.trial_sess.loc[delay_trials, 'special_trial'] = 1
+                self.trial_sess.loc[delay_trials,'delay_len'] = df1.loc[df1.MSG=='expected_delay', '+INFO'].values.astype(float)
+            
+            if len(comswitchtrials):
+                self.trial_sess.loc[comswitchtrials-1, 'special_trial'] = 3 # new mark for com-switch-trials
 
+            
+            
         # smooth here
         # alternatively, only smooth the trajectories (we know that the snout likely wont be occluded)
 
         # needs to be done before get trajectories, because of Y component of V (speed)
-        if normcoords:
+        if normcoords & self.analyze_trajectories:
             # adding temp cols for other rotated bodyparts
             self.pose['rL-eye', 'x'] = np.nan
             self.pose['rL-eye', 'y'] = np.nan
@@ -909,29 +997,38 @@ class chom:
         # retrieve fixation frame indexes from here instead
         # get startsound transition frame index (* fixation ends)
         # TODO: needs adendum for fair inverted!!! ~ just debug missing
-        if self.newSM and list(self.switching_idx):
+        if self.newSM and list(self.switching_idx): # 
             # we get the bool mas for transition and then we shift it few positions attending what we are interested in
-            critical_trans_regular = ((trans.loc[~trans.trial_idx.isin(
-                self.switching_idx+1), 'MSG']) == 'StartSound').values
+            regulartrans = trans.loc[~trans.trial_idx.isin(
+                self.switching_idx+1)]
+            critical_trans_regular = (regulartrans['MSG'] == 'StartSound').values # switching because of fair cannot be delayed trials
             # contains frames corresponding to the end of the trajectory ~next transition to StartSound = waitresp; next = response. Trial based
-            end_traj_vec_regular = trans.loc[np.roll(
-                critical_trans_regular, 2), 'fixed_int'].values
-            start_traj_vec_regular = trans.loc[np.roll(
-                critical_trans_regular, -2), 'fixed_int'].values
+            end_traj_vec_regular = regulartrans.loc[np.roll(critical_trans_regular, 2),
+            'fixed_int'].values
+            start_traj_vec_regular = regulartrans.loc[np.roll(critical_trans_regular, -2), 'fixed_int'].values
+            #end_traj_vec_regular = trans.loc[np.roll(
+            #    critical_trans_regular, 2), 'fixed_int'].values # wth crash here?
+            #start_traj_vec_regular = trans.loc[np.roll(
+            #    critical_trans_regular, -2), 'fixed_int'].values
             # fixed int is sorted, so there should be no problem about sorting them afterwards
             # we get the bool mas for transition and then we shift it few positions attending what we are interested in
-            critical_trans_switched = (trans.loc[trans.trial_idx.isin(
-                self.switching_idx+1), 'MSG'] == 'StartSound').values
+            trans_switched = (trans.loc[trans.trial_idx.isin(self.switching_idx+1)])
+            critical_trans_switched = (trans_switched['MSG']=='StartSound').values
+            #critical_trans_switched = (trans.loc[trans.trial_idx.isin(
+            #    self.switching_idx+1), 'MSG'] == 'StartSound').values
             # contains frames corresponding to the end of the trajectory ~next transition to StartSound = waitresp; next = response. Trial based
-            end_traj_vec_switched = trans.loc[np.roll(
-                critical_trans_switched, 3), 'fixed_int'].values
-            start_traj_vec_switched = trans.loc[np.roll(
-                critical_trans_switched, -2), 'fixed_int'].values
+            end_traj_vec_switched = trans_switched.loc[np.roll(critical_trans_switched,3), 'fixed_int'].values
+            #end_traj_vec_switched = trans.loc[np.roll(
+            #    critical_trans_switched, 3), 'fixed_int'].values
+            start_traj_vec_switched = trans_switched.loc[np.roll(critical_trans_switched, -2), 'fixed_int'].values
+            #start_traj_vec_switched = trans.loc[np.roll(
+            #    critical_trans_switched, -2), 'fixed_int'].values
             # merge and sort them ~ because items are frame indexes they will align naturally with trials
             start_traj_vec = np.sort(np.concatenate(
-                start_traj_vec_regular, start_traj_vec_switched))
+                (start_traj_vec_regular, start_traj_vec_switched)))
             end_traj_vec = np.sort(np.concatenate(
-                end_traj_vec_regular, end_traj_vec_switched))
+                (end_traj_vec_regular, end_traj_vec_switched)))
+                # elif self.newSM # smthing to account to delays
         elif 'delay' not in str(self.target):
             if self.newSM:
                 rollback = -2  # fixation contains an extra state (feedback)
@@ -972,8 +1069,7 @@ class chom:
             pattern_right_choice_sound = np.array([self.event_to_int[self.active_ports[1]+'In'], 104, 104,
                                                    self.event_to_int[self.active_ports[1]+'Out'], self.event_to_int[self.active_ports[2]+'In']])
             pattern_right_choice_nosound = np.array([self.event_to_int[self.active_ports[1]+'In'], 104,
-                                                     self.event_to_int[self.active_ports[1]+'Out'], self.event_to_int[self.active_ports[2]+'In']])
-        # TODO: chheck whether softcode alters events (which will, unfortunately)
+                                                    self.event_to_int[self.active_ports[1]+'Out'], self.event_to_int[self.active_ports[2]+'In']])
         elif self.newSM:
             # TODO: then fix for feedbacksessions with fair stim
             # this should be main trial bulk, just adapt for reversing trials if they exist
@@ -1688,3 +1784,95 @@ class chom:
 # sound_len: theoretical stim duration in ms | soudnt last longer than 1s
 # frames_listened: same but/50
 # tbc
+def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
+    #                     bodypart='rabove-snout', skip_errors=False, get_trajectories=True):
+    # unpack because of the single argument * concurrent-futures shit
+    com_instance, session, kwargs = inarg[0], inarg[1], inarg[2]
+    try:
+        com_instance.load(session)
+        com_instance.process(normcoords=kwargs['normcoords'])
+        if kwargs['analyze_trajectories']:
+            com_instance.get_trajectories(bodypart=kwargs['bodypart'], fixationbreaks=kwargs['fixationbreaks'])
+            com_instance.suggest_coms() 
+            if com_instance.framestamps is not None:
+                com_instance.trial_sess.loc[:,'framestamps']=True
+            else:
+                com_instance.trial_sess.loc[:,'framestamps']=False
+            com_instance.trial_sess.loc[:,'framerate']=com_instance.fixed_framerate
+        # return com_instance.trial_sess, com_instance.target
+        return com_instance.trial_sess
+
+    except Exception as e:
+        if not kwargs['skip_errors']:
+            raise e
+        print(f'fail {session}: {e}')
+        #return -1, com_instance.target
+        return -1
+
+# plenty of strategies:
+# https://yuanjiang.space/threadpoolexecutor-map-method-with-multiple-parameters
+def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=True, 
+                    normcoords=True, skip_errors=True, analyze_trajectories=True, sessions={}, parentpath='../data/',
+                    tqdm_notebook=True, pat='p4'):
+    """to avoid copying extraction scrpt all the way around
+    targets = list of subjects
+    sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
+    pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
+    Poggers bar: https://github.com/tqdm/tqdm/issues/484"""
+    assert isinstance(targets, list)
+    kwargs = {
+        'normcoords': normcoords,
+        'bodypart': bodypart,
+        'skip_errors': skip_errors,
+        'analyze_trajectories': analyze_trajectories,
+        'fixationbreaks': fixationbreaks
+    }
+
+    df = pd.DataFrame([])
+    for subj in targets:
+        com_instance = chom(subj, parentpath=parentpath, analyze_trajectories=analyze_trajectories)
+        
+        subj_sess = [x for x in com_instance.available if pat in x]
+        if sessions:
+            if subj not in sessions.keys():
+                print(f"skipping {subj} because it's not in sessions.keys()")
+                continue
+            final_sess = [x if x in com_instance.available else print(f'{x} not in available') for x in sessions[subj]]
+            subj_sess = final_sess
+
+        #print(f'processing {len(subj_sess)} sessions from {subj}...')
+
+        with ProcessPoolExecutor(max_workers=nworkers) as executor:
+            # for targ_sess, name in executor.map(threaded_gather, 
+            #                             tqdm.tqdm([[com_instance, x, kwargs] for x in subj_sess])):
+            #     if isinstance(targ_sess, pd.DataFrame):
+            #         df = df.append(targ_sess, ignore_index=True)
+            jobs = [
+                executor.submit(threaded_gather, 
+            [chom(subj, parentpath=parentpath, analyze_trajectories=analyze_trajectories), x, kwargs]) 
+            for x in subj_sess
+            ] # attempting to generate a new chom instance per job (less efficient but safer because of
+            # shared vars (e.g. self.fair)
+            if tqdm_notebook:
+                progressfun = tqdm.tqdm_notebook
+            else:
+                progressfun = tqdm.tqdm
+            for job in progressfun(as_completed(jobs), total=len(subj_sess), desc=subj):
+                if skip_errors:
+                    try:
+                        if isinstance(job.result(), pd.DataFrame):
+                            df = df.append(job.result(), ignore_index=True)
+                    except Exception as e:
+                        print(f'one job crashed:\n{e}')
+                else:
+                    if isinstance(job.result(), pd.DataFrame):
+                        df = df.append(job.result(), ignore_index=True)
+    # because submit nature, sort them by subject and date
+    if isinstance(df, pd.DataFrame):
+        if 'sessid' in df.columns:
+            df['date'] = pd.to_datetime(df.sessid.str[-15:])
+            df = df.sort_values(['subjid', 'date']).reset_index(drop=True).drop(columns='date')
+
+        return df
+    else:
+        return -1

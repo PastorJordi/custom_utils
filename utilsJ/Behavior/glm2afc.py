@@ -81,8 +81,8 @@ def getmodel_cols(cols='all', lateralized=False, noenv=False):
         "T--6-10"
     ]
     # TODO: change above to something sorted by regressor ()
-    # model_cols = [f'L+{x}' for x in range(1,6)] \
-    #             + [f'L-{x}' for x in range(1,6)] ...
+    # model_cols = [f'L+{x}' for x in range(1,6)]+['L+6-10'] \
+    #             + [f'L-{x}' for x in range(1,6)]+['L-6-10']...
     if lateralized:
         model_cols = ['intercept'] \
                     + [f'SR{x}' for x in range(1,9)] \
@@ -116,10 +116,13 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
             1 * np.sin(2 * np.pi * (20) * np.arange(0, 1, step=1 / samplingR) + np.pi)
         )
     else:
-        # correct modwave
-        raise NotImplementedError
+        modwave = 0.5 * (np.sin(2 * np.pi * (20) * np.arange(0, 0.5, step=1 / samplingR) - np.pi/2)+1) # new stim which can be bugged as well
+
     if np.isnan(time):
-        time = 0
+        time = 0 # is this editing when used with apply + lambda function?
+    elif (fail==False) and (time>0.5):
+        time = 0.5 # old-new bug
+
     tot_steps = int(0.001 * time * samplingR)
     envLpoints = np.abs(np.repeat(envL, samplingR / 20))
     envRpoints = np.abs(np.repeat(envR, samplingR / 20))
@@ -130,7 +133,7 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
     return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
 
 
-def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to calc intensity.
+def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps use trapz to calc intensity.
     """input df object, since it will calculate history*, it must contain consecutive trials
     returns preprocessed dataframe
     noenv = adapted to noenv- sessions # does it work with env sessions if they have 
@@ -166,7 +169,7 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
                 pd.DataFrame(
                     df["renv"].values.tolist(),
                     columns=["SR" + str(x + 1) for x in range(20)],
-                    index=df.index,
+                    index=df.index, # crash
                 ).loc[:, "SR1":"SR8"],
             ],
             axis=1,
@@ -205,13 +208,15 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
     # frame_mat_mask = np.repeat(nanmat.flatten(), fuk).reshape(-1,20)
     # df['aftereff1'] = np.nansum((frame_mat_mask * envmatrix), axis=1)
     if not noenv:
+        if stimlength==1:
+            fail_flag = True
         df = pd.concat(
             [
                 df,
                 pd.DataFrame(
                     df[["lenv", "renv", "sound_len"]]
                     .apply(
-                        lambda x: get_stim_trapz2(x[0], x[1], x[2], samplingR=1000), axis=1
+                        lambda x: get_stim_trapz2(x[0], x[1], x[2], samplingR=1000, fail=fail_flag), axis=1
                     )
                     .values.tolist(),
                     columns=["afterL", "afterR", "av_trapz"],
@@ -347,7 +352,7 @@ def preprocess(in_data, lateralized=True, noenv=False):  # perhaps use trapz to 
             df.R_response.shift(1) * 2 - 1
         )  # {0 = Left; 1 = Right, nan=invalid}
 
-    if not noenv:
+    if not noenv: # this uses frames listened, fix it to ComPipe
         for i in range(8, 0, -1):
             if not lateralized:
                 df.loc[df.frames_listened < (i - 1), "S" + str(i)] = 0
@@ -404,7 +409,7 @@ def check_colin(df, lateralized=False ,dual=True, noenv=False):
         plt.show()
 
 
-def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=True, savdir=''):
+def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''):
     """perhaps iwont implement the splitting but w/e idk atm
     futureme: wth is split
     # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
@@ -415,7 +420,6 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
         NotImplementedError('cannot lateralized AND noenv')
     
     if dual:
-        print('dual')
         afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
         aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
         
@@ -479,7 +483,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
             index_col=0,
         )[0]
 
-        df["proba"] = np.nan
+        df.loc[:,"proba"] = np.nan
         probac = Lreg_ac.predict_proba(X_df_ac)
         probae = Lreg_ae.predict_proba(X_df_ae)
         print(
@@ -544,7 +548,7 @@ def exec_glm(df, dual=True, split=False, lateralized=False, noenv=False, plot=Tr
             header=0,
             index_col=0,
         )[0]
-        df["proba"] = np.nan
+        df.loc[:,"proba"] = np.nan
         df.loc[df.R_response.notna(), 'proba'] = Lreg.predict_proba(X_df)[:,1]
         warnings.filterwarnings("default")
         return {"skl": Lreg, "sm": result, "mat": LRresult, 'proba': df['proba'].values} 
@@ -1388,7 +1392,7 @@ def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b,
     plt.show()
 
 
-def get_module_weight(df, dic, lateralized=False, noenv=False):
+def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
     """I FUCKOING DELETED IT because retarded cut icon + copy rather than pasting"""
     if lateralized and noenv:
         raise NotImplementedError('cannot use lateralized and noenv atm')
@@ -1406,7 +1410,7 @@ def get_module_weight(df, dic, lateralized=False, noenv=False):
             stimcols = ["S" + str(x) for x in range(1, 9)]
         else:
             stimcols = ['S']
-    fcolnames = ["stim", "short_s", "lat", "trans"]
+    fcolnames = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(fixedbias*1)
 
 
     if len(list(dic.keys())) == 4:  # single
@@ -1432,8 +1436,15 @@ def get_module_weight(df, dic, lateralized=False, noenv=False):
             dic["mat"].loc[transcols, "coef"].values.reshape(1, -1),
             df[transcols].fillna(value=0).values.T,
         )
-        for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]):
-            df[prefix + col] = vec.flatten()
+        if fixedbias:
+            fixedbiascomp = [dic["mat"].loc['intercept', 'coef']]
+        else:
+            fixedbiascomp = []
+        for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]+fixedbiascomp):
+            if col!='fixedbias':
+                df[prefix + col] = vec.flatten()
+            else:
+                df[prefix + col] = vec # broadcast!
 
         return df
 
@@ -1461,8 +1472,16 @@ def get_module_weight(df, dic, lateralized=False, noenv=False):
                 dic[key].loc[transcols, "coef"].values.reshape(1, -1),
                 df.loc[df.aftererror == i, transcols].fillna(value=0).values.T,
             )
-            for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]):
-                df.loc[df.aftererror == i, prefix + col] = vec.flatten()
+            if fixedbias:
+                fixedbiascomp = [dic[key].loc['intercept', 'coef']]
+            else:
+                fixedbiascomp = []
+        
+            for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]+fixedbiascomp):
+                if col!='fixedbias':
+                    df.loc[df.aftererror == i, prefix + col] = vec.flatten()
+                else:
+                    df.loc[df.aftererror == i, prefix + col] = vec
         return df
 
     else:
@@ -1536,3 +1555,72 @@ def get_module_weight(df, dic, lateralized=False, noenv=False):
     # #         return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
     # #     else:
     # #         return stats.norm.sf(np.abs(self.tvalues)) * 2
+
+
+def piped_moduleweight(df,lateralized=True, dual=True, plot=False, plot_kwargs={}, filtermask=None, noenv=False, savdir='', fixedbias=True):
+    """"pipe to preprocess + glm + get module weight, 
+    so everything could run in local scope (loop) and returns module weight
+    without storing inbetween stuff (Glm weights and diverse regressor matrices)
+    
+    df: dataframe, asumes it is from a single animal containing several sessions and kwargs correspond to it
+    filtermask = rows to filter (eg combo of df.sound_len<=400 & df.resp_len<=1)
+    
+    returns same df + extra component cols (excluded rows=np.nan) 
+
+    example:
+    ------------------
+    newcols = [f'dW_{x}' for x in ["stim", "short_s", "lat", "trans", "fixedbias"]]
+    for col in newcols:
+        df[col]=np.nan
+    # what about this prototoype:
+    for subj in [f'LE{x}' for x in range(82,88)]:
+        mask = 'sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0' 
+        if len(df.loc[(df.subjid==subj)&df.sessid.str.contains('feedback')]):
+            for bo in [False, True]:
+                cur_mask = (df.subjid==subj)&(df.sessid.str.contains('feedback')==bo)
+                if bo:
+                    lateral_flag=True
+                    noenv_flag=False
+                else:
+                    lateral_flag=False
+                    noenv_flag=True
+                df.loc[cur_mask] = glm2afc.piped_moduleweight(df.loc[cur_mask], 
+                                                            filtermask=mask, lateralized=lateral_flag, noenv=noenv_flag)
+            # further split
+        else:
+            df.loc[df.subjid==subj] = glm2afc.piped_moduleweight(df.loc[(df.subjid==subj)], filtermask=mask, noenv=True, lateralized=False)
+    """
+    # origcol = df.columns
+    tempdf = preprocess(df.copy(deep=True), lateralized=lateralized, noenv=noenv)
+
+    #now that we do not need them to be aligned, we can apply filters/mask
+
+    if filtermask is None:
+        # define default mask 
+        raise NotImplementedError('standard mask is not yet written')
+    elif isinstance(filtermask, (np.ndarray, pd.Series, pd.core.series.Series)): # bool # array is a bad idea
+        tempdf = tempdf[filtermask]
+    elif isinstance(filtermask, str):
+        tempdf = tempdf.query(filtermask)
+    
+    tempdic = exec_glm(tempdf, dual=dual, plot=plot, lateralized=lateralized, savdir='', noenv=noenv)
+    tempdf = get_module_weight(tempdf, tempdic, lateralized=lateralized, noenv=noenv, fixedbias=fixedbias) # filtered rows!
+
+    # KeyError: "None of [Index(['S'], dtype='object')] are in the [index]"
+
+
+    newcols = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(dual*1)
+    if dual:
+        prefix = 'dW_'
+    else:
+        prefix = 'sW_'
+
+    newcols = [f'{prefix}{x}' for x in newcols]
+    
+    # try omitting this    
+    for col in newcols:
+       df.loc[:,col] = np.nan
+
+    df.loc[tempdf.index, newcols] = tempdf[newcols]
+    
+    return df

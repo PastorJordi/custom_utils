@@ -1,14 +1,26 @@
 # utils for plotting behavior
 # this should be renamed to plotting/figures
-from scipy.stats import norm
+from scipy.stats import norm, sem
 from scipy.optimize import minimize
 from statsmodels.stats.proportion import proportion_confint
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import warnings
+from utilsJ.regularimports import groupby_binom_ci
+import types
 
+
+def help():
+    """should print at least available functions"""
+    print('available methods:')
+    print('distbysubj: grid of distributions')
+    print('psych_curve')
+    print('correcting_kiani')
+    print('com_heatmap')
+    print('binned curve: curve of means and err of y-var binning by x-var')
 
 #class cplot(): # cplot stands for custom plot
     #def __init__():
@@ -21,6 +33,8 @@ def distbysubj(df, data, by, grid_kwargs=dict(col_wrap=2, hue='CoM_sugg', aspect
             . add_legend
         data: what to plot (bin on) ~ str(df.col header)
         by: sorter (ie defines #subplots) ~ str(df.col header)
+
+        returns sns.FacetGrid obj
     """
     g = sns.FacetGrid(df, col=by , **grid_kwargs)
     g = g.map(sns.distplot, data, **dist_kwargs)
@@ -164,21 +178,35 @@ def correcting_kiani(hit, rresp, com, ev, **kwargs):
 # pending: pcom kiani
 
 # transition com vs transition regular
-def com_heatmap(x, y, com, flip=False, **kwargs):
-    '''x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe'''
+def com_heatmap(x, y, com, flip=False, annotate=True,predefbins=None,**kwargs):
+    '''x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe
+    TODO: improve binning option, or let add custom bins
+    TODO: add example call'''
     warnings.warn("when used alone (ie single axis obj) by default sns y-flips it")
     tmp = pd.DataFrame(np.array([x, y, com]).T, columns=['prior', 'stim', 'com'])
-
+    
     # make bins    
     tmp['binned_prior'] = np.nan
     maxedge_prior = tmp.prior.abs().max()
-    tmp.loc[:,'binned_prior'], priorbins = pd.cut(tmp.prior, bins=np.linspace(-maxedge_prior-0.01,maxedge_prior+0.01, 8), retbins=True, labels=np.arange(7))
+    if predefbins is None:
+        predefbinsflag=False
+        bins = np.linspace(-maxedge_prior-0.01,maxedge_prior+0.01, 8)
+    else:
+        predefbinsflag=True
+        bins = predefbins[0]
+    tmp.loc[:,'binned_prior'], priorbins = pd.cut(tmp.prior, bins=bins, retbins=True, labels=np.arange(7))
     tmp.loc[:, 'binned_prior']= tmp.loc[:, 'binned_prior'].astype(int)
     priorlabels = [round((priorbins[i]+priorbins[i+1])/2, 2) for i in range(7)]
+
+
     
     tmp['binned_stim'] = np.nan
     maxedge_stim = tmp.stim.abs().max()
-    tmp.loc[:,'binned_stim'], stimbins = pd.cut(tmp.stim, bins=np.linspace(-maxedge_stim-0.01,maxedge_stim+0.01, 8), retbins=True, labels=np.arange(7))
+    if not predefbinsflag:
+        bins=np.linspace(-maxedge_stim-0.01,maxedge_stim+0.01, 8)
+    else:
+        bins=predefbins[1]
+    tmp.loc[:,'binned_stim'], stimbins = pd.cut(tmp.stim, bins=bins, retbins=True, labels=np.arange(7))
     tmp.loc[:, 'binned_stim']= tmp.loc[:, 'binned_stim'].astype(int)
     stimlabels = [round((stimbins[i]+stimbins[i+1])/2, 2) for i in range(7)]
     
@@ -198,18 +226,26 @@ def com_heatmap(x, y, com, flip=False, **kwargs):
     
     if not kwargs:
         kwargs = dict(cmap='viridis', fmt='.0f')
-    if flip: # this shit is not workin
+    if flip: # this shit is not workin # this works in custom subplot grid
         # just retrieve ax and ax.invert_yaxis
         # matrix = np.flipud(matrix)
         # nmat = np.flipud(nmat)
         # stimlabels=np.flip(stimlabels)
-        (sns.heatmap(np.flipud(matrix), annot=np.flipud(nmat), **kwargs)
-        .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= np.flip(stimlabels))
-        )
+        if annotate:
+            g = (sns.heatmap(np.flipud(matrix), annot=np.flipud(nmat), **kwargs)
+            .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= np.flip(stimlabels)))
+        else:
+            g = (sns.heatmap(np.flipud(matrix), annot=None, **kwargs)
+            .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= np.flip(stimlabels)))
     else:
-        (sns.heatmap(matrix, annot=nmat, **kwargs)
-        .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= stimlabels)
-        )        
+        if annotate:
+            g = (sns.heatmap(matrix, annot=nmat, **kwargs)
+            .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= stimlabels))
+        else:
+            g = (sns.heatmap(matrix, annot=None, **kwargs)
+            .set(xlabel='prior', ylabel='average stim', xticklabels=priorlabels, yticklabels= stimlabels))
+
+    return g
         
 
 
@@ -243,3 +279,128 @@ def com_heatmap(x, y, com, flip=False, **kwargs):
 
 # # add grid right (gridspec), convolved comrate through time
 # # same with num trials/session
+
+def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={}, 
+                ax=None, sem_err=True, xpos=None, subplot_kw={},
+                legend=True, traces=None, traces_kw={'color':'grey', 'alpha':0.15},
+                traces_rolling=0, xoffset=True
+                ):
+    """ bins a var and plots a var according to those bins
+    df: dataframe
+    var_toplot: str, col in df
+    var_tobin: str. col in df,
+    bins: edges to bin,
+    ax: if provided it plots there
+    sem: if false it uses statsmodels proportion confint beta,
+    xpos: position to plot in x-ax, else it will use bin index comming fromn groupby
+        none= use index
+        int/float = number to scale index
+        list/array = x-vec array (to plot)
+    traces: str, display traces grouping by whatever column
+    returns ax
+
+    example call:
+    f, g = plt.subplots(figsize=(12,6))
+        for filt in ['feedback', 'noenv']:
+            g = plotting.binned_curve(df[(df.sessid.str.contains(filt))&(df.hithistory>=0)], 'hithistory', 'sound_len',
+                                np.arange(0,400,21), sem_err=True, xpos=20, errorbar_kw={'label':filt}, ax=g) # matplotlib is so smart
+                                                                                                            # that keeps rotating color on its own
+        g.set_xlabel('RT')
+        g.set_ylabel('accu')
+        plt.show()
+    """
+    mdf = df.copy()
+    mdf['tmp_bin'] = pd.cut(mdf[var_tobin], bins, include_lowest=True, labels=False)
+
+
+    if ax is None:
+        f, ax = plt.subplots(**subplot_kw)
+
+
+    # big picture
+    if sem_err:
+        errfun = sem
+    else:
+        errfun = groupby_binom_ci
+    tmp = mdf.groupby('tmp_bin')[var_toplot].agg(m='mean', e=errfun)
+
+    print(f'attempting to plot {tmp.shape} shaped grouped df')
+
+    if isinstance(xoffset, (int, float)):
+        xoffsetval = xoffset
+        xoffset = False # flag removed
+    elif isinstance(xoffset, bool):
+        if not xoffset:
+            xoffsetval = 0
+        
+    
+    if xpos is None:
+        xpos_plot=tmp.index  
+        if xoffset:
+            try:
+                xpos_plot += (tmp.index[1]-tmp.index[0])/2
+            except:
+                print(f'could not add offsest, is this index numeric?\n {tmp.index.head()}')
+        else:
+            xpos_plot += xoffsetval
+    elif isinstance(xpos, (list, np.ndarray)): # beware if trying to plot empty data-bin 
+        xpos_plot = np.array(xpos)+xoffsetval
+        if xoffset:
+            xpos_plot+= (xpos_plot[1]-xpos_plot[0])/2
+    elif isinstance(xpos, (int, float)):
+        if xoffset:
+            xpos_plot+= (xpos_plot[1]-xpos_plot[0])/2
+        else:
+            xpos_plot=tmp.index * xpos + xoffsetval
+    elif isinstance(xpos, (types.FunctionType, types.LambdaType)):
+        xpos_plot = xpos(tmp.index)
+
+    if sem_err:
+        yerrtoplot = tmp['e']
+    else:
+        yerrtoplot = [
+            tmp['e'].apply(lambda x: x[0]),
+            tmp['e'].apply(lambda x: x[1])
+        ]
+
+    if 'label' not in errorbar_kw.keys():
+        errorbar_kw['label'] = var_toplot
+    
+    ax.errorbar(
+        xpos_plot,
+        tmp['m'],
+        yerr=yerrtoplot,
+        **errorbar_kw
+    )
+    if legend:
+        ax.legend()
+
+
+
+    # traces section # may malfunction if using weird xpos
+    if traces is not None:
+        traces_tmp = mdf.groupby([traces, 'tmp_bin'])[var_toplot].mean()
+        for tr in mdf[traces].unique():
+            if xpos is not None:
+                if isinstance(xpos, (int,float)):
+                    if not xoffset:
+                        xpos_tr = traces_tmp[tr].index * xpos + xoffsetval
+                    else:
+                        xpos_tr = traces_tmp[tr].index * xpos
+                        xpos_tr += (xpos_tr[1]-xpos_tr[0])/2
+                else:
+                    raise NotImplementedError('traces just work with xpos=None/float/int, offsetval')
+
+            if traces_rolling: #needs debug
+                y_traces = traces_tmp[tr].rolling(traces_rolling, min_periods=1).mean().values
+            else:
+                y_traces = traces_tmp[tr].values
+            ax.plot(
+                xpos_tr,
+                y_traces,
+                **traces_kw
+            )
+
+
+    
+    return ax
