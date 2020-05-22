@@ -111,7 +111,7 @@ class chom:
                 list(zip(l[:int(tlen/2)], l[int(tlen/2):]))).reshape(-1, 2)
             return o
 
-    def populate_fb_traj(fb_idxs, posedf, part='isnout'):
+    def populate_fb_traj(fb_idxs, posedf, part='rabove-snout'):
         """to apply in fb trajectories, shit happens, adding df(pose) as an arg"""
         if len(fb_idxs):
             o = []
@@ -381,27 +381,30 @@ class chom:
 
     # get active ports with this #allportevents = a.sess.loc[(a.sess.TYPE=='EVENT') & (a.sess['+INFO'].str.startswith('Port')), '+INFO'].unique()
     # set([x[:5] for x in allportevents])
-    @staticmethod  # why not simply (self, port)??
-    def get_port_coord(sessdf, posedf, port):
-        '''port is a string eg Port1; requires fixed_int and self.sess'''
-        ## np.unique(seq.reshape(-1,2), axis=0)
-        seq = sessdf.loc[(sessdf.TYPE == 'EVENT') & ((sessdf['+INFO'] == port+'In')
-                                                     | (sessdf['+INFO'] == port+'Out')), 'MSG'].astype(int).diff().values
-        seq = seq[1:]
-        seq = np.array(seq.tolist()+[1])  # add placeholder in last position
-        findex = sessdf.loc[(sessdf.TYPE == 'EVENT') & ((sessdf['+INFO'] == port+'In') | (
-            sessdf['+INFO'] == port+'Out')), 'fixed_int'].iloc[np.where(seq != 0)[0]].astype(int).values
-        findex = findex.reshape((int(findex.size/2), 2))
-        #framespace = np.arange(0, 1+fok.sess.loc[(fok.sess.TYPE=='EVENT') & ((fok.sess['+INFO']=='Port1In')|(fok.sess['+INFO']=='Port1Out')), 'fixed_int'].iloc[np.where(seq!=0)[0]].max())
-        framespace = np.arange(0, 1+findex.flatten().max())
-        mask = (framespace >= findex[:, 0][:, None]) & (
-            framespace < findex[:, 1][:, None])  # 1 row per event (with its init - end)
-        # this can lead to: 'positional indexeers are out-of-bounds'
-        return posedf.iloc[np.where(mask)[1]].loc[:, 'isnout'].values
+
+    # comment this out because not used at all
+    # TODO: delete this commented function
+    # @staticmethod  # why not simply (self, port)??
+    # def get_port_coord(sessdf, posedf, port, bodypart='rabove-snout'):
+    #     '''port is a string eg Port1; requires fixed_int and self.sess'''
+    #     ## np.unique(seq.reshape(-1,2), axis=0)
+    #     seq = sessdf.loc[(sessdf.TYPE == 'EVENT') & ((sessdf['+INFO'] == port+'In')
+    #                                                  | (sessdf['+INFO'] == port+'Out')), 'MSG'].astype(int).diff().values
+    #     seq = seq[1:]
+    #     seq = np.array(seq.tolist()+[1])  # add placeholder in last position
+    #     findex = sessdf.loc[(sessdf.TYPE == 'EVENT') & ((sessdf['+INFO'] == port+'In') | (
+    #         sessdf['+INFO'] == port+'Out')), 'fixed_int'].iloc[np.where(seq != 0)[0]].astype(int).values
+    #     findex = findex.reshape((int(findex.size/2), 2))
+    #     #framespace = np.arange(0, 1+fok.sess.loc[(fok.sess.TYPE=='EVENT') & ((fok.sess['+INFO']=='Port1In')|(fok.sess['+INFO']=='Port1Out')), 'fixed_int'].iloc[np.where(seq!=0)[0]].max())
+    #     framespace = np.arange(0, 1+findex.flatten().max())
+    #     mask = (framespace >= findex[:, 0][:, None]) & (
+    #         framespace < findex[:, 1][:, None])  # 1 row per event (with its init - end)
+    #     # this can lead to: 'positional indexeers are out-of-bounds'
+    #     return posedf.iloc[np.where(mask)[1]].loc[:, bodypart].values
 
     @staticmethod
     # 2nd function---perhaps I crash the function. If it works relace first one
-    def get_port_coord2(sessdf, posedf, port):
+    def get_port_coord2(sessdf, posedf, port, bodypart='rabove-snout'):
         '''port is a string eg Port1; requires fixed_int and self.sess'''
         ## np.unique(seq.reshape(-1,2), axis=0)
         seq = sessdf.loc[(sessdf.TYPE == 'EVENT') & (
@@ -436,7 +439,7 @@ class chom:
         # print('mask',mask.shape)
         #print('npwhere mask', np.where(mask)[1].shape)
         #print('poses', posedf.shape)
-        return posedf.iloc[np.where(mask)[1]].loc[:, 'isnout'].values
+        return posedf.iloc[np.where(mask)[1]].loc[:, bodypart].values
 
     # , target=self.target) # switch default to normcoords?
     def process(self, normcoords=True, interpolate=False):
@@ -887,8 +890,25 @@ class chom:
         if 'delay' in self.target:
             self.trial_sess['special_trial'] = self.sess.loc[self.sess.MSG ==
                                                              'delay_trial', '+INFO'].astype(int).values[:kek.shape[0]]
+            # here add negative delay for those early trials (labeled as -1 in line above)                                                 
             self.trial_sess['delay_len'] = self.sess.loc[(self.sess.TYPE == 'STATE') & (
-                self.sess.MSG == 'Delay'), '+INFO'].astype(float).values[:kek.shape[0]] * 1000
+                self.sess.MSG == 'Delay'), '+INFO'].astype(float).values[:kek.shape[0]] # removing *1000 to keep in secs
+
+            # edit those which were early (1ms delay till here)
+            earlytrials = np.where(self.trial_sess['special_trial'].values==-1)[0] # 0 based trial index
+            # get those trials last fixation, and -0.3 # for robustnes, some sessions have 50ms early, other 150 and other 250? idk
+            # this strat should work for all of them since fixation time is chosen by an ifelse
+            # if last trial is discarded but marked as early this can raise issues using this loc.
+            # ensure we do nto find index>prunned session length
+            earlytrials = earlytrials[earlytrials<kek.shape[0]]
+            if earlytrials.size:
+                self.trial_sess.loc[earlytrials, 'delay_len'] = ( 
+                                                                df1.loc[
+                                                                    df1.trial_index.isin(earlytrials.astype(float)+1) \
+                                                                        &(df1.TYPE=='STATE')&(df1.MSG=='Fixation')
+                                                                    ].drop_duplicates(subset=['MSG', 'trial_index'],keep='last')
+                                                            )['+INFO'].values.astype(float)-0.3
+
         elif 'silence' in self.target:
             #kek.loc[silent_trial_idx, 'special_trial'] = 2  # silence ones # just replaced this, rollback if crash
             self.trial_sess.loc[silent_trial_idx, 'special_trial'] = 2
@@ -896,13 +916,23 @@ class chom:
             delay_trials = df1.loc[df1.MSG=='delayed_trial', '+INFO'].values.astype(int)
             if delay_trials.size:
                 self.trial_sess.loc[delay_trials, 'special_trial'] = 1
-                self.trial_sess.loc[delay_trials,'delay_len'] = df1.loc[df1.MSG=='expected_delay', '+INFO'].values.astype(float)
+                self.trial_sess.loc[delay_trials,'delay_len'] = df1.loc[df1.MSG=='expected_delay', '+INFO'].values.astype(float) # in seconds
             
             if len(comswitchtrials):
                 self.trial_sess.loc[comswitchtrials-1, 'special_trial'] = 3 # new mark for com-switch-trials
 
             
-            
+        # get fixation onset timestamp
+        fix_onset_state = 'Fixation'
+        if self.newSM:
+            fix_onset_state = 'Fixation_fb'
+        
+        self.trial_sess['fix_onset_dt'] = (
+            df1.loc[(df1.MSG==fix_onset_state)&(df1.TYPE=='TRANSITION')]
+            .drop_duplicates(subset=['MSG', 'trial_index'], keep='last')['PC-TIME']
+            .values[:kek.shape[0]]
+        )
+
         # smooth here
         # alternatively, only smooth the trajectories (we know that the snout likely wont be occluded)
 
@@ -927,8 +957,10 @@ class chom:
             self.pose['rabove-snout', 'y'] = np.nan
 
             # should this center C-port to (0,0)?
-            p1coords, p2coords, p3coords = chom.get_port_coord2(self.sess, self.pose, self.active_ports[0]), chom.get_port_coord2(
-                self.sess, self.pose, self.active_ports[1]), chom.get_port_coord2(self.sess, self.pose, self.active_ports[2])
+            p1coords, p2coords, p3coords = chom.get_port_coord2(self.sess, self.pose, self.active_ports[0], bodypart='isnout'), chom.get_port_coord2(
+                self.sess, self.pose, self.active_ports[1], bodypart='isnout'), chom.get_port_coord2(self.sess, self.pose, self.active_ports[2], bodypart='isnout')
+            # using isnout above because rabove-snout does not exist yet!
+            
             # self.pose['rsnout','x'], self.pose['rsnout','y']= np.nan, np.nan # we will directly place it into isnout_
             p1sd, p2sd, p3sd = p1coords.std(axis=0), p2coords.std(
                 axis=0), p3coords.std(axis=0)
@@ -969,12 +1001,14 @@ class chom:
         self.processed = True
 
     # we can filter later by response side
-    def get_trajectories(self, bodypart='isnout', fixationbreaks=False):
+    def get_trajectories(self, bodypart='rabove-snout', fixationbreaks=False, noffset_frames=2):
         ''' # starts at correct fixation
         requires .process() first
         generates a dictionary of initial_frame and ending frame of trajectories = stored in self.trajectories
         The key for each entry is the frame number.
         isnout = 'inferred snout', check above-snout
+        # noffset_frames, leaving default = 2 because of historical reasons,
+        trajectory frames to shift
         '''
 
         trans = self.sess.loc[self.sess.TYPE == 'TRANSITION']
@@ -1194,16 +1228,16 @@ class chom:
         init_f = []
 
         # old stuff, try vectorized and get all coords (even for weird trials, evaluate later the trials you please) # cannot really vectorize it :(
-        for trial in range(start_traj_vec.size):  # beware offset+2 always!!
+        for trial in range(start_traj_vec.size):  # beware offset+2 always!! ~ this should be removed!!!!!!
             try:
                 init_f += [start_traj_vec[trial]]
                 traj_y_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                        2:end_traj_vec[trial]+3][bodypart, 'y'].values)]  # test, remove
+                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart, 'y'].values)]  # test, remove
                 # hoh huge bug solved
                 traj_x_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                        2:end_traj_vec[trial]+3][bodypart, 'x'].values)]
+                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart, 'x'].values)]
                 traj_vy_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                         2:end_traj_vec[trial]+3][bodypart+'_v', 'y'].values)]
+                                                         noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart+'_v', 'y'].values)]
                 if self.framestamps is not None:
                     traj_stamps += [
                         np.array(self.framestamps[start_traj_vec[trial]+2:end_traj_vec[trial]+3])]
@@ -1739,7 +1773,16 @@ class chom:
         else:
             # get something new # def speed_inflex_delay(speedvec, soundlen, delay, special_trial ,fps=30):
             self.trial_sess['Hesitation'] = (self.trial_sess
-                                             .apply(lambda x: chom.speed_inflex_delay(x['trajectory_vy'], x['sound_len'], x['delay_len'], x['special_trial'], fps=self.fixed_framerate), axis=1))
+                                             .apply(
+                                                 lambda x: chom.speed_inflex_delay(
+                                                     x['trajectory_vy'], 
+                                                     x['sound_len'], 
+                                                     x['delay_len']*1000, # we keep delay in secs now, so multipy it here because function assumes ms input
+                                                     x['special_trial'], 
+                                                     fps=self.fixed_framerate
+                                                    ), axis=1
+                                                )
+                                            )
 
         # Now, just in the ones that Hesitation=True
         self.trial_sess['CoM_sugg'] = False
@@ -1792,7 +1835,10 @@ def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
         com_instance.load(session)
         com_instance.process(normcoords=kwargs['normcoords'])
         if kwargs['analyze_trajectories']:
-            com_instance.get_trajectories(bodypart=kwargs['bodypart'], fixationbreaks=kwargs['fixationbreaks'])
+            com_instance.get_trajectories(
+                bodypart=kwargs.get('bodypart', 'rabove-snout'), 
+                fixationbreaks=kwargs.get('fixationbreaks', False), 
+                noffset_frames=kwargs.get('noffset_frames', 2)) # history
             com_instance.suggest_coms() 
             if com_instance.framestamps is not None:
                 com_instance.trial_sess.loc[:,'framestamps']=True
@@ -1813,7 +1859,7 @@ def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
 # https://yuanjiang.space/threadpoolexecutor-map-method-with-multiple-parameters
 def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=True, 
                     normcoords=True, skip_errors=True, analyze_trajectories=True, sessions={}, parentpath='../data/',
-                    tqdm_notebook=True, pat='p4'):
+                    tqdm_notebook=True, pat='p4', noffset_frames=2, GLM=False, glm_kws={}):
     """to avoid copying extraction scrpt all the way around
     targets = list of subjects
     sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
@@ -1825,7 +1871,8 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
         'bodypart': bodypart,
         'skip_errors': skip_errors,
         'analyze_trajectories': analyze_trajectories,
-        'fixationbreaks': fixationbreaks
+        'fixationbreaks': fixationbreaks,
+        'noffset_frames': noffset_frames
     }
 
     df = pd.DataFrame([])
@@ -1873,6 +1920,10 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
             df['date'] = pd.to_datetime(df.sessid.str[-15:])
             df = df.sort_values(['subjid', 'date']).reset_index(drop=True).drop(columns='date')
 
-        return df
+        if GLM:
+            raise NotImplementedError
+            #return df_modules, glm_mat
+        else:
+            return df
     else:
         return -1

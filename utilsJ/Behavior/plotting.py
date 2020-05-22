@@ -2,6 +2,7 @@
 # this should be renamed to plotting/figures
 from scipy.stats import norm, sem
 from scipy.optimize import minimize
+from scipy import interpolate
 from statsmodels.stats.proportion import proportion_confint
 
 import matplotlib.pyplot as plt
@@ -404,3 +405,177 @@ def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={},
 
     
     return ax
+
+
+def interpolapply(
+    row, stamps='trajectory_stamps', ts_fix_onset='fix_onset_dt',
+    trajectory='trajectory_y',resp_side='R_response', collapse_sides=False, 
+    interpolatespace=np.linspace(-700000,1000000, 1000), fixation_us=300000, # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
+    align='action'
+): # we can speed up below funcction for trajectories
+    #for ii,i in enumerate(idx_dic[b]):
+
+    # think about discarding first few frames from trajectory_y because they are noisy (due to camera delay they likely belong to previous state)
+    x_vec = []
+    y_vec = []
+    try:
+        x_vec = (row[stamps] - np.datetime64(row[ts_fix_onset]))#.astype(float) # aligned to fixation onset (0) using timestamps
+        # by def 0 aligned to fixation    
+        if align == 'sound': 
+            x_vec = (x_vec-np.timedelta64(fixation_us , 'us')).astype(float)
+        elif align == 'action':
+            x_vec = (x_vec - np.timedelta64(int(fixation_us + (row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
+        else:
+            x_vec=x_vec.astype(float)
+
+
+        # else it is aliggned with
+        y_vec = row[trajectory] 
+        if collapse_sides: 
+            if row[resp_side]==0: # do we want to collapse here? # should be filtered so yes
+                y_vec = y_vec*-1
+        f = interpolate.interp1d(x_vec, y_vec, bounds_error=False, fill_value=(y_vec[0],y_vec[-1])) # without fill_value it fills with nan
+        out = f(interpolatespace)    
+        return out
+    except Exception as e:
+        print(e) 
+        return np.array([np.nan]*interpolatespace.size)
+
+
+def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
+    stamps='trajectory_stamps',threshold_only=True, xticklock=None, ax=None, fpsmin=29,
+    fixation_us = 300000, collapse_sides=False, return_trash=False,
+    interpolatespace=np.linspace(-700000,1000000, 1700), zeropos_interp = 700,
+    fixation_delay_offset=0, error_kwargs={'ls':'none'}, ax_traj=None,
+    traj_kws={}, ts_fix_onset='fix_onset_dt', align='action'):
+    """
+    This changed a lot!, review default plots
+    Exclude invalids
+    atm this will only retrieve data, not plotting if ax=None 
+    # if a single bin, both edges must be provided
+    fpsmin: minimum fps to consider trajectories
+    if duplicated indexes in df this wont work
+
+    fixation_delay_offset = 300-fixation state lenght (ie new state matrix should use 80)
+    # """
+    if (fixation_us != 300000) or (fixation_delay_offset!=0):
+        print('fixation and delay offset should be adressed and you should avoid tweaking defaults')
+
+    if df['R_response'].unique().size>1:
+        print(f'Warning, found more than a single response {df.R_response.unique()}\n this will default to collapsing them')
+    
+    if (df.index.value_counts()>1).sum():
+        raise IndexError('input dataframe contains duplicate index entries hence this function would not work propperly')
+    
+
+    matrix_dic = {}
+    idx_dic = {}
+
+    # errorplot to threshold!
+    xpoints =  (bins[:-1]+bins[1:])/2
+    y_points = []
+    y_err = []
+    ### del
+
+    test = df.loc[df.framerate>=fpsmin]
+    for b, bin_edge in enumerate(bins[:-1]): # if a single bin, both edges must be provided
+        idx_dic[b] = test.loc[(test[bincol]>bin_edge)&(test[bincol]<bins[b+1])].index.values
+        matrix_dic[b] = np.zeros((idx_dic[b].size, interpolatespace.size))
+
+
+        matrix_dic[b] = np.concatenate(test.loc[idx_dic[b]].swifter.apply(
+            lambda x: interpolapply(x, collapse_sides=collapse_sides, interpolatespace=interpolatespace, align=align),
+            axis=1
+        ).values).reshape(-1, interpolatespace.size)
+
+        y_point_list = []
+        for row in range(matrix_dic[b].shape[0]):
+            if np.isnan(matrix_dic[b][row, 0]):
+                continue
+            else:
+                if (thr>0) or collapse_sides:
+                    y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr)] # threshold in pixels # works fine
+                else:
+                    y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr)] # assumes neg thr = left trajectories / so it is sorted
+                # this threshold should be addressed when collapse sides = false
+                # current iteration
+
+        y_point = np.nanmean(np.array(y_point_list)) # no need to substract anythng because it is aligned by zeropos_interp
+        #print(y_point)
+        y_points += [y_point]
+        y_err += [sem(np.array(y_point_list), nan_policy='omit')]
+
+
+
+
+        # plot section
+   
+        if ax_traj is not None:
+            ax_traj.plot(
+                (interpolatespace)/1000, 
+                np.nanmedian(matrix_dic[b], axis=0), **traj_kws
+                )
+
+
+
+    y_points = np.array(y_points)
+    y_err = np.array(y_err)
+
+
+
+    if ax is not None:
+        ax.errorbar(
+                xpoints, y_points+fixation_delay_offset, yerr=y_err, **error_kwargs
+            ) # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
+
+        return ax
+
+    elif not return_trash:
+        return xpoints, y_points+fixation_delay_offset, y_err
+    else: # with matrix dic we can compute median trajectories etc. for the other plot
+        return xpoints, y_points+fixation_delay_offset, y_err, matrix_dic, idx_dic
+
+
+    
+
+
+# old sections for trajectories
+
+        # ## TODO: replace this with a function and apply it using pandas.swifter.apply
+        # for ii,i in enumerate(idx_dic[b]):
+        #     x_vec = []
+        #     y_vec = []
+        #     try:
+        #         x_vec = test.loc[i,stamps]
+        #         if ts_fix_onset is None:
+        #             resp_onset = (fixation_us + (test.loc[i, 'sound_len'] * 10**3)).astype(int) # * 10**3 ?? # this one is not for binning
+        #             x_vec = x_vec-x_vec[0] - np.timedelta64(resp_onset, 'us') # this would be fine if first frame from trajectory
+        #             # was aligned with fixation onset, which is not the case.
+        #         else:
+        #             x_vec -= test.loc[i, ts_fix_onset] 
+
+        #         # is it possible to find this time_gap without reprocessing everything?=!
+        #         x_vec = x_vec.astype(float)
+        #         y_vec = test.loc[i, trajectory] 
+
+        #         ##
+        #         if offset_frame_correction:
+        #             y_vec = np.concatenate(([y_vec[0]]*offset_frame_correction, y_vec[:-offset_frame_correction])) # since There was a +2 offset in the extraction function
+        #         if collapse_sides: 
+        #             if test.loc[i,'R_response']==0: # do we want to collapse here? # should be filtered so yes
+        #                 y_vec = y_vec*-1
+        #         if x_vec.size!=y_vec.size:
+        #             print(f'vec sizes differ t:{x_vec.size} vs y_vec:{y_vec.size}')
+        #         f = interpolate.interp1d(x_vec, y_vec, bounds_error=False, fill_value=y_vec[-1]) # without fill_value it fills with nan
+        #         matrix_dic[b][ii,:] = f(newx)    
+        #     except Exception as e: 
+        #         print(f'error in idx {i}: {e} ') # can get very spammy
+        #         matrix_dic[b][ii,:]= np.nan
+
+        #test and then replace above loop for ii, i...
+
+
+            # if y_point>0:
+    #     yoffset=0
+    #     if subj in [f'LE{x}' for x in range(82,88)]:
+    #         yoffset = 80
