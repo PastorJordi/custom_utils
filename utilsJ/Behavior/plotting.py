@@ -410,8 +410,8 @@ def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={},
 def interpolapply(
     row, stamps='trajectory_stamps', ts_fix_onset='fix_onset_dt',
     trajectory='trajectory_y',resp_side='R_response', collapse_sides=False, 
-    interpolatespace=np.linspace(-700000,1000000, 1000), fixation_us=300000, # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
-    align='action'
+    interpolatespace=np.linspace(-700000,1000000, 1701), fixation_us=300000, # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
+    align='action', interp_extend=True
 ): # we can speed up below funcction for trajectories
     #for ii,i in enumerate(idx_dic[b]):
 
@@ -434,7 +434,10 @@ def interpolapply(
         if collapse_sides: 
             if row[resp_side]==0: # do we want to collapse here? # should be filtered so yes
                 y_vec = y_vec*-1
-        f = interpolate.interp1d(x_vec, y_vec, bounds_error=False, fill_value=(y_vec[0],y_vec[-1])) # without fill_value it fills with nan
+        if interp_extend:
+            f = interpolate.interp1d(x_vec, y_vec, bounds_error=False, fill_value=(y_vec[0],y_vec[-1])) # without fill_value it fills with nan
+        else:
+            f = interpolate.interp1d(x_vec, y_vec, bounds_error=False) # should fill everything else with NaNs
         out = f(interpolatespace)    
         return out
     except Exception as e:
@@ -447,7 +450,7 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
     fixation_us = 300000, collapse_sides=False, return_trash=False,
     interpolatespace=np.linspace(-700000,1000000, 1700), zeropos_interp = 700,
     fixation_delay_offset=0, error_kwargs={'ls':'none'}, ax_traj=None,
-    traj_kws={}, ts_fix_onset='fix_onset_dt', align='action'):
+    traj_kws={}, ts_fix_onset='fix_onset_dt', align='action', interp_extend=True):
     """
     This changed a lot!, review default plots
     Exclude invalids
@@ -461,8 +464,8 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
     if (fixation_us != 300000) or (fixation_delay_offset!=0):
         print('fixation and delay offset should be adressed and you should avoid tweaking defaults')
 
-    if df['R_response'].unique().size>1:
-        print(f'Warning, found more than a single response {df.R_response.unique()}\n this will default to collapsing them')
+    #if df['R_response'].unique().size>1: # not true anymore, right?
+    #    print(f'Warning, found more than a single response {df.R_response.unique()}\n this will default to collapsing them')
     
     if (df.index.value_counts()>1).sum():
         raise IndexError('input dataframe contains duplicate index entries hence this function would not work propperly')
@@ -476,27 +479,46 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
     y_points = []
     y_err = []
     ### del
-
+    ### TODO: adapt to not using bins if already grouped
+    ### like bins=False / float
     test = df.loc[df.framerate>=fpsmin]
+
+
     for b, bin_edge in enumerate(bins[:-1]): # if a single bin, both edges must be provided
         idx_dic[b] = test.loc[(test[bincol]>bin_edge)&(test[bincol]<bins[b+1])].index.values
         matrix_dic[b] = np.zeros((idx_dic[b].size, interpolatespace.size))
 
 
         matrix_dic[b] = np.concatenate(test.loc[idx_dic[b]].swifter.apply(
-            lambda x: interpolapply(x, collapse_sides=collapse_sides, interpolatespace=interpolatespace, align=align),
+            lambda x: interpolapply(x, collapse_sides=collapse_sides, interpolatespace=interpolatespace, align=align, interp_extend=interp_extend),
             axis=1
         ).values).reshape(-1, interpolatespace.size)
 
         y_point_list = []
         for row in range(matrix_dic[b].shape[0]):
-            if np.isnan(matrix_dic[b][row, 0]):
+            if np.isnan(matrix_dic[b][row,:]).sum()==matrix_dic[b].shape[1]: # all row is nan
                 continue
             else:
                 if (thr>0) or collapse_sides:
-                    y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr)] # threshold in pixels # works fine
+                    # replacing old strategy because occasional nans might break code
+                    #y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr)] # threshold in pixels # works fine
+                    # https://stackoverflow.com/questions/27255890/numpy-searchsorted-for-an-array-containing-numpy-nan
+                    arg_sorted = np.argsort(matrix_dic[b][row,zeropos_interp:])
+                    tmp_ind = np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr, sorter=arg_sorted)
+                    try:
+                        y_point_list += [arg_sorted[tmp_ind]] # if it is outside is because never reached thr
+                    except:
+                        y_point_list += [np.nan]
                 else:
-                    y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr)] # assumes neg thr = left trajectories / so it is sorted
+                    #old
+                    #y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr)] # assumes neg thr = left trajectories / so it is sorted
+                    arg_sorted = np.argsort(matrix_dic[b][row,zeropos_interp:]*-1)
+                    tmp_ind = np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr, sorter=arg_sorted)
+                    try:
+                        y_point_list += [arg_sorted[tmp_ind]] # if it is outside is because never reached thr
+                    except:
+                        y_point_list += [np.nan]
+                
                 # this threshold should be addressed when collapse sides = false
                 # current iteration
 
