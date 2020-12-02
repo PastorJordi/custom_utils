@@ -10,6 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from concurrent.futures import as_completed, ProcessPoolExecutor
 import tqdm
+from utilsJ.Behavior.glm2afc import piped_moduleweight
 
 
 
@@ -123,7 +124,7 @@ class chom:
 
     @staticmethod
     def sess_info(df):  # is this even used?
-        # todo: add{repetitive cols which coul be replaced by integers: ie sessionnames, subjids, task, rotations/activeports, meanframerate?}
+        # TODO: add{repetitive cols which coul be replaced by integers: ie sessionnames, subjids, task, rotations/activeports, meanframerate?}
         try:
             sess_name = df.loc[df.MSG == 'SESSION-NAME', '+INFO'].values[0]
         except:
@@ -251,6 +252,30 @@ class chom:
             for item in args:
                 if item not in helpdict.keys():
                     print(f'did not understand "{item}"')
+                    print(
+                    f'use .help(topic) for further info among those: {list(helpdict.keys())}')
+                    print(
+                    """
+                    Usual flow is: 
+                    object = chom('LEXX', parent='../data/', analyze_trajectories) # this last one makes a diff! 
+                    .load_available(kwargs) # just required if changing defaults or plotting
+                    .load(target) | list of available sessions stored in .available 
+                    .process(normcoords=True, interpolate=False)
+                    .get_trajectories(bodypart='rabove-snout', fixationbreaks=True)
+                        bodypart: tracking reference to get trajectories. ['rabove-snout', 'isnout']
+                        fixationbreaks: whether to extract fb trajectories or not
+                    .suggest_coms()
+                    everything should be stored in those attributes
+                        .trial_sess: stuff sorted in trial basis
+                        .poses: dlc output
+                        .sess: raw bpod output
+                        .framestamps: raw npy framestamps
+                        .trajectories: dic containing trial trajectories start & end frame idx
+
+                    or simply:
+                    df =  extraction_pipe(subjlist, **kwargs)
+                        """
+                    )
                 else:
                     # commenting this out idk where it comes from : available
                     print(item)
@@ -325,7 +350,7 @@ class chom:
             raise NotImplementedError
 
     # experimenter, box, task, num trials etc.. few descriptives a little more in depth than load available
-    def describe_sessions(self, df=None, pattern=None, deep=False, njobs=1):
+    def describe_sessions_pre(self, df=None, pattern=None, deep=False, njobs=1):
         """pattern should be either a string or a function which operates with list of session rawnames (LEXX_....csv) and returns a list
         deep= whether to look for coms and extra process
         df= df which contain already processed sessions, uses pattern in sessid"""
@@ -345,14 +370,18 @@ class chom:
             raise ValueError('empty list of selected sessions')
         raise NotImplementedError
 
+    def describe_sessions_post(): # once analysis is complete
+        return None
+
     def load(self, target):  # target should be one of the available sessions
         self.target = target
         self.sess = pd.read_csv(
             self.CSVS_PATH+target+chom.csv_ext, sep=';', skiprows=6, error_bad_lines=False)
         self.sess['PC-TIME'] = pd.to_datetime(self.sess['PC-TIME'])
-        self.pose = pd.read_hdf(
-            self.POSES_PATH+target+chom.pose_ext).xs(chom.pose_ext[:-3], axis=1, drop_level=True)
+        
         self.info = chom.sess_info(self.sess)
+        # TODO: if stored as metadata add fullpath location when this is called for ease of use later!
+
         # sessions with new state machine diagram
         if any([True if x in target else False for x in ['noenv', 'feedback']]):
             self.newSM = True
@@ -367,6 +396,8 @@ class chom:
         ) if x in self.sess.loc[self.sess.TYPE == 'EVENT', 'MSG'].astype(int).unique()])
         if self.analyze_trajectories:
             try:
+                self.pose = pd.read_hdf(
+                    self.POSES_PATH+target+chom.pose_ext).xs(chom.pose_ext[:-3], axis=1, drop_level=True)
                 self.framestamps = np.load(
                     self.VIDEOS_PATH+target+'.npy', allow_pickle=True)
                 # if self.framestamps.dtype is np.dtype(np.object): # idk if this will work: https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
@@ -680,7 +711,8 @@ class chom:
                                     rewside[int(tr)-1]= 0
                         except Exception as e:
                             print(f'could not elucidate which was the reward side in trial {tr}\n{e}')
-                else: # issue solved in vers 0.3!
+                else: # issue solved in vers >0.3!
+                    # this should remain the same in 0.5 (another issue solved)
                     # just invert rewside in those trials
                     comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values.astype(int) # 1 based to keep it the same way than previous if
                     rewside[comswitchtrials-1] = (rewside[comswitchtrials]-1)**2
@@ -1232,15 +1264,15 @@ class chom:
             try:
                 init_f += [start_traj_vec[trial]]
                 traj_y_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart, 'y'].values)]  # test, remove
+                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart, 'y'].values)]  # test, remove
                 # hoh huge bug solved
                 traj_x_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart, 'x'].values)]
+                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart, 'x'].values)]
                 traj_vy_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                         noffset_frames:end_traj_vec[trial]+noffset_frames+1][bodypart+'_v', 'y'].values)]
+                                                         noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart+'_v', 'y'].values)]
                 if self.framestamps is not None:
                     traj_stamps += [
-                        np.array(self.framestamps[start_traj_vec[trial]+2:end_traj_vec[trial]+3])]
+                        np.array(self.framestamps[start_traj_vec[trial]+noffset_frames:end_traj_vec[trial]+noffset_frames+6])]
             except:
                 traj_y_list += [np.empty(0)]
                 traj_vy_list += [np.empty(0)]
@@ -1832,9 +1864,10 @@ def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
     # unpack because of the single argument * concurrent-futures shit
     com_instance, session, kwargs = inarg[0], inarg[1], inarg[2]
     try:
+        com_instance.load_available()
         com_instance.load(session)
         com_instance.process(normcoords=kwargs['normcoords'])
-        if kwargs['analyze_trajectories']:
+        if kwargs['analyze_trajectories']==True:
             com_instance.get_trajectories(
                 bodypart=kwargs.get('bodypart', 'rabove-snout'), 
                 fixationbreaks=kwargs.get('fixationbreaks', False), 
@@ -1859,10 +1892,14 @@ def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
 # https://yuanjiang.space/threadpoolexecutor-map-method-with-multiple-parameters
 def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=True, 
                     normcoords=True, skip_errors=True, analyze_trajectories=True, sessions={}, parentpath='../data/',
-                    tqdm_notebook=True, pat='p4', noffset_frames=2, GLM=False, glm_kws={}):
+                    tqdm_notebook=True, pat='p4', noffset_frames=0, GLM=False, glm_kws={
+                        'lateralized':True, 'dual':True, 'plot':False, 'plot_kwargs':{}, 'filtermask':None, 
+                        'noenv':False, 'savdir':'', 'fixedbias':True, 'return_coefs':True, 'subjcol':'subjid'
+                    }):
     """to avoid copying extraction scrpt all the way around
     targets = list of subjects
     sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
+                (ie needs matching target list)
     pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
     Poggers bar: https://github.com/tqdm/tqdm/issues/484"""
     assert isinstance(targets, list)
@@ -1878,7 +1915,7 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
     df = pd.DataFrame([])
     for subj in targets:
         com_instance = chom(subj, parentpath=parentpath, analyze_trajectories=analyze_trajectories)
-        
+        com_instance.load_available() # I think default load available uses analyze_trajectories=True
         subj_sess = [x for x in com_instance.available if pat in x]
         if sessions:
             if subj not in sessions.keys():
@@ -1921,9 +1958,119 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
             df = df.sort_values(['subjid', 'date']).reset_index(drop=True).drop(columns='date')
 
         if GLM:
-            raise NotImplementedError
-            #return df_modules, glm_mat
+            if not glm_kws:
+                raise NotImplementedError('default kws not ready yet')
+            df, glm_out = piped_moduleweight(
+                df, **glm_kws
+            )
+            return df, glm_out
         else:
             return df
     else:
         return -1
+
+
+# def piped_moduleweight(
+#     df,lateralized=True, dual=True, plot=False, plot_kwargs={}, filtermask=None, 
+#     noenv=False, savdir='', fixedbias=True, return_coefs=False, subjcol=None
+# ):
+
+def build_videos_single(df, dfindex, outvidobject, pose_ext='DeepCut_resnet50_metamix2019Jul03shuffle1_1030000.h5',
+    constant_text=None, write_custom=None):
+    """once we have complete dataframe, we can build videos of interest sections (trajectories)
+    df: trial-based pandas dataframe
+    dfindex: index of the above dataframe to slice vid frames (integer)
+    outvidobject: cv2 videowriter object where the frames will be appended
+    constant_text: str to write in those frames; can be str (msg) or touple (str, coord)
+    write_custom: custom function to be called in order to write/draw other stuff
+    
+    
+    example in action:
+    ----------------------------------------------------------------------------------------
+    a = df.loc[~(df.dirty)&(df.CoM_sugg==True), :].sort_values(by='y_com').index # sortwhatever trials you want to compile
+    fourcc = cv2.VideoWriter_fourcc(*'X264') # codec
+    out_test = 'CoM_noenv_nodirty.avi' # filename
+    outvid_all = cv2.VideoWriter(out_test, fourcc, 30.0, (640,480)) # create videowriter object
+
+    for trial in tqdm_notebook(a): # loop
+        feed_frames(df,trial, outvid_all)
+        
+    outvid_all.release()
+    """
+    subj = df.loc[dfindex, 'subjid']
+    targ = df.loc[dfindex, 'sessid']
+    invideo_dir = f'../data/{subj}/videos/{targ}.avi'
+    intraj_dir = f'../data/{subj}/poses/{targ}{pose_ext}'
+    pose = pd.read_hdf(intraj_dir).xs(pose_ext[:-3], axis=1, drop_level=True)
+
+    startf = df.loc[dfindex, 'vidfnum']-5
+    endf = startf + len(df.loc[dfindex, 'trajectory_y'])+15
+    cap = cv2.VideoCapture(invideo_dir)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, startf)
+    #ycom = round(df.loc[dfindex, 'y_com'], 1)
+    traj_as = list(pose.iloc[startf:endf].loc[:,('above-snout', ('x','y'))].values)
+    traj_sn = list(pose.iloc[startf:endf].loc[:,('snout', ('x','y'))].values)
+    sfail = df.loc[dfindex, 'soundrfail']
+    for i, f in enumerate(range(startf, endf)):
+        ret, frame = cap.read()
+        if ret:
+            cv2.putText(frame, targ + '; #f: ' +str(f), # + ' y_px(AS) = ' + str(ycom),
+                                           (10, 30),
+                                           cv2.FONT_HERSHEY_DUPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            if sfail:
+                cv2.putText(frame, 'no sound',(30, 430), cv2.FONT_HERSHEY_DUPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.circle(frame, tuple(traj_as[i].astype(int).tolist()), 3, (0,255,0), -1)
+            cv2.circle(frame, tuple(traj_sn[i].astype(int).tolist()), 3, (0,0,255), -1)
+            outvidobject.write(frame)
+    cap.release()
+
+# def build_videos_threaded():
+# """"build lots of them and concatenate them using ffmpeg""""
+
+def build_videos_trial(df, trial_number,show_states=True, framerate=None,
+    videoobject=None, savpath='./', coords=True
+):
+    """build a video from a particular trial to check whats going on
+    df = session dataframe (chom.sess) # substitute by session_name and trialnumber
+    trial number to show,
+    whether to write state transitions in the video or not!
+    framerate of out video (none will pick inferred fps, not taken into account if video
+                            objct is provided)
+    videoobject = preexisting cv2.videowriter obj
+    savpath: where to save the video in case it is not already provided
+    coords overlay"""
+    raise NotImplementedError('incomplete')
+    session_name = df.loc[df.MSG=='SESSION-NAME', '+INFO'].values[0]
+    if not savpath.endswith('/'):
+        savpath += '/'
+    if videoobject is None: #create videoobject
+        fourcc = cv2.VideoWriter_fourcc(*'X264')
+        
+        finalname = savpath+session_name+'.avi'
+
+
+def stack_sessions_by_day(df, normalized=False ,consecutive=True):
+    """input prototypical df, returns pd.Series of the new col containing either full sessidx
+    (normalized=False) or normalized one.
+    Consecutive=False, pending to implement"""
+    if not consecutive:
+        raise NotImplementedError('do it!')
+    # pretest and warn
+    if (np.diff(df.index.values)!=1).sum():
+        warnings.warn('Non-consecutive index detected. Requires consecutive trials else this will malfunction')
+    df['trainingdayrat'] = np.nan
+    df['tmpdate'] = pd.to_datetime(df.sessid.str[-15:])
+    first_day_sess = df.set_index('tmpdate').groupby([pd.Grouper(freq='D'), 'subjid'])['sessid'].agg('first').values
+    ntrials_day = df.set_index('tmpdate').groupby([pd.Grouper(freq='D'), 'subjid'])['subjid'].agg('count').values
+    df.loc[(df.origidx==1) & df.sessid.isin(first_day_sess), 'trainingdayrat'] = np.arange(first_day_sess.size)
+    df.trainingdayrat.fillna(method='ffill', inplace=True)
+
+    if normalized:
+        out = pd.Series(np.concatenate([np.arange(1,x+1)/x for x in ntrials_day]), index=df.index, name='daystacknorm')
+    else:
+        out = pd.Series(np.concatenate([np.arange(1,x+1) for x in ntrials_day]), index=df.index, name='daystack')
+    
+    df.drop(columns=['tmpdate', 'trainingdayrat'], inplace=True)
+
+    return out
+    

@@ -28,6 +28,7 @@ import seaborn as sns
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
 import warnings 
+import re
 
 
 # In[4]:
@@ -210,6 +211,8 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     if not noenv:
         if stimlength==1:
             fail_flag = True
+        else:
+            fail_flag = False
         df = pd.concat(
             [
                 df,
@@ -373,7 +376,7 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     return df  # resulting df with lateralized T+
 
 
-def check_colin(df, lateralized=False ,dual=True, noenv=False):
+def check_colin(df, lateralized=False ,dual=True, noenv=False, clustermap=False):
     """plots matrix
     df is the preprocessed dframe,
     dual = aftercorrect/aftererror,
@@ -385,37 +388,51 @@ def check_colin(df, lateralized=False ,dual=True, noenv=False):
             zip(["after correct", "after error"], [afterc_cols, aftere_cols])
         ):
             _, ax = plt.subplots(figsize=(16, 16))
-            sns.heatmap(
-                df.loc[df.aftererror == j, cols].fillna(value=0).corr(),
-                vmin=-1,
-                vmax=1,
-                cmap="coolwarm",
-                ax=ax,
-            )
+            cdata = df.loc[df.aftererror == j, cols].fillna(value=0).corr()
+            if clustermap:
+                sns.clustermap(cdata, ax=ax)
+            else:
+                sns.heatmap(
+                    cdata,
+                    vmin=-1,
+                    vmax=1,
+                    cmap="coolwarm",
+                    ax=ax,
+                )
             ax.set_title(t)
             plt.show()
     else:
         model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
 
-        fig, ax = plt.subplots(figsize=(16, 16))
-        sns.heatmap(
-            df.loc[:, model_cols].fillna(value=0).corr(),
-            vmin=-1,
-            vmax=1,
-            cmap="coolwarm",
-            ax=ax,
-        )
+        _, ax = plt.subplots(figsize=(16, 16))
+        cdata = df.loc[:, model_cols].fillna(value=0).corr()
+        if clustermap:
+            sns.clustermap(cdata, ax=ax)
+        else:
+            sns.heatmap(
+                cdata,
+                vmin=-1,
+                vmax=1,
+                cmap="coolwarm",
+                ax=ax,
+            )
         ax.set_title("single")
         plt.show()
 
 
-def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''):
+def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir='', link=None, L2_alpha=1.0):
     """perhaps iwont implement the splitting but w/e idk atm
     futureme: wth is split
     # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
+    # later me, retry using regularized statsmodels
+    # notable link functions for binomial = {logit, probit, ...} [we can pass directly a scipy cdf with CDFlink([dbn])]
+    # more docu here https://www.statsmodels.org/0.6.1/glm.html | also how to implement weibull: http://courses.washington.edu/matlab1/Lesson_5.html
+    # fitting issues https://stackoverflow.com/questions/17481672/fitting-a-weibull-distribution-using-scipy
+    L2 alpha just works when providing link
     """
     #warnings.filterwarnings("ignore")
-    
+    if link is not None:
+        NotImplementedError('link and regularization still not implemented')
     if lateralized and noenv:
         NotImplementedError('cannot lateralized AND noenv')
     
@@ -456,14 +473,31 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
             n_jobs=-1,
         )
         Lreg_ae.fit(X_df_ae.values, y_df_ae.values)
-        sm_logit_ac = sm.Logit(y_df_ac.values, X_df_ac.values)
-        result_ac = sm_logit_ac.fit(
-            method="bfgs", maxiter=10 ** 8
-        )  # start_params=Lreg_ac.coef_ # alpha=1.3 # start_params=Lreg_ac.coef_
-        sm_logit_ae = sm.Logit(y_df_ae.values, X_df_ae.values)
-        result_ae = sm_logit_ae.fit(
-            method="bfgs", maxiter=10 ** 8
-        )  # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
+        if link is None:
+            sm_logit_ac = sm.Logit(y_df_ac.values, X_df_ac.values)
+            sm_logit_ae = sm.Logit(y_df_ae.values, X_df_ae.values)
+            result_ac = sm_logit_ac.fit(
+                method="bfgs", maxiter=10 ** 8
+            ) 
+            result_ae = sm_logit_ae.fit(
+                method="bfgs", maxiter=10 ** 8
+            )
+        else:
+            fit_reg_kws = dict(method='elastic_net', alpha=L2_alpha, L1_wt=0.0)
+            chosenlink = getattr(sm.families.family.Binomial.links, link)
+            sm_logit_ac = sm.GLM(y_df_ac.values, X_df_ac.values,
+            family=sm.families.Binomial(link=chosenlink))
+            sm_logit_ae = sm.GLM(y_df_ae.values, X_df_ae.values,
+            family=sm.families.Binomial(link=chosenlink))
+            result_ac = sm_logit_ac.fit_regularized(**fit_reg_kws)
+            result_ae = sm_logit_ae.fit_regularized(**fit_reg_kws)
+            
+         # start_params=Lreg_ac.coef_ # alpha=1.3 # start_params=Lreg_ac.coef_
+        
+        # this can be replaced with:
+        # sm_logit_ae = sm.GLM(y_df, X_df, family=sm.families.Binomial(link=sm.families.links.logit)) # or links.probit
+        # then: .fit_regularized(method='elastic_net', alpha=1.0, L1_wt=0.0) # so it just uses L2 and we do not lose regressors
+          # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
         if plot:
             if savdir: # ie savdir==''
                 pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
@@ -856,7 +890,7 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             )
     else:
         interestcols = np.where(targ_df1.columns.str.startswith("S"))[0]
-        f, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
+        _, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
         ax = ax.flatten()
         ax[0].plot(
             np.arange(interestcols.size),
@@ -1557,13 +1591,17 @@ def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
     # #         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
 
-def piped_moduleweight(df,lateralized=True, dual=True, plot=False, plot_kwargs={}, filtermask=None, noenv=False, savdir='', fixedbias=True):
+def piped_moduleweight(
+    df,lateralized=True, dual=True, plot=False, plot_kwargs={}, filtermask=None, 
+    noenv=False, savdir='', fixedbias=True, return_coefs=False, subjcol='subjid'
+):
     """"pipe to preprocess + glm + get module weight, 
     so everything could run in local scope (loop) and returns module weight
     without storing inbetween stuff (Glm weights and diverse regressor matrices)
     
-    df: dataframe, asumes it is from a single animal containing several sessions and kwargs correspond to it
+    df: dataframe, if subjcol==None#assumes it is from a single animal containing several sessions and kwargs correspond to it
     filtermask = rows to filter (eg combo of df.sound_len<=400 & df.resp_len<=1)
+    # aka which trials to exclude from the fitting procedure (should contain invalids etc.)
     
     returns same df + extra component cols (excluded rows=np.nan) 
 
@@ -1590,37 +1628,182 @@ def piped_moduleweight(df,lateralized=True, dual=True, plot=False, plot_kwargs={
         else:
             df.loc[df.subjid==subj] = glm2afc.piped_moduleweight(df.loc[(df.subjid==subj)], filtermask=mask, noenv=True, lateralized=False)
     """
-    # origcol = df.columns
-    tempdf = preprocess(df.copy(deep=True), lateralized=lateralized, noenv=noenv)
-
-    #now that we do not need them to be aligned, we can apply filters/mask
-
-    if filtermask is None:
-        # define default mask 
-        raise NotImplementedError('standard mask is not yet written')
-    elif isinstance(filtermask, (np.ndarray, pd.Series, pd.core.series.Series)): # bool # array is a bad idea
-        tempdf = tempdf[filtermask]
-    elif isinstance(filtermask, str):
-        tempdf = tempdf.query(filtermask)
-    
-    tempdic = exec_glm(tempdf, dual=dual, plot=plot, lateralized=lateralized, savdir='', noenv=noenv)
-    tempdf = get_module_weight(tempdf, tempdic, lateralized=lateralized, noenv=noenv, fixedbias=fixedbias) # filtered rows!
-
-    # KeyError: "None of [Index(['S'], dtype='object')] are in the [index]"
-
-
-    newcols = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(dual*1)
+    # create new columns in df
+    newcols = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(dual*1) # does it crash or something?
     if dual:
         prefix = 'dW_'
     else:
         prefix = 'sW_'
 
     newcols = [f'{prefix}{x}' for x in newcols]
-    
     # try omitting this    
     for col in newcols:
        df.loc[:,col] = np.nan
 
-    df.loc[tempdf.index, newcols] = tempdf[newcols]
+    outdic = {}
+       
+    for subj in df[subjcol].unique():
+        tempdf = preprocess(df.loc[df[subjcol]==subj].copy(deep=True), lateralized=lateralized, noenv=noenv)
+
+        #now that we do not need them to be aligned, we can apply filters/mask
+        if filtermask is None:
+            print('using default mask, review it:')
+            print('sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0')
+            tempdf = tempdf.query('sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0')
+        elif isinstance(filtermask, (np.ndarray, pd.Series, pd.core.series.Series)): # bool # array is a bad idea
+            tempdf = tempdf[filtermask]
+        elif isinstance(filtermask, str):
+            tempdf = tempdf.query(filtermask)
+        
+        
+        tempdic = exec_glm(tempdf, dual=dual, plot=plot, lateralized=lateralized, savdir='', noenv=noenv)
+        tempdf = get_module_weight(tempdf, tempdic, lateralized=lateralized, noenv=noenv, fixedbias=fixedbias) # filtered rows!
+
+        if return_coefs:
+            outdic[subj] = tempdic
+
+        # KeyError: "None of [Index(['S'], dtype='object')] are in the [index]"
+        df.loc[tempdf.index, newcols] = tempdf[newcols]
     
-    return df
+    if return_coefs:
+        pass
+        return df, outdic
+    else:
+        return df
+
+# get some civil & structured functions to plot all pannels
+# which do not require more info than it should, aka (targdf),
+# so we can call it just with statsmodels summary dframe!
+
+def civil_plot(xlabels, summary, ax=None, 
+    error_kws={'marker':'o', 'capsize':2}, 
+    sign_kws={'marker':'*', 'zorder':3}, 
+    signiff_offset=0.1, c=None, label=None,
+    arrange_labels=False 
+):
+    """
+    simple function to search xlabels in statsmodels summary and plot it 
+    signiff_offset: displacement of stars
+    c: if not none overrides default colorcycle
+    It will trigger several warnings by comparing with nans and using keys which do not exist!
+    Arrange labels= force using integers contained in label to avoid other problems (total ticks)
+    """
+    assert ax is not None, 'provide axis'
+
+    # adding shortcuts for oftenly used kwords
+    if c is not None:
+        error_kws['color']=c
+        sign_kws['color']=c
+    if label is not None:
+        error_kws['label'] = label
+    
+    if not isinstance(xlabels, np.ndarray):
+        xlabels = np.array(xlabels, dtype=object)
+    
+    signifposition = (summary.loc[xlabels, "P>|z|"].values < 0.05)
+    if arrange_labels:
+        xpos = []
+        for item in xlabels:
+            cstr = ''
+            for char in item:
+                if char.isdigit():
+                    cstr += char
+            xpos += [int(cstr)]
+        xpos = np.array(xpos)-1
+        xposs = np.where(summary.loc[xlabels, "P>|z|"].values < 0.05)[0]
+    else:
+        xpos = xlabels
+        xposs = xlabels[signifposition]
+
+    
+
+    # errors
+    ax.errorbar(
+        xpos,
+        summary.loc[xlabels, 'coef'],
+        yerr=summary.loc[xlabels, 'std err'],
+        **error_kws
+    )
+    # stars
+    ax.scatter(
+        xposs,
+        summary.loc[xlabels[signifposition], 'coef']+signiff_offset,
+        **sign_kws
+    )
+    # ax.set_xticks(np.arange(xpos_i.max()))
+    # ax.set_xticklabels(xlabels)
+
+
+def dual_glm_plot(
+    smac, smae, regressor_dict=None,
+    subplot_kws={'ncols':2, 'nrows':4, 'figsize':(9,12), 'sharex':False, 'sharey':False},
+    c_ac='tab:orange', c_ae='black', savpath='', suptitle=''
+):
+    """ plot shit (dual glm) from statsmodels outputs
+    regressor_list: regressor name to plot, length as long as num of subplots
+    should work kewl without defining many kw_, subplot_kws,
+    """
+    
+    if regressor_dict is None:
+        # default search to define regressor_dict
+        alli = np.unique(np.concatenate([smac.index, smae.index]))
+        lateralized=False
+        regressor_dict = {}
+        if any([x for x in alli if x.startswith('SR')]): # lateralized
+            series = [
+                sorted([x for x in alli if x.startswith('SR')]),
+                sorted([x for x in alli if x.startswith('SL')])
+            ]
+            lateralized=True
+        else:
+            series = [
+                sorted([x for x in alli if x.startswith('S')])
+            ]
+        regressor_dict['stimulus'] = series
+        if lateralized:
+            series = [
+                [f'afterefR{x}' for x in range(1,11)],
+                [f'afterefL{x}' for x in range(1,11)]
+            ]
+        else:
+            series = [sorted([x for x in alli if x.startswith('after')])]
+        regressor_dict['short sensory']=series
+        regressor_dict['L+'] = [sorted([x for x in alli if x.startswith('L+')])]
+        regressor_dict['L-'] = [sorted([x for x in alli if x.startswith('L-')])]
+        regressor_dict['T++'] = [sorted([x for x in alli if x.startswith('T++')])]
+        regressor_dict['T+-'] = [sorted([x for x in alli if x.startswith('T+-')])]
+        regressor_dict['T-+'] = [sorted([x for x in alli if x.startswith('T-+')])]
+        regressor_dict['T--'] = [sorted([x for x in alli if x.startswith('T--')])]
+        
+        
+    # iterate and plot
+    f, ax = plt.subplots(**subplot_kws)
+    ax=ax.flatten()
+    multiple_linestyles = ['-', ':']
+    arrange_labels = [True]*2 + [False]*6
+    offsets = [0.8, 0.1, 0.2, 0.1, 0.2, 0.1,0.1, 0.1]
+    for i, k in enumerate(regressor_dict.keys()):
+        for ii, j in enumerate(regressor_dict[k]):
+            try:
+                civil_plot(j, smac, ax=ax[i], c=c_ac, signiff_offset=offsets[i],
+                error_kws={'ls':multiple_linestyles[ii], 'marker':'o', 'capsize':2}, arrange_labels=arrange_labels[i])
+                civil_plot(j, smae, ax=ax[i], c=c_ae, signiff_offset=offsets[i]*-1,
+                error_kws={'ls':multiple_linestyles[ii], 'marker':'o', 'capsize':2}, arrange_labels=arrange_labels[i])
+            except Exception as e:
+                print(j)
+                print(e)
+
+            ax[i].set_title(k)
+            ax[i].axhline(0, ls=':', c='k')
+
+    ax[0].set_ylim(-4,4)
+
+    if suptitle:
+        f.suptitle(suptitle)
+        f.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    if savpath:
+        f.savefig(savpath)
+        # call plt.close() outside the function
+    else:
+        return f, ax

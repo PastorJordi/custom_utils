@@ -6,12 +6,16 @@ from scipy import interpolate
 from statsmodels.stats.proportion import proportion_confint
 
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import warnings
 from utilsJ.regularimports import groupby_binom_ci
 import types
+import swifter
+import tqdm
+from concurrent.futures import as_completed, ThreadPoolExecutor
 
 
 def help():
@@ -57,7 +61,9 @@ def distbysubj(df, data, by, grid_kwargs=dict(col_wrap=2, hue='CoM_sugg', aspect
 
 def sigmoid(fit_params, x_data, y_data):
     s,b,RL,LL = fit_params
-    ypred = RL + (1-RL-LL)/(1+np.exp(-(s*x_data+b)))
+    ypred = RL + (1-RL-LL)/(1+np.exp(-(s*x_data+b))) # this is harder to interpret
+    # replacing function so it is meaningful
+    # ypred = RL + (1-RL-LL)/(1+np.exp(-s(x_data-b)))
     return -np.sum(norm.logpdf(y_data, loc=ypred))
 
 def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(-1,1,50), kwargs_plot={}, kwargs_error={}):
@@ -325,7 +331,7 @@ def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={},
         errfun = groupby_binom_ci
     tmp = mdf.groupby('tmp_bin')[var_toplot].agg(m='mean', e=errfun)
 
-    print(f'attempting to plot {tmp.shape} shaped grouped df')
+    #print(f'attempting to plot {tmp.shape} shaped grouped df')
 
     if isinstance(xoffset, (int, float)):
         xoffsetval = xoffset
@@ -411,9 +417,13 @@ def interpolapply(
     row, stamps='trajectory_stamps', ts_fix_onset='fix_onset_dt',
     trajectory='trajectory_y',resp_side='R_response', collapse_sides=False, 
     interpolatespace=np.linspace(-700000,1000000, 1701), fixation_us=300000, # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
-    align='action', interp_extend=True
+    align='action', interp_extend=False, discarded_tstamp=0
 ): # we can speed up below funcction for trajectories
     #for ii,i in enumerate(idx_dic[b]):
+
+
+    
+
 
     # think about discarding first few frames from trajectory_y because they are noisy (due to camera delay they likely belong to previous state)
     x_vec = []
@@ -423,14 +433,22 @@ def interpolapply(
         # by def 0 aligned to fixation    
         if align == 'sound': 
             x_vec = (x_vec-np.timedelta64(fixation_us , 'us')).astype(float)
+            #x_vec = x_vec.astype(float)
         elif align == 'action':
             x_vec = (x_vec - np.timedelta64(int(fixation_us + (row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
+            #x_vec = (x_vec - np.timedelta64(int((row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
+        elif align == 'response':
+            x_vec = (x_vec - np.timedelta64(int(fixation_us + (row['sound_len'] * 10**3) + (row['resp_len'] * 10**6)), 'us')).astype(float)
         else:
             x_vec=x_vec.astype(float)
 
+        x_vec = x_vec[discarded_tstamp:]
 
         # else it is aliggned with
-        y_vec = row[trajectory] 
+        if isinstance(trajectory, tuple):
+            y_vec = row[trajectory[0]][:,trajectory[1]] # this wont work if there are several columns called like trajectory[0] in the original df
+        else: # is a column name
+            y_vec = row[trajectory] 
         if collapse_sides: 
             if row[resp_side]==0: # do we want to collapse here? # should be filtered so yes
                 y_vec = y_vec*-1
@@ -446,98 +464,142 @@ def interpolapply(
 
 
 def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
-    stamps='trajectory_stamps',threshold_only=True, xticklock=None, ax=None, fpsmin=29,
+    stamps='trajectory_stamps', ax=None, fpsmin=29,
     fixation_us = 300000, collapse_sides=False, return_trash=False,
     interpolatespace=np.linspace(-700000,1000000, 1700), zeropos_interp = 700,
     fixation_delay_offset=0, error_kwargs={'ls':'none'}, ax_traj=None,
-    traj_kws={}, ts_fix_onset='fix_onset_dt', align='action', interp_extend=True):
+    traj_kws={}, ts_fix_onset='fix_onset_dt', align='action', interp_extend=False,
+    discarded_tstamp=0, cmap=None, rollingmeanwindow=0, bintype='edges', xpoints=None):
     """
     This changed a lot!, review default plots
     Exclude invalids
     atm this will only retrieve data, not plotting if ax=None 
     # if a single bin, both edges must be provided
     fpsmin: minimum fps to consider trajectories
+    align ='action' or 'sound'
     if duplicated indexes in df this wont work
-
+    bins= if single element it does not use edges but == that value
     fixation_delay_offset = 300-fixation state lenght (ie new state matrix should use 80)
+    trajectory: str (colname) where trajectory is. tuple (colname, which col to use in the array) for cols containing arrays.
+    discarded_tstamp: number of tstamps to ommit (for 1st and second derivatives!)
+    thr (threshold should be able to accept as many thr like bins)
+    # rollingmean for noisy traj (d1 and d2)
+    bintype='edges', 'categorical', 'dfmask'
     # """
+    
+    if bintype not in ['edges', 'categorical', 'dfmask']:
+        raise ValueError('bintype can take values: "edges", "categorical" and "dfmask"')
+
+    categorical_bins = False
+    if bintype!='edges':
+        categorical_bins=True
+    if align not in ['action', 'sound', 'response']:
+        raise ValueError('align must be "action","sound" or "response"')
     if (fixation_us != 300000) or (fixation_delay_offset!=0):
         print('fixation and delay offset should be adressed and you should avoid tweaking defaults')
-
-    #if df['R_response'].unique().size>1: # not true anymore, right?
-    #    print(f'Warning, found more than a single response {df.R_response.unique()}\n this will default to collapsing them')
     
     if (df.index.value_counts()>1).sum():
         raise IndexError('input dataframe contains duplicate index entries hence this function would not work propperly')
     
+    if isinstance(cmap, str):
+        cmap = cm.get_cmap(cmap)
+        # cmap overrides color in kwrgs
+        if traj_kws is not None:
+            traj_kws.pop('c', None)
+            traj_kws.pop('color', None)
+        if error_kwargs is not None:
+            error_kwargs.pop('c', None)
+            error_kwargs.pop('color', None)
 
     matrix_dic = {}
     idx_dic = {}
 
     # errorplot to threshold!
-    xpoints =  (bins[:-1]+bins[1:])/2
+    if xpoints is None:
+        if bintype=='edges':
+            xpoints =  (bins[:-1]+bins[1:])/2
+        elif bintype=='categorical':
+            xpoints = bins
+        else:
+            try:# attempt converting them to floats?!
+                xpoints = [float(x) for x in bins.keys()]
+            except:
+                xpoints = np.arange(len(bins.keys()))
     y_points = []
     y_err = []
-    ### del
-    ### TODO: adapt to not using bins if already grouped
-    ### like bins=False / float
+
     test = df.loc[df.framerate>=fpsmin]
 
+    if bintype=='dfmask':
+        bkeys = list(bins.keys())
+        niters = len(bkeys)
+    elif bintype=='categorical':
+        niters = len(bins)
+    elif bintype=='edges':
+        niters = len(bins)-1 # we iterate 1 less because of edges!
 
-    for b, bin_edge in enumerate(bins[:-1]): # if a single bin, both edges must be provided
-        idx_dic[b] = test.loc[(test[bincol]>bin_edge)&(test[bincol]<bins[b+1])].index.values
+    for b in range(niters): # if a single bin, both edges must be provided
+        if isinstance(thr, (list, tuple, np.ndarray)):
+            cthr = thr[b] # beware if list passes crashes
+        else:
+            cthr = thr
+
+        if bintype=='dfmask':
+            idx_dic[b] = test.loc[bins[bkeys[b]]].index.values
+        elif (len(bins)>1) & (not categorical_bins):
+            idx_dic[b] = test.loc[(test[bincol]>bins[b])&(test[bincol]<bins[b+1])].index.values
+        else:
+            idx_dic[b] = test.loc[(test[bincol]==bins[b])].index.values
         matrix_dic[b] = np.zeros((idx_dic[b].size, interpolatespace.size))
 
-
-        matrix_dic[b] = np.concatenate(test.loc[idx_dic[b]].swifter.apply(
-            lambda x: interpolapply(x, collapse_sides=collapse_sides, interpolatespace=interpolatespace, align=align, interp_extend=interp_extend),
+        #if collapse_sides:
+        #    print('collapsing sides!')
+        matrix_dic[b] = np.concatenate(test.loc[idx_dic[b]].swifter.progress_bar(False).apply(
+            lambda x: interpolapply(
+                x, collapse_sides=collapse_sides, interpolatespace=interpolatespace, align=align, 
+                interp_extend=interp_extend, trajectory=trajectory, discarded_tstamp=discarded_tstamp),
             axis=1
         ).values).reshape(-1, interpolatespace.size)
 
-        y_point_list = []
-        for row in range(matrix_dic[b].shape[0]):
-            if np.isnan(matrix_dic[b][row,:]).sum()==matrix_dic[b].shape[1]: # all row is nan
-                continue
-            else:
-                if (thr>0) or collapse_sides:
-                    # replacing old strategy because occasional nans might break code
-                    #y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr)] # threshold in pixels # works fine
-                    # https://stackoverflow.com/questions/27255890/numpy-searchsorted-for-an-array-containing-numpy-nan
-                    arg_sorted = np.argsort(matrix_dic[b][row,zeropos_interp:])
-                    tmp_ind = np.searchsorted(matrix_dic[b][row,zeropos_interp:], thr, sorter=arg_sorted)
-                    try:
-                        y_point_list += [arg_sorted[tmp_ind]] # if it is outside is because never reached thr
-                    except:
-                        y_point_list += [np.nan]
-                else:
-                    #old
-                    #y_point_list += [np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr)] # assumes neg thr = left trajectories / so it is sorted
-                    arg_sorted = np.argsort(matrix_dic[b][row,zeropos_interp:]*-1)
-                    tmp_ind = np.searchsorted(matrix_dic[b][row,zeropos_interp:]*-1, -1*thr, sorter=arg_sorted)
-                    try:
-                        y_point_list += [arg_sorted[tmp_ind]] # if it is outside is because never reached thr
-                    except:
-                        y_point_list += [np.nan]
-                
-                # this threshold should be addressed when collapse sides = false
-                # current iteration
 
-        y_point = np.nanmean(np.array(y_point_list)) # no need to substract anythng because it is aligned by zeropos_interp
-        #print(y_point)
+        tmp_mat =  matrix_dic[b][:,zeropos_interp:]
+        # wont iterate anymore
+        if (cthr>0) or collapse_sides:
+            r, c = np.where(tmp_mat>cthr)
+        else:
+            r, c = np.where(tmp_mat<cthr)
+
+        _,idxes = np.unique(r, return_index=True)
+        y_point = np.median(c[idxes])
         y_points += [y_point]
-        y_err += [sem(np.array(y_point_list), nan_policy='omit')]
+        y_err += [sem(c[idxes], nan_policy='omit')]
 
 
-
+        extra_kw = {}
 
         # plot section
-   
-        if ax_traj is not None:
+        if ax_traj is not None: # original stuff
+            if cmap is not None:
+                traj_kws.pop('color', None)
+                traj_kws['color'] = cmap(b/niters)
+            if 'label' not in traj_kws.keys():
+                if bintype=='categorical':
+                    extra_kw['label'] = f'{bincol}={round(bins[b],2)}'
+                elif bintype=='dfmask':
+                    extra_kw['label'] = f'{bincol}={bkeys[b]}'
+                else: # edges
+                    extra_kw['label'] = f'{round(bins[b],2)}<{bincol}<{round(bins[b+1],2)}'
+            if rollingmeanwindow:
+                ytoplot= pd.Series(
+                    np.nanmedian(matrix_dic[b], axis=0)
+                    ).rolling(rollingmeanwindow, min_periods=1).mean().values
+            else:
+                ytoplot=np.nanmedian(matrix_dic[b], axis=0)
             ax_traj.plot(
                 (interpolatespace)/1000, 
-                np.nanmedian(matrix_dic[b], axis=0), **traj_kws
+                ytoplot, **traj_kws, **extra_kw
                 )
-
+            # trigger legend outside of the function
 
 
     y_points = np.array(y_points)
@@ -545,11 +607,45 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
 
 
 
-    if ax is not None:
-        ax.errorbar(
-                xpoints, y_points+fixation_delay_offset, yerr=y_err, **error_kwargs
-            ) # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
+    if (ax is not None) & return_trash:
+        if cmap is not None:
+            extra_kw = {}
+            for i in range(len(xpoints)):
+                if 'label' not in error_kwargs.keys():
+                    if bintype=='categorical':
+                        extra_kw['label'] = f'{bincol}={round(bins[i],2)}'
+                    elif bintype=='dfmask':
+                        extra_kw['label'] = f'{bincol}={bkeys[b]}'
+                    else:
+                        extra_kw['label'] = f'{round(bins[i],2)}<{bincol}<{round(bins[i+1],2)}'
 
+                ax.errorbar(
+                    xpoints[i], y_points[i]+fixation_delay_offset, yerr=y_err[i], 
+                    **error_kwargs, color=cmap(i/niters), **extra_kw)
+        else:
+            ax.errorbar(
+                    xpoints, y_points+fixation_delay_offset, yerr=y_err, **error_kwargs
+                ) # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
+
+        return xpoints, y_points+fixation_delay_offset, y_err, matrix_dic, idx_dic
+    elif ax is not None:
+        if cmap is not None:
+            for i in range(len(xpoints)): ##TODO remove duplicated code
+                if 'label' not in error_kwargs.keys():
+                    if bintype=='categorical':
+                        extra_kw['label'] = f'{bincol}={round(bins[i],2)}'
+                    elif bintype=='dfmask':
+                        extra_kw['label'] = f'{bincol}={bkeys[b]}'
+                    else:
+                        extra_kw['label'] = f'{round(bins[i],2)}<{bincol}<{round(bins[i+1],2)}'
+
+                ax.errorbar(
+                    xpoints[i], y_points[i]+fixation_delay_offset, yerr=y_err[i], 
+                    **error_kwargs, color=cmap(i/niters), **extra_kw)
+        else:
+            ax.errorbar(
+                    xpoints, y_points+fixation_delay_offset, yerr=y_err, **error_kwargs
+                ) # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
         return ax
 
     elif not return_trash:
@@ -558,46 +654,443 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
         return xpoints, y_points+fixation_delay_offset, y_err, matrix_dic, idx_dic
 
 
+
+def colored_line(x, y, z=None, ax=None, linewidth=3, MAP='viridis'):
+    # this uses pcolormesh to make interpolated rectangles
+    # https://stackoverflow.com/questions/8500700/how-to-plot-a-gradient-color-line-in-matplotlib
+    xl = len(x)
+    [xs, ys, zs] = [np.zeros((xl,2)), np.zeros((xl,2)), np.zeros((xl,2))]
+
+    # z is the line length drawn or a list of vals to be plotted
+    if z == None:
+        z = [0]
+
+    for i in range(xl-1):
+        # make a vector to thicken our line points
+        dx = x[i+1]-x[i]
+        dy = y[i+1]-y[i]
+        perp = np.array( [-dy, dx] )
+        unit_perp = (perp/np.linalg.norm(perp))*linewidth
+
+        # need to make 4 points for quadrilateral
+        xs[i] = [x[i], x[i] + unit_perp[0] ]
+        ys[i] = [y[i], y[i] + unit_perp[1] ]
+        xs[i+1] = [x[i+1], x[i+1] + unit_perp[0] ]
+        ys[i+1] = [y[i+1], y[i+1] + unit_perp[1] ]
+
+        if len(z) == i+1:
+            z.append(z[-1] + (dx**2+dy**2)**0.5)     
+        # set z values
+        zs[i] = [z[i], z[i] ] 
+        zs[i+1] = [z[i+1], z[i+1] ]
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    cm = plt.get_cmap(MAP)
+    ax.pcolormesh(xs, ys, zs, shading='gouraud', cmap=cm)    
+
+
+
+def gradient(row):
+    """returns speed, accel and jerk # and time incr"""
+    try:
+        t = row['trajectory_stamps'].astype(float)/1000
+        dt1 = np.repeat(np.diff(row['trajectory_stamps'].astype(float)/1000),2).reshape(-1,2)
+        coords = np.c_[row['trajectory_x'], row['trajectory_y']]
+        coords1 = np.diff(coords, axis=0)/dt1 # veloc
+        coords2 = np.diff(coords1, axis=0)/dt1[1:]# accel
+        coords3 = np.diff(coords2, axis=0)/dt1[2:] # jerk
+        return coords1, coords2, coords3,t-t[0]
+    except:
+        #print(f'exception in index {row.index}') # gets too spammy
+        #print(e)
+        return np.nan, np.nan, np.nan, np.nan
+
+def gradient_1d(row):
+    """same than above but the norm rather than 2D"""
+    try:
+        t = row['trajectory_stamps'].astype(float)/1000
+        dt1 = np.diff(t)
+        coords = np.c_[row['trajectory_x'], row['trajectory_y']]
+        coords1= (np.diff(coords, axis=0)**2).sum(axis=1)**0.5 / dt1
+        coords2 = np.diff(coords1)/dt1[1:]
+        coords3 = np.diff(coords2)/dt1[2:]
+        return coords1, coords2, coords3,t-t[0]
+    except Exception as e:
+        print(e)
+        return np.nan, np.nan, np.nan, np.nan
+
+def gradient_np(row):
+    """returns speed accel and jerk by np.gradient"""
+    try:
+        t = row['trajectory_stamps'].astype(float)/1000
+        #dt1 = np.repeat(np.diff(row['trajectory_stamps'].astype(float)/1000),2).reshape(-1,2)
+        t = t-t[0]
+        coords = np.c_[row['trajectory_x'], row['trajectory_y']]
+        d1 = np.gradient(coords, t, axis=0)
+        d2 = np.gradient(d1, t,axis=0)
+        d3 = np.gradient(d2, t,axis=0)
+        return d1, d2, d3, t
+    except:
+        return np.nan, np.nan, np.nan, np.nan
+
+
+def speedaccel_plot(cdata, binningcol, bins, savpath=None, align='action', bintype='edges',
+    rollingmeanwindow=30, axobj=None, trajectory_thr_kw={}, suptitle=None, 
+    thresholds=[
+        -0.05, # single item list will mak it crash! [[-0.05], ...]
+        [-0.2]*4 + [0.2]*4,
+        -0.001, #[-0.001]*4 + [0.001]*4,
+        [-0.001]*4 + [0.001]*4
+    ], return_trash=False
+):
+    """cdata = filtered dataframe (by subject, RT, hit...)
+    binningcol = str 'name of the col to bin
+    bins = bins
+    bintype = '"""
+    if align=='action':
+        interpolatespace=np.linspace(-700000,1000000, 1700)
+        zeropos_interp=700
+    elif align=='sound':
+        interpolatespace=np.linspace(-300000,1400000, 1700)
+        zeropos_interp=300
+    else:
+        ValueError('align should be either "action" or "sound"')
+    #cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1]) & (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
+    if axobj is None:
+        f,ax = plt.subplots(ncols=4, nrows=2, figsize=(16,10), sharex='col',gridspec_kw=dict(width_ratios=[1,4,1,4]))
+    else:
+        ax=axobj
     
 
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[0][0], ax_traj=ax[0][1], bintype=bintype,
+        error_kwargs={'capsize':2, 'marker':'o'}, cmap='viridis', trajectory=('traj_d1', 0), discarded_tstamp=1, interp_extend=False, thr=thresholds[0],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[0][0].set_ylabel(f'time to thr = {np.unique(thresholds[0])}')
+    ax[0][1].set_ylim([-0.2,0.2])
+    ax[0][1].set_title('x speed')
+    for i in np.unique(thresholds[0]):
+        ax[0,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout = {'x_speed': [xpos, ypos, yerr, mat_d, idx_d]}
+    
 
-# old sections for trajectories
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[0][2], ax_traj=ax[0][3], bintype=bintype,
+        error_kwargs={'capsize':2, 'marker':'o'}, cmap='viridis', trajectory=('traj_d1', 1), discarded_tstamp=1, interp_extend=False, thr=thresholds[1],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[0][2].set_ylabel(f'time to thr = {np.unique(thresholds[1])}')
+    ax[0][3].set_ylim([-0.5,0.5])
+    ax[0][3].set_title('y speed')
+    for i in np.unique(thresholds[1]):
+        ax[0,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['y_speed'] = [xpos, ypos, yerr, mat_d, idx_d]
 
-        # ## TODO: replace this with a function and apply it using pandas.swifter.apply
-        # for ii,i in enumerate(idx_dic[b]):
-        #     x_vec = []
-        #     y_vec = []
-        #     try:
-        #         x_vec = test.loc[i,stamps]
-        #         if ts_fix_onset is None:
-        #             resp_onset = (fixation_us + (test.loc[i, 'sound_len'] * 10**3)).astype(int) # * 10**3 ?? # this one is not for binning
-        #             x_vec = x_vec-x_vec[0] - np.timedelta64(resp_onset, 'us') # this would be fine if first frame from trajectory
-        #             # was aligned with fixation onset, which is not the case.
-        #         else:
-        #             x_vec -= test.loc[i, ts_fix_onset] 
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[1][0], ax_traj=ax[1][1], bintype=bintype,
+        error_kwargs={'capsize':2, 'marker':'o'}, cmap='viridis', trajectory=('traj_d2', 0), discarded_tstamp=2, interp_extend=False, thr=thresholds[2],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[1][0].set_ylabel(f'time to thr = {np.unique(thresholds[2])}')
+    ax[1][1].set_ylim([-0.005, 0.005])
+    ax[1][1].set_title('x accel')
+    for i in np.unique(thresholds[2]):
+        ax[1,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['x_accel'] = [xpos, ypos, yerr, mat_d, idx_d]
 
-        #         # is it possible to find this time_gap without reprocessing everything?=!
-        #         x_vec = x_vec.astype(float)
-        #         y_vec = test.loc[i, trajectory] 
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[1][2], ax_traj=ax[1][3], bintype=bintype,
+        error_kwargs={'capsize':2, 'marker':'o'}, cmap='viridis', trajectory=('traj_d2', 1), discarded_tstamp=2, interp_extend=False, thr=thresholds[3],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[1][2].set_ylabel(f'time to thr = {np.unique(thresholds[3])}')
+    ax[1][3].set_ylim([-0.005, 0.005])
+    ax[1][3].set_title('y accel')
+    for i in np.unique(thresholds[3]):
+        ax[1,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['y_accel'] = [xpos, ypos, yerr, mat_d, idx_d]
 
-        #         ##
-        #         if offset_frame_correction:
-        #             y_vec = np.concatenate(([y_vec[0]]*offset_frame_correction, y_vec[:-offset_frame_correction])) # since There was a +2 offset in the extraction function
-        #         if collapse_sides: 
-        #             if test.loc[i,'R_response']==0: # do we want to collapse here? # should be filtered so yes
-        #                 y_vec = y_vec*-1
-        #         if x_vec.size!=y_vec.size:
-        #             print(f'vec sizes differ t:{x_vec.size} vs y_vec:{y_vec.size}')
-        #         f = interpolate.interp1d(x_vec, y_vec, bounds_error=False, fill_value=y_vec[-1]) # without fill_value it fills with nan
-        #         matrix_dic[b][ii,:] = f(newx)    
-        #     except Exception as e: 
-        #         print(f'error in idx {i}: {e} ') # can get very spammy
-        #         matrix_dic[b][ii,:]= np.nan
+    # loop later
+    for i in [0,1]:
+        for k in [1,3]:
+            ax[i][k].axhline(0, ls=':', c='black')
+            #ax[i][k].legend(fancybox=False, frameon=False) # user decides to show it or not
 
-        #test and then replace above loop for ii, i...
+    plt.tight_layout()
+    if suptitle is not None:
+        plt.suptitle(suptitle)
+    #plt.suptitle(f'{subject}: {bins[b]}< RT <{bins[b+1]}')
+    if savpath is not None:
+        f.savefig(savpath)
+        plt.close()
+        if return_trash:
+            return dout
+    else:
+        #print('figure is active, tune it and plt.show()')
+        if return_trash:
+            return ax, dout
+        else:
+            return ax
 
 
-            # if y_point>0:
-    #     yoffset=0
-    #     if subj in [f'LE{x}' for x in range(82,88)]:
-    #         yoffset = 80
+def full_traj_plot(cdata, binningcol, bins, savpath=None, align='action', bintype='edges',
+    rollingmeanwindow=30, axobj=None, trajectory_thr_kw={}, suptitle=None, discarded_tstamps=[0,0,1,1,2,2,3,3],
+    thresholds=[
+        -30,
+        [-30]*4+[30]*4,
+        -0.05, # single item list will mak it crash!
+        [-0.2]*4 + [0.2]*4,
+        -0.001, #[-0.001]*4 + [0.001]*4,
+        [-0.001]*4 + [0.001]*4,
+        0.00001,
+        [-0.000025]*4+[0.000025]*4
+    ], return_trash=False
+):
+    """cdata = filtered dataframe (by subject, RT, hit...)
+    binningcol = str 'name of the col to bin
+    bins = bins
+    bintype = 'edges', 'categorical' or 'dfmask
+    TODO: add examples of bintypes
+    TODO: add repetitions of default thresholds when collape_sides=False, according to number of bins/lines"""    
+    if align=='action':
+        interpolatespace=np.linspace(-700_000, 1_000_000, 1700)
+        zeropos_interp=700
+    elif align=='sound':
+        interpolatespace=np.linspace(-300_000, 1_400_000, 1700)
+        zeropos_interp=300
+    elif align=='response':
+        interpolatespace=np.linspace(-1_000_000, 300_000, 1300)
+        zeropos_interp=1000
+    else:
+        ValueError('align should be either "action", "sound" or "response"')
+    #cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1]) & (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
+    if axobj is None:
+        f,ax = plt.subplots(ncols=4, nrows=4, figsize=(16,20), sharex='col',gridspec_kw=dict(width_ratios=[1,4,1,4]))
+    else:
+        ax=axobj
+
+
+    # check defaults
+    if 'error_kwargs' not in trajectory_thr_kw.keys(): # default that does not duplicate kw entry
+        trajectory_thr_kw['error_kwargs'] = {'capsize':2, 'marker':'o'}
+    if 'cmap' not in trajectory_thr_kw.keys():
+        trajectory_thr_kw['cmap'] = 'viridis'
+    no_collapse_kw = {i:trajectory_thr_kw[i] for i in trajectory_thr_kw if i!='collapse_sides'}
+
+    if bintype=='edges':
+        nlines = bins.size-1
+    elif bintype=='categorical':
+        nlines = bins.size
+    elif bintype=='dfmask':
+        nlines = len(bins.keys())
+    for i,thr in enumerate(thresholds):
+        if isinstance(thr, (np.ndarray, list)):
+            assert len(thr)==nlines, f"threshold in position {i} does not match the number of bins"
+
+    ##### POSITION
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[0][0], ax_traj=ax[0][1], bintype=bintype,
+        trajectory='trajectory_x', discarded_tstamp=discarded_tstamps[0], interp_extend=False, thr=thresholds[0],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, collapse_sides=False, **no_collapse_kw
+    )
+    ax[0][0].set_ylabel(f'time to thr = {np.unique(thresholds[0])}')
+    ax[0][1].set_ylim([-50,5])
+    ax[0][1].set_ylabel('x coord')
+    for i in np.unique(thresholds[0]):
+        ax[0,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout = {'x_coord': [xpos, ypos, yerr, mat_d, idx_d]}
+
+    
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[0][2], ax_traj=ax[0][3], bintype=bintype,
+        trajectory='trajectory_y', discarded_tstamp=discarded_tstamps[1], interp_extend=False, thr=thresholds[1],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow,**trajectory_thr_kw
+    )
+    ax[0][2].set_ylabel(f'time to thr = {np.unique(thresholds[1])}')
+    ax[1][1].set_ylim([-90,90])
+    ax[0][3].set_ylabel('y coord')
+    for i in np.unique(thresholds[1]):
+        ax[0,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout = {'y_coord': [xpos, ypos, yerr, mat_d, idx_d]}
+
+
+    ##### VELOCITY
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[1][0], ax_traj=ax[1][1], bintype=bintype,
+        trajectory=('traj_d1', 0), discarded_tstamp=discarded_tstamps[2], interp_extend=False, thr=thresholds[2],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, collapse_sides=False, **no_collapse_kw
+    )
+    ax[1][0].set_ylabel(f'time to thr = {np.unique(thresholds[2])}')
+    ax[1][1].set_ylim([-0.25,0.25])
+    ax[1][1].set_ylabel('x speed')
+    for i in np.unique(thresholds[2]):
+        ax[1,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout = {'x_speed': [xpos, ypos, yerr, mat_d, idx_d]}
+    
+
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[1][2], ax_traj=ax[1][3], bintype=bintype,
+        trajectory=('traj_d1', 1), discarded_tstamp=discarded_tstamps[3], interp_extend=False, thr=thresholds[3],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[1][2].set_ylabel(f'time to thr = {np.unique(thresholds[3])}')
+    ax[1][3].set_ylim([-0.5,0.5])
+    ax[1][3].set_ylabel('y speed')
+    for i in np.unique(thresholds[3]):
+        ax[1,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['y_speed'] = [xpos, ypos, yerr, mat_d, idx_d]
+
+    #### ACCELERATION
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[2][0], ax_traj=ax[2][1], bintype=bintype,
+        trajectory=('traj_d2', 0), discarded_tstamp=discarded_tstamps[4], interp_extend=False, thr=thresholds[4],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, collapse_sides=False, **no_collapse_kw
+    )
+    ax[2][0].set_ylabel(f'time to thr = {np.unique(thresholds[4])}')
+    ax[2][1].set_ylim([-0.005, 0.005])
+    ax[2][1].set_ylabel('x accel')
+    for i in np.unique(thresholds[4]):
+        ax[2,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['x_accel'] = [xpos, ypos, yerr, mat_d, idx_d]
+
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[2][2], ax_traj=ax[2][3], bintype=bintype,
+        trajectory=('traj_d2', 1), discarded_tstamp=discarded_tstamps[5], interp_extend=False, thr=thresholds[5],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[2][2].set_ylabel(f'time to thr = {np.unique(thresholds[5])}')
+    ax[2][3].set_ylim([-0.005, 0.005])
+    ax[2][3].set_ylabel('y accel')
+    for i in np.unique(thresholds[5]):
+        ax[2,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['y_accel'] = [xpos, ypos, yerr, mat_d, idx_d]
+
+    ##### JERK
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[3][0], ax_traj=ax[3][1], bintype=bintype,
+        trajectory=('traj_d3', 0), discarded_tstamp=discarded_tstamps[6], interp_extend=False, thr=thresholds[6],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, collapse_sides=False, **no_collapse_kw
+    )
+    ax[3][0].set_ylabel(f'time to thr = {np.unique(thresholds[4])}')
+    ax[3][1].set_ylim([-0.00025, 0.00025])
+    ax[3][1].set_ylabel('x jerk')
+    for i in np.unique(thresholds[6]):
+        ax[3,1].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['x_jerk'] = [xpos, ypos, yerr, mat_d, idx_d]
+
+    xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
+        cdata, binningcol, bins, return_trash=True, ax=ax[3][2], ax_traj=ax[3][3], bintype=bintype,
+        trajectory=('traj_d3', 1), discarded_tstamp=discarded_tstamps[7], interp_extend=False, thr=thresholds[7],
+        align=align, interpolatespace=interpolatespace, zeropos_interp=zeropos_interp, rollingmeanwindow=rollingmeanwindow, **trajectory_thr_kw
+    )
+    ax[3][2].set_ylabel(f'time to thr = {np.unique(thresholds[5])}')
+    ax[3][3].set_ylim([-0.00025, 0.00025])
+    ax[3][3].set_ylabel('y jerk')
+    for i in np.unique(thresholds[7]):
+        ax[3,3].axhline(i, ls=':', color='gray')
+    if return_trash:
+        dout['y_jerk'] = [xpos, ypos, yerr, mat_d, idx_d]
+
+    # loop later
+    for i in [0,1,2,3]:
+        for k in [1,3]:
+            ax[i][k].axhline(0, ls=':', c='black')
+            #ax[i][k].legend(fancybox=False, frameon=False) # user decides to show it or not
+    #ax[0,3].axhline(0, ls=':', c='black')
+
+    plt.tight_layout()
+    if suptitle is not None:
+        plt.suptitle(suptitle)
+    #plt.suptitle(f'{subject}: {bins[b]}< RT <{bins[b+1]}')
+    if savpath is not None:
+        f.savefig(savpath)
+        plt.close()
+        if return_trash:
+            return dout
+    else:
+        #print('figure is active, tune it and plt.show()')
+        if return_trash:
+            return ax, dout
+        else:
+            return ax
+
+
+def shuffled_meandiff(inarg):
+    # inarg[0]= cmat; inarg[1]=switchindex
+    cmat = inarg[0]
+    np.random.shuffle(cmat)
+    switchindex = inarg[1]
+    meandiff = np.nanmean(cmat[:switchindex, :], axis=0) - np.nanmean(cmat[switchindex:, :], axis=0)
+    return meandiff
+
+
+def surrogate_test(mata, matb, pval=0.005, nshuffles=1000, return_extra=False, nworkers=8,
+    pcalc_discard0 =0, pcalc_discard1 = 1000, lrG=0.01, verbose=False
+):
+    """shuffling strat to compare trajectories
+    # mata: matrix of dims (ntrajectories, ninterpolatedspace), e.g. coh=1
+    # matb: same but corresponding to alternative group (eg. coh=0)
+    # pcalc discard: last noisy items to discard when calculating global pband
+    # return_extra:also returns meandiff, 95% band and pointwise significance(yes or no)
+    # nworkers for shuffling,
+    # lrG: step when searching for global band G
+    """
+    # TODO: cythonized core_loop?
+    wholemat = np.concatenate([mata, matb],axis=0)
+    switchindex = mata.shape[0]
+    collector = [] # beware running out of memory!
+    random_states = np.arange(nshuffles)
+    with ThreadPoolExecutor(max_workers=nworkers) as executor:
+        jobs = [
+            executor.submit(
+                shuffled_meandiff,
+                [wholemat, switchindex]
+            ) for x in random_states
+        ]   
+        if verbose:
+            iterable = tqdm.tqdm_notebook(as_completed(jobs), total=len(random_states))
+        else:
+            iterable = as_completed(jobs)
+        for job in iterable:
+            collector += [job.result()]
+    # at some point it ould be adapted to this random states
+
+    # slow part should be done already
+    allshuffled = np.concatenate(collector).reshape(-1, mata.shape[1])
+
+    shuffleabs=np.abs(allshuffled[:,pcalc_discard0:pcalc_discard1])
+    G = 0
+    p = 1 #
+    for _ in range(int(1/lrG)+1):
+        G += lrG
+        p = (np.any((shuffleabs>G), axis=1)*1).mean() # difference from 0 which hshould be considered sign
+        if p<=pval:
+            break
+
+    if not return_extra: # we are already done
+        return G
+    else:
+        real_groupdiff = np.nanmean(mata,axis=0)-np.nanmean(matb, axis=0)
+        pointwise_points = sorted(np.where(real_groupdiff>np.percentile(allshuffled, 97.5, axis=0))[0].tolist() + np.where(real_groupdiff<np.percentile(allshuffled, 2.5, axis=0))[0].tolist())
+        pointwise_points = np.unique(pointwise_points)
+        out = (
+            G, 
+            np.nanmean(allshuffled, axis=0),
+            [np.percentile(allshuffled, 97.5, axis=0),np.percentile(allshuffled, 2.5, axis=0)],
+            pointwise_points
+        )
+        return out
+
