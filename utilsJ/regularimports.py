@@ -28,6 +28,9 @@ def get_datecol(df):
 
 common_mask = 'sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0'
 
+lejla_rats = [f'LE{x}' for x in range(36,42)]
+dani_rats =  [f'LE{x}' for x in range(42,48)]
+jordi_rats = [f'LE{x}' for x in range(82,88)]
 
 def apply_expand_concat(df,fun, newcolnames):
 	"""returns apply+expand concatenated to df,

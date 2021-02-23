@@ -131,7 +131,8 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
     relunit = np.trapz(modwave[: int(0.05 * samplingR)])  # 1 envelope
     L_int = np.trapz(modwave[:tot_steps] * envLpoints[:tot_steps])
     R_int = np.trapz(modwave[:tot_steps] * envRpoints[:tot_steps])
-    return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
+    #return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
+    return L_int / reltotev, R_int / reltotev, (R_int - L_int) / reltotev
 
 
 def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps use trapz to calc intensity.
@@ -1790,6 +1791,7 @@ def dual_glm_plot(
                 civil_plot(j, smae, ax=ax[i], c=c_ae, signiff_offset=offsets[i]*-1,
                 error_kws={'ls':multiple_linestyles[ii], 'marker':'o', 'capsize':2}, arrange_labels=arrange_labels[i])
             except Exception as e:
+                print('exception during plotting:')
                 print(j)
                 print(e)
 

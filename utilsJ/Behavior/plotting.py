@@ -16,6 +16,8 @@ import types
 import swifter
 import tqdm
 from concurrent.futures import as_completed, ThreadPoolExecutor
+from scipy.interpolate import interp1d
+#from utilsJ.Models import alex_bayes as ab
 
 
 def help():
@@ -919,7 +921,7 @@ def full_traj_plot(cdata, binningcol, bins, savpath=None, align='action', bintyp
     for i in np.unique(thresholds[1]):
         ax[0,3].axhline(i, ls=':', color='gray')
     if return_trash:
-        dout = {'y_coord': [xpos, ypos, yerr, mat_d, idx_d]}
+        dout['y_coord'] = [xpos, ypos, yerr, mat_d, idx_d]
 
 
     ##### VELOCITY
@@ -934,7 +936,7 @@ def full_traj_plot(cdata, binningcol, bins, savpath=None, align='action', bintyp
     for i in np.unique(thresholds[2]):
         ax[1,1].axhline(i, ls=':', color='gray')
     if return_trash:
-        dout = {'x_speed': [xpos, ypos, yerr, mat_d, idx_d]}
+        dout['x_speed'] = [xpos, ypos, yerr, mat_d, idx_d]
     
 
     xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
@@ -1094,3 +1096,141 @@ def surrogate_test(mata, matb, pval=0.005, nshuffles=1000, return_extra=False, n
         )
         return out
 
+def get_Mt0te(t0, te):
+        Mt0te=np.array([
+            [1, t0, t0**2, t0**3, t0**4, t0**5],
+            [0, 1, 2*t0, 3*t0**2, 4*t0**3, 5*t0**4],
+            [0, 0, 2, 6*t0, 12*t0**2, 20*t0**3],
+            [1, te, te**2, te**3, te**4, te**5],
+            [0, 1, 2*te, 3*te**2, 4*te**3, 5*te**4],
+            [0, 0, 2, 6*te, 12*te**2, 20*te**3]
+        ])
+        return Mt0te
+
+def v_(t):
+        return t.reshape(-1,1)**np.arange(6)
+
+def get_traj_subplot(row,invert=True, mu=None, allSIGMA=None, sigma=5,dim=1):
+    """evaluates whether it was or not (through pandas apply), copypasting 
+    preprocess + expand to loglike
+    if want to retrieve fit traj, specify mu (list of left and right mu's)"""
+    # TODO: retrieve Zk based on hyperparams
+    #def get_data(row, dim=0, sigma=None, SIGMA=None, SIGMA_1=None):
+    try:
+        t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
+        T = row.resp_len*1000 + 50 # total span
+        t = t.astype(int)/1000_000 - 250 - row.sound_len #  we take 50ms earlier CportOut
+        if t.size<10:
+            raise ValueError('custom exception to discard trial')
+        
+        fp = np.argmax(t>=0)
+        lastp = np.argmax(t>T) # first frame after lateral poke in 
+        tsegment = np.append(t[fp:lastp],T)
+        tsegment = np.insert(tsegment,0,0)
+        if invert and row.R_response==0:
+            pose = np.c_[row.trajectory_x,row.trajectory_y*-1]
+        else:
+            pose = np.c_[row.trajectory_x,row.trajectory_y]
+
+        boundaries = [[0,0]]*6
+        for i, traj in enumerate([pose, row.traj_d1, row.traj_d2]):
+            f = interp1d(t, traj, axis=0)
+            initial = f(0)
+            last = f(T)
+            boundaries[i] = initial
+            boundaries[i+3] = last
+        pose = np.insert(pose[fp:lastp], 0, boundaries[0], axis=0)
+        pose = np.append(pose, boundaries[3].reshape(-1,2), axis=0)
+        if mu is None:
+            return tsegment, pose
+        else:
+            M = get_Mt0te(tsegment[0], tsegment[-1])
+            M_1 = np.linalg.inv(M)
+            vt = v_(tsegment)
+            N = vt @ M_1
+            SIGMA = allSIGMA[int(row.R_response)]
+            SIGMA_1 = np.linalg.pinv(SIGMA)
+            #W = sigma**2 * np.identity(N.shape[0]) + N @ SIGMA @ N.T # shape n x n
+            L = np.linalg.pinv( # shape 6,6
+                SIGMA_1 + N.T @ N/sigma**2 
+            )
+            
+            m = L @ (N.T @ pose[:,dim].reshape(-1,1)/sigma**2 + SIGMA_1 @ mu[:,int(row.R_response)].reshape(-1,1))
+            posterior = N @ m
+            prior = N @ mu[:,int(row.R_response)] # is this the prior
+            se = np.sqrt(np.diag(N @ L @ N.T))
+            # se = np.zeros(N.shape[0] )
+            # for i in range(N.shape[0]):
+            #     posterior[i] = None # nt @ m
+            #     se[i] = N[i].reshape(1,6) @ L @ N[i].reshape(6,1) # same result!
+            return tsegment, pose, posterior, se, prior
+    except Exception as e:
+        raise e
+        if mu is None:
+            return np.nan, np.nan
+        else:
+            return np.nan, np.nan, np.nan, np.nan, np.nan
+
+
+def get_traj_subplot_factors(row,invert=True, B=None, allSIGMA=None, sigma=5,dim=1):
+    """evaluates whether it was or not (through pandas apply), copypasting 
+    preprocess + expand to loglike
+    if want to retrieve fit traj, specify mu (list of left and right mu's)"""
+    # TODO: retrieve Zk based on hyperparams
+    #def get_data(row, dim=0, sigma=None, SIGMA=None, SIGMA_1=None):
+    raise NotImplementedError('not yet')
+    try:
+        t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
+        T = row.resp_len*1000 + 50 # total span
+        t = t.astype(int)/1000_000 - 250 - row.sound_len #  we take 50ms earlier CportOut
+        if t.size<10:
+            raise ValueError('custom exception to discard trial')
+        
+        fp = np.argmax(t>=0)
+        lastp = np.argmax(t>T) # first frame after lateral poke in 
+        tsegment = np.append(t[fp:lastp],T)
+        tsegment = np.insert(tsegment,0,0)
+        if invert and row.R_response==0:
+            pose = np.c_[row.trajectory_x,row.trajectory_y*-1]
+        else:
+            pose = np.c_[row.trajectory_x,row.trajectory_y]
+
+        boundaries = [[0,0]]*6
+        for i, traj in enumerate([pose, row.traj_d1, row.traj_d2]):
+            f = interp1d(t, traj, axis=0)
+            initial = f(0)
+            last = f(T)
+            boundaries[i] = initial
+            boundaries[i+3] = last
+        pose = np.insert(pose[fp:lastp], 0, boundaries[0], axis=0)
+        pose = np.append(pose, boundaries[3].reshape(-1,2), axis=0)
+        
+        mu = B @ F.reshape(4,1)
+
+        
+        M = get_Mt0te(tsegment[0], tsegment[-1])
+        M_1 = np.linalg.inv(M)
+        vt = v_(tsegment)
+        N = vt @ M_1
+        SIGMA = allSIGMA[int(row.R_response)]
+        SIGMA_1 = np.linalg.pinv(SIGMA)
+        #W = sigma**2 * np.identity(N.shape[0]) + N @ SIGMA @ N.T # shape n x n
+        L = np.linalg.pinv( # shape 6,6
+            SIGMA_1 + N.T @ N/sigma**2 
+        )
+        
+        m = L @ (N.T @ pose[:,dim].reshape(-1,1)/sigma**2 + SIGMA_1 @ mu[:,int(row.R_response)].reshape(-1,1))
+        posterior = N @ m
+        prior = N @ mu[:,int(row.R_response)] # is this the prior
+        se = np.sqrt(np.diag(N @ L @ N.T))
+        # se = np.zeros(N.shape[0] )
+        # for i in range(N.shape[0]):
+        #     posterior[i] = None # nt @ m
+        #     se[i] = N[i].reshape(1,6) @ L @ N[i].reshape(6,1) # same result!
+        return tsegment, pose, posterior, se, prior
+    except Exception as e:
+        raise e
+        if mu is None:
+            return np.nan, np.nan
+        else:
+            return np.nan, np.nan, np.nan, np.nan, np.nan

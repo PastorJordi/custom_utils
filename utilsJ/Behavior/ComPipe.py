@@ -282,7 +282,7 @@ class chom:
                     print(helpdict[item])
 
 
-    def __init__(self, subject, parentpath='../data/', analyze_trajectories=True):
+    def __init__(self, subject, parentpath='/home/jordi/Documents/changes_of_mind/data/', analyze_trajectories=True):
         ## ideally it contains all defaults so we can run whole pipe with a single call
         # perhaps we should create a 2nd class which inherits shared stuff from chom(subj)
         # instead of storing non shared stuff in above class (subj)
@@ -682,7 +682,9 @@ class chom:
                 if float(literal_eval(df1.loc[df1.MSG=='TASK','+INFO'].values[0])[1])<0.3:
                     # task earlier than v0.3 were sub-optimal  
                     # whether they are correct is fine, just need to make sure side is fine!
-                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values # perhaps not all of them are switch
+                    #comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values # perhaps not all of them are switch
+                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', '+INFO'].values.astype(int) +1 # this was not working prop, previous on top
+                    # it should be 1-based now
                     eventdfwobnc = df1.loc[df1.trial_index.isin(comswitchtrials)&(df1.TYPE=='EVENT')& ~(df1['+INFO'].str.startswith('BNC', na=False))]
 
                     pat=np.asarray(['Tup', 'Tup', self.active_ports[1]+'Out'])
@@ -714,8 +716,9 @@ class chom:
                 else: # issue solved in vers >0.3!
                     # this should remain the same in 0.5 (another issue solved)
                     # just invert rewside in those trials
-                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values.astype(int) # 1 based to keep it the same way than previous if
-                    rewside[comswitchtrials-1] = (rewside[comswitchtrials]-1)**2
+                    #comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', 'trial_index'].values.astype(int) # 1 based to keep it the same way than previous if
+                    comswitchtrials = df1.loc[df1.MSG=='enhance_com_switch', '+INFO'].values.astype(int) +1 # 1 based to keep it the same way than previous if
+                    rewside[comswitchtrials-1] = (rewside[comswitchtrials-1]-1)**2
             else:
                 comswitchtrials = np.array([])
 
@@ -789,7 +792,7 @@ class chom:
                            columns=['origidx', 'coh', 'rewside', 'hithistory', 'R_response'])
         for i in list(kek.columns)[1:]:
             kek[i] = kek[i].astype(float)
-
+        kek['coh'] = kek.coh.round(decimals=3)
         subj = literal_eval(df1.loc[(df1.TYPE == 'INFO') & (
             df1.MSG == 'SUBJECT-NAME'), '+INFO'].values[0])[0]
         sessid = df1[(df1.TYPE == 'INFO') & (
@@ -810,6 +813,12 @@ class chom:
             kek['renv'] = kek.coh
             kek['lenv'] = kek.coh-1
             kek['res_sound'] = kek.renv + kek.lenv
+            silent_trial_idx = df1.loc[df1.MSG == 'silence_trial',
+                                       'trial_index'].values.astype(int)  # 0 indexed
+            if silent_trial_idx.size:
+                kek.loc[silent_trial_idx, ['renv', 'lenv', 'res_sound']] = 0
+
+
         kek['trialonset'] = trialonset
         # what happen in silent trials? fix: should be nan already
         kek['soundonset'] = soundonset
@@ -843,10 +852,10 @@ class chom:
                 print(f'somehow could not get prob_repeat in {self.target}; inferring...\nBbeware, this will lead to wrong results if not .2-.8 and rep-alt')
                 kek['prob_repeat'] = chom.get_rep(df1)[:len(trialidx)]
         # add withinblock index
-        blen = int(df1.loc[(df1.TYPE == 'VAL') & (
-            df1.MSG == 'VAR_BLEN'), '+INFO'].values[-1])
-        bnum = int(df1.loc[(df1.TYPE == 'VAL') & (
-            df1.MSG == 'VAR_BNUM'), '+INFO'].values[-1])
+        blen = int(float(df1.loc[(df1.TYPE == 'VAL') & (
+            df1.MSG == 'VAR_BLEN'), '+INFO'].values[-1]))
+        bnum = int(float(df1.loc[(df1.TYPE == 'VAL') & (
+            df1.MSG == 'VAR_BNUM'), '+INFO'].values[-1]))
         # wtf what about invalid trials?
         kek['wibl_idx'] = np.tile(
             np.arange(1, blen+1, step=1), bnum)[:len(trialidx)]
@@ -952,7 +961,10 @@ class chom:
             
             if len(comswitchtrials):
                 self.trial_sess.loc[comswitchtrials-1, 'special_trial'] = 3 # new mark for com-switch-trials
-
+                # -1 because it is 1-based (buggy before Feb2021)
+            silence_trials = df1.loc[df1.MSG=='silence_trial', '+INFO'].values.astype(int)
+            if silence_trials.size:
+                self.trial_sess.loc[silence_trials, 'special_trial'] = 2
             
         # get fixation onset timestamp
         fix_onset_state = 'Fixation'
@@ -1891,7 +1903,7 @@ def threaded_gather(inarg): #com_instance, session, normcoords=True, #**kwargs):
 # plenty of strategies:
 # https://yuanjiang.space/threadpoolexecutor-map-method-with-multiple-parameters
 def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=True, 
-                    normcoords=True, skip_errors=True, analyze_trajectories=True, sessions={}, parentpath='../data/',
+                    normcoords=True, skip_errors=True, analyze_trajectories=True, sessions={}, parentpath='/home/jordi/Documents/changes_of_mind/data/',
                     tqdm_notebook=True, pat='p4', noffset_frames=0, GLM=False, glm_kws={
                         'lateralized':True, 'dual':True, 'plot':False, 'plot_kwargs':{}, 'filtermask':None, 
                         'noenv':False, 'savdir':'', 'fixedbias':True, 'return_coefs':True, 'subjcol':'subjid'
