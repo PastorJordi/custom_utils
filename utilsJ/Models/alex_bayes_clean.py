@@ -60,7 +60,8 @@ class tinf: # (trial info)
     '''given that same code is rewritten and messy, ill try to compact access to trial info (row) in a class
     call it to access info later *(do not preprocess everything by default to save computing power when possible)'''
     def __init__(self, row, M=False, othermatrices=False, factors=False, dim=1,twoD=False, boundary_cond=False, verbose=False,
-        sigma=5, SIGMA=None, ab_instance=None, invert=False
+        sigma=5, SIGMA=None, ab_instance=None, invert=False, factorlist=['coh2', 'zidx', 'dW_trans'], 
+        factor_kw={'add_intercept':True}
     ):
         # row is a row from a df. Ideally this is will be instantiated when using long apply
         t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
@@ -93,21 +94,22 @@ class tinf: # (trial info)
         self.okstatus = True
         self.t = t # original t vector
         self.T = T
-        
 
         if ab_instance is not None: # reduce code by looping with setattr and getattr
-            self.sigma = ab_instance.sigma
-            self.SIGMA = ab_instance.SIGMA
-            self.twoD = ab_instance.twoD
-            self.factors = ab_instance.factors
-            self.dim = ab_instance.dim
-            self.invert = ab_instance.invert
+            for at in ['sigma', 'SIGMA', 'twoD', 'factors', 'dim', 'invert', 'factorlist', 'factor_kw']:
+                setattr(
+                    self, 
+                    at,
+                    getattr(ab_instance, at, None)
+                )
         else:
             self.sigma = sigma
             self.SIGMA = SIGMA
             self.twoD = twoD
             self.factors = factors
             self.invert = invert
+            self.factorlist = factorlist
+            self.factor_kw = factor_kw
             if twoD:
                 self.dim = np.array([0,1])
             else:
@@ -115,7 +117,7 @@ class tinf: # (trial info)
 
         try:
             if factors:
-                self.get_factors()
+                self.get_factors(**factor_kw)
             if M:
                 self.get_M()
             if boundary_cond:
@@ -127,13 +129,12 @@ class tinf: # (trial info)
             if verbose:
                 print(f'err while extracting info in trial {row.name}\n{e}')
 
-    def get_factors(self):
-        extra = [self.row.coh *2 -1, self.row.zidx, self.row.dW_trans] #! remember order
-        for i in range(3):
-            if np.isnan(extra[i]): # replace nans in extra features
-                extra[i] = 0
-
-        self.Fk = np.array([1]+extra) # prepended intercept
+    def get_factors(self, add_intercept = True):
+        factors = self.row[self.factorlist].fillna(0).values
+        if add_intercept:
+            self.Fk = np.array([1]+factors.tolist()) # prepended intercept
+        else:
+            self.Fk = np.array(factors)
     
     def get_boundarycond(self):
         # if self.M is None:
@@ -168,6 +169,7 @@ class tinf: # (trial info)
             )
 
     def return_preprocessed(self):
+        # this should check whether N W and Fk are processed, spent many time with this one
         toreturn = [self.okstatus, self.pose[:,self.dim], self.N, self.W] + self.factors*[self.Fk]
         return toreturn
     
@@ -189,7 +191,8 @@ class ab:
 
     def __init__(
         self, df, sigma=5, SIGMA=None, mu=None, factors=False, dim=1, dummy_span=150, workers=7, twoD=False,
-        min_frames_traj=10, random_state=123, response_side=0, eps = 0.05, invertLtraj=False, silentonly=False
+        min_frames_traj=15, random_state=123, response_side=0, eps = 0.05, invertLtraj=False,
+        factorlist=['coh2', 'zidx', 'dW_trans'], factor_kw={'add_intercept':True}
     ):
         """
         df = filtered dataframe (side, invalids, rt/mt bins)
@@ -203,6 +206,8 @@ class ab:
         min_frames_traj: minimum frames to consider (discard trajectories with less datapoints)
         eps = initial epsilon
         invertLtraj : whether to invert left trial trajectories
+        factorlist: which cols/factors/features from DF will be used to find B
+
 
 
         briefly, this will work as follows>
@@ -215,6 +220,8 @@ class ab:
         df = df.loc[
             (df.trajectory_x.apply(len)>=min_frames_traj) & (df.R_response==response_side)
             ]
+        assert df.size, 'beware filtering, (response=side?), df is empty'
+        
         if twoD:
             dim=np.array([0,1])
             raise NotImplementedError('not yet')
@@ -231,10 +238,13 @@ class ab:
             print('calculating zscore for trial index')
             df['zidx'] = (df.origidx - df.origidx.mean())/df.origidx.std()
 
+        if factors:
+            for f in factorlist:
+                assert f in df.columns, f'factor "{f}" not found among df.cols'
 
         self.df=df#.copy()
         self.subject = df.subjid.unique()
-        self.B = None
+        self.B = None # we-ll define it later according to Fk.size
         self.eps = eps
         self.sigma=sigma
         
@@ -246,16 +256,12 @@ class ab:
         self.response_side = response_side
         self.dummy_span = dummy_span
         self.invertLtraj = invertLtraj
+        self.factorlist = factorlist
+        self.factor_kw = factor_kw
 
         if mu is None and factors==False:
             print('using default mu, else provide it as an arg')
             self.mu = self.default_mu.copy()[:,dim]
-        elif factors:
-            self.mu = None
-            if not silentonly:
-                self.B = np.zeros((6,4))
-            else:
-                self.B = np.zeros((6,3))
         else:
             self.mu=mu
 
@@ -269,7 +275,6 @@ class ab:
         self.llh = -np.inf
         self.prep_data = None
         self.history = {} # fit history in short
-        self.silentonly = silentonly
         
 
 
@@ -287,15 +292,17 @@ class ab:
 
 
 
-    def preprocess(self):
-        """no args yet, all defined in __init__"""
+    def preprocess(
+            self
+        ):
+        """colkw - kwords for tinf class (clolumn mapping)"""
         colnames = ['OK', 'coords', 'N', 'W'] + ['F'] * self.factors
         tmp = self.df.swifter.apply( 
-            lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True).return_preprocessed(), 
+            #lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True, factorlist=self.factorlist).return_preprocessed(), 
+            lambda row: tinf(row, factors=self.factors, othermatrices=True, ab_instance=self).return_preprocessed(), 
             axis=1, result_type='expand')
         tmp.columns = colnames
-        if self.silentonly & self.factors:
-            tmp['F'] = tmp['F'].apply(lambda x: np.array([x[0], x[2], x[3]])) # beware because oftn dW_trans is missing for silent trials
+
         out = {}
         for cname in colnames[1:]: # all but OK
             out[cname] = tmp.loc[tmp.OK==True,cname].tolist()
@@ -321,7 +328,7 @@ class ab:
             llh = np.log(eps/dummy_span**N.shape[0] + (1-eps) * pmk)
             return (pmk, zk, llh)
         except Exception as e:
-            print(f'exception in E_step_factors, \n{e}')
+            print(f'exception in E_step_worker, \n{e}')
             return (1e-10,1e-10,1e-10) # is this tiny enough?
     
     @staticmethod
@@ -382,12 +389,16 @@ class ab:
             'llh' : [self.llh],
             'eps' : [self.eps]
         }
+        if self.factors: # init B now that stuff is preprocessed
+            self.B = np.zeros((6,self.prep_data['F'][0].size))
+
+
         if self.factors:
             self.history['tofit'] = [self.B.copy()] 
         else:
             self.history['tofit'] = [self.mu.copy()]
 
-
+        
         itercounter = 0
         break_flag = False
         while True: # we'll break it explicitly
