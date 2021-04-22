@@ -66,6 +66,7 @@ class tinf: # (trial info)
         # BL and BR are betas to use interactive plotting function. [size should match with factorlist + itnercept]
         # row is a row from a df. Ideally this is will be instantiated when using long apply
         # time_pre_portout: get some extra ms before port out (trajectory starts slightly before)
+        self.okstatus = True
         t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
         T = row.resp_len*1000 + time_pre_portout # total span
         t = t.astype(int)/1000_000 - (300-time_pre_portout) - row.sound_len #  align to Cportout
@@ -74,15 +75,26 @@ class tinf: # (trial info)
         else:
             pose = np.c_[row.trajectory_x,row.trajectory_y]
         self.original_pose = pose
-        f = interp1d(t, pose, axis=0)
-        initpose = f(0)
-        lastpose = f(T)
-        fp = np.argmax(t>=0)
-        lastp = np.argmax(t>T) # first frame after lateral poke in 
-        tsegment = np.append(t[fp:lastp],T)
-        tsegment = np.insert(tsegment,0,0)
-        pose = np.insert(pose[fp:lastp], 0, initpose, axis=0)
-        pose = np.append(pose, lastpose.reshape(-1,2), axis=0) # 2D!
+        
+        try:
+            f = interp1d(t, pose, axis=0)
+            initpose = f(0)
+            fp = np.argmax(t>=0) 
+            lastp = np.argmax(t>T) # first frame after lateral poke in 
+            tsegment = np.append(t[fp:lastp],T)
+            tsegment = np.insert(tsegment,0,0)
+            lastpose = f(T)
+            
+            pose = np.insert(pose[fp:lastp], 0, initpose, axis=0)
+            pose = np.append(pose, lastpose.reshape(-1,2), axis=0) # 2D!
+        except Exception as e:
+            print(f'exception in {row.sessid} trial {row.origidx}\n{e}')
+            pose = None
+            tsegment = t 
+            self.okstatus=False
+
+            #raise e
+        
         self.row = row
         self.pose = pose
         self.tsegment = tsegment
@@ -93,12 +105,11 @@ class tinf: # (trial info)
         self.vt = None
         self.N = None
         self.W = None
-        self.okstatus = True
         self.t = t # original t vector
         self.T = T
 
         if ab_instance is not None: # reduce code by looping with setattr and getattr
-            for at in ['sigma', 'SIGMA', 'twoD', 'factors', 'dim', 'invert', 'factorlist', 'factor_kw']:
+            for at in ['sigma', 'SIGMA', 'twoD', 'factors', 'dim', 'invert', 'factorlist', 'factor_kw', 'collapsing_factors', 'collapse_sides', 'time_pre_portout']:
                 setattr(
                     self, 
                     at,
@@ -112,10 +123,18 @@ class tinf: # (trial info)
             self.collapse_sides = collapse_sides
             self.factorlist = factorlist
             self.factor_kw = factor_kw
+            self.collapsing_factors = collapsing_factors
             if twoD:
                 self.dim = np.array([0,1])
             else:
                 self.dim = dim
+        if self.collapse_sides:
+            collapsing_index = [self.factorlist.index(x) for x in self.collapsing_factors]#to know which column indexes to invert
+            factor_mask = np.ones(len(self.factorlist))
+            factor_mask[collapsing_index] = -1
+            self.factor_mask = factor_mask
+        else:
+            self.factor_mask = np.ones(len(self.factorlist)) # should not be used but just in case!
 
         try:
             if factors:
@@ -128,11 +147,15 @@ class tinf: # (trial info)
                 self.get_othermatrices()
         except Exception as e:
             self.okstatus=False
+            print('second exception in tinf')
+            raise e
             if verbose:
                 print(f'err while extracting info in trial {row.name}\n{e}')
 
     def get_factors(self, add_intercept = True):
         factors = self.row[self.factorlist].fillna(0).values
+        if self.collapse_sides and int(self.row['R_response'])==0:
+            factors = factors * self.factor_mask
         if add_intercept:
             self.Fk = np.array([1]+factors.tolist()) # prepended intercept
         else:
@@ -141,16 +164,18 @@ class tinf: # (trial info)
     def get_boundarycond(self):
         # if self.M is None:
         #     self.get_M()
-
-        out = [0]*6
-        for i, traj in enumerate([self.original_pose, self.row.traj_d1, self.row.traj_d2]):
-            f = interp1d(self.t, traj, axis=0)
-            initial = f(0)
-            last = f(self.T)
-            out[i] = initial
-            out[i+3] = last
-        # self.boundary_cond = self.M_1 @ np.vstack(out)
-        self.boundary_cond = np.vstack(out)
+        if self.okstatus:
+            out = [0]*6
+            for i, traj in enumerate([self.original_pose, self.row.traj_d1, self.row.traj_d2]):
+                f = interp1d(self.t, traj, axis=0)
+                initial = f(0)
+                last = f(self.T)
+                out[i] = initial
+                out[i+3] = last
+            # self.boundary_cond = self.M_1 @ np.vstack(out)
+            self.boundary_cond = np.vstack(out)
+        else:
+            self.boundary_cond = np.ones(12).reshape(6,2) * np.nan
 
 
     def get_M(self):
@@ -172,8 +197,11 @@ class tinf: # (trial info)
 
     def return_preprocessed(self):
         # this should check whether N W and Fk are processed, spent many time with this one
-        toreturn = [self.okstatus, self.pose[:,self.dim], self.N, self.W] + self.factors*[self.Fk]
-        return toreturn
+        if self.okstatus:
+            toreturn = [self.okstatus, self.pose[:,self.dim], self.N, self.W] + self.factors*[self.Fk]
+            return toreturn
+        else:
+            return [False, None, None, None] + self.factors*[None]
     
 
 
@@ -224,9 +252,13 @@ class ab:
         # apply filtering so we avoid to rewrite it every single time
         if loadpath is None:
             assert isinstance(df, pd.DataFrame), 'df does not look as a dataframe'
-            df = df.loc[
-                (df.trajectory_x.apply(len)>=min_frames_traj) & (df.R_response==response_side)
-                ]
+            if not collapse_sides:
+                df = df.loc[
+                    (df.trajectory_x.apply(len)>=min_frames_traj) & (df.R_response==response_side)
+                    ]
+            else:
+                response_side = None
+                df = df.loc[df.trajectory_x.apply(len)>=min_frames_traj]
             assert df.size, 'beware filtering, (response=side?), df is empty'
             
             if twoD:
@@ -265,6 +297,7 @@ class ab:
             self.collapse_sides = collapse_sides
             self.factorlist = factorlist
             self.factor_kw = factor_kw
+            self.collapsing_factors = collapsing_factors
             self.time_pre_portout = time_pre_portout
 
             if mu is None and factors==False:
@@ -292,9 +325,10 @@ class ab:
         """samples trajectories to get an average as a prior"""
         print('SIGMA was not provided, estimating it')
         subset = self.df.loc[(self.df.hithistory>=0)&(self.df.Hesitation==False)].sample(sample_size, replace=True, random_state=self.random_state)
-        subset['est_params'] = subset.swifter.apply(lambda x: tinf(x, dim=self.dim, boundary_cond=True, time_pre_portout=self.time_pre_portout).boundary_cond, axis=1)
+        subset['est_params'] = subset.swifter.apply(lambda x: tinf(x, ab_instance=self,
+        dim=self.dim, factorlist = self.factorlist, collapse_sides=self.collapse_sides,boundary_cond=True, time_pre_portout=self.time_pre_portout).boundary_cond, axis=1)
         if not self.twoD:
-            sigma_b = np.stack(subset['est_params'].tolist(), axis=2).std(axis=2)
+            sigma_b = np.nanstd(np.stack(subset['est_params'].tolist(), axis=2), axis=2)#.std(axis=2)
             var = (sigma_b[:,self.dim]**2).reshape(-1,1)
             # SIGMA = np.concatenate([var[:3], var[:3]]) * np.identity(6)
             SIGMA = var * np.identity(6)
@@ -309,7 +343,8 @@ class ab:
         colnames = ['OK', 'coords', 'N', 'W'] + ['F'] * self.factors
         tmp = self.df.swifter.apply( 
             #lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True, factorlist=self.factorlist).return_preprocessed(), 
-            lambda row: tinf(row, factors=self.factors, othermatrices=True, ab_instance=self, time_pre_portout=self.time_pre_portout).return_preprocessed(), 
+            lambda row: tinf(row, ab_instance=self,
+            factors=self.factors, factorlist = self.factorlist ,collapse_sides=self.collapse_sides,othermatrices=True, time_pre_portout=self.time_pre_portout).return_preprocessed(), 
             axis=1, result_type='expand')
         tmp.columns = colnames
 
@@ -317,8 +352,10 @@ class ab:
         for cname in colnames[1:]: # all but OK
             out[cname] = tmp.loc[tmp.OK==True,cname].tolist()
 
-        self.ntrials = tmp.shape[0] # number of trials which will run through EM
+        self.ntrials = tmp[tmp.OK].shape[0] # number of trials which will run through EM
         self.prep_data = out
+
+        print(f'discarded {len(self.df)-self.ntrials} trials in the preprocess')
 
     @staticmethod
     def E_step_worker_(args):
@@ -400,6 +437,7 @@ class ab:
             'eps' : [self.eps]
         }
         if self.factors: # init B now that stuff is preprocessed
+            #print(self.prep_data['F'])
             self.B = np.zeros((6,self.prep_data['F'][0].size))
 
 
@@ -513,7 +551,7 @@ class ab:
         # perhaps this would be more useful/natural in the other class but as it is auxiliary ideally
         # end user will just interact with ab class | that's no excuse
 
-        r = tinf(row, othermatrices=True, ab_instance=self, time_pre_portout=self.time_pre_portout)
+        r = tinf(row, othermatrices=True, ab_instance=self, collapse_sides=self.collapse_sides,time_pre_portout=self.time_pre_portout)
         args =  [
                     r.pose[:,self.dim], # arg list # this could be cleaner.
                     r.N,
@@ -540,6 +578,7 @@ class ab:
 
 
 def viz_traj_B(self, row, Lobjectpath=None, Robjectpath=None, time=None):
+    # also wont work if  collapsed
     raise NotImplementedError
     qL=ab(loadpath=Lobjectpath)
     qR=ab(loadpath=Robjectpath)
