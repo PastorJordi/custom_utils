@@ -437,6 +437,7 @@ def interpolapply(
             x_vec = (x_vec-np.timedelta64(fixation_us , 'us')).astype(float)
             #x_vec = x_vec.astype(float)
         elif align == 'action':
+            # next line crashes when there's a (accidental)silent trial and sound_len is np.nan
             x_vec = (x_vec - np.timedelta64(int(fixation_us + (row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
             #x_vec = (x_vec - np.timedelta64(int((row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
         elif align == 'response':
@@ -735,6 +736,17 @@ def gradient_np(row):
         return d1, d2, d3, t
     except:
         return np.nan, np.nan, np.nan, np.nan
+
+def gradient_np_simul(row):
+    """same but no stamps due being ms based"""
+    try:
+        t = np.arange(row.traj.size)
+        d1 = np.gradient(row.traj, t)
+        d2 = np.gradient(d1, t)
+        d3 = np.gradient(d2, t)
+        return d1, d2, d3
+    except:
+        return np.nan, np.nan, np.nan
 
 
 def speedaccel_plot(cdata, binningcol, bins, savpath=None, align='action', bintype='edges',

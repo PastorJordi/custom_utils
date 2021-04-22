@@ -3,17 +3,9 @@ import numpy as np
 cimport numpy as cnp
 cimport cython
 
-## TODO: remove double declarations of vars (py+c) when they are not returned just use cdef 
-
-## check this for clarificatio in dtypes https://stackoverflow.com/questions/21851985/difference-between-np-int-np-int-int-and-np-int-t-in-cython
-# adapt inputs, for efficient indexing! docu here! https://cython.readthedocs.io/en/latest/src/tutorial/numpy.html
-# like def naive_convolve(np.ndarray[DTYPE_t, ndim=2] f, np.ndarray[DTYPE_t, ndim=2] g):
 ctypedef cnp.int_t DTYPE_int
 ctypedef cnp.float_t DTYPE_float
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-def D2M_simulation_c(
+def D2M_simulation_here(
     double t_c, # 1.3 time of truncation (quan truncar els RTs dels contaminants)
     double c, # prob de que 1 trial sigui contaminant (1-p(PSIAM)
     double b, # (invers temps característic / factor multiplicatiu exponent contaminant) e^(-b*t) ~> t:RT
@@ -62,19 +54,19 @@ def D2M_simulation_c(
     """
     # set seed in random generator
     rng = np.random.RandomState(seed=seed)
-
+    
     # init vars
     cdef cnp.ndarray[DTYPE_float, ndim=1] RT = np.repeat([-1.], n) # float
     cdef cnp.ndarray[DTYPE_int, ndim=1] Accu = np.zeros((n), dtype=np.int_)
     cdef cnp.ndarray[DTYPE_int, ndim=1] Bound = np.zeros((n), dtype=np.int_)
     cdef long i, k, ii
     cdef int k_0 = int(np.floor(t_0_u/dt)) # we store this in mem so we avoid 1 useless calc
+    cdef int iii = 0
     cdef double vv_u, v_e, zz, mu, a ,B, x_u, x_e
     cdef double var = 0.015
-    cdef long max_steps = int((t_c+abs(t_0_u))/dt)
+    cdef long max_steps = int((t_c+abs(t_0_u))/dt)+25000
     cdef double curr_vvu, curr_vve, T
-
-
+    cdef long batchsize = 1000
 
     # vectorized python
     cdef cnp.ndarray[DTYPE_int, ndim=1] Block_vec = np.mod(np.ceil(np.arange(1,n+1)/block_len),2).astype(np.int_)
@@ -85,15 +77,15 @@ def D2M_simulation_c(
     Rep_vec = (Block_vec*(rng.binomial(1, prep_rep, n)*2 - 1) + \
         (Block_vec-1)**2 * (rng.binomial(1, prep_alt, n)*2 - 1)).astype(np.int_)
     Block_vec = (2*Block_vec-1).astype(np.int_) # to -1~1 space
-    cdef int[:] Rep_view = Rep_vec
-
+    cdef long[:] Rep_view = Rep_vec
+    
     # Markovian stimulus
     cdef cnp.ndarray[DTYPE_int, ndim=1 ]Categ_vec = np.zeros(n, dtype=np.int_)
     Categ_vec[0] = rng.choice(np.array([-1,1], dtype=np.int_)) # 0th trial side
     
     for i in range(1,n):
         Categ_vec[i] = Categ_vec[i-1]*Rep_view[i]
-
+    
     # % Difficulty
     if len(v)>1:
         v[v==v.min()]=0 #; %to force zero coherence as random stimulus.
@@ -122,11 +114,10 @@ def D2M_simulation_c(
         zz = 0
     else:
         zz=1
-
     ### precompute beta and normals randomness here
     cdef cnp.ndarray[DTYPE_float, ndim=1] betas = rng.beta(a,B, size=n)*2-1 # one per trial (n)
-    cdef cnp.ndarray[DTYPE_float, ndim=2] normals = rng.normal(size=(2,max_steps)) * (dt**0.5) # scaling here sqrt(dt)
-    
+    cdef cnp.ndarray[DTYPE_float, ndim=3] normals =  rng.normal(size=(2,max_steps,batchsize)) * (dt**0.5)  # scaling here sqrt(dt)
+    # adding one dimension for main loop
     # trial loop
     for i in range(1,n):
         # cdef np.ndarray nrandomness = rng.normal(size=()) # decide how many random numbers to precompute
@@ -143,12 +134,12 @@ def D2M_simulation_c(
         curr_vvu = vv_u*dt
         curr_vve = v_e*dt
         while (x_u<a_u) & (k*dt<t_0_e): # % for FBs and Express Responses (purely urgency-triggered responses)
-            x_u = x_u + curr_vvu + normals[0,ii] #; % urgency integrator
+            x_u = x_u + curr_vvu + normals[0,ii,iii] #; % urgency integrator
             k = k+1
             ii = ii+1
         while (x_u<a_u) & (abs(x_e)<a_e): # % for Non-Express Responses
-            x_u = x_u + curr_vvu + normals[0,ii] # % urgency integrator
-            x_e = x_e + curr_vve + normals[1,ii] # % evidence integrator
+            x_u = x_u + curr_vvu + normals[0,ii,iii] # % urgency integrator
+            x_e = x_e + curr_vve + normals[1,ii,iii] # % evidence integrator
             k = k+1 # ; % time step counter
             ii = ii+1
         # end
@@ -160,7 +151,7 @@ def D2M_simulation_c(
             if T<t_0_e: # % for express responses
                 k = int(t_0_e/dt) # ; % we cannot integrate evidence until "t_0_e" # should I int or floor'?
             while k*dt < T+(t_0_e-StimOnset): # % keep integrating for "(t_0_e-StimOnset)" seconds more
-                x_e = x_e + curr_vvu + normals[1,ii] # ; % evidence integrator
+                x_e = x_e + curr_vvu + normals[1,ii,iii] # ; % evidence integrator
                 k = k+1 #; % time step counter
                 k = ii+1
         #    end
@@ -172,14 +163,15 @@ def D2M_simulation_c(
             Resp_vec[i] = 1
         else:
             Resp_vec[i] = 0
-        Accu[i] = ((Resp_vec[i]*Categ_vec[i]+1)/2).astype(np.int_) # ;
+        
+        if i%batchsize == 0:
+            normals =  rng.normal(size=(2,max_steps, batchsize)) * (dt**0.5)
+            iii = 0
+            #print('hey')
+        else:
+            iii +=1   
+    Accu = ((Resp_vec*Categ_vec+1)/2).astype(np.int_) # ;# do this vectorized out of the loop
+    
 
+    # this also should return x_e!
     return RT, v, Accu, Bound, var**0.5
-
-
-
-    # obsolete shit
-    # bound = np.zeros((n), dtype=np.intc)
-    # cdef double[:] RT_view = RT
-    # cdef int[:] Accu_view = Accu
-    # cdef int[:] bound_view = bound

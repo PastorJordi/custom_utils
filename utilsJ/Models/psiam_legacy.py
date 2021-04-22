@@ -6,6 +6,11 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 from numba import jit # testing this for the first time :)
 import random
 
+def PSIAM_custom(
+
+):
+    """adapting lluis code to simulate based on already existing data!"""
+
 def D2M_simulation(
     t_c,c,b,d,v_u,a_u,t_0_u,v,a_e,z_e,t_0_e,StimOnset,prop,dt,n,x_cont_inf, seed=None,
     block_len=80, prep_rep=.8, prep_alt=.2

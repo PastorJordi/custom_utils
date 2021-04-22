@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
-from concurrent.futures import as_completed, ProcessPoolExecutor
+#from concurrent.futures import as_completed, ProcessPoolExecutor
+import concurrent.futures as confu
 import tqdm
 from utilsJ.Behavior.glm2afc import piped_moduleweight
 
@@ -1651,9 +1652,9 @@ class chom:
         speedvec = pd.Series(speedvec).rolling(window=2).mean().iloc[1:].values
         try:  # ignore first few fixation frames
             condition1 = (
-                np.sign(np.round(speedvec[fixation_offset:-3]/sf1))) < 0
+                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) < 0
             condition2 = (
-                np.sign(np.round(speedvec[fixation_offset:-3]/sf1))) > 0
+                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) > 0
             a = ((np.diff(np.where(np.concatenate(
                 ([condition1[0]], condition1[:-1] != condition1[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
             b = ((np.diff(np.where(np.concatenate(
@@ -1662,9 +1663,10 @@ class chom:
         except:
             return False  # except because it crashes if there is no trajectory or no trues?
 
+
     def speed_inflex_delay(speedvec, soundlen, delay, special_trial, fps=30):
         sf1 = -fps*0.06+8
-        if special_trial == -1:
+        if special_trial == -1: # TODO: not true with noenv. Review
             fix_time = 150
         else:
             fix_time = 300
@@ -1674,9 +1676,9 @@ class chom:
         speedvec = pd.Series(speedvec).rolling(window=2).mean().iloc[1:].values
         try:  # ignore first few fixation frames
             condition1 = (
-                np.sign(np.round(speedvec[fixation_offset:-3]/sf1))) < 0
+                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) < 0
             condition2 = (
-                np.sign(np.round(speedvec[fixation_offset:-3]/sf1))) > 0
+                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) > 0
             a = ((np.diff(np.where(np.concatenate(
                 ([condition1[0]], condition1[:-1] != condition1[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
             b = ((np.diff(np.where(np.concatenate(
@@ -1685,6 +1687,10 @@ class chom:
         except:
             return False
 
+    # above functions are totaltrash
+    def detect_speed_inflexion(speedvec, soundlen, fps):
+        pass
+    # TODO: complete
     '''
     def CoM_or_not(traj,slen,resp_side, fps=30 ): # wont work as it is now whenever normcoord = False
         fixsound_framespan=int((300+slen)/(1000/fps))
@@ -1706,6 +1712,7 @@ class chom:
         else:
             return False
     '''
+    @staticmethod
     def CoM_or_not(traj, slen, resp_side, fps=30):  # wont work as it is now whenever normcoord = False
         # adapt this to work with framestamps
         fixsound_framespan = int((300+slen)/(1000/fps))
@@ -1907,13 +1914,16 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
                     tqdm_notebook=True, pat='p4', noffset_frames=0, GLM=False, glm_kws={
                         'lateralized':True, 'dual':True, 'plot':False, 'plot_kwargs':{}, 'filtermask':None, 
                         'noenv':False, 'savdir':'', 'fixedbias':True, 'return_coefs':True, 'subjcol':'subjid'
-                    }):
+                    }, parallel='ThreadPoolExecutor'):
     """to avoid copying extraction scrpt all the way around
     targets = list of subjects
     sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
                 (ie needs matching target list)
     pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
-    Poggers bar: https://github.com/tqdm/tqdm/issues/484"""
+    Poggers bar: https://github.com/tqdm/tqdm/issues/484
+    Parallel: should be either ThreadPoolExecutor or ProcessPoolExecutor
+    """
+
     assert isinstance(targets, list)
     kwargs = {
         'normcoords': normcoords,
@@ -1937,8 +1947,8 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
             subj_sess = final_sess
 
         #print(f'processing {len(subj_sess)} sessions from {subj}...')
-
-        with ProcessPoolExecutor(max_workers=nworkers) as executor:
+        parallelizator = getattr(confu, parallel)
+        with parallelizator(max_workers=nworkers) as executor:
             # for targ_sess, name in executor.map(threaded_gather, 
             #                             tqdm.tqdm([[com_instance, x, kwargs] for x in subj_sess])):
             #     if isinstance(targ_sess, pd.DataFrame):
@@ -1953,7 +1963,7 @@ def extraction_pipe(targets, nworkers=7, bodypart='rabove-snout',fixationbreaks=
                 progressfun = tqdm.tqdm_notebook
             else:
                 progressfun = tqdm.tqdm
-            for job in progressfun(as_completed(jobs), total=len(subj_sess), desc=subj):
+            for job in progressfun(confu.as_completed(jobs), total=len(subj_sess), desc=subj):
                 if skip_errors:
                     try:
                         if isinstance(job.result(), pd.DataFrame):
