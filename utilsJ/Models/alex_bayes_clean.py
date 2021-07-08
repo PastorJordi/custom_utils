@@ -62,13 +62,14 @@ class tinf: # (trial info)
     def __init__(self, row, M=False, othermatrices=False, factors=False, dim=1,twoD=False, boundary_cond=False, verbose=False,
         sigma=5, SIGMA=None, ab_instance=None, collapse_sides=False, factorlist=['coh2', 'zidx', 'dW_trans'], 
         factor_kw={'add_intercept':True}, collapsing_factors = ['coh2', 'dW_trans'],time_pre_portout=50, 
+        time_post_portin=0
     ):
         # BL and BR are betas to use interactive plotting function. [size should match with factorlist + itnercept]
         # row is a row from a df. Ideally this is will be instantiated when using long apply
         # time_pre_portout: get some extra ms before port out (trajectory starts slightly before)
         self.okstatus = True
         t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
-        T = row.resp_len*1000 + time_pre_portout # total span
+        T = row.resp_len*1000 + time_pre_portout + time_post_portin# total span
         t = t.astype(int)/1000_000 - (300-time_pre_portout) - row.sound_len #  align to Cportout
         if collapse_sides and row.R_response==0:
             pose = np.c_[row.trajectory_x,row.trajectory_y.copy()*-1]
@@ -77,7 +78,7 @@ class tinf: # (trial info)
         self.original_pose = pose
         
         try:
-            f = interp1d(t, pose, axis=0)
+            f = interp1d(t, pose, axis=0, fill_value=(pose[0],pose[1]))
             initpose = f(0)
             fp = np.argmax(t>=0) 
             lastp = np.argmax(t>T) # first frame after lateral poke in 
@@ -107,6 +108,7 @@ class tinf: # (trial info)
         self.W = None
         self.t = t # original t vector
         self.T = T
+        
 
         if ab_instance is not None: # reduce code by looping with setattr and getattr
             for at in ['sigma', 'SIGMA', 'twoD', 'factors', 'dim', 'invert', 'factorlist', 'factor_kw', 'collapsing_factors', 'collapse_sides', 'time_pre_portout']:
@@ -128,13 +130,16 @@ class tinf: # (trial info)
                 self.dim = np.array([0,1])
             else:
                 self.dim = dim
+
+        self.factor_mask = np.ones(len(self.factorlist)) # should not be used w/o collapse
+
         if self.collapse_sides:
             collapsing_index = [self.factorlist.index(x) for x in self.collapsing_factors]#to know which column indexes to invert
             factor_mask = np.ones(len(self.factorlist))
             factor_mask[collapsing_index] = -1
             self.factor_mask = factor_mask
-        else:
-            self.factor_mask = np.ones(len(self.factorlist)) # should not be used but just in case!
+
+             
 
         try:
             if factors:
@@ -151,6 +156,7 @@ class tinf: # (trial info)
             raise e
             if verbose:
                 print(f'err while extracting info in trial {row.name}\n{e}')
+
 
     def get_factors(self, add_intercept = True):
         factors = self.row[self.factorlist].fillna(0).values
@@ -225,7 +231,7 @@ class ab:
         self, df=None, sigma=5, SIGMA=None, mu=None, factors=False, dim=1, dummy_span=150, workers=7, twoD=False,
         min_frames_traj=15, random_state=123, response_side=0, eps = 0.05, collapse_sides=False,
         factorlist=['coh2', 'zidx', 'dW_trans'], factor_kw={'add_intercept':True}, collapsing_factors=['coh2', 'dW_trans'],
-        loadpath=None, time_pre_portout=50
+        loadpath=None, time_pre_portout=50, time_post_portin=50
     ):
         """
         df = filtered dataframe (side, invalids, rt/mt bins)
@@ -299,6 +305,14 @@ class ab:
             self.factor_kw = factor_kw
             self.collapsing_factors = collapsing_factors
             self.time_pre_portout = time_pre_portout
+            self.time_post_portin = time_post_portin
+
+            self.factor_mask = np.ones(len(self.factorlist)) # should not be used w/o collapse
+            if self.collapse_sides:
+                collapsing_index = [self.factorlist.index(x) for x in self.collapsing_factors]#to know which column indexes to invert
+                factor_mask = np.ones(len(self.factorlist))
+                factor_mask[collapsing_index] = -1
+                self.factor_mask = factor_mask
 
             if mu is None and factors==False:
                 print('using default mu, else provide it as an arg')
@@ -316,6 +330,7 @@ class ab:
             self.llh = -np.inf
             self.prep_data = None
             self.history = {} # fit history in short
+            
         else:
             self.subject = None
             self.load_model(loadpath)
@@ -326,7 +341,8 @@ class ab:
         print('SIGMA was not provided, estimating it')
         subset = self.df.loc[(self.df.hithistory>=0)&(self.df.Hesitation==False)].sample(sample_size, replace=True, random_state=self.random_state)
         subset['est_params'] = subset.swifter.apply(lambda x: tinf(x, ab_instance=self,
-        dim=self.dim, factorlist = self.factorlist, collapse_sides=self.collapse_sides,boundary_cond=True, time_pre_portout=self.time_pre_portout).boundary_cond, axis=1)
+        dim=self.dim, factorlist = self.factorlist, collapse_sides=self.collapse_sides,boundary_cond=True, time_pre_portout=self.time_pre_portout, 
+        time_post_portin=self.time_post_portin).boundary_cond, axis=1)
         if not self.twoD:
             sigma_b = np.nanstd(np.stack(subset['est_params'].tolist(), axis=2), axis=2)#.std(axis=2)
             var = (sigma_b[:,self.dim]**2).reshape(-1,1)
@@ -344,7 +360,8 @@ class ab:
         tmp = self.df.swifter.apply( 
             #lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True, factorlist=self.factorlist).return_preprocessed(), 
             lambda row: tinf(row, ab_instance=self,
-            factors=self.factors, factorlist = self.factorlist ,collapse_sides=self.collapse_sides,othermatrices=True, time_pre_portout=self.time_pre_portout).return_preprocessed(), 
+            factors=self.factors, factorlist = self.factorlist ,collapse_sides=self.collapse_sides,othermatrices=True, 
+            time_pre_portout=self.time_pre_portout, time_post_portin=self.time_post_portin).return_preprocessed(), 
             axis=1, result_type='expand')
         tmp.columns = colnames
 
@@ -354,6 +371,7 @@ class ab:
 
         self.ntrials = tmp[tmp.OK].shape[0] # number of trials which will run through EM
         self.prep_data = out
+        
 
         print(f'discarded {len(self.df)-self.ntrials} trials in the preprocess')
 
@@ -551,7 +569,8 @@ class ab:
         # perhaps this would be more useful/natural in the other class but as it is auxiliary ideally
         # end user will just interact with ab class | that's no excuse
 
-        r = tinf(row, othermatrices=True, ab_instance=self, collapse_sides=self.collapse_sides,time_pre_portout=self.time_pre_portout)
+        r = tinf(row, othermatrices=True, ab_instance=self, collapse_sides=self.collapse_sides,
+        time_pre_portout=self.time_pre_portout, time_post_portin=self.time_post_portin)
         args =  [
                     r.pose[:,self.dim], # arg list # this could be cleaner.
                     r.N,
@@ -591,7 +610,8 @@ def viz_traj_B(self, row, Lobjectpath=None, Robjectpath=None, time=None):
     # # perhaps this would be more useful/natural in the other class but as it is auxiliary ideally
     # end user will just interact with ab class | that's no excuse
 
-    r = tinf(row, othermatrices=True, ab_instance=self, time_pre_portout=self.time_pre_portout)
+    r = tinf(row, othermatrices=True, ab_instance=self, time_pre_portout=self.time_pre_portout,
+    time_post_portin=self.time_post_portin)
     argsL =  [
                 r.pose[:,self.dim], # arg list # this could be cleaner.
                 r.N,

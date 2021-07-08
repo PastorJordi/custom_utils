@@ -8,7 +8,7 @@ import pickle
 from utilsJ.regularimports import loadmat
 import tqdm
 import warnings
-
+import matplotlib.pyplot as plt
 # remember, silent factorlist sorted like this: [intercept!] + ['zidx', 'dW_trans', 'dW_lat']
 
 # example paths
@@ -24,37 +24,53 @@ def loadclf(path):
 
 class def_traj:
     def __init__(self, subject, side):
-        """rtbin from 0 to 5"""
-        assert side in ['left', 'right'], 'side needs to be a str (left or right)'
+        """rtbin from 0 to 5,
+        if side==None it assumes there are no RTbins neither"""
+        assert side in ['left', 'right',None], 'side needs to be a str (left or right)'
         self.subject = subject
         self.side = side
+        self.B = None
+        self.factor_mask = None
 
     def selectRT(self, RTbin):
-        abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{RTbin}.pkl')
+        if self.side is None:
+            abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_full2.pkl')
+            self.clf = loadclf(f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_full.pkl')
+        else:
+            abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{RTbin}.pkl')
+            self.clf = loadclf(f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{RTbin}.pkl')
         self.B = abobject.B 
-        self.clf = loadclf(f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{RTbin}.pkl')
         self.factorlist = abobject.factorlist
 
     def loadRTs(self, RTbin):
         self.Bs = {}
         self.clfs = {}
-        for i in range(6):
-            try:
-                abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{RTbin}.pkl')
-                self.Bs[i] = abobject.B 
-                if not i:
-                    self.factorlist = abobject.factorlist
-            except:
-                warnings.warn(f'could not retrieve B for {self.subject} in RT {i}')
-            try:
-                self.clfs[i] = loadclf(f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{RTbin}.pkl')
-            except:
-                warnings.warn(f'could not retrieve MT clf for {self.subject} in RT {i}')
+        if self.side is None:
+            abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_full2.pkl')
+            self.B = abobject.B
+            self.factor_mask = abobject.factor_mask
+            warnings.warn(f'You must realign left choices with this mask={repr(self.factor_mask)} in factors={repr(self.factorlist)}')
+        else:
+            for i in range(6):
+                try:
+                    abobject = ab.ab(loadpath=f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{i}.pkl')
+                    self.Bs[i] = abobject.B 
+                    if not i:
+                        self.factorlist = abobject.factorlist
+                except:
+                    warnings.warn(f'could not retrieve B for {self.subject} in RT {i}')
+                try:
+                    self.clfs[i] = loadclf(f'/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{i}.pkl')
+                except:
+                    warnings.warn(f'could not retrieve MT clf for {self.subject} in RT {i}')
             
 
     def expected_mt(self, Fk, add_intercept=True): # adapt so Fk can be a matrix
         # Fk each row = 1 trial.
         assert Fk.ndim==2, 'ensure Fk is 2 d, 0th dim (rows) = trial, 2nd (cols) = each factor'
+        # if self.factor_msk is not None:
+        #     Fk = Fk * self.factor_mask.reshape(1,-1) 
+        # this wont work because it is agnostic to final choice
         if add_intercept:
             Fk = np.insert(Fk, 0, 1, axis=1)
         self.Fk = Fk
@@ -89,7 +105,10 @@ class def_traj:
         return mu_list
 
 
-def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, batches=30, batch_size=2000):
+def simul_psiam(
+    df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, batches=30, 
+    batch_size=2000, priortoZt=None, silent_trials=False, sample_silent_only=False, x_e0_noise=0,
+    confirm_thr=0, proportional_confirm=False):
     """
     rewritting this so it is straightforward
     This is hell
@@ -111,6 +130,9 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
     t_0_e, # temporal onset evidence acumulator. usually ~  0.35s (300 fixation + 50)
     StimOnset, # when is the stimulus starting (0.3)
     v_trial : drift urgency x trial index (x1000 times bigger due numerical errors)
+    priortoZt: if not none, scales prior to starting Zt (evidence integrator offset)
+    confirm_thr: (inverse) fraction of Ze that needs to be surpassed in order to revert preplanned choice. E.g, with confirmthr==0.3 rat with zE 1 (right) will need to reach evidence
+    value of at least -0.3 to choose left, if above -0.3 it will stick to preplanned choice (right)
     """
     if seed is not None:
         rng = np.random.RandomState(seed=seed)
@@ -122,19 +144,30 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
 
     c, v_u, a_u, t_0_u, *v, a_e, z_e, t_0_e, t_0_e_silent, v_trial, b, d, _, _, _ = psiam_params
     v = np.sort(v)
+    # print('v_trial',v_trial)
     v_trial /= 1000
-    s = 1e-3 #0.1
+    # print('v_trial',v_trial)
+    s = .2 #1e-3 #0.1
     mu = (z_e+1)/2 # 0~1 space (assuming z_e was in -1~1) 
-    a = (1-mu)*(mu/s)**2-mu #; % parameter a for the beta distribution
+    a = (1-mu)*(mu/(s/2))**2-mu #; % parameter a for the beta distribution
     B = a*(1/mu-1) # ; % parameter b for the beta distribution
     df['rtbin'] = pd.cut(df.sound_len, np.linspace(0,150,7), include_lowest=True, labels=False)
     ntrials = df.shape[0]
+    #for i, n in enumerate([
+    #    'c', 'v_u', 'a_u', 't_0_u', 'v1', 'v2', 'v3', 'v4', 'a_e', 'z_e', 't_0_e', 't_0_e_silent', 'v_trial', 'b', 'd'
+    #]):
+    #    print(n, psiam_params[i])
+
+
     assert ntrials, 'df has no rows'
     # simulate independently per session! # if it works create a worker later to paralelize
     # as it is done in compipe
     outdf = pd.DataFrame([]) # empty
     for i in range(batches):
-        dat = df.loc[(df.special_trial==0)&(df.origidx!=1)].sample(n=batch_size, random_state=seed+i)
+        if not sample_silent_only:
+            dat = df.loc[(df.special_trial==0)&(df.origidx!=1)].sample(n=batch_size, random_state=seed+i)
+        else:
+            dat = df.loc[(df.special_trial==2)&(df.origidx!=1)].sample(n=batch_size, random_state=seed+i)
         n = len(dat) # we will simulate all but first!
         u_drift = v_u + v_trial * dat.origidx.values # urgency drift in each trial
         u_mat = rng.normal(size=( # fill matrix with unitary drift
@@ -143,20 +176,36 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
             )) * np.sqrt(dt) + (u_drift*dt).reshape(-1,1)
         u_mat = u_mat.astype(np.float32).cumsum(axis=1) # cumsum in each trial
 
-        x_e0 = (rng.beta(a,B, size=n)*2-1) * a_e # % initialize Decision Variable with std so that performance is around 60%
         categ_vec = dat.rewside.values * 2 - 1
-        usefulprior = (np.nansum(dat[['dW_trans', 'dW_lat']].values, axis=1) * categ_vec ) > 0 
-        x_e0[usefulprior] = x_e0[usefulprior] * categ_vec[usefulprior]
-        x_e0[~usefulprior] = x_e0[~usefulprior] * categ_vec[~usefulprior] * -1
-        #x_e0[dat.aftererror.values[1:]==1] = 0 # aftererror set it to 0
+        if priortoZt is None:
+            x_e0 = (rng.beta(a,B, size=n)*2-1) * a_e # % initialize Decision Variable with std so that performance is around 60%
+            #plt.hist(x_e0)
+            #plt.title('x_e0')
+            #plt.show()
+            usefulprior = (np.nansum(dat[['dW_trans', 'dW_lat']].values, axis=1) * categ_vec ) > 0 
+            x_e0[usefulprior] = x_e0[usefulprior] * categ_vec[usefulprior]
+            x_e0[~usefulprior] = x_e0[~usefulprior] * categ_vec[~usefulprior] * -1
+            x_e0[dat.aftererror.values==1] = 0 # aftererror set it to 0
+        else:
+            x_e0 = np.nansum(dat[['dW_trans', 'dW_lat']].values, axis=1) * priortoZt 
+
+        if x_e0_noise:
+            # add gaussian
+            x_e0 += rng.normal(scale=x_e0_noise, size=x_e0.size)
+        
+        x_e0 *= a_e # scale it after noise!
+            
         
         #calc e_drift according to stimulus str/coherence
         e_drift = v[dat.coh2.abs().map({1.:3, 0.5:2, 0.4:2,0.25:1, 0.2:1, 0.:0}).values] * categ_vec
-        e_mat = rng.normal(size=( # fill matrix with unitary drift
-            n, 
-            int(1/dt)
-            )) * np.sqrt(dt) + (e_drift*dt).reshape(-1,1)
-        e_mat[:,0] += x_e0 
+        if silent_trials: # perhaps in the future, add some tiny noise
+            e_mat = np.zeros((n, int(1/dt)))
+        else:
+            e_mat = rng.normal(size=( # fill matrix with unitary drift
+                n, 
+                int(1/dt)
+                )) * np.sqrt(dt) + (e_drift*dt).reshape(-1,1)
+        e_mat[:,0] = x_e0  # removed +=
         e_mat = e_mat.astype(np.float32).cumsum(axis=1) 
 
         evmask = np.abs(e_mat)>a_e
@@ -177,10 +226,35 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
         RT = u_time.copy()
         RT[reactive_i] = e_time[reactive_i]
         # get x_e
-        x_e = x_e0
+        x_e = x_e0.copy()
         x_e[non_fb] = e_mat[non_fb,np.round((RT[non_fb]-0.3)/dt).astype(int)]
+        # TODO: account here for those that listened less than t_e. ! should be fine with line above!
+
+
+
         pred_choice = np.zeros(n)
-        pred_choice[non_fb] = np.ceil(x_e[non_fb]/1000)*2-1
+        # pred_choice[non_fb] = np.ceil(x_e[non_fb]/1000)*2-1
+        # pred_choice[reactive_i] = np.ceil(x_e[reactive_i]/1000)*2-1
+        # set new thr for proactive
+        # x_e0 is in a_e scale already and has noise (if enabled in params)
+        # actually reactive will always be beyond, calc them altogether
+        conf_bias_x_e = np.zeros(n)
+        
+        if proportional_confirm: # confirm thr is proportional to -Ze ; screws com matrix
+            newconfirm_thr = x_e0.copy() * -(confirm_thr) # x_e0 os a;ready in a_e scale
+            # pred_choice[non_fb] = np.ceil((x_e[non_fb]-newconfirm_thr[non_fb])/1000)*2-1
+        else: # confirm thr it is a fixed value happening only after correct!
+            newconfirm_thr = np.repeat(-confirm_thr,x_e0.size) # create rep vec
+            # ae_mask = dat.aftererror.values==1 # get a mask to turn aftererror to 0
+            # newconfirm_thr[ae_mask] =  0 # set them to 0 remove this because it was increasing pcom to 30%
+            newconfirm_thr[np.nansum(dat[['dW_trans', 'dW_lat']].values, axis=1)<0] *= -1 # invert it where it happenned to have left bias
+            newconfirm_thr *= a_e # scale it to a_e
+            
+        conf_bias_x_e[non_fb] = x_e[non_fb]-newconfirm_thr[non_fb] # we will use it later to calc DeltaMT
+        pred_choice[non_fb] = (conf_bias_x_e[non_fb]>0)*2 - 1
+
+        
+
 
         newdf = pd.DataFrame({
             'zidx': dat.zidx.values[non_fb],
@@ -199,7 +273,9 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
             'hithistory': (pred_choice == categ_vec)[non_fb],
             'u_time':u_time[non_fb]-0.3,
             'e_time':e_time[non_fb]-0.3,
-            'avtrapz':dat.avtrapz[non_fb]
+            'avtrapz':dat.avtrapz.values[non_fb],
+            'delta_ev': conf_bias_x_e[non_fb],
+            'aftererror' : dat.aftererror.values[non_fb]
         })
 
         outdf = pd.concat([outdf,newdf], ignore_index=True)
@@ -208,65 +284,148 @@ def simul_psiam(df, psiam_params, t_c=1.3, StimOnset=0.3, dt=1e-4, seed=None, ba
 
 
 
-def simul_traj(row):
+# def simul_traj(row): # whats the difference with function below?
+#     """load params from simulated df
+#     however this will just work for proactive responses, filter before applying
+#     both sides mu are precalculated"""
+#     try:
+#         resp_len = int(row.resp_len*1000)
+
+#         if row.reactive:
+#             if row.R_response:
+#                 curr_mu = row.B_R
+#             else:
+#                 curr_mu = row.B_L
+
+#             t_arr = np.arange(resp_len)
+#             M = ab.get_Mt0te(0,resp_len)
+#             M_1 = np.linalg.inv(M)
+#             vt = ab.v_(t_arr)
+#             N = vt @ M_1
+#             prior0 = (N @ curr_mu).ravel()
+#             return prior0
+#             #return np.zeros(prior0.size), prior0
+#         else:
+#             if row.prechoice: # R
+#                 initial_expected_span = row.expectedMT_R
+#                 curr_mu = row.B_R
+#             else: # L
+#                 initial_expected_span = row.expectedMT_L
+#                 curr_mu = row.B_L
+
+#             if row.R_response: # R
+#                 final_mu = row.B_R.ravel()
+#             else:
+#                 final_mu = row.B_L.ravel()
+
+#             t_arr = np.arange(int(initial_expected_span))
+#             M = ab.get_Mt0te(0,initial_expected_span)
+#             M_1 = np.linalg.inv(M)
+#             vt = ab.v_(t_arr)
+#             N = vt @ M_1
+#             prior0 = (N @ curr_mu).ravel()
+#             tup = int(row.t_update)
+            
+#             d1 = np.gradient(prior0, t_arr)
+#             d2 = np.gradient(d1, t_arr)
+#             Mf = ab.get_Mt0te(tup, resp_len)
+#             Mf_1 = np.linalg.inv(Mf)
+#             # init conditions are [prior0[tup], d1[tup], d2[tup]]
+#             mu_prime = np.array([prior0[tup], d1[tup], d2[tup], *final_mu[3:]]).reshape(6,1) # final mu contains choice*
+#             t_arr_prime = np.arange(tup, resp_len)
+#             N_prime = ab.v_(t_arr_prime) @ Mf_1
+#             updated_fragment = (N_prime @ mu_prime).ravel()
+#             final_traj = np.concatenate(
+#                 [prior0[:tup], updated_fragment]
+#                 )
+#             return final_traj
+#             #return prior0,final_traj
+#     except Exception as e:
+#         raise e
+#         return np.empty(0)
+#         #return np.empty(0), np.empty(0)
+
+def simul_traj_single(
+    row, fixed_reactive_mu=None, return_both=False, silent_trials=False,
+    trajMT_jerk_extension=0
+):
     """load params from simulated df
     however this will just work for proactive responses, filter before applying
     both sides mu are precalculated"""
+    if fixed_reactive_mu is None:
+        fixed_reactive_mu = np.array([0,0,0,75,0,0]).reshape(-1,1)
     try:
-        resp_len = int(row.resp_len*1000)
-
+        resp_len = int(trajMT_jerk_extension  + row.resp_len*1000)
+        RLresp = row.R_response *2 -1 # in -1 ~ 1 space
         if row.reactive:
-            if row.R_response:
-                curr_mu = row.B_R
-            else:
-                curr_mu = row.B_L
-
             t_arr = np.arange(resp_len)
             M = ab.get_Mt0te(0,resp_len)
             M_1 = np.linalg.inv(M)
             vt = ab.v_(t_arr)
             N = vt @ M_1
-            prior0 = (N @ curr_mu).ravel()
-            return prior0
-            #return np.zeros(prior0.size), prior0
-        else:
-            if row.prechoice: # R
-                initial_expected_span = row.expectedMT_R
-                curr_mu = row.B_R
-            else: # L
-                initial_expected_span = row.expectedMT_L
-                curr_mu = row.B_L
-
-            if row.R_response: # R
-                final_mu = row.B_R.ravel()
+            prior0 = (N @ (fixed_reactive_mu*RLresp)).ravel()
+            if return_both:
+                return np.zeros(prior0.size), prior0
             else:
-                final_mu = row.B_L.ravel()
+                return prior0 # no update at all!
+            
+        elif silent_trials:
+            initial_mu = row.mu_boundary
+            t_arr = np.arange(resp_len)
+            M = ab.get_Mt0te(0,resp_len)
+            M_1 = np.linalg.inv(M)
+            vt = ab.v_(t_arr)
+            N = vt @ M_1
+            prior0 = (N @ (initial_mu*RLresp)).ravel()
+            if return_both:
+                return np.zeros(prior0.size), prior0
+            else:
+                return prior0 # no update at all!
+        else:
+            initial_expected_span = trajMT_jerk_extension + row.expectedMT
+            initial_mu = row.mu_boundary
+
+            final_mu = initial_mu.copy().flatten()
+            if row.R_response==0:# flip it
+                final_mu *= -1 
 
             t_arr = np.arange(int(initial_expected_span))
             M = ab.get_Mt0te(0,initial_expected_span)
             M_1 = np.linalg.inv(M)
             vt = ab.v_(t_arr)
             N = vt @ M_1
-            prior0 = (N @ curr_mu).ravel()
+            prior0 = (N @ initial_mu).flatten()
+            if row.prechoice==0:# it was left, flip it back
+                prior0 *= -1
             tup = int(row.t_update)
-            
+            # if t_update is too slow tup might happen after prior traj ended
+            if tup-1>prior0.size: # should I substract trajMT_jerk_extension from prior0.size?
+                if return_both:
+                    return prior0, prior0
+                else:
+                    return prior0
             d1 = np.gradient(prior0, t_arr)
             d2 = np.gradient(d1, t_arr)
             Mf = ab.get_Mt0te(tup, resp_len)
             Mf_1 = np.linalg.inv(Mf)
             # init conditions are [prior0[tup], d1[tup], d2[tup]]
-            mu_prime = np.array([prior0[tup], d1[tup], d2[tup], *final_mu[3:]]).reshape(6,1) # final mu contains choice*
+            mu_prime = np.array([prior0[tup], d1[tup], d2[tup], final_mu[3], final_mu[4], final_mu[5]]).reshape(6,1) # final mu contains choice*
             t_arr_prime = np.arange(tup, resp_len)
             N_prime = ab.v_(t_arr_prime) @ Mf_1
-            updated_fragment = (N_prime @ mu_prime).ravel()
+            updated_fragment = (N_prime @ mu_prime)#.flatten()
             final_traj = np.concatenate(
-                [prior0[:tup], updated_fragment]
+                [prior0[:tup], updated_fragment.flatten()]
                 )
-            return final_traj
-            #return prior0,final_traj
+            if return_both:
+                return prior0,final_traj.flatten()
+            else:
+                return final_traj.flatten()
     except Exception as e:
-        return np.empty(0)
-        #return np.empty(0), np.empty(0)
+        raise e
+        if return_both:
+            return np.empty(0), np.empty(0)
+        else:
+            return np.empty(0)
 
 # then call it with parametergrid: https://stackoverflow.com/questions/13370570/elegant-grid-search-in-python-numpy
 def report_simul(df, sdf, simulparams):

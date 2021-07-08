@@ -68,6 +68,23 @@ def sigmoid(fit_params, x_data, y_data):
     # ypred = RL + (1-RL-LL)/(1+np.exp(-s(x_data-b)))
     return -np.sum(norm.logpdf(y_data, loc=ypred))
 
+def sigmoid_no_lapses(fit_params, x_data, y_data):
+    s,b= fit_params
+    ypred = 1/(1+np.exp(-(s*x_data+b))) # this is harder to interpret
+    # replacing function so it is meaningful
+    # ypred = RL + (1-RL-LL)/(1+np.exp(-s(x_data-b)))
+    return -np.sum(norm.logpdf(y_data, loc=ypred))
+
+
+def raw_psych(y, x, lapses=True):
+    """returns params"""
+    if lapses:
+        loglike = minimize(sigmoid, [1,1,0,0], (x, y))
+    else:
+        loglike = minimize(sigmoid_no_lapses, [0,0], (x, y))
+    params = loglike['x']
+    return params
+
 def psych_curve(target, coherence, ret_ax=None, annot=False ,xspace=np.linspace(-1,1,50), kwargs_plot={}, kwargs_error={}):
     """
     function to plot psych curves
@@ -187,7 +204,7 @@ def correcting_kiani(hit, rresp, com, ev, **kwargs):
 # pending: pcom kiani
 
 # transition com vs transition regular
-def com_heatmap(x, y, com, flip=False, annotate=True,predefbins=None,**kwargs):
+def com_heatmap(x, y, com, flip=False, annotate=True,predefbins=None, return_mat=False,**kwargs):
     '''x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe
     TODO: improve binning option, or let add custom bins
     TODO: add example call'''
@@ -232,6 +249,9 @@ def com_heatmap(x, y, com, flip=False, annotate=True,predefbins=None,**kwargs):
         nmat[i,nobs.index.astype(int)]=nobs
         plain_com_mat[i,switch.index.astype(int)]=switch.values
         matrix[i,crow.index.astype(int)]=crow
+
+    if return_mat:
+        return matrix
     
     if not kwargs:
         kwargs = dict(cmap='viridis', fmt='.0f')
@@ -292,7 +312,7 @@ def com_heatmap(x, y, com, flip=False, annotate=True,predefbins=None,**kwargs):
 def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={}, 
                 ax=None, sem_err=True, xpos=None, subplot_kw={},
                 legend=True, traces=None, traces_kw={'color':'grey', 'alpha':0.15},
-                traces_rolling=0, xoffset=True
+                traces_rolling=0, xoffset=True, median=False
                 ):
     """ bins a var and plots a var according to those bins
     df: dataframe
@@ -331,7 +351,10 @@ def binned_curve(df, var_toplot, var_tobin, bins, errorbar_kw={},
         errfun = sem
     else:
         errfun = groupby_binom_ci
-    tmp = mdf.groupby('tmp_bin')[var_toplot].agg(m='mean', e=errfun)
+    if median:
+        tmp = mdf.groupby('tmp_bin')[var_toplot].agg(m='median', e=errfun)
+    else:
+        tmp = mdf.groupby('tmp_bin')[var_toplot].agg(m='mean', e=errfun)
 
     #print(f'attempting to plot {tmp.shape} shaped grouped df')
 
@@ -448,7 +471,7 @@ def interpolapply(
         x_vec = x_vec[discarded_tstamp:]
 
         # else it is aliggned with
-        if isinstance(trajectory, tuple):
+        if isinstance(trajectory, tuple): # when is this shit being executed
             y_vec = row[trajectory[0]][:,trajectory[1]] # this wont work if there are several columns called like trajectory[0] in the original df
         else: # is a column name
             y_vec = row[trajectory] 
@@ -462,6 +485,8 @@ def interpolapply(
         out = f(interpolatespace)    
         return out
     except Exception as e:
+        #print(x_vec.shape)
+        #raise e
         print(e) 
         return np.array([np.nan]*interpolatespace.size)
 
@@ -472,7 +497,8 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
     interpolatespace=np.linspace(-700000,1000000, 1700), zeropos_interp = 700,
     fixation_delay_offset=0, error_kwargs={'ls':'none'}, ax_traj=None,
     traj_kws={}, ts_fix_onset='fix_onset_dt', align='action', interp_extend=False,
-    discarded_tstamp=0, cmap=None, rollingmeanwindow=0, bintype='edges', xpoints=None):
+    discarded_tstamp=0, cmap=None, rollingmeanwindow=0, bintype='edges', xpoints=None,
+    raiseerrors=False):
     """
     This changed a lot!, review default plots
     Exclude invalids
@@ -484,7 +510,7 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
     bins= if single element it does not use edges but == that value
     fixation_delay_offset = 300-fixation state lenght (ie new state matrix should use 80)
     trajectory: str (colname) where trajectory is. tuple (colname, which col to use in the array) for cols containing arrays.
-    discarded_tstamp: number of tstamps to ommit (for 1st and second derivatives!)
+    discarded_tstamp: number of tstamps to ommit (for 1st and second derivatives!) # old
     thr (threshold should be able to accept as many thr like bins)
     # rollingmean for noisy traj (d1 and d2)
     bintype='edges', 'categorical', 'dfmask'
@@ -526,7 +552,9 @@ def trajectory_thr(df, bincol, bins, thr=40, trajectory='trajectory_y',
         else:
             try:# attempt converting them to floats?!
                 xpoints = [float(x) for x in bins.keys()]
-            except:
+            except Exception as e:
+                if raiseerrors:
+                    raise e
                 xpoints = np.arange(len(bins.keys()))
     y_points = []
     y_err = []
@@ -1054,7 +1082,7 @@ def shuffled_meandiff(inarg):
 def surrogate_test(mata, matb, pval=0.005, nshuffles=1000, return_extra=False, nworkers=8,
     pcalc_discard0 =0, pcalc_discard1 = 1000, lrG=0.01, verbose=False
 ):
-    """shuffling strat to compare trajectories
+    """shuffling/permutation strat to compare trajectories
     # mata: matrix of dims (ntrajectories, ninterpolatedspace), e.g. coh=1
     # matb: same but corresponding to alternative group (eg. coh=0)
     # pcalc discard: last noisy items to discard when calculating global pband

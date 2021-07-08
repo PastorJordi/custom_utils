@@ -14,7 +14,7 @@ import tqdm
 from utilsJ.Behavior.glm2afc import piped_moduleweight
 
 
-
+# fixiing com detection / normalizing speed
 # TODO: add all default params in __init__() so we can run the whole pipe with a single call (compipe)
 # TODO: fix pipe for fixationbreak in trajectories.
 # TODO: adapt to _feedback sessions (which may have inverted trials!)
@@ -1131,11 +1131,18 @@ class chom:
             end_traj_vec = trans.loc[critical_trans,
                                      'fixed_int'].values  # no need to roll
 
+
+        # remove this / adapt
         # this 'd be fine if framerate is constant
-        self.pose[bodypart+'_v', 'x'] = self.pose[bodypart,
-                                                  'x'].shift(-1) - self.pose[bodypart, 'x']
-        self.pose[bodypart+'_v', 'y'] = self.pose[bodypart,
-                                                  'y'].shift(-1) - self.pose[bodypart, 'y']
+        if self.framestamps is None:
+            self.pose[bodypart+'_v', 'x'] = self.pose[bodypart,
+                                                    'x'].shift(-1) - self.pose[bodypart, 'x']
+            self.pose[bodypart+'_v', 'y'] = self.pose[bodypart,
+                                                      'y'].shift(-1) - self.pose[bodypart, 'y']
+        else:
+            tvec = self.framestamps.astype(float)/1000 # in ms
+            self.pose[bodypart+'_v', 'x'] = np.gradient(self.pose[bodypart, 'x'].values, tvec)
+            self.pose[bodypart+'_v', 'y'] = np.gradient(self.pose[bodypart, 'y'].values, tvec)
 
         # drop BNCs from albert device: 60,61,62,63 ~ or following section will not work propperly
         # tag as dirty all trials not following this event pattern [drop BNCs events before] * [delay tasks will differ]
@@ -1270,14 +1277,17 @@ class chom:
         traj_x_list = []
         traj_vy_list = []
         traj_stamps = []
-        init_f = []
+        init_f = [] # getting initial and last frames might help scalating this to db / slicing / retrieving it from original hdf5 etc.
+        last_f = []
 
         # old stuff, try vectorized and get all coords (even for weird trials, evaluate later the trials you please) # cannot really vectorize it :(
         for trial in range(start_traj_vec.size):  # beware offset+2 always!! ~ this should be removed!!!!!!
             try:
                 init_f += [start_traj_vec[trial]]
+                last_f += [end_traj_vec[trial]]
                 traj_y_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
-                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart, 'y'].values)]  # test, remove
+                                                        noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart, 'y'].values)]  # test, remove?
+                                                        # where does this +6 comes from?
                 # hoh huge bug solved
                 traj_x_list += [np.array(self.pose.iloc[start_traj_vec[trial] +
                                                         noffset_frames:end_traj_vec[trial]+noffset_frames+6][bodypart, 'x'].values)]
@@ -1292,6 +1302,7 @@ class chom:
                 traj_x_list += [np.empty(0)]
                 traj_stamps += [np.empty(0)]
                 init_f += [-1]
+                last_f += [-1]
 
         #fix_coords = list()
         if 'delay' not in self.target:
@@ -1315,7 +1326,8 @@ class chom:
         # not centered to 0
         self.trial_sess['trajectory_x'] = traj_x_list[:self.trial_sess.shape[0]]
         # also save frame index
-        self.trial_sess['vidfnum'] = init_f[:self.trial_sess.shape[0]]
+        self.trial_sess['vidfnum_0'] = init_f[:self.trial_sess.shape[0]]
+        self.trial_sess['vidfnum_f'] = last_f[:self.trial_sess.shape[0]]
 
         if self.framestamps is not None:
             self.trial_sess['trajectory_stamps'] = traj_stamps[:self.trial_sess.shape[0]]
@@ -1637,31 +1649,35 @@ class chom:
 
     @staticmethod
     # beware output changes dramatically attending to framerate
-    def speed_inflex(speedvec, soundlen, fps=30, delay=False):
-        #sf1 = -fps*0.085+12.5
-        # sf1 = -fps*0.07+10 # works quite ok
-        # lower a little bit?
-        sf1 = -fps*0.06+8
-        # before it was : fixation_offset = int(0.275*fps)
+    def speed_inflex(speedvec, soundlen, fps=30, delay=False, hotfix=False):
+        if not hotfix:
+            #sf1 = -fps*0.085+12.5
+            # sf1 = -fps*0.07+10 # works quite ok
+            # lower a little bit?
+            sf1 = -fps*0.06+8
+            # before it was : fixation_offset = int(0.275*fps)
 
-        # can lead to : 'cannot convert float NaN to integer', 'occurred at index 0'
-        fixation_offset = int(((300+soundlen)/1000)*fps)
-        #consec_frames_threshold = int(np.round(fps*0.06))
-        consec_frames_threshold = 2  # this should change according to framerate ! adjust
-        # smooth or not? try it out
-        speedvec = pd.Series(speedvec).rolling(window=2).mean().iloc[1:].values
-        try:  # ignore first few fixation frames
-            condition1 = (
-                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) < 0
-            condition2 = (
-                np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) > 0
-            a = ((np.diff(np.where(np.concatenate(
-                ([condition1[0]], condition1[:-1] != condition1[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
-            b = ((np.diff(np.where(np.concatenate(
-                ([condition2[0]], condition2[:-1] != condition2[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
-            return bool(bool(a) & bool(b))
-        except:
-            return False  # except because it crashes if there is no trajectory or no trues?
+            # can lead to : 'cannot convert float NaN to integer', 'occurred at index 0'
+            fixation_offset = int(((300+soundlen)/1000)*fps)
+            #consec_frames_threshold = int(np.round(fps*0.06))
+            consec_frames_threshold = 2  # this should change according to framerate ! adjust
+            # smooth or not? try it out
+            speedvec = pd.Series(speedvec).rolling(window=2).mean().iloc[1:].values
+            try:  # ignore first few fixation frames
+                condition1 = (
+                    np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) < 0
+                condition2 = (
+                    np.sign(np.round(speedvec[fixation_offset:-int(0.1*fps)]/sf1))) > 0
+                a = ((np.diff(np.where(np.concatenate(
+                    ([condition1[0]], condition1[:-1] != condition1[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
+                b = ((np.diff(np.where(np.concatenate(
+                    ([condition2[0]], condition2[:-1] != condition2[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
+                return bool(bool(a) & bool(b))
+            except:
+                return False  # except because it crashes if there is no trajectory or no trues?
+        else:
+            # we are getting speedvec in px/ms and we'll consider valid accel over abs(0.1)
+            raise NotImplementedError('wrote a new function')
 
 
     def speed_inflex_delay(speedvec, soundlen, delay, special_trial, fps=30):
@@ -1688,8 +1704,104 @@ class chom:
             return False
 
     # above functions are totaltrash
-    def detect_speed_inflexion(speedvec, soundlen, fps):
-        pass
+    @staticmethod
+    def did_he_hesitate(row,thr=0.1, positioncol ='trajectory_y' ,speedcol = 'trajectory_vy', consec_frames_threshold=2,
+        simul=False, simul_min_ms=0
+    ):
+        """this new version should work with simulations as well,
+        row is a df row (so we can .apply() this function)
+        requires that speeds were calculated using timestamps (px/ms),
+        
+        it also returns wether CoM or not (and CoM peak frame)"""
+        hesitation = False
+        if simul:
+            try:
+                speedvec = row[speedcol] # already aligned with movement onset.
+                speedvec = speedvec[:-50] # remove last 50ms
+                dist = 100
+                onset = 0
+                offset = speedvec.size - 50
+            except:
+                return hesitation, False, np.nan
+        else:
+            fixtime = 300
+            delay = 0
+            if row['special_trial']!=0:
+                if row.special_trial == -1: # TODO: not true with noenv. Review
+                    fixtime = 150
+                delay = int(row.delay_len)
+            sp = row[speedcol] # speedvec
+            t = (row.trajectory_stamps - row.fix_onset_dt.to_datetime64()).astype(int)/1000_000
+            dist = int(t.size*100/(t.max()-t.min()))
+            t = t - fixtime - delay - row.sound_len # timestamps adjusted to movement onset (0)
+            # get indices to slice, 
+            onset = np.argmax(t>0) - 1
+            offset = np.argmax(t>(row.resp_len*1000-50)) - 1
+            speedvec = np.sign((sp/thr).astype(int))[onset:offset] # already sliced containing {-1, 1} if above thr, else  0
+
+        try:  # ignore first few fixation frames
+            condition1 = speedvec < 0
+            condition2 = speedvec > 0
+            a = ((np.diff(np.where(np.concatenate(
+                ([condition1[0]], condition1[:-1] != condition1[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
+            b = ((np.diff(np.where(np.concatenate(
+                ([condition2[0]], condition2[:-1] != condition2[1:], [True])))[0])[::2]) >= consec_frames_threshold).sum()
+
+            hesitation = bool(bool(a) & bool(b))
+            if not hesitation:
+                return hesitation, False, np.nan
+            else:
+                # calc CoM and peakframe (copying com_or_not fcuntion)
+                traj = row[positioncol]
+                if simul:
+                    yoffset = traj[0]
+                else:
+                    yoffset = traj[int(onset * 0.5):onset].mean()
+                sliced_traj = traj[onset:offset]-yoffset
+                sliced_traj = pd.Series(sliced_traj).rolling(
+                    window=2).mean().iloc[1:].values
+
+                # TODO: finnish this so it can return CoM true or false!
+                if row.R_response > 0:
+                    # get idx for peaks (*-1 because in this sidewe want the more negative values, aka minima)
+                    opposite_side_peak = find_peaks(-1*sliced_traj, distance=dist)
+                    same_side_peak = find_peaks(1*sliced_traj, distance=dist)
+                else:
+                    opposite_side_peak = find_peaks(sliced_traj, distance=dist)
+                    same_side_peak = find_peaks(-1*sliced_traj, distance=dist)
+
+                if len(opposite_side_peak[0]) > 0:
+                    if len(same_side_peak[0]) > 0:
+                        # first choice = last, hence hesitation+ but not com
+                        if same_side_peak[0][0] < opposite_side_peak[0][0] and np.abs(sliced_traj[same_side_peak[0][0]]) > 5:
+                            # last comparison is an arbitrary threshold
+                            return hesitation, False, np.nan
+                    targ = sliced_traj[np.concatenate(
+                        [opposite_side_peak[0].flatten(), np.array([-1])]).astype(int)]  # idxes
+                    targ = np.sign((targ/2).astype(int))
+                    if (np.any(targ < 0) and np.any(targ > 0)):
+                        try:
+                            # return it as whole len trajectory index (+1 missing because of the rolling smooth?)
+                            if simul_min_ms:
+                                raise NotImplemented # perhaps we can bypass this using popposite side peak
+                            else:
+                                return hesitation, True, onset+1+opposite_side_peak[0]
+                        except Exception as e:
+                            #raise e
+                            # print(fixsound_framespan+1+opposite_side_peak[0])
+                            # pass
+                        # return True
+                            return hesitation, False, np.nan # somehow there are still empty simul traj
+                    else:
+                        return hesitation, False, np.nan
+                else:
+                    #print('no opposite peaks')
+                    return hesitation, False, np.nan
+        except Exception as e:
+            # raise e
+            return hesitation, False, np.nan
+        
+
     # TODO: complete
     '''
     def CoM_or_not(traj,slen,resp_side, fps=30 ): # wont work as it is now whenever normcoord = False
@@ -1817,10 +1929,19 @@ class chom:
         # speed factor calc (30fps ~10, 100 fps ~4 )
         # sf = -self.fixed_framerate*0.085+12.5 ### more or less the line we want
         # self.trial_sess['Hesitation'] = self.trial_sess['trajectory_vy'].apply(lambda x: chom.speed_inflex(x, fps=self.fixed_framerate)) # change to Hesitation
-        if 'delay' not in self.target:
+        self.trial_sess['Hesitation'] = False
+        self.trial_sess['CoM_sugg'] = False
+        self.trial_sess['CoM_peakf'] = np.nan
+        # newer robust code
+        if self.framestamps is not None: # asumes speed is in px/ms units
+            self.trial_sess[['Hesitation', 'CoM_sugg', 'CoM_peakf']] = self.trial_sess.apply(lambda x: chom.did_he_hesitate(
+                x), axis=1, result_type='expand')
+        # older crap
+        elif 'delay' not in self.target:
             # trying to smooth it \ add soundlen so we can filter noisy fixation + sound traj
             self.trial_sess['Hesitation'] = self.trial_sess.apply(lambda x: chom.speed_inflex(
                 x['trajectory_vy'], x['sound_len'], fps=self.fixed_framerate), axis=1)
+
         else:
             # get something new # def speed_inflex_delay(speedvec, soundlen, delay, special_trial ,fps=30):
             self.trial_sess['Hesitation'] = (self.trial_sess
@@ -1836,19 +1957,19 @@ class chom:
                                             )
 
         # Now, just in the ones that Hesitation=True
-        self.trial_sess['CoM_sugg'] = False
-        self.trial_sess['CoM_peakf'] = np.nan
+        
         #self.trial_sess.loc[self.trial_sess.Hesitation==True, 'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation==True, :].apply(lambda x: chom.CoM_or_not(x['trajectory_y'], x['sound_len'], x['R_response'], fps=self.fixed_framerate), axis=1)
-        if 'delay' not in self.target:
-            self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, :].apply(
-                lambda x: chom.CoM_or_not(x['trajectory_y'], x['sound_len'], x['R_response'], fps=self.fixed_framerate), axis=1)
-        else:
-            self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, :].apply(
-                lambda x: chom.CoM_or_not_delay(x['trajectory_y'], x['sound_len'], x['R_response'], x['delay_len'], x['special_trial'], fps=self.fixed_framerate), axis=1)
-        self.trial_sess.loc[self.trial_sess.Hesitation == True,
-                            'CoM_peakf'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'].apply(lambda x: x[1])  # ??
-        self.trial_sess.loc[self.trial_sess.Hesitation == True,
-                            'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'].apply(lambda x: x[0])
+        if self.framestamps is None:
+            if 'delay' not in self.target:
+                self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, :].apply(
+                    lambda x: chom.CoM_or_not(x['trajectory_y'], x['sound_len'], x['R_response'], fps=self.fixed_framerate), axis=1)
+            else:
+                self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, :].apply(
+                    lambda x: chom.CoM_or_not_delay(x['trajectory_y'], x['sound_len'], x['R_response'], x['delay_len'], x['special_trial'], fps=self.fixed_framerate), axis=1)
+            self.trial_sess.loc[self.trial_sess.Hesitation == True,
+                                'CoM_peakf'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'].apply(lambda x: x[1])  # ??
+            self.trial_sess.loc[self.trial_sess.Hesitation == True,
+                                'CoM_sugg'] = self.trial_sess.loc[self.trial_sess.Hesitation == True, 'CoM_sugg'].apply(lambda x: x[0])
         # kek.apply(lambda x: chom.extr_listened_frames(x['res_sound'], x['frames_listened']), axis=1)
         # fixsound_framespan = (300 + fok.trial_sess.loc[fok.trial_sess.CoM_sugg==True, 'sound_len'].iloc[trial_n])/(1000/fok.fixed_framerate) # get rid of these first frames
         # 2nd filter to get changes of mind from hesitation.
