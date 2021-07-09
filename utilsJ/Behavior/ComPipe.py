@@ -1706,7 +1706,7 @@ class chom:
     # above functions are totaltrash
     @staticmethod
     def did_he_hesitate(row,thr=0.1, positioncol ='trajectory_y' ,speedcol = 'trajectory_vy', consec_frames_threshold=2,
-        simul=False, simul_min_ms=0
+        simul=False, height=5
     ):
         """this new version should work with simulations as well,
         row is a df row (so we can .apply() this function)
@@ -1720,7 +1720,7 @@ class chom:
                 speedvec = speedvec[:-50] # remove last 50ms
                 dist = 100
                 onset = 0
-                offset = speedvec.size - 50
+                offset = speedvec.size # - 50
             except:
                 return hesitation, False, np.nan
         else:
@@ -1755,20 +1755,23 @@ class chom:
                 traj = row[positioncol]
                 if simul:
                     yoffset = traj[0]
+                    sliced_traj = traj[onset:offset]-yoffset
+                    rowlling1 = 0
                 else:
                     yoffset = traj[int(onset * 0.5):onset].mean()
-                sliced_traj = traj[onset:offset]-yoffset
-                sliced_traj = pd.Series(sliced_traj).rolling(
-                    window=2).mean().iloc[1:].values
+                    sliced_traj = traj[onset:offset]-yoffset
+                    sliced_traj = pd.Series(sliced_traj).rolling(
+                        window=2).mean().iloc[1:].values
+                    rolling1 = 1
 
                 # TODO: finnish this so it can return CoM true or false!
                 if row.R_response > 0:
                     # get idx for peaks (*-1 because in this sidewe want the more negative values, aka minima)
-                    opposite_side_peak = find_peaks(-1*sliced_traj, distance=dist)
-                    same_side_peak = find_peaks(1*sliced_traj, distance=dist)
+                    opposite_side_peak = find_peaks(-1*sliced_traj, distance=dist, height=height)
+                    same_side_peak = find_peaks(1*sliced_traj, distance=dist, height=height)
                 else:
-                    opposite_side_peak = find_peaks(sliced_traj, distance=dist)
-                    same_side_peak = find_peaks(-1*sliced_traj, distance=dist)
+                    opposite_side_peak = find_peaks(sliced_traj, distance=dist, height=height)
+                    same_side_peak = find_peaks(-1*sliced_traj, distance=dist, height=height)
 
                 if len(opposite_side_peak[0]) > 0:
                     if len(same_side_peak[0]) > 0:
@@ -1781,11 +1784,7 @@ class chom:
                     targ = np.sign((targ/2).astype(int))
                     if (np.any(targ < 0) and np.any(targ > 0)):
                         try:
-                            # return it as whole len trajectory index (+1 missing because of the rolling smooth?)
-                            if simul_min_ms:
-                                raise NotImplemented # perhaps we can bypass this using popposite side peak
-                            else:
-                                return hesitation, True, onset+1+opposite_side_peak[0]
+                            return hesitation, True, onset+opposite_side_peak[0] + rolling1 # adding an extra idnex if we use rolling (w=2)
                         except Exception as e:
                             #raise e
                             # print(fixsound_framespan+1+opposite_side_peak[0])

@@ -269,7 +269,7 @@ def whole_simul(
     # this was giving issues, now restrict df usage to single subject
     df = df.loc[df.subjid==subject]
     df['sstr'] = df.coh2.abs()
-    df['priorZt'] = np.nansum(df[['dW_fixedbias', 'dW_lat', 'dW_trans']].values, axis=1)
+    df['priorZt'] = np.nansum(df[['dW_lat', 'dW_trans']].values, axis=1) # 'dW_fixedbias'
     df['prechoice'] = np.ceil(df.priorZt.values/1000)
     df['prechoice'] = df.prechoice.astype(int)
     df['time_to_thr'] = np.nan
@@ -308,18 +308,23 @@ def whole_simul(
     out['mu_boundary'] = np.nan
     out['mu_boundary'] = out['mu_boundary'].astype(object)
 
-    out['priorZt'] = np.nansum(out[['dW_fixedbias', 'dW_lat', 'dW_trans']].values, axis=1)
+
+    # WARNING using fixed boas here...
+    out['priorZt'] = np.nansum(out[[ 'dW_lat', 'dW_trans']].values, axis=1) # 'dW_fixedbias',
     out['prechoice'] = np.ceil(out.priorZt.values/1000)
     out['prechoice'] = out.prechoice.astype(int)
 
     for col in ['dW_trans', 'dW_lat']: # invert those factors in left choices
-        out[f'{col}_i'] = out[col] * (out['R_response']*2-1)
+        # out[f'{col}_i'] = out[col] * (out['R_response']*2-1)
+        out[f'{col}_i'] = out[col] * (out['prechoice']*2-1)
         
     try: ### PROACTIVE RESPONSES
         sdf = out.loc[out.reactive==0]
         tr.selectRT(0)
         fkmat = sdf[['zidx', 'dW_trans_i', 'dW_lat_i']].fillna(0).values
         fkmat = np.insert(fkmat, 0, 1,axis=1)
+        # fkmat = sdf[['zidx', 'dW_trans', 'dW_lat']].fillna(0).values
+        # fkmat = np.insert(fkmat, 0, 1,axis=1)
         tr.expected_mt(fkmat, add_intercept=False)
         out.loc[sdf.index,'expectedMT']=tr.mt * 1000
         if mtnoise: # load error
@@ -366,6 +371,9 @@ def whole_simul(
     out['t_update'] = np.nan
     # out.loc[out.reactive==0, 't_update'] = params['t_update'] + out.loc[out.reactive==0, 'sound_len'] # a big bug lied here*
     out.loc[out.reactive==0, 't_update'] = params['t_update'] # now it happen relative to movement onset!
+    # how defek? shouldnt it be respective movement onset + te + tupdate? check model scketch?
+    # TODO: probably this is a bug as well
+
     # UNCOMMENT LINE BELOW IF UPDATE CAN HAPPEN EARLIER WHEN EV-BOUND IS REACHED
     if not vanishing_bounds:
         # out.loc[out.e_after_u==1, 't_update'] = out.loc[out.e_after_u==1, 'e_time']
