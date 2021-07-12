@@ -252,7 +252,7 @@ def whole_simul(
         'com_gamma':250, 'glm2Ze_scaling': 0.25, 'x_e0_noise':0.001, 'naive_jerk':False, 'confirm_thr':0,
         'proportional_confirm':False
     }, batches=10, batch_size=1500, return_data=False, vanishing_bounds=True, both_traj=False,
-    silent_trials=False, sample_silent_only=False, trajMT_jerk_extension=0, mtnoise=True
+    silent_trials=False, sample_silent_only=False, trajMT_jerk_extension=0, mtnoise=True, com_height=5
     ):
     # t_update: time it takes from bound hit to exert effect in movement
     # deltaMT: coef to reduce expected MT based on accumulated evidence
@@ -428,7 +428,7 @@ def whole_simul(
     out['rtbin']=pd.cut(out.sound_len,rtbins,labels=False, include_lowest=True)
     out['choice_x_coh'] = (out.R_response*2-1) * out.coh2    
     out[['Hesitation', 'CoM_sugg', 'CoM_peakf']] = out.apply(
-        lambda x: ComPipe.chom.did_he_hesitate(x, simul=True, positioncol='traj', speedcol='traj_d1'),
+        lambda x: ComPipe.chom.did_he_hesitate(x, simul=True, positioncol='traj', speedcol='traj_d1', height=com_height),
         axis=1, result_type='expand') # return 1 or more peak frames?
 
     # not saving data, its 2.9 GB each

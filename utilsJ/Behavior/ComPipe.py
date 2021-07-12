@@ -1756,7 +1756,7 @@ class chom:
                 if simul:
                     yoffset = traj[0]
                     sliced_traj = traj[onset:offset]-yoffset
-                    rowlling1 = 0
+                    rolling1 = 0
                 else:
                     yoffset = traj[int(onset * 0.5):onset].mean()
                     sliced_traj = traj[onset:offset]-yoffset
