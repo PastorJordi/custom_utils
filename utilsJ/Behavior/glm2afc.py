@@ -27,22 +27,22 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
-import warnings 
+import warnings
 import re
 
 
 # In[4]:
 
 # create funct for this crp
-def getmodel_cols(cols='all', lateralized=False, noenv=False):
+def getmodel_cols(cols="all", lateralized=False, noenv=False):
     """returns list
     all: all model cols
     ac: after correct
     ae: after error"""
-    if cols not in ['all', 'ae', 'ac']:
-        raise ValueError('cols valueshould be in [all, ac, ae]')
+    if cols not in ["all", "ae", "ac"]:
+        raise ValueError("cols valueshould be in [all, ac, ae]")
     if lateralized and noenv:
-        raise NotImplementedError('cannot use lateralized and noenv atm')
+        raise NotImplementedError("cannot use lateralized and noenv atm")
     model_cols = [
         "L+1",
         "L-1",
@@ -79,33 +79,48 @@ def getmodel_cols(cols='all', lateralized=False, noenv=False):
         "T++6-10",
         "T+-6-10",
         "T-+6-10",
-        "T--6-10"
+        "T--6-10",
     ]
     # TODO: change above to something sorted by regressor ()
     # model_cols = [f'L+{x}' for x in range(1,6)]+['L+6-10'] \
     #             + [f'L-{x}' for x in range(1,6)]+['L-6-10']...
     if lateralized:
-        model_cols = ['intercept'] \
-                    + [f'SR{x}' for x in range(1,9)] \
-                    + [f'SL{x}' for x in range(1,9)] \
-                    + [f'afterefR{x}' for x in range(1,11)] \
-                    + [f'afterefL{x}' for x in range(1,11)] \
-                    + model_cols
+        model_cols = (
+            ["intercept"]
+            + [f"SR{x}" for x in range(1, 9)]
+            + [f"SL{x}" for x in range(1, 9)]
+            + [f"afterefR{x}" for x in range(1, 11)]
+            + [f"afterefL{x}" for x in range(1, 11)]
+            + model_cols
+        )
     else:
         if noenv:
-            model_cols = ['intercept'] + ['S'] + [f'aftereff{x}' for x in range(1,11)] + model_cols
+            model_cols = (
+                ["intercept"]
+                + ["S"]
+                + [f"aftereff{x}" for x in range(1, 11)]
+                + model_cols
+            )
         else:
-            model_cols = ['intercept'] + [f'S{x}' for x in range(1,9)] + [f'aftereff{x}' for x in range(1,11)] + model_cols
+            model_cols = (
+                ["intercept"]
+                + [f"S{x}" for x in range(1, 9)]
+                + [f"aftereff{x}" for x in range(1, 11)]
+                + model_cols
+            )
 
-    if cols=='all':
+    if cols == "all":
         return model_cols
-    elif cols=='ac':
-        afterc_cols = [x for x in model_cols if x not in ["L+2", "L-1", "T-+1", "T+-1", "T--1"]]
+    elif cols == "ac":
+        afterc_cols = [
+            x for x in model_cols if x not in ["L+2", "L-1", "T-+1", "T+-1", "T--1"]
+        ]
         return afterc_cols
-    elif cols=='ae':
-        aftere_cols = [x for x in model_cols if x not in ["L+1", "T++1", "T-+1", "T+-1", "T--1"]]
+    elif cols == "ae":
+        aftere_cols = [
+            x for x in model_cols if x not in ["L+1", "T++1", "T-+1", "T+-1", "T--1"]
+        ]
         return aftere_cols
-
 
 
 def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
@@ -117,12 +132,15 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
             1 * np.sin(2 * np.pi * (20) * np.arange(0, 1, step=1 / samplingR) + np.pi)
         )
     else:
-        modwave = 0.5 * (np.sin(2 * np.pi * (20) * np.arange(0, 0.5, step=1 / samplingR) - np.pi/2)+1) # new stim which can be bugged as well
+        modwave = 0.5 * (
+            np.sin(2 * np.pi * (20) * np.arange(0, 0.5, step=1 / samplingR) - np.pi / 2)
+            + 1
+        )  # new stim which can be bugged as well
 
     if np.isnan(time):
-        time = 0 # is this editing when used with apply + lambda function?
-    elif (fail==False) and (time>0.5):
-        time = 0.5 # old-new bug
+        time = 0  # is this editing when used with apply + lambda function?
+    elif (fail == False) and (time > 0.5):
+        time = 0.5  # old-new bug
 
     tot_steps = int(0.001 * time * samplingR)
     envLpoints = np.abs(np.repeat(envL, samplingR / 20))
@@ -131,19 +149,23 @@ def get_stim_trapz2(envL, envR, time, fail=True, samplingR=1000):
     relunit = np.trapz(modwave[: int(0.05 * samplingR)])  # 1 envelope
     L_int = np.trapz(modwave[:tot_steps] * envLpoints[:tot_steps])
     R_int = np.trapz(modwave[:tot_steps] * envRpoints[:tot_steps])
-    #return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
+    # return L_int / relunit, R_int / relunit, (R_int - L_int) / reltotev
     return L_int / reltotev, R_int / reltotev, (R_int - L_int) / reltotev
 
 
-def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps use trapz to calc intensity.
+def preprocess(
+    in_data, lateralized=True, noenv=False, stimlength=1
+):  # perhaps use trapz to calc intensity.
     """input df object, since it will calculate history*, it must contain consecutive trials
     returns preprocessed dataframe
     noenv = adapted to noenv- sessions # does it work with env sessions if they have 
     laterme: wtf does newaftereff means? (doubled?) # now called lateralized, more mnemonic
     """
-    model_cols = getmodel_cols(cols='all',lateralized=lateralized, noenv=noenv)
+    model_cols = getmodel_cols(cols="all", lateralized=lateralized, noenv=noenv)
     if lateralized & noenv:
-        raise NotImplementedError('cannot get sided aftereffects in noenv sessions because cohs are paired')
+        raise NotImplementedError(
+            "cannot get sided aftereffects in noenv sessions because cohs are paired"
+        )
     df = in_data  # .copy(deep=True)
     df.loc[:, "rep_response"] *= 1  # originally is True/False col
     # expand stim [Sensory module]
@@ -162,8 +184,8 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
         if "soundrfail" in df.columns.tolist():
             df.loc[df.soundrfail, ["S" + str(x + 1) for x in range(8)]] = 0
     elif noenv:
-        df.loc[:,'S']= df['res_sound']
-        df.loc[df.soundrfail, 'S'] = 0
+        df.loc[:, "S"] = df["res_sound"]
+        df.loc[df.soundrfail, "S"] = 0
     else:
         df = pd.concat(
             [
@@ -171,7 +193,7 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
                 pd.DataFrame(
                     df["renv"].values.tolist(),
                     columns=["SR" + str(x + 1) for x in range(20)],
-                    index=df.index, # crash
+                    index=df.index,  # crash
                 ).loc[:, "SR1":"SR8"],
             ],
             axis=1,
@@ -210,7 +232,7 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     # frame_mat_mask = np.repeat(nanmat.flatten(), fuk).reshape(-1,20)
     # df['aftereff1'] = np.nansum((frame_mat_mask * envmatrix), axis=1)
     if not noenv:
-        if stimlength==1:
+        if stimlength == 1:
             fail_flag = True
         else:
             fail_flag = False
@@ -220,7 +242,10 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
                 pd.DataFrame(
                     df[["lenv", "renv", "sound_len"]]
                     .apply(
-                        lambda x: get_stim_trapz2(x[0], x[1], x[2], samplingR=1000, fail=fail_flag), axis=1
+                        lambda x: get_stim_trapz2(
+                            x[0], x[1], x[2], samplingR=1000, fail=fail_flag
+                        ),
+                        axis=1,
                     )
                     .values.tolist(),
                     columns=["afterL", "afterR", "av_trapz"],
@@ -231,24 +256,24 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
         )
     if not lateralized:
         if noenv:
-            df.loc[:,"aftereff1"] = df.res_sound.shift(1)
+            df.loc[:, "aftereff1"] = df.res_sound.shift(1)
             df.loc[df.origidx == 1, "aftereff1"] = np.nan
             for i in range(2, 11):
-                df.loc[:,"aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[:, "aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
                 df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
         else:
-            df.loc[:,"aftereff1"] = df["afterR"] - df["afterL"]
-            df.loc[:,"aftereff1"] = df.aftereff1.shift(1)
+            df.loc[:, "aftereff1"] = df["afterR"] - df["afterL"]
+            df.loc[:, "aftereff1"] = df.aftereff1.shift(1)
             df.loc[df.origidx == 1, "aftereff1"] = np.nan
             for i in range(2, 11):
-                df.loc[:,"aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
+                df.loc[:, "aftereff" + str(i)] = df["aftereff" + str(i - 1)].shift(1)
                 df.loc[df.origidx == 1, "aftereff" + str(i)] = np.nan
     else:
-        df.loc[:,"afterefR1"] = df.afterR.shift(1)
-        df.loc[:,"afterefL1"] = df.afterL.shift(1)
+        df.loc[:, "afterefR1"] = df.afterR.shift(1)
+        df.loc[:, "afterefL1"] = df.afterL.shift(1)
         for i in range(2, 11):
-            df.loc[:,"afterefR" + str(i)] = df["afterefR" + str(i - 1)].shift(1)
-            df.loc[:,"afterefL" + str(i)] = df["afterefL" + str(i - 1)].shift(1)
+            df.loc[:, "afterefR" + str(i)] = df["afterefR" + str(i - 1)].shift(1)
+            df.loc[:, "afterefL" + str(i)] = df["afterefL" + str(i - 1)].shift(1)
             df.loc[df.origidx == 1, "afterefR" + str(i)] = np.nan
             df.loc[df.origidx == 1, "afterefL" + str(i)] = np.nan
 
@@ -257,23 +282,23 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     #     del obsoletevariable
 
     # Lateral module
-    df.loc[:,"L+1"] = np.nan  # np.nan considering invalids as errors
+    df.loc[:, "L+1"] = np.nan  # np.nan considering invalids as errors
     df.loc[(df.R_response == 1) & (df.hithistory == 1), "L+1"] = 1
     df.loc[(df.R_response == 0) & (df.hithistory == 1), "L+1"] = -1
     df.loc[df.hithistory == 0, "L+1"] = 0
-    df.loc[:,"L+1"] = df["L+1"].shift(1)
+    df.loc[:, "L+1"] = df["L+1"].shift(1)
     df.loc[df.origidx == 1, "L+1"] = np.nan
     # L-
-    df.loc[:,"L-1"] = np.nan
+    df.loc[:, "L-1"] = np.nan
     df.loc[(df.R_response == 1) & (df.hithistory == 0), "L-1"] = 1
     df.loc[(df.R_response == 0) & (df.hithistory == 0), "L-1"] = -1
     df.loc[df.hithistory == 1, "L-1"] = 0
-    df.loc[:,"L-1"] = df["L-1"].shift(1)
+    df.loc[:, "L-1"] = df["L-1"].shift(1)
     df.loc[df.origidx == 1, "L-1"] = np.nan
     # shifts
     for i, item in enumerate([2, 3, 4, 5, 6, 7, 8, 9, 10]):
-        df.loc[:,"L+" + str(item)] = df["L+" + str(item - 1)].shift(1)
-        df.loc[:,"L-" + str(item)] = df["L-" + str(item - 1)].shift(1)
+        df.loc[:, "L+" + str(item)] = df["L+" + str(item - 1)].shift(1)
+        df.loc[:, "L-" + str(item)] = df["L-" + str(item - 1)].shift(1)
         df.loc[df.origidx == 1, "L+" + str(item)] = np.nan
         df.loc[df.origidx == 1, "L-" + str(item)] = np.nan
 
@@ -281,54 +306,54 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     cols_lp = ["L+" + str(x) for x in range(6, 11)]
     cols_ln = ["L-" + str(x) for x in range(6, 11)]
 
-    df.loc[:,"L+6-10"] = np.nansum(df[cols_lp].values, axis=1)
-    df.loc[:,"L-6-10"] = np.nansum(df[cols_ln].values, axis=1)
+    df.loc[:, "L+6-10"] = np.nansum(df[cols_lp].values, axis=1)
+    df.loc[:, "L-6-10"] = np.nansum(df[cols_ln].values, axis=1)
     df.drop(cols_lp + cols_ln, axis=1, inplace=True)
     df.loc[df.origidx <= 6, "L+6-10"] = np.nan
     df.loc[df.origidx <= 6, "L-6-10"] = np.nan
 
     # pre transition module
     df.loc[df.origidx == 1, "rep_response"] = np.nan
-    df.loc[:,"rep_response_11"] = df.rep_response
+    df.loc[:, "rep_response_11"] = df.rep_response
     df.loc[df.rep_response == 0, "rep_response_11"] = -1
     df.rep_response_11.fillna(value=0, inplace=True)
     df.loc[df.origidx == 1, "aftererror"] = np.nan
 
     # transition module
-    df.loc[:,"T++1"] = np.nan  # np.nan #
+    df.loc[:, "T++1"] = np.nan  # np.nan #
     df.loc[(df.aftererror == 0) & (df.hithistory == 1), "T++1"] = df.loc[
         (df.aftererror == 0) & (df.hithistory == 1), "rep_response_11"
     ]
     df.loc[(df.aftererror == 1) | (df.hithistory == 0), "T++1"] = 0
-    df.loc[:,"T++1"] = df["T++1"].shift(1)
+    df.loc[:, "T++1"] = df["T++1"].shift(1)
 
-    df.loc[:,"T+-1"] = np.nan  # np.nan
+    df.loc[:, "T+-1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 0) & (df.hithistory == 0), "T+-1"] = df.loc[
         (df.aftererror == 0) & (df.hithistory == 0), "rep_response_11"
     ]
     df.loc[(df.aftererror == 1) | (df.hithistory == 1), "T+-1"] = 0
-    df.loc[:,"T+-1"] = df["T+-1"].shift(1)
+    df.loc[:, "T+-1"] = df["T+-1"].shift(1)
 
-    df.loc[:,"T-+1"] = np.nan  # np.nan
+    df.loc[:, "T-+1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 1) & (df.hithistory == 1), "T-+1"] = df.loc[
         (df.aftererror == 1) & (df.hithistory == 1), "rep_response_11"
     ]
     df.loc[(df.aftererror == 0) | (df.hithistory == 0), "T-+1"] = 0
-    df.loc[:,"T-+1"] = df["T-+1"].shift(1)
+    df.loc[:, "T-+1"] = df["T-+1"].shift(1)
 
-    df.loc[:,"T--1"] = np.nan  # np.nan
+    df.loc[:, "T--1"] = np.nan  # np.nan
     df.loc[(df.aftererror == 1) & (df.hithistory == 0), "T--1"] = df.loc[
         (df.aftererror == 1) & (df.hithistory == 0), "rep_response_11"
     ]
     df.loc[(df.aftererror == 0) | (df.hithistory == 1), "T--1"] = 0
-    df.loc[:,"T--1"] = df["T--1"].shift(1)
+    df.loc[:, "T--1"] = df["T--1"].shift(1)
 
     # shifts now
     for i, item in enumerate([2, 3, 4, 5, 6, 7, 8, 9, 10]):
-        df.loc[:,"T++" + str(item)] = df["T++" + str(item - 1)].shift(1)
-        df.loc[:,"T+-" + str(item)] = df["T+-" + str(item - 1)].shift(1)
-        df.loc[:,"T-+" + str(item)] = df["T-+" + str(item - 1)].shift(1)
-        df.loc[:,"T--" + str(item)] = df["T--" + str(item - 1)].shift(1)
+        df.loc[:, "T++" + str(item)] = df["T++" + str(item - 1)].shift(1)
+        df.loc[:, "T+-" + str(item)] = df["T+-" + str(item - 1)].shift(1)
+        df.loc[:, "T-+" + str(item)] = df["T-+" + str(item - 1)].shift(1)
+        df.loc[:, "T--" + str(item)] = df["T--" + str(item - 1)].shift(1)
         df.loc[df.origidx == 1, "T++" + str(item)] = np.nan
         df.loc[df.origidx == 1, "T+-" + str(item)] = np.nan
         df.loc[df.origidx == 1, "T-+" + str(item)] = np.nan
@@ -343,27 +368,27 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
     cols_tnn = ["T--" + str(x) for x in range(6, 11)]
     # cols_tnn = [x for x in df.columns if x.startswith('T--')]
 
-    df.loc[:,"T++6-10"] = np.nansum(df[cols_tpp].values, axis=1)
-    df.loc[:,"T+-6-10"] = np.nansum(df[cols_tpn].values, axis=1)
-    df.loc[:,"T-+6-10"] = np.nansum(df[cols_tnp].values, axis=1)
-    df.loc[:,"T--6-10"] = np.nansum(df[cols_tnn].values, axis=1)
+    df.loc[:, "T++6-10"] = np.nansum(df[cols_tpp].values, axis=1)
+    df.loc[:, "T+-6-10"] = np.nansum(df[cols_tpn].values, axis=1)
+    df.loc[:, "T-+6-10"] = np.nansum(df[cols_tnp].values, axis=1)
+    df.loc[:, "T--6-10"] = np.nansum(df[cols_tnn].values, axis=1)
 
     df.drop(cols_tpp + cols_tpn + cols_tnp + cols_tnn, axis=1, inplace=True)
     df.loc[df.origidx < 6, ["T++6-10", "T+-6-10", "T-+6-10", "T--6-10"]] = np.nan
 
     for col in [x for x in df.columns if x.startswith("T")]:  ## not working?
-        df.loc[:,col] = df[col] * (
+        df.loc[:, col] = df[col] * (
             df.R_response.shift(1) * 2 - 1
         )  # {0 = Left; 1 = Right, nan=invalid}
 
-    if not noenv: # this uses frames listened, fix it to ComPipe
+    if not noenv:  # this uses frames listened, fix it to ComPipe
         for i in range(8, 0, -1):
             if not lateralized:
                 df.loc[df.frames_listened < (i - 1), "S" + str(i)] = 0
             else:
                 df.loc[df.frames_listened < (i - 1), ["SR" + str(i), "SL" + str(i)]] = 0
 
-    df.loc[:,"intercept"] = 1
+    df.loc[:, "intercept"] = 1
     df.loc[:, model_cols].fillna(value=0, inplace=True)
 
     if "soundrfail" in df.columns.tolist() and not noenv:
@@ -372,19 +397,19 @@ def preprocess(in_data, lateralized=True, noenv=False, stimlength=1):  # perhaps
         soundrfailidx = df.loc[df.soundrfail == True, "res_sound"].index
         # df.loc[df.soundrfail==True, 'res_sound'] = np.zeros(df.soundrfail.sum(),20) #* df.soundrfail.sum()
         ent_series.loc[soundrfailidx] = [np.zeros(20)] * soundrfailidx.size
-        df.loc[:,"res_sound"] = ent_series
+        df.loc[:, "res_sound"] = ent_series
 
     return df  # resulting df with lateralized T+
 
 
-def check_colin(df, lateralized=False ,dual=True, noenv=False, clustermap=False):
+def check_colin(df, lateralized=False, dual=True, noenv=False, clustermap=False):
     """plots matrix
     df is the preprocessed dframe,
     dual = aftercorrect/aftererror,
     noenv = single Stim val (=Coh)"""
     if dual:
-        afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
-        aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
+        afterc_cols = getmodel_cols(cols="ac", lateralized=lateralized, noenv=noenv)
+        aftere_cols = getmodel_cols(cols="ae", lateralized=lateralized, noenv=noenv)
         for j, (t, cols) in enumerate(
             zip(["after correct", "after error"], [afterc_cols, aftere_cols])
         ):
@@ -394,16 +419,12 @@ def check_colin(df, lateralized=False ,dual=True, noenv=False, clustermap=False)
                 sns.clustermap(cdata, ax=ax)
             else:
                 sns.heatmap(
-                    cdata,
-                    vmin=-1,
-                    vmax=1,
-                    cmap="coolwarm",
-                    ax=ax,
+                    cdata, vmin=-1, vmax=1, cmap="coolwarm", ax=ax,
                 )
             ax.set_title(t)
             plt.show()
     else:
-        model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
+        model_cols = getmodel_cols(cols="all", lateralized=lateralized, noenv=noenv)
 
         _, ax = plt.subplots(figsize=(16, 16))
         cdata = df.loc[:, model_cols].fillna(value=0).corr()
@@ -411,17 +432,22 @@ def check_colin(df, lateralized=False ,dual=True, noenv=False, clustermap=False)
             sns.clustermap(cdata, ax=ax)
         else:
             sns.heatmap(
-                cdata,
-                vmin=-1,
-                vmax=1,
-                cmap="coolwarm",
-                ax=ax,
+                cdata, vmin=-1, vmax=1, cmap="coolwarm", ax=ax,
             )
         ax.set_title("single")
         plt.show()
 
 
-def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir='', link=None, L2_alpha=1.0):
+def exec_glm(
+    df,
+    dual=True,
+    lateralized=False,
+    noenv=False,
+    plot=True,
+    savdir="",
+    link=None,
+    L2_alpha=1.0,
+):
     """perhaps iwont implement the splitting but w/e idk atm
     futureme: wth is split
     # adapt this function so it can accept **kwargs (dual, lateralized, noenv :D)
@@ -431,16 +457,16 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
     # fitting issues https://stackoverflow.com/questions/17481672/fitting-a-weibull-distribution-using-scipy
     L2 alpha just works when providing link
     """
-    #warnings.filterwarnings("ignore")
+    # warnings.filterwarnings("ignore")
     if link is not None:
-        NotImplementedError('link and regularization still not implemented')
+        NotImplementedError("link and regularization still not implemented")
     if lateralized and noenv:
-        NotImplementedError('cannot lateralized AND noenv')
-    
+        NotImplementedError("cannot lateralized AND noenv")
+
     if dual:
-        afterc_cols = getmodel_cols(cols='ac', lateralized=lateralized, noenv=noenv)
-        aftere_cols = getmodel_cols(cols='ae', lateralized=lateralized, noenv=noenv)
-        
+        afterc_cols = getmodel_cols(cols="ac", lateralized=lateralized, noenv=noenv)
+        aftere_cols = getmodel_cols(cols="ae", lateralized=lateralized, noenv=noenv)
+
         X_df_ac, y_df_ac = (
             df.loc[
                 (df.aftererror == 0) & (df["R_response"].notna()), afterc_cols
@@ -477,36 +503,63 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
         if link is None:
             sm_logit_ac = sm.Logit(y_df_ac.values, X_df_ac.values)
             sm_logit_ae = sm.Logit(y_df_ae.values, X_df_ae.values)
-            result_ac = sm_logit_ac.fit(
-                method="bfgs", maxiter=10 ** 8
-            ) 
-            result_ae = sm_logit_ae.fit(
-                method="bfgs", maxiter=10 ** 8
-            )
+            result_ac = sm_logit_ac.fit(method="bfgs", maxiter=10 ** 8)
+            result_ae = sm_logit_ae.fit(method="bfgs", maxiter=10 ** 8)
         else:
-            fit_reg_kws = dict(method='elastic_net', alpha=L2_alpha, L1_wt=0.0)
+            fit_reg_kws = dict(method="elastic_net", alpha=L2_alpha, L1_wt=0.0)
             chosenlink = getattr(sm.families.family.Binomial.links, link)
-            sm_logit_ac = sm.GLM(y_df_ac.values, X_df_ac.values,
-            family=sm.families.Binomial(link=chosenlink))
-            sm_logit_ae = sm.GLM(y_df_ae.values, X_df_ae.values,
-            family=sm.families.Binomial(link=chosenlink))
+            sm_logit_ac = sm.GLM(
+                y_df_ac.values,
+                X_df_ac.values,
+                family=sm.families.Binomial(link=chosenlink),
+            )
+            sm_logit_ae = sm.GLM(
+                y_df_ae.values,
+                X_df_ae.values,
+                family=sm.families.Binomial(link=chosenlink),
+            )
             result_ac = sm_logit_ac.fit_regularized(**fit_reg_kws)
             result_ae = sm_logit_ae.fit_regularized(**fit_reg_kws)
-            
-         # start_params=Lreg_ac.coef_ # alpha=1.3 # start_params=Lreg_ac.coef_
-        
+
+        # start_params=Lreg_ac.coef_ # alpha=1.3 # start_params=Lreg_ac.coef_
+
         # this can be replaced with:
         # sm_logit_ae = sm.GLM(y_df, X_df, family=sm.families.Binomial(link=sm.families.links.logit)) # or links.probit
         # then: .fit_regularized(method='elastic_net', alpha=1.0, L1_wt=0.0) # so it just uses L2 and we do not lose regressors
-          # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
+        # start_params=Lreg_ae.coef_ alpha=1.3 #start_params=Lreg_ae.coef_
         if plot:
-            if savdir: # ie savdir==''
-                pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
+            if savdir:  # ie savdir==''
+                pths = [f"{savdir}{module}.png" for module in ["sens", "lat", "trans"]]
             else:
-                pths = ['']*3
-            plot_sensory_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, lateralized=lateralized, savpath=pths[0])
-            plot_lateral_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=pths[1])
-            plot_transition_dual(X_df_ac, X_df_ae, Lreg_ac, result_ac, Lreg_ae, result_ae, savpath=pths[2])
+                pths = [""] * 3
+            plot_sensory_dual(
+                X_df_ac,
+                X_df_ae,
+                Lreg_ac,
+                result_ac,
+                Lreg_ae,
+                result_ae,
+                lateralized=lateralized,
+                savpath=pths[0],
+            )
+            plot_lateral_dual(
+                X_df_ac,
+                X_df_ae,
+                Lreg_ac,
+                result_ac,
+                Lreg_ae,
+                result_ae,
+                savpath=pths[1],
+            )
+            plot_transition_dual(
+                X_df_ac,
+                X_df_ae,
+                Lreg_ac,
+                result_ac,
+                Lreg_ae,
+                result_ae,
+                savpath=pths[2],
+            )
         LRresult_ac = pd.read_html(
             result_ac.summary(xname=X_df_ac.columns.tolist()).tables[1].as_html(),
             header=0,
@@ -518,7 +571,7 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
             index_col=0,
         )[0]
 
-        df.loc[:,"proba"] = np.nan
+        df.loc[:, "proba"] = np.nan
         probac = Lreg_ac.predict_proba(X_df_ac)
         probae = Lreg_ae.predict_proba(X_df_ae)
         print(
@@ -549,7 +602,7 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
             "proba": df["proba"].values,
         }
     else:
-        model_cols = getmodel_cols(cols='all', lateralized=lateralized, noenv=noenv)
+        model_cols = getmodel_cols(cols="all", lateralized=lateralized, noenv=noenv)
         X_df, y_df = (
             df.loc[df["R_response"].notna(), model_cols].fillna(value=0),
             df.loc[df["R_response"].notna(), "R_response"],
@@ -568,12 +621,12 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
         result = model.fit_regularized(
             start_params=Lreg.coef_, maxiter=10 ** 6, alpha=1
         )
-        
+
         if plot:
             if savdir:
-                pths = [f'{savdir}{module}.png' for module in ['sens', 'lat', 'trans']]
+                pths = [f"{savdir}{module}.png" for module in ["sens", "lat", "trans"]]
             else:
-                pths = ['']*3
+                pths = [""] * 3
             plot_sensory(X_df, Lreg, result, lateralized=lateralized, savpath=pths[0])
             plot_lateral(X_df, Lreg, result, savpath=pths[1])
             plot_transition(X_df, Lreg, result, savpath=pths[2])
@@ -583,10 +636,10 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
             header=0,
             index_col=0,
         )[0]
-        df.loc[:,"proba"] = np.nan
-        df.loc[df.R_response.notna(), 'proba'] = Lreg.predict_proba(X_df)[:,1]
+        df.loc[:, "proba"] = np.nan
+        df.loc[df.R_response.notna(), "proba"] = Lreg.predict_proba(X_df)[:, 1]
         warnings.filterwarnings("default")
-        return {"skl": Lreg, "sm": result, "mat": LRresult, 'proba': df['proba'].values} 
+        return {"skl": Lreg, "sm": result, "mat": LRresult, "proba": df["proba"].values}
 
 
 # In[5]:
@@ -594,7 +647,7 @@ def exec_glm(df, dual=True, lateralized=False, noenv=False, plot=True, savdir=''
 
 # plotting section
 # tune functions to plot sensory + aftereff; Lateral; Transition
-def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
+def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=""):
     """
     models should be fitted previously
     being model1 sklearn and model2 statsmodels
@@ -616,18 +669,18 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
         LRresult.loc[targ_df.columns[interestcols], "coef"],
         yerr=LRresult.loc[targ_df.columns[interestcols], "std err"],
         marker="o",
-        c="b"
+        c="b",
     )
     ax[0].errorbar(
-        interestcols.size, 
-        LRresult.loc['intercept', "coef"],
-        yerr=LRresult.loc['intercept', "std err"],
+        interestcols.size,
+        LRresult.loc["intercept", "coef"],
+        yerr=LRresult.loc["intercept", "std err"],
         marker="o",
         c="k",
-        alpha=0.6
+        alpha=0.6,
     )
-    ax[0].set_xticks(np.arange(interestcols.size+1))
-    ax[0].set_xticklabels(targ_df.columns[interestcols].tolist()+['intercept'])
+    ax[0].set_xticks(np.arange(interestcols.size + 1))
+    ax[0].set_xticklabels(targ_df.columns[interestcols].tolist() + ["intercept"])
     ax[0].set_title("sensory")
     ax[0].set_ylabel("weight")
     ax[0].axhline(y=0, linestyle=":", c="k")
@@ -671,7 +724,7 @@ def plot_sensory(targ_df, model1, model2, lateralized=False, savpath=''):
     plt.show()
 
 
-def plot_lateral(targ_df, model1, model2, savpath=''):
+def plot_lateral(targ_df, model1, model2, savpath=""):
     LRresult = pd.read_html(
         model2.summary(xname=targ_df.columns.tolist()).tables[1].as_html(),
         header=0,
@@ -746,7 +799,7 @@ def plot_lateral(targ_df, model1, model2, savpath=''):
     plt.show()
 
 
-def plot_transition(targ_df, model1, model2, savpath=''):
+def plot_transition(targ_df, model1, model2, savpath=""):
     LRresult = pd.read_html(
         model2.summary(xname=targ_df.columns.tolist()).tables[1].as_html(),
         header=0,
@@ -788,12 +841,21 @@ def plot_transition(targ_df, model1, model2, savpath=''):
         ax[i].set_xticks(np.arange(numcols))
         ax[i].set_xticklabels(targ_df.columns[interestcols])
         ax[i].axhline(y=0, linestyle=":", c="k")
-    if savpath:    
+    if savpath:
         plt.savefig(savpath)
     plt.show()
 
 
-def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, lateralized=False, savpath=''):
+def plot_sensory_dual(
+    targ_df1,
+    targ_df2,
+    model1a,
+    model1b,
+    model2a,
+    model2b,
+    lateralized=False,
+    savpath="",
+):
     """
     models should be fitted previously
     being modelxa sklearn and modelxb statsmodels
@@ -809,7 +871,7 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
     )[0]
     if lateralized:
         interestcols = np.where(targ_df1.columns.str.startswith("SR"))[0]
-    
+
         _, ax = plt.subplots(ncols=2, nrows=1, figsize=(16, 6))
         ax = ax.flatten()
         ax[0].plot(
@@ -834,7 +896,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         ax[0].axhline(y=0, linestyle=":", c="k")
         # stars
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
@@ -861,7 +925,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             label="SL a-corr",
         )
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
@@ -908,14 +974,18 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             c=colors[1],
             label="S a-corr",
         )
-        ax[0].set_xticks(np.arange(interestcols.size).tolist()+[8])
-        ax[0].set_xticklabels([f'S{x+1}' for x in np.arange(interestcols.size)]+['intercept'])
+        ax[0].set_xticks(np.arange(interestcols.size).tolist() + [8])
+        ax[0].set_xticklabels(
+            [f"S{x+1}" for x in np.arange(interestcols.size)] + ["intercept"]
+        )
         ax[0].set_title("sensory")
         ax[0].set_ylabel("weight")
         ax[0].axhline(y=0, linestyle=":", c="k")
         # stars
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values <= 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
@@ -940,9 +1010,11 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
         if LRresult1.loc["intercept", "P>|z|"] <= 0.05:
             ax[0].scatter(
-                8, LRresult1.loc["intercept", "coef"] - 0.4, marker="*", color="tab:orange"
+                8,
+                LRresult1.loc["intercept", "coef"] - 0.4,
+                marker="*",
+                color="tab:orange",
             )
-
 
     # aftereffects correct R9ight
     if lateralized:
@@ -964,7 +1036,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
 
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -992,7 +1066,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             alpha=0.5,
         )
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -1020,7 +1096,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
 
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult1.loc[targ_df1.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -1057,7 +1135,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             label="SR a-err",
         )
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
@@ -1084,7 +1164,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             label="SL a-err",
         )
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
@@ -1096,7 +1178,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
 
         ax[0].scatter(
             8,
-            model2a.coef_[0, np.where(targ_df2.columns == "intercept")[0][0]], # changed this to df2
+            model2a.coef_[
+                0, np.where(targ_df2.columns == "intercept")[0][0]
+            ],  # changed this to df2
             c="blue",
             alpha=0.5,
         )
@@ -1118,7 +1202,7 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             np.arange(interestcols.size),
             model2a.coef_[0, interestcols],
             "-o",
-            c='tab:blue',
+            c="tab:blue",
             alpha=0.5,
         )
         ax[0].errorbar(
@@ -1126,23 +1210,27 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             LRresult2.loc[targ_df2.columns[interestcols], "coef"],
             yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
             marker="o",
-            c='tab:blue',
+            c="tab:blue",
             label="S a-err",
         )
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[0].scatter(
             signifposition,
             LRresult2.loc[targ_df2.columns[interestcols], "coef"].values[signifposition]
             + 0.4,
             marker="*",
-            c='tab:blue'
+            c="tab:blue",
         )
 
         ax[0].scatter(
             8,
-            model2a.coef_[0, np.where(targ_df2.columns == "intercept")[0][0]], # changed this to df2
+            model2a.coef_[
+                0, np.where(targ_df2.columns == "intercept")[0][0]
+            ],  # changed this to df2
             c="tab:blue",
             alpha=0.5,
         )
@@ -1156,7 +1244,10 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
         if LRresult2.loc["intercept", "P>|z|"] <= 0.05:
             ax[0].scatter(
-                8, LRresult2.loc["intercept", "coef"] + 0.4, marker="*", color="tab:blue"
+                8,
+                LRresult2.loc["intercept", "coef"] + 0.4,
+                marker="*",
+                color="tab:blue",
             )
         interestcols = np.where(targ_df2.columns.str.startswith("aftereff"))[0]
         ax[1].errorbar(
@@ -1164,19 +1255,21 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
             LRresult2.loc[targ_df2.columns[interestcols], "coef"],
             yerr=LRresult2.loc[targ_df2.columns[interestcols], "std err"],
             marker="o",
-            c='tab:blue',
+            c="tab:blue",
             label="aftereff error",
         )
         ax[1].plot(
             np.arange(interestcols.size),
             model2a.coef_[0, interestcols],
             "-o",
-            c='tab:blue',
+            c="tab:blue",
             alpha=0.5,
         )
 
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -1188,8 +1281,8 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
     ax[1].set_title("aftereffect")
     ax[1].set_ylabel("weight")
     ax[1].axhline(y=0, linestyle=":", c="k")
-        # now aftereff err
-    if lateralized: # forgot to pack it with previous segment
+    # now aftereff err
+    if lateralized:  # forgot to pack it with previous segment
         interestcols = np.where(targ_df2.columns.str.startswith("afterefR"))[0]
         ax[1].errorbar(
             np.arange(interestcols.size),
@@ -1208,7 +1301,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
 
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -1236,7 +1331,9 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
         )
 
         signifposition = np.arange(interestcols.size)[
-            np.where(LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05)
+            np.where(
+                LRresult2.loc[targ_df2.columns[interestcols], "P>|z|"].values < 0.05
+            )
         ]
         ax[1].scatter(
             signifposition,
@@ -1249,11 +1346,13 @@ def plot_sensory_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, la
     ax[0].legend()
     ax[1].legend()
     if savpath:
-        plt.savefig(savpath) # free debug
+        plt.savefig(savpath)  # free debug
     plt.show()
 
 
-def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=''):
+def plot_lateral_dual(
+    targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=""
+):
     Lp_labels = np.array(["L+1", "L+2", "L+3", "L+4", "L+5", "L+6-10"])
     Ln_labels = np.array(["L-1", "L-2", "L-3", "L-4", "L-5", "L-6-10"])
     _, ax = plt.subplots(ncols=2, nrows=1, sharey=True, sharex=False, figsize=(16, 6))
@@ -1355,7 +1454,9 @@ def plot_lateral_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, sa
     plt.show()
 
 
-def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=''):
+def plot_transition_dual(
+    targ_df1, targ_df2, model1a, model1b, model2a, model2b, savpath=""
+):
     Tpp_labels = np.array(["T++1", "T++2", "T++3", "T++4", "T++5", "T++6-10"])
     Tpn_labels = np.array(["T+-1", "T+-2", "T+-3", "T+-4", "T+-5", "T+-6-10"])
     Tnp_labels = np.array(["T-+1", "T-+2", "T-+3", "T-+4", "T-+5", "T-+6-10"])
@@ -1430,7 +1531,7 @@ def plot_transition_dual(targ_df1, targ_df2, model1a, model1b, model2a, model2b,
 def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
     """I FUCKOING DELETED IT because retarded cut icon + copy rather than pasting"""
     if lateralized and noenv:
-        raise NotImplementedError('cannot use lateralized and noenv atm')
+        raise NotImplementedError("cannot use lateralized and noenv atm")
     if lateralized:
         stimcols = ["SR" + str(x) for x in range(1, 9)] + [
             "SL" + str(x) for x in range(1, 9)
@@ -1440,13 +1541,12 @@ def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
             "afterefL" + str(x) for x in range(1, 11)
         ]
     else:
-        aftereffcols = ['aftereff'+str(x) for x in range(1,11)]
+        aftereffcols = ["aftereff" + str(x) for x in range(1, 11)]
         if not noenv:
             stimcols = ["S" + str(x) for x in range(1, 9)]
         else:
-            stimcols = ['S']
-    fcolnames = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(fixedbias*1)
-
+            stimcols = ["S"]
+    fcolnames = ["stim", "short_s", "lat", "trans"] + ["fixedbias"] * (fixedbias * 1)
 
     if len(list(dic.keys())) == 4:  # single
         prefix = "sW_"
@@ -1472,14 +1572,16 @@ def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
             df[transcols].fillna(value=0).values.T,
         )
         if fixedbias:
-            fixedbiascomp = [dic["mat"].loc['intercept', 'coef']]
+            fixedbiascomp = [dic["mat"].loc["intercept", "coef"]]
         else:
             fixedbiascomp = []
-        for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]+fixedbiascomp):
-            if col!='fixedbias':
+        for col, vec in zip(
+            fcolnames, [scomp, afcomp, latcomp, transcomp] + fixedbiascomp
+        ):
+            if col != "fixedbias":
                 df[prefix + col] = vec.flatten()
             else:
-                df[prefix + col] = vec # broadcast!
+                df[prefix + col] = vec  # broadcast!
 
         return df
 
@@ -1508,12 +1610,14 @@ def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
                 df.loc[df.aftererror == i, transcols].fillna(value=0).values.T,
             )
             if fixedbias:
-                fixedbiascomp = [dic[key].loc['intercept', 'coef']]
+                fixedbiascomp = [dic[key].loc["intercept", "coef"]]
             else:
                 fixedbiascomp = []
-        
-            for col, vec in zip(fcolnames, [scomp, afcomp, latcomp, transcomp]+fixedbiascomp):
-                if col!='fixedbias':
+
+            for col, vec in zip(
+                fcolnames, [scomp, afcomp, latcomp, transcomp] + fixedbiascomp
+            ):
+                if col != "fixedbias":
                     df.loc[df.aftererror == i, prefix + col] = vec.flatten()
                 else:
                     df.loc[df.aftererror == i, prefix + col] = vec
@@ -1526,75 +1630,84 @@ def get_module_weight(df, dic, lateralized=False, noenv=False, fixedbias=True):
 
 # from statsmodels
 # howwever when using sm.api.Logit it returns a P>|z|!!! # keep searching
-    # https://www.statsmodels.org/stable/_modules/statsmodels/regression/process_regression.html
-    # def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+# https://www.statsmodels.org/stable/_modules/statsmodels/regression/process_regression.html
+# def summary(self, yname=None, xname=None, title=None, alpha=0.05):
 
-    #     df = pd.DataFrame()
+#     df = pd.DataFrame()
 
-    #     df["Type"] = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
-    #                   ["Smooth"] * self.k_smooth + ["SD"] * self.k_noise)
-    #     df["coef"] = self.params
+#     df["Type"] = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
+#                   ["Smooth"] * self.k_smooth + ["SD"] * self.k_noise)
+#     df["coef"] = self.params
 
-    #     try:
-    #         df["std err"] = np.sqrt(np.diag(self.cov_params())) # this
-    #     except Exception:
-    #         df["std err"] = np.nan
+#     try:
+#         df["std err"] = np.sqrt(np.diag(self.cov_params())) # this
+#     except Exception:
+#         df["std err"] = np.nan
 
-    #     from scipy.stats.distributions import norm
-    #     df["tvalues"] = df.coef / df["std err"] # this
-    #     df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues)) # and this?
+#     from scipy.stats.distributions import norm
+#     df["tvalues"] = df.coef / df["std err"] # this
+#     df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues)) # and this?
 
-    #     f = norm.ppf(1 - alpha / 2)
-    #     df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
-    #     df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+#     f = norm.ppf(1 - alpha / 2)
+#     df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
+#     df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
 
-    #     df.index = self.model.data.param_names
+#     df.index = self.model.data.param_names
 
-    #     summ = summary2.Summary()
-    #     if title is None:
-    #         title = "Gaussian process regression results"
-    #     summ.add_title(title)
-    #     summ.add_df(df)
+#     summ = summary2.Summary()
+#     if title is None:
+#         title = "Gaussian process regression results"
+#     summ.add_title(title)
+#     summ.add_df(df)
 
-    #     return summ
+#     return summ
 
 # from model.py
-    # @cached_value
-    # def llf(self):
-    #     """Log-likelihood of model"""
-    #     return self.model.loglike(self.params)
+# @cached_value
+# def llf(self):
+#     """Log-likelihood of model"""
+#     return self.model.loglike(self.params)
 
-    # @cached_value
-    # def bse(self):
-    #     """The standard errors of the parameter estimates."""
-    #     # Issue 3299
-    #     if ((not hasattr(self, 'cov_params_default')) and
-    #             (self.normalized_cov_params is None)):
-    #         bse_ = np.empty(len(self.params))
-    #         bse_[:] = np.nan
-    #     else:
-    #         bse_ = np.sqrt(np.diag(self.cov_params()))
-    #     return bse_
+# @cached_value
+# def bse(self):
+#     """The standard errors of the parameter estimates."""
+#     # Issue 3299
+#     if ((not hasattr(self, 'cov_params_default')) and
+#             (self.normalized_cov_params is None)):
+#         bse_ = np.empty(len(self.params))
+#         bse_[:] = np.nan
+#     else:
+#         bse_ = np.sqrt(np.diag(self.cov_params()))
+#     return bse_
 
-    # @cached_value
-    # def tvalues(self):
-    #     """
-    #     Return the t-statistic for a given parameter estimate.
-    #     """
-    #     return self.params / self.bse
+# @cached_value
+# def tvalues(self):
+#     """
+#     Return the t-statistic for a given parameter estimate.
+#     """
+#     return self.params / self.bse
 
-    # @    # def pvalues(self):
-    # #     """The two-tailed p values for the t-stats of the params."""
-    # #     if self.use_t:
-    # #         df_resid = getattr(self, 'df_resid_inference', self.df_resid)
-    # #         return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
-    # #     else:
-    # #         return stats.norm.sf(np.abs(self.tvalues)) * 2
+# @    # def pvalues(self):
+# #     """The two-tailed p values for the t-stats of the params."""
+# #     if self.use_t:
+# #         df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+# #         return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
+# #     else:
+# #         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
 
 def piped_moduleweight(
-    df,lateralized=True, dual=True, plot=False, plot_kwargs={}, filtermask=None, 
-    noenv=False, savdir='', fixedbias=True, return_coefs=False, subjcol='subjid'
+    df,
+    lateralized=True,
+    dual=True,
+    plot=False,
+    plot_kwargs={},
+    filtermask=None,
+    noenv=False,
+    savdir="",
+    fixedbias=True,
+    return_coefs=False,
+    subjcol="subjid",
 ):
     """"pipe to preprocess + glm + get module weight, 
     so everything could run in local scope (loop) and returns module weight
@@ -1630,57 +1743,84 @@ def piped_moduleweight(
             df.loc[df.subjid==subj] = glm2afc.piped_moduleweight(df.loc[(df.subjid==subj)], filtermask=mask, noenv=True, lateralized=False)
     """
     # create new columns in df
-    newcols = ["stim", "short_s", "lat", "trans"] + ['fixedbias']*(dual*1) # does it crash or something?
+    newcols = ["stim", "short_s", "lat", "trans"] + ["fixedbias"] * (
+        dual * 1
+    )  # does it crash or something?
     if dual:
-        prefix = 'dW_'
+        prefix = "dW_"
     else:
-        prefix = 'sW_'
+        prefix = "sW_"
 
-    newcols = [f'{prefix}{x}' for x in newcols]
-    # try omitting this    
+    newcols = [f"{prefix}{x}" for x in newcols]
+    # try omitting this
     for col in newcols:
-       df.loc[:,col] = np.nan
+        df.loc[:, col] = np.nan
 
     outdic = {}
-       
-    for subj in df[subjcol].unique():
-        tempdf = preprocess(df.loc[df[subjcol]==subj].copy(deep=True), lateralized=lateralized, noenv=noenv)
 
-        #now that we do not need them to be aligned, we can apply filters/mask
+    for subj in df[subjcol].unique():
+        tempdf = preprocess(
+            df.loc[df[subjcol] == subj].copy(deep=True),
+            lateralized=lateralized,
+            noenv=noenv,
+        )
+
+        # now that we do not need them to be aligned, we can apply filters/mask
         if filtermask is None:
-            print('using default mask, review it:')
-            print('sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0')
-            tempdf = tempdf.query('sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0')
-        elif isinstance(filtermask, (np.ndarray, pd.Series, pd.core.series.Series)): # bool # array is a bad idea
+            print("using default mask, review it:")
+            print(
+                "sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0"
+            )
+            tempdf = tempdf.query(
+                "sound_len <= 400 and soundrfail == False and resp_len <=1 and R_response>= 0 and hithistory >= 0 and special_trial == 0"
+            )
+        elif isinstance(
+            filtermask, (np.ndarray, pd.Series, pd.core.series.Series)
+        ):  # bool # array is a bad idea
             tempdf = tempdf[filtermask]
         elif isinstance(filtermask, str):
             tempdf = tempdf.query(filtermask)
-        
-        
-        tempdic = exec_glm(tempdf, dual=dual, plot=plot, lateralized=lateralized, savdir='', noenv=noenv)
-        tempdf = get_module_weight(tempdf, tempdic, lateralized=lateralized, noenv=noenv, fixedbias=fixedbias) # filtered rows!
+
+        tempdic = exec_glm(
+            tempdf,
+            dual=dual,
+            plot=plot,
+            lateralized=lateralized,
+            savdir="",
+            noenv=noenv,
+        )
+        tempdf = get_module_weight(
+            tempdf, tempdic, lateralized=lateralized, noenv=noenv, fixedbias=fixedbias
+        )  # filtered rows!
 
         if return_coefs:
             outdic[subj] = tempdic
 
         # KeyError: "None of [Index(['S'], dtype='object')] are in the [index]"
         df.loc[tempdf.index, newcols] = tempdf[newcols]
-    
+
     if return_coefs:
         pass
         return df, outdic
     else:
         return df
 
+
 # get some civil & structured functions to plot all pannels
 # which do not require more info than it should, aka (targdf),
 # so we can call it just with statsmodels summary dframe!
 
-def civil_plot(xlabels, summary, ax=None, 
-    error_kws={'marker':'o', 'capsize':2}, 
-    sign_kws={'marker':'*', 'zorder':3}, 
-    signiff_offset=0.1, c=None, label=None,
-    arrange_labels=False 
+
+def civil_plot(
+    xlabels,
+    summary,
+    ax=None,
+    error_kws={"marker": "o", "capsize": 2},
+    sign_kws={"marker": "*", "zorder": 3},
+    signiff_offset=0.1,
+    c=None,
+    label=None,
+    arrange_labels=False,
 ):
     """
     simple function to search xlabels in statsmodels summary and plot it 
@@ -1689,116 +1829,142 @@ def civil_plot(xlabels, summary, ax=None,
     It will trigger several warnings by comparing with nans and using keys which do not exist!
     Arrange labels= force using integers contained in label to avoid other problems (total ticks)
     """
-    assert ax is not None, 'provide axis'
+    assert ax is not None, "provide axis"
 
     # adding shortcuts for oftenly used kwords
     if c is not None:
-        error_kws['color']=c
-        sign_kws['color']=c
+        error_kws["color"] = c
+        sign_kws["color"] = c
     if label is not None:
-        error_kws['label'] = label
-    
+        error_kws["label"] = label
+
     if not isinstance(xlabels, np.ndarray):
         xlabels = np.array(xlabels, dtype=object)
-    
-    signifposition = (summary.loc[xlabels, "P>|z|"].values < 0.05)
+
+    signifposition = summary.loc[xlabels, "P>|z|"].values < 0.05
     if arrange_labels:
         xpos = []
         for item in xlabels:
-            cstr = ''
+            cstr = ""
             for char in item:
                 if char.isdigit():
                     cstr += char
             xpos += [int(cstr)]
-        xpos = np.array(xpos)-1
+        xpos = np.array(xpos) - 1
         xposs = np.where(summary.loc[xlabels, "P>|z|"].values < 0.05)[0]
     else:
         xpos = xlabels
         xposs = xlabels[signifposition]
 
-    
-
     # errors
     ax.errorbar(
         xpos,
-        summary.loc[xlabels, 'coef'],
-        yerr=summary.loc[xlabels, 'std err'],
-        **error_kws
+        summary.loc[xlabels, "coef"],
+        yerr=summary.loc[xlabels, "std err"],
+        **error_kws,
     )
     # stars
     ax.scatter(
-        xposs,
-        summary.loc[xlabels[signifposition], 'coef']+signiff_offset,
-        **sign_kws
+        xposs, summary.loc[xlabels[signifposition], "coef"] + signiff_offset, **sign_kws
     )
     # ax.set_xticks(np.arange(xpos_i.max()))
     # ax.set_xticklabels(xlabels)
 
 
 def dual_glm_plot(
-    smac, smae, regressor_dict=None,
-    subplot_kws={'ncols':2, 'nrows':4, 'figsize':(9,12), 'sharex':False, 'sharey':False},
-    c_ac='tab:orange', c_ae='black', savpath='', suptitle=''
+    smac,
+    smae,
+    regressor_dict=None,
+    subplot_kws={
+        "ncols": 2,
+        "nrows": 4,
+        "figsize": (9, 12),
+        "sharex": False,
+        "sharey": False,
+    },
+    c_ac="tab:orange",
+    c_ae="black",
+    savpath="",
+    suptitle="",
 ):
     """ plot shit (dual glm) from statsmodels outputs
     regressor_list: regressor name to plot, length as long as num of subplots
     should work kewl without defining many kw_, subplot_kws,
     """
-    
+
     if regressor_dict is None:
         # default search to define regressor_dict
         alli = np.unique(np.concatenate([smac.index, smae.index]))
-        lateralized=False
+        lateralized = False
         regressor_dict = {}
-        if any([x for x in alli if x.startswith('SR')]): # lateralized
+        if any([x for x in alli if x.startswith("SR")]):  # lateralized
             series = [
-                sorted([x for x in alli if x.startswith('SR')]),
-                sorted([x for x in alli if x.startswith('SL')])
+                sorted([x for x in alli if x.startswith("SR")]),
+                sorted([x for x in alli if x.startswith("SL")]),
             ]
-            lateralized=True
+            lateralized = True
         else:
-            series = [
-                sorted([x for x in alli if x.startswith('S')])
-            ]
-        regressor_dict['stimulus'] = series
+            series = [sorted([x for x in alli if x.startswith("S")])]
+        regressor_dict["stimulus"] = series
         if lateralized:
             series = [
-                [f'afterefR{x}' for x in range(1,11)],
-                [f'afterefL{x}' for x in range(1,11)]
+                [f"afterefR{x}" for x in range(1, 11)],
+                [f"afterefL{x}" for x in range(1, 11)],
             ]
         else:
-            series = [sorted([x for x in alli if x.startswith('after')])]
-        regressor_dict['short sensory']=series
-        regressor_dict['L+'] = [sorted([x for x in alli if x.startswith('L+')])]
-        regressor_dict['L-'] = [sorted([x for x in alli if x.startswith('L-')])]
-        regressor_dict['T++'] = [sorted([x for x in alli if x.startswith('T++')])]
-        regressor_dict['T+-'] = [sorted([x for x in alli if x.startswith('T+-')])]
-        regressor_dict['T-+'] = [sorted([x for x in alli if x.startswith('T-+')])]
-        regressor_dict['T--'] = [sorted([x for x in alli if x.startswith('T--')])]
-        
-        
+            series = [sorted([x for x in alli if x.startswith("after")])]
+        regressor_dict["short sensory"] = series
+        regressor_dict["L+"] = [sorted([x for x in alli if x.startswith("L+")])]
+        regressor_dict["L-"] = [sorted([x for x in alli if x.startswith("L-")])]
+        regressor_dict["T++"] = [sorted([x for x in alli if x.startswith("T++")])]
+        regressor_dict["T+-"] = [sorted([x for x in alli if x.startswith("T+-")])]
+        regressor_dict["T-+"] = [sorted([x for x in alli if x.startswith("T-+")])]
+        regressor_dict["T--"] = [sorted([x for x in alli if x.startswith("T--")])]
+
     # iterate and plot
     f, ax = plt.subplots(**subplot_kws)
-    ax=ax.flatten()
-    multiple_linestyles = ['-', ':']
-    arrange_labels = [True]*2 + [False]*6
-    offsets = [0.8, 0.1, 0.2, 0.1, 0.2, 0.1,0.1, 0.1]
+    ax = ax.flatten()
+    multiple_linestyles = ["-", ":"]
+    arrange_labels = [True] * 2 + [False] * 6
+    offsets = [0.8, 0.1, 0.2, 0.1, 0.2, 0.1, 0.1, 0.1]
     for i, k in enumerate(regressor_dict.keys()):
         for ii, j in enumerate(regressor_dict[k]):
             try:
-                civil_plot(j, smac, ax=ax[i], c=c_ac, signiff_offset=offsets[i],
-                error_kws={'ls':multiple_linestyles[ii], 'marker':'o', 'capsize':2}, arrange_labels=arrange_labels[i])
-                civil_plot(j, smae, ax=ax[i], c=c_ae, signiff_offset=offsets[i]*-1,
-                error_kws={'ls':multiple_linestyles[ii], 'marker':'o', 'capsize':2}, arrange_labels=arrange_labels[i])
+                civil_plot(
+                    j,
+                    smac,
+                    ax=ax[i],
+                    c=c_ac,
+                    signiff_offset=offsets[i],
+                    error_kws={
+                        "ls": multiple_linestyles[ii],
+                        "marker": "o",
+                        "capsize": 2,
+                    },
+                    arrange_labels=arrange_labels[i],
+                )
+                civil_plot(
+                    j,
+                    smae,
+                    ax=ax[i],
+                    c=c_ae,
+                    signiff_offset=offsets[i] * -1,
+                    error_kws={
+                        "ls": multiple_linestyles[ii],
+                        "marker": "o",
+                        "capsize": 2,
+                    },
+                    arrange_labels=arrange_labels[i],
+                )
             except Exception as e:
-                print('exception during plotting:')
+                print("exception during plotting:")
                 print(j)
                 print(e)
 
             ax[i].set_title(k)
-            ax[i].axhline(0, ls=':', c='k')
+            ax[i].axhline(0, ls=":", c="k")
 
-    ax[0].set_ylim(-4,4)
+    ax[0].set_ylim(-4, 4)
 
     if suptitle:
         f.suptitle(suptitle)

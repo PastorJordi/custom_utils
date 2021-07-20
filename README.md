@@ -4,6 +4,23 @@ few python util functions I use regularly (or used to :suspect:) when working in
 
 ## I guess the most useful thing here is the extraction pipe. It can be integrated with video coordinates but won't cover it here
 
+I wrote chom class using certain folder structure. Hence if you want to reuse it right away, you need that structure as well. Data is organized like this:
+```
+parentpath/LEXX/
+        |
+        |---- electro/
+        |        LEXX_date_session_folder/
+        |---- poses/
+        |        LEXX_task_date_DLCnetwork.h5
+        |        LEXX_task_date_DLCnetwork.pickle
+        |---- sessions/
+        |        LEXX_task_date.csv
+        |---- videos/
+        |        LEXX_task_date.avi
+        |        LEXX_task_date.npy
+            
+```
+
 ### How to use it behavior-only example
 ```
 from utilsJ.Behavior import ComPipe # you can install repo with pip install -e .
@@ -11,7 +28,7 @@ from utilsJ.Behavior import ComPipe # you can install repo with pip install -e .
 p = ComPipe.chom( # instantiate class
     'LE85',  # subject (must be the same as the folder under parentpath)
     parentpath='/home/jordi/Documents/changes_of_mind/data/',
-    analyze_trajectories=False
+    analyze_trajectories=False # requires .avi and .h5 file to work
 ) # this 
 p.load_available() # just in case, refresh
 print(p.available[0]) # example target session / filename string is the actual arg 
@@ -94,3 +111,6 @@ p.trial_sess.head() # preprocessed dataframe stored in attr. trial_sess of chom 
 **choice_x_coh**: coherence aligned to choice  
 **allpriors**: nan sum (axis0) of trans + lat modules  
 **choice_x_allpriors**: allpriors aligned to choice  
+
+from time to time I try reducing entropy using block code formatter
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

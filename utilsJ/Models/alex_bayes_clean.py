@@ -27,75 +27,98 @@ import warnings
 
 # re-writting few functions scattered elsewhere
 
+
 def gradient_np(row):
     """returns speed accel and jerk by np.gradient"""
     try:
-        t = row['trajectory_stamps'].astype(float)/1000
-        #dt1 = np.repeat(np.diff(row['trajectory_stamps'].astype(float)/1000),2).reshape(-1,2)
-        t = t-t[0]
-        coords = np.c_[row['trajectory_x'], row['trajectory_y']]
+        t = row["trajectory_stamps"].astype(float) / 1000
+        # dt1 = np.repeat(np.diff(row['trajectory_stamps'].astype(float)/1000),2).reshape(-1,2)
+        t = t - t[0]
+        coords = np.c_[row["trajectory_x"], row["trajectory_y"]]
         d1 = np.gradient(coords, t, axis=0)
-        d2 = np.gradient(d1, t,axis=0)
-        d3 = np.gradient(d2, t,axis=0)
+        d2 = np.gradient(d1, t, axis=0)
+        d3 = np.gradient(d2, t, axis=0)
         return d1, d2, d3, t
-    except: #just in case something goes wrong, we avoid losing everything when using .apply
+    except:  # just in case something goes wrong, we avoid losing everything when using .apply
         return np.nan, np.nan, np.nan, np.nan
 
+
 def v_(t):
-    return t.reshape(-1,1)**np.arange(6)
+    return t.reshape(-1, 1) ** np.arange(6)
+
 
 def get_Mt0te(t0, te):
-    Mt0te=np.array([
-        [1, t0, t0**2, t0**3, t0**4, t0**5],
-        [0, 1, 2*t0, 3*t0**2, 4*t0**3, 5*t0**4],
-        [0, 0, 2, 6*t0, 12*t0**2, 20*t0**3],
-        [1, te, te**2, te**3, te**4, te**5],
-        [0, 1, 2*te, 3*te**2, 4*te**3, 5*te**4],
-        [0, 0, 2, 6*te, 12*te**2, 20*te**3]
-    ])
+    Mt0te = np.array(
+        [
+            [1, t0, t0 ** 2, t0 ** 3, t0 ** 4, t0 ** 5],
+            [0, 1, 2 * t0, 3 * t0 ** 2, 4 * t0 ** 3, 5 * t0 ** 4],
+            [0, 0, 2, 6 * t0, 12 * t0 ** 2, 20 * t0 ** 3],
+            [1, te, te ** 2, te ** 3, te ** 4, te ** 5],
+            [0, 1, 2 * te, 3 * te ** 2, 4 * te ** 3, 5 * te ** 4],
+            [0, 0, 2, 6 * te, 12 * te ** 2, 20 * te ** 3],
+        ]
+    )
     return Mt0te
 
 
-class tinf: # (trial info)
-    '''given that same code is rewritten and messy, ill try to compact access to trial info (row) in a class
-    call it to access info later *(do not preprocess everything by default to save computing power when possible)'''
-    def __init__(self, row, M=False, othermatrices=False, factors=False, dim=1,twoD=False, boundary_cond=False, verbose=False,
-        sigma=5, SIGMA=None, ab_instance=None, collapse_sides=False, factorlist=['coh2', 'zidx', 'dW_trans'], 
-        factor_kw={'add_intercept':True}, collapsing_factors = ['coh2', 'dW_trans'],time_pre_portout=50, 
-        time_post_portin=0
+class tinf:  # (trial info)
+    """given that same code is rewritten and messy, ill try to compact access to trial info (row) in a class
+    call it to access info later *(do not preprocess everything by default to save computing power when possible)"""
+
+    def __init__(
+        self,
+        row,
+        M=False,
+        othermatrices=False,
+        factors=False,
+        dim=1,
+        twoD=False,
+        boundary_cond=False,
+        verbose=False,
+        sigma=5,
+        SIGMA=None,
+        ab_instance=None,
+        collapse_sides=False,
+        factorlist=["coh2", "zidx", "dW_trans"],
+        factor_kw={"add_intercept": True},
+        collapsing_factors=["coh2", "dW_trans"],
+        time_pre_portout=50,
+        time_post_portin=0,
     ):
         # BL and BR are betas to use interactive plotting function. [size should match with factorlist + itnercept]
         # row is a row from a df. Ideally this is will be instantiated when using long apply
         # time_pre_portout: get some extra ms before port out (trajectory starts slightly before)
         self.okstatus = True
         t = row.trajectory_stamps - row.fix_onset_dt.to_datetime64()
-        T = row.resp_len*1000 + time_pre_portout + time_post_portin# total span
-        t = t.astype(int)/1000_000 - (300-time_pre_portout) - row.sound_len #  align to Cportout
-        if collapse_sides and row.R_response==0:
-            pose = np.c_[row.trajectory_x,row.trajectory_y.copy()*-1]
+        T = row.resp_len * 1000 + time_pre_portout + time_post_portin  # total span
+        t = (
+            t.astype(int) / 1000_000 - (300 - time_pre_portout) - row.sound_len
+        )  #  align to Cportout
+        if collapse_sides and row.R_response == 0:
+            pose = np.c_[row.trajectory_x, row.trajectory_y.copy() * -1]
         else:
-            pose = np.c_[row.trajectory_x,row.trajectory_y]
+            pose = np.c_[row.trajectory_x, row.trajectory_y]
         self.original_pose = pose
-        
-        try:
-            f = interp1d(t, pose, axis=0, fill_value=(pose[0],pose[1]))
-            initpose = f(0)
-            fp = np.argmax(t>=0) 
-            lastp = np.argmax(t>T) # first frame after lateral poke in 
-            tsegment = np.append(t[fp:lastp],T)
-            tsegment = np.insert(tsegment,0,0)
-            lastpose = f(T)
-            
-            pose = np.insert(pose[fp:lastp], 0, initpose, axis=0)
-            pose = np.append(pose, lastpose.reshape(-1,2), axis=0) # 2D!
-        except Exception as e:
-            print(f'exception in {row.sessid} trial {row.origidx}\n{e}')
-            pose = None
-            tsegment = t 
-            self.okstatus=False
 
-            #raise e
-        
+        try:
+            f = interp1d(t, pose, axis=0, fill_value=(pose[0], pose[1]))
+            initpose = f(0)
+            fp = np.argmax(t >= 0)
+            lastp = np.argmax(t > T)  # first frame after lateral poke in
+            tsegment = np.append(t[fp:lastp], T)
+            tsegment = np.insert(tsegment, 0, 0)
+            lastpose = f(T)
+
+            pose = np.insert(pose[fp:lastp], 0, initpose, axis=0)
+            pose = np.append(pose, lastpose.reshape(-1, 2), axis=0)  # 2D!
+        except Exception as e:
+            print(f"exception in {row.sessid} trial {row.origidx}\n{e}")
+            pose = None
+            tsegment = t
+            self.okstatus = False
+
+            # raise e
+
         self.row = row
         self.pose = pose
         self.tsegment = tsegment
@@ -106,17 +129,24 @@ class tinf: # (trial info)
         self.vt = None
         self.N = None
         self.W = None
-        self.t = t # original t vector
+        self.t = t  # original t vector
         self.T = T
-        
 
-        if ab_instance is not None: # reduce code by looping with setattr and getattr
-            for at in ['sigma', 'SIGMA', 'twoD', 'factors', 'dim', 'invert', 'factorlist', 'factor_kw', 'collapsing_factors', 'collapse_sides', 'time_pre_portout']:
-                setattr(
-                    self, 
-                    at,
-                    getattr(ab_instance, at, None)
-                )
+        if ab_instance is not None:  # reduce code by looping with setattr and getattr
+            for at in [
+                "sigma",
+                "SIGMA",
+                "twoD",
+                "factors",
+                "dim",
+                "invert",
+                "factorlist",
+                "factor_kw",
+                "collapsing_factors",
+                "collapse_sides",
+                "time_pre_portout",
+            ]:
+                setattr(self, at, getattr(ab_instance, at, None))
         else:
             self.sigma = sigma
             self.SIGMA = SIGMA
@@ -127,19 +157,21 @@ class tinf: # (trial info)
             self.factor_kw = factor_kw
             self.collapsing_factors = collapsing_factors
             if twoD:
-                self.dim = np.array([0,1])
+                self.dim = np.array([0, 1])
             else:
                 self.dim = dim
 
-        self.factor_mask = np.ones(len(self.factorlist)) # should not be used w/o collapse
+        self.factor_mask = np.ones(
+            len(self.factorlist)
+        )  # should not be used w/o collapse
 
         if self.collapse_sides:
-            collapsing_index = [self.factorlist.index(x) for x in self.collapsing_factors]#to know which column indexes to invert
+            collapsing_index = [
+                self.factorlist.index(x) for x in self.collapsing_factors
+            ]  # to know which column indexes to invert
             factor_mask = np.ones(len(self.factorlist))
             factor_mask[collapsing_index] = -1
             self.factor_mask = factor_mask
-
-             
 
         try:
             if factors:
@@ -151,68 +183,78 @@ class tinf: # (trial info)
             if othermatrices:
                 self.get_othermatrices()
         except Exception as e:
-            self.okstatus=False
-            print('second exception in tinf')
+            self.okstatus = False
+            print("second exception in tinf")
             raise e
             if verbose:
-                print(f'err while extracting info in trial {row.name}\n{e}')
+                print(f"err while extracting info in trial {row.name}\n{e}")
 
-
-    def get_factors(self, add_intercept = True):
+    def get_factors(self, add_intercept=True):
         factors = self.row[self.factorlist].fillna(0).values
-        if self.collapse_sides and int(self.row['R_response'])==0:
+        if self.collapse_sides and int(self.row["R_response"]) == 0:
             factors = factors * self.factor_mask
         if add_intercept:
-            self.Fk = np.array([1]+factors.tolist()) # prepended intercept
+            self.Fk = np.array([1] + factors.tolist())  # prepended intercept
         else:
             self.Fk = np.array(factors)
-    
+
     def get_boundarycond(self):
         # if self.M is None:
         #     self.get_M()
         if self.okstatus:
-            out = [0]*6
-            for i, traj in enumerate([self.original_pose, self.row.traj_d1, self.row.traj_d2]):
+            out = [0] * 6
+            for i, traj in enumerate(
+                [self.original_pose, self.row.traj_d1, self.row.traj_d2]
+            ):
                 f = interp1d(self.t, traj, axis=0)
                 initial = f(0)
                 last = f(self.T)
                 out[i] = initial
-                out[i+3] = last
+                out[i + 3] = last
             # self.boundary_cond = self.M_1 @ np.vstack(out)
             self.boundary_cond = np.vstack(out)
         else:
-            self.boundary_cond = np.ones(12).reshape(6,2) * np.nan
-
+            self.boundary_cond = np.ones(12).reshape(6, 2) * np.nan
 
     def get_M(self):
         self.M = get_Mt0te(self.tsegment[0], self.tsegment[-1])
         self.M_1 = np.linalg.inv(self.M)
-    
+
     def get_othermatrices(self):
         if self.M is None:
             self.get_M()
         self.vt = v_(self.tsegment)
         self.N = self.vt @ self.M_1
         if not self.twoD:
-            self.W = self.sigma**2 * np.identity(self.N.shape[0]) + self.N @ self.SIGMA @ self.N.T # shape n x n
+            self.W = (
+                self.sigma ** 2 * np.identity(self.N.shape[0])
+                + self.N @ self.SIGMA @ self.N.T
+            )  # shape n x n
         else:
             self.W = (
-                self.sigma**2 * np.identity(self.N.shape[0]) + self.N @ self.SIGMA[0] @ self.N.T,
-                self.sigma**2 * np.identity(self.N.shape[0]) + self.N @ self.SIGMA[1] @ self.N.T
+                self.sigma ** 2 * np.identity(self.N.shape[0])
+                + self.N @ self.SIGMA[0] @ self.N.T,
+                self.sigma ** 2 * np.identity(self.N.shape[0])
+                + self.N @ self.SIGMA[1] @ self.N.T,
             )
 
     def return_preprocessed(self):
         # this should check whether N W and Fk are processed, spent many time with this one
         if self.okstatus:
-            toreturn = [self.okstatus, self.pose[:,self.dim], self.N, self.W] + self.factors*[self.Fk]
+            toreturn = [
+                self.okstatus,
+                self.pose[:, self.dim],
+                self.N,
+                self.W,
+            ] + self.factors * [self.Fk]
             return toreturn
         else:
-            return [False, None, None, None] + self.factors*[None]
-    
+            return [False, None, None, None] + self.factors * [None]
 
 
 # TODO: implement both dims at once
 # TODO: auto invert is not handling default mu
+
 
 class ab:
     """
@@ -225,13 +267,30 @@ class ab:
     the idea is to follow the same flow used in the notebook but saving hyperparams/kwargs in class vars
     """
 
-    default_mu = np.array([[-25,0],[0,0],[0,0],[-35,85],[0,0],[0,0]])
+    default_mu = np.array([[-25, 0], [0, 0], [0, 0], [-35, 85], [0, 0], [0, 0]])
 
     def __init__(
-        self, df=None, sigma=5, SIGMA=None, mu=None, factors=False, dim=1, dummy_span=150, workers=7, twoD=False,
-        min_frames_traj=15, random_state=123, response_side=0, eps = 0.05, collapse_sides=False,
-        factorlist=['coh2', 'zidx', 'dW_trans'], factor_kw={'add_intercept':True}, collapsing_factors=['coh2', 'dW_trans'],
-        loadpath=None, time_pre_portout=50, time_post_portin=50
+        self,
+        df=None,
+        sigma=5,
+        SIGMA=None,
+        mu=None,
+        factors=False,
+        dim=1,
+        dummy_span=150,
+        workers=7,
+        twoD=False,
+        min_frames_traj=15,
+        random_state=123,
+        response_side=0,
+        eps=0.05,
+        collapse_sides=False,
+        factorlist=["coh2", "zidx", "dW_trans"],
+        factor_kw={"add_intercept": True},
+        collapsing_factors=["coh2", "dW_trans"],
+        loadpath=None,
+        time_pre_portout=50,
+        time_post_portin=50,
     ):
         """
         df = filtered dataframe (side, invalids, rt/mt bins)
@@ -254,50 +313,52 @@ class ab:
         - preprocess (pulls required data)
         - fit_EM
         """
-        
+
         # apply filtering so we avoid to rewrite it every single time
         if loadpath is None:
-            assert isinstance(df, pd.DataFrame), 'df does not look as a dataframe'
+            assert isinstance(df, pd.DataFrame), "df does not look as a dataframe"
             if not collapse_sides:
                 df = df.loc[
-                    (df.trajectory_x.apply(len)>=min_frames_traj) & (df.R_response==response_side)
-                    ]
+                    (df.trajectory_x.apply(len) >= min_frames_traj)
+                    & (df.R_response == response_side)
+                ]
             else:
                 response_side = None
-                df = df.loc[df.trajectory_x.apply(len)>=min_frames_traj]
-            assert df.size, 'beware filtering, (response=side?), df is empty'
-            
+                df = df.loc[df.trajectory_x.apply(len) >= min_frames_traj]
+            assert df.size, "beware filtering, (response=side?), df is empty"
+
             if twoD:
-                dim=np.array([0,1])
-                raise NotImplementedError('not yet')
-            
+                dim = np.array([0, 1])
+                raise NotImplementedError("not yet")
 
             # calc some columns if not precomputed
-            if 'traj_d1' not in df.columns:
-                print('traj derivatives not found, calculating...')
-                tmp = df.swifter.apply(lambda x: gradient_np(x)[:3], axis=1, result_type='expand')
-                tmp.columns = ['traj_d1', 'traj_d2', 'traj_d3']
+            if "traj_d1" not in df.columns:
+                print("traj derivatives not found, calculating...")
+                tmp = df.swifter.apply(
+                    lambda x: gradient_np(x)[:3], axis=1, result_type="expand"
+                )
+                tmp.columns = ["traj_d1", "traj_d2", "traj_d3"]
                 df = pd.concat([df, tmp], axis=1)
 
-            if factors and 'zidx' not in df.columns:
-                print('calculating zscore for trial index')
-                df['zidx'] = (df.origidx - df.origidx.mean())/df.origidx.std()
+            if factors and "zidx" not in df.columns:
+                print("calculating zscore for trial index")
+                df["zidx"] = (df.origidx - df.origidx.mean()) / df.origidx.std()
 
             if factors:
                 for f in factorlist:
                     assert f in df.columns, f'factor "{f}" not found among df.cols'
 
-            self.df=df#.copy()
+            self.df = df  # .copy()
             self.subject = df.subjid.unique()
-            self.B = None # we-ll define it later according to Fk.size
+            self.B = None  # we-ll define it later according to Fk.size
             self.eps = eps
-            self.sigma=sigma
-            
+            self.sigma = sigma
+
             self.dim = dim
             self.random_state = random_state
             self.factors = factors
             self.twoD = twoD
-            self.workers=workers
+            self.workers = workers
             self.response_side = response_side
             self.dummy_span = dummy_span
             self.collapse_sides = collapse_sides
@@ -307,219 +368,255 @@ class ab:
             self.time_pre_portout = time_pre_portout
             self.time_post_portin = time_post_portin
 
-            self.factor_mask = np.ones(len(self.factorlist)) # should not be used w/o collapse
+            self.factor_mask = np.ones(
+                len(self.factorlist)
+            )  # should not be used w/o collapse
             if self.collapse_sides:
-                collapsing_index = [self.factorlist.index(x) for x in self.collapsing_factors]#to know which column indexes to invert
+                collapsing_index = [
+                    self.factorlist.index(x) for x in self.collapsing_factors
+                ]  # to know which column indexes to invert
                 factor_mask = np.ones(len(self.factorlist))
                 factor_mask[collapsing_index] = -1
                 self.factor_mask = factor_mask
 
-            if mu is None and factors==False:
-                print('using default mu, else provide it as an arg')
-                self.mu = self.default_mu.copy()[:,dim]
+            if mu is None and factors == False:
+                print("using default mu, else provide it as an arg")
+                self.mu = self.default_mu.copy()[:, dim]
             else:
-                self.mu=mu
+                self.mu = mu
 
             if SIGMA is not None:
-                self.SIGMA=SIGMA
+                self.SIGMA = SIGMA
             else:
                 self.estimate_SIGMA_()
 
             self.SIGMA_1 = np.linalg.inv(self.SIGMA)
-            self.ntrials = None # perhaps after discarding some!*(bad trajectories etc.)
+            self.ntrials = (
+                None  # perhaps after discarding some!*(bad trajectories etc.)
+            )
             self.llh = -np.inf
             self.prep_data = None
-            self.history = {} # fit history in short
-            
+            self.history = {}  # fit history in short
+
         else:
             self.subject = None
             self.load_model(loadpath)
 
-
     def estimate_SIGMA_(self, sample_size=1000):
         """samples trajectories to get an average as a prior"""
-        print('SIGMA was not provided, estimating it')
-        subset = self.df.loc[(self.df.hithistory>=0)&(self.df.Hesitation==False)].sample(sample_size, replace=True, random_state=self.random_state)
-        subset['est_params'] = subset.swifter.apply(lambda x: tinf(x, ab_instance=self,
-        dim=self.dim, factorlist = self.factorlist, collapse_sides=self.collapse_sides,boundary_cond=True, time_pre_portout=self.time_pre_portout, 
-        time_post_portin=self.time_post_portin).boundary_cond, axis=1)
+        print("SIGMA was not provided, estimating it")
+        subset = self.df.loc[
+            (self.df.hithistory >= 0) & (self.df.Hesitation == False)
+        ].sample(sample_size, replace=True, random_state=self.random_state)
+        subset["est_params"] = subset.swifter.apply(
+            lambda x: tinf(
+                x,
+                ab_instance=self,
+                dim=self.dim,
+                factorlist=self.factorlist,
+                collapse_sides=self.collapse_sides,
+                boundary_cond=True,
+                time_pre_portout=self.time_pre_portout,
+                time_post_portin=self.time_post_portin,
+            ).boundary_cond,
+            axis=1,
+        )
         if not self.twoD:
-            sigma_b = np.nanstd(np.stack(subset['est_params'].tolist(), axis=2), axis=2)#.std(axis=2)
-            var = (sigma_b[:,self.dim]**2).reshape(-1,1)
+            sigma_b = np.nanstd(
+                np.stack(subset["est_params"].tolist(), axis=2), axis=2
+            )  # .std(axis=2)
+            var = (sigma_b[:, self.dim] ** 2).reshape(-1, 1)
             # SIGMA = np.concatenate([var[:3], var[:3]]) * np.identity(6)
             SIGMA = var * np.identity(6)
-        self.SIGMA=SIGMA
+        self.SIGMA = SIGMA
 
-
-
-    def preprocess(
-            self
-        ):
+    def preprocess(self):
         """colkw - kwords for tinf class (clolumn mapping)"""
-        colnames = ['OK', 'coords', 'N', 'W'] + ['F'] * self.factors
-        tmp = self.df.swifter.apply( 
-            #lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True, factorlist=self.factorlist).return_preprocessed(), 
-            lambda row: tinf(row, ab_instance=self,
-            factors=self.factors, factorlist = self.factorlist ,collapse_sides=self.collapse_sides,othermatrices=True, 
-            time_pre_portout=self.time_pre_portout, time_post_portin=self.time_post_portin).return_preprocessed(), 
-            axis=1, result_type='expand')
+        colnames = ["OK", "coords", "N", "W"] + ["F"] * self.factors
+        tmp = self.df.swifter.apply(
+            # lambda row: tinf(row, factors=self.factors, othermatrices=True, SIGMA=self.SIGMA, verbose=True, factorlist=self.factorlist).return_preprocessed(),
+            lambda row: tinf(
+                row,
+                ab_instance=self,
+                factors=self.factors,
+                factorlist=self.factorlist,
+                collapse_sides=self.collapse_sides,
+                othermatrices=True,
+                time_pre_portout=self.time_pre_portout,
+                time_post_portin=self.time_post_portin,
+            ).return_preprocessed(),
+            axis=1,
+            result_type="expand",
+        )
         tmp.columns = colnames
 
         out = {}
-        for cname in colnames[1:]: # all but OK
-            out[cname] = tmp.loc[tmp.OK==True,cname].tolist()
+        for cname in colnames[1:]:  # all but OK
+            out[cname] = tmp.loc[tmp.OK == True, cname].tolist()
 
-        self.ntrials = tmp[tmp.OK].shape[0] # number of trials which will run through EM
+        self.ntrials = tmp[tmp.OK].shape[
+            0
+        ]  # number of trials which will run through EM
         self.prep_data = out
-        
 
-        print(f'discarded {len(self.df)-self.ntrials} trials in the preprocess')
+        print(f"discarded {len(self.df)-self.ntrials} trials in the preprocess")
 
     @staticmethod
     def E_step_worker_(args):
-        if len(args)==6:
+        if len(args) == 6:
             coords, N, W, mu, eps, dummy_span = args
         else:
             coords, N, W, F, B, eps, dummy_span = args
-            mu = B @ F.reshape(-1,1) # usually (4,1)
+            mu = B @ F.reshape(-1, 1)  # usually (4,1)
 
         try:
-            marg_gauss = multivariate_normal( (N @ mu.reshape(-1,1)).ravel(), W) # eq 9
-            pmk = marg_gauss.pdf(coords) # prob under ballistic model
+            marg_gauss = multivariate_normal((N @ mu.reshape(-1, 1)).ravel(), W)  # eq 9
+            pmk = marg_gauss.pdf(coords)  # prob under ballistic model
 
-            alt_prob = eps/((1-eps)*dummy_span**coords.size) # sometimes runtime warning div 0
+            alt_prob = eps / (
+                (1 - eps) * dummy_span ** coords.size
+            )  # sometimes runtime warning div 0
             zk = pmk / (pmk + alt_prob)
             # loglikelihod for trial k
-            llh = np.log(eps/dummy_span**N.shape[0] + (1-eps) * pmk)
+            llh = np.log(eps / dummy_span ** N.shape[0] + (1 - eps) * pmk)
             return (pmk, zk, llh)
         except Exception as e:
-            print(f'exception in E_step_worker, \n{e}')
-            return (1e-10,1e-10,1e-10) # is this tiny enough?
-    
+            print(f"exception in E_step_worker, \n{e}")
+            return (1e-10, 1e-10, 1e-10)  # is this tiny enough?
+
     @staticmethod
     def M_step_worker_(args):
-        if len(args)==6:
+        if len(args) == 6:
             coords, N, W, mu, eps, dummy_span = args
             factors_flag = False
         else:
             coords, N, W, F, B, eps, dummy_span = args
-            mu = B @ F.reshape(-1,1)
+            mu = B @ F.reshape(-1, 1)
             factors_flag = True
 
-        marg_gauss = multivariate_normal( (N @ mu.reshape(-1,1)).ravel(), W) # eq 9
-        pmk = marg_gauss.pdf(coords) # prob under ballistic model
-        alt_prob = eps/((1-eps)*dummy_span**coords.size)
+        marg_gauss = multivariate_normal((N @ mu.reshape(-1, 1)).ravel(), W)  # eq 9
+        pmk = marg_gauss.pdf(coords)  # prob under ballistic model
+        alt_prob = eps / ((1 - eps) * dummy_span ** coords.size)
         zk = pmk / (pmk + alt_prob)
         W_1 = np.linalg.inv(W)
-        
+
         if factors_flag:
-            F_hat = np.zeros((6,6*F.size))
-            for i, j in enumerate(np.arange(6*F.size,step=F.size)):
-                F_hat[i, j:j+F.size] = F
-            first_term =  F_hat.T @ N.T @ W_1 @ N @ F_hat # usually (24,24)
-            second_term = zk * F_hat.T @ N.T @ W_1 @ coords.reshape(-1,1) # (24,1)
+            F_hat = np.zeros((6, 6 * F.size))
+            for i, j in enumerate(np.arange(6 * F.size, step=F.size)):
+                F_hat[i, j : j + F.size] = F
+            first_term = F_hat.T @ N.T @ W_1 @ N @ F_hat  # usually (24,24)
+            second_term = zk * F_hat.T @ N.T @ W_1 @ coords.reshape(-1, 1)  # (24,1)
         else:
-            first_term = zk * N.T @ W_1 @ N # (6,6)
-            second_term = zk * coords @ W_1 @ N # (6,)
+            first_term = zk * N.T @ W_1 @ N  # (6,6)
+            second_term = zk * coords @ W_1 @ N  # (6,)
 
         return (first_term, second_term)
 
     def get_worker_list(self, i=None):
-        '''avoiding typing twice same endless list
+        """avoiding typing twice same endless list
         selects args based on fitting mu or B
-        if row is passed as arg, it extract single trial info'''
-        ugly_arg_list = [
-                            self.prep_data['coords'][i], # arg list # this could be cleaner.
-                            self.prep_data['N'][i],
-                            self.prep_data['W'][i]
-                        ] + [self.mu] * (not self.factors) +\
-                        [ self.prep_data['F'][i], self.B ] * self.factors +\
-                        [self.eps, self.dummy_span] # remaining parameters
+        if row is passed as arg, it extract single trial info"""
+        ugly_arg_list = (
+            [
+                self.prep_data["coords"][i],  # arg list # this could be cleaner.
+                self.prep_data["N"][i],
+                self.prep_data["W"][i],
+            ]
+            + [self.mu] * (not self.factors)
+            + [self.prep_data["F"][i], self.B] * self.factors
+            + [self.eps, self.dummy_span]
+        )  # remaining parameters
 
         return ugly_arg_list
 
-
     def fit_EM(self, threshold=1e-3, streak=2, verbose=0):
-        '''
+        """
         expectation maximization loop
         threshold  =  loglikelihood increase below this will make exit the loop
         streak = times that threshold rule must be violated to exit the loop
         all vars and params should be already initialized in __init__
 
         ## we'll track fitting history since this takes few steps to converge (5~30)
-        '''
-        assert streak>=1, f'min streak value is 1, and attempted to use {streak}'
-        
-        self.history = {
-            'llh' : [self.llh],
-            'eps' : [self.eps]
-        }
-        if self.factors: # init B now that stuff is preprocessed
-            #print(self.prep_data['F'])
-            self.B = np.zeros((6,self.prep_data['F'][0].size))
+        """
+        assert streak >= 1, f"min streak value is 1, and attempted to use {streak}"
 
+        self.history = {"llh": [self.llh], "eps": [self.eps]}
+        if self.factors:  # init B now that stuff is preprocessed
+            # print(self.prep_data['F'])
+            self.B = np.zeros((6, self.prep_data["F"][0].size))
 
         if self.factors:
-            self.history['tofit'] = [self.B.copy()] 
+            self.history["tofit"] = [self.B.copy()]
         else:
-            self.history['tofit'] = [self.mu.copy()]
+            self.history["tofit"] = [self.mu.copy()]
 
-        
         itercounter = 0
         break_flag = False
-        while True: # we'll break it explicitly
+        while True:  # we'll break it explicitly
             allres = []
 
             # E step
             with ThreadPoolExecutor(max_workers=self.workers) as executor:
                 jobs = [
                     executor.submit(
-                        ab.E_step_worker_,  # static function 
-                        self.get_worker_list(i=i) # util function to forge args
-                    ) for i in range(self.ntrials)
+                        ab.E_step_worker_,  # static function
+                        self.get_worker_list(i=i),  # util function to forge args
+                    )
+                    for i in range(self.ntrials)
                 ]
                 for job in as_completed(jobs):
                     allres += [job.result()]
 
-            res = np.concatenate(allres).reshape(-1,3).sum(axis=0) # sum prob ballistic, zk and llh
+            res = (
+                np.concatenate(allres).reshape(-1, 3).sum(axis=0)
+            )  # sum prob ballistic, zk and llh
 
             # update LLH & eps
-            self.history['llh'] += [res[2]]
+            self.history["llh"] += [res[2]]
             self.llh = res[2]
-            self.history['eps'] += [ 1 - res[1]/self.ntrials ] # this goes actually in M step. Eq 16
-            self.eps = 1 - res[1]/self.ntrials
+            self.history["eps"] += [
+                1 - res[1] / self.ntrials
+            ]  # this goes actually in M step. Eq 16
+            self.eps = 1 - res[1] / self.ntrials
 
             # break or not based in llh history
-            if itercounter>=streak: # avoids getting evaluated before we have not enough iters
-                if (np.diff(self.history['llh'])[-streak:]<threshold).all():
+            if (
+                itercounter >= streak
+            ):  # avoids getting evaluated before we have not enough iters
+                if (np.diff(self.history["llh"])[-streak:] < threshold).all():
                     break_flag = True
-            
+
             # M step
             # update the mean over boundary conditions mu using eq 18
             allres = []
             with ThreadPoolExecutor(max_workers=self.workers) as executor:
                 jobs = [
                     executor.submit(
-                        ab.M_step_worker_,  # static function 
-                        self.get_worker_list(i=i) # util function to forge args
-                    ) for i in range(self.ntrials)
+                        ab.M_step_worker_,  # static function
+                        self.get_worker_list(i=i),  # util function to forge args
+                    )
+                    for i in range(self.ntrials)
                 ]
                 for job in as_completed(jobs):
                     allres += [job.result()]
 
-            first_term, second_term = [],[]
-            for i in range(len(allres)): # split in two lists
+            first_term, second_term = [], []
+            for i in range(len(allres)):  # split in two lists
                 first_term += [allres[i][0]]
                 second_term += [allres[i][1]]
 
-            if self.factors: # fitting B
-                B_hat = np.linalg.inv(np.sum(first_term, axis=0)) @ np.sum(second_term, axis=0) # eq 23
-                B = B_hat.reshape((6,-1), order='C') # this was the issue!
-                self.history['tofit'] += [B.copy()]
+            if self.factors:  # fitting B
+                B_hat = np.linalg.inv(np.sum(first_term, axis=0)) @ np.sum(
+                    second_term, axis=0
+                )  # eq 23
+                B = B_hat.reshape((6, -1), order="C")  # this was the issue!
+                self.history["tofit"] += [B.copy()]
                 self.B = B
-            else: # fitting mu
-                mu = np.linalg.inv(np.sum(first_term, axis=0)) @ np.sum(second_term, axis=0) # former eq 20
-                self.history['tofit'] += [mu.copy()]
+            else:  # fitting mu
+                mu = np.linalg.inv(np.sum(first_term, axis=0)) @ np.sum(
+                    second_term, axis=0
+                )  # former eq 20
+                self.history["tofit"] += [mu.copy()]
                 self.mu = mu
 
             itercounter += 1
@@ -532,36 +629,40 @@ class ab:
                 break
 
         # once the loop finishes keep best params in self.
-        best_index = np.argmax(self.history['llh'])
-        self.llh = self.history['llh'][best_index]
+        best_index = np.argmax(self.history["llh"])
+        self.llh = self.history["llh"][best_index]
         if self.factors:
-            self.B = self.history['tofit'][best_index]
+            self.B = self.history["tofit"][best_index]
         else:
-            self.mu = self.history['tofit'][best_index]
-        self.eps = self.history['eps'][best_index]
-        print('all fine?')
+            self.mu = self.history["tofit"][best_index]
+        self.eps = self.history["eps"][best_index]
+        print("all fine?")
 
     # TODO: add function to save and load previously fitted model from pickle
     def save_model(self, path):
-        assert isinstance(str(path),str), 'path is not string-like convertable' # handles posix
-        if not path.endswith('.pkl'):
-            path += '.csv'
+        assert isinstance(
+            str(path), str
+        ), "path is not string-like convertable"  # handles posix
+        if not path.endswith(".pkl"):
+            path += ".csv"
 
         tosave = self.__dict__.copy()
-        for k in ['df', 'prep_data', 'loadpath']: # we do not want to pickle these
+        for k in ["df", "prep_data", "loadpath"]:  # we do not want to pickle these
             _ = tosave.pop(k, None)
-        with open(path, 'wb') as handle:
+        with open(path, "wb") as handle:
             pickle.dump(tosave, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def load_model(self, path): # initialize with df
-        with open(path, 'rb') as handle:
+    def load_model(self, path):  # initialize with df
+        with open(path, "rb") as handle:
             in_dic = pickle.load(handle)
 
-        if in_dic['subject'] != self.subject:
-            warnings.warn(f'instantiazed subject (from df) {self.subject} will be overrided by loaded model subject {in_dic["subject"]}')
+        if in_dic["subject"] != self.subject:
+            warnings.warn(
+                f'instantiazed subject (from df) {self.subject} will be overrided by loaded model subject {in_dic["subject"]}'
+            )
         for k, val in in_dic.items():
             setattr(self, k, val)
-        print(f'model loaded') # \nmu={self.mu},\n B={self.B}')
+        print(f"model loaded")  # \nmu={self.mu},\n B={self.B}')
 
     def retrieve_trial_info(self, row, zkonly=True):
         """given a row (trial), retrieve, zk, prior trajectory error and posterior+ from the fitted params
@@ -569,29 +670,37 @@ class ab:
         # perhaps this would be more useful/natural in the other class but as it is auxiliary ideally
         # end user will just interact with ab class | that's no excuse
 
-        r = tinf(row, othermatrices=True, ab_instance=self, collapse_sides=self.collapse_sides,
-        time_pre_portout=self.time_pre_portout, time_post_portin=self.time_post_portin)
-        args =  [
-                    r.pose[:,self.dim], # arg list # this could be cleaner.
-                    r.N,
-                    r.W
-                ] + [self.mu] * (not self.factors) +\
-                [ r.Fk, self.B ] * self.factors +\
-                [self.eps, self.dummy_span] # remaining parameters
+        r = tinf(
+            row,
+            othermatrices=True,
+            ab_instance=self,
+            collapse_sides=self.collapse_sides,
+            time_pre_portout=self.time_pre_portout,
+            time_post_portin=self.time_post_portin,
+        )
+        args = (
+            [r.pose[:, self.dim], r.N, r.W]  # arg list # this could be cleaner.
+            + [self.mu] * (not self.factors)
+            + [r.Fk, self.B] * self.factors
+            + [self.eps, self.dummy_span]
+        )  # remaining parameters
         pmk, zk, llh = ab.E_step_worker_(args)
         if zkonly:
             return zk
-            
-        L = np.linalg.pinv( # shape 6,6
-                self.SIGMA_1 + r.N.T @ r.N/self.sigma**2 # args[1] = N
+
+        L = np.linalg.pinv(  # shape 6,6
+            self.SIGMA_1 + r.N.T @ r.N / self.sigma ** 2  # args[1] = N
         )
         if not self.factors:
-            mu=self.mu  
+            mu = self.mu
         else:
-            mu = self.B @ r.Fk.reshape(-1,1) # args[3] = F if using factors
-        m = L @ (r.N.T @ r.pose[:,self.dim].reshape(-1,1)/self.sigma**2 + self.SIGMA_1 @ mu.reshape(-1,1))
+            mu = self.B @ r.Fk.reshape(-1, 1)  # args[3] = F if using factors
+        m = L @ (
+            r.N.T @ r.pose[:, self.dim].reshape(-1, 1) / self.sigma ** 2
+            + self.SIGMA_1 @ mu.reshape(-1, 1)
+        )
         posterior = r.N @ m
-        prior = r.N @ mu 
+        prior = r.N @ mu
         se = np.sqrt(np.diag(r.N @ L @ r.N.T))
         return r.tsegment, r.pose[self.dim], posterior, se, prior
 
@@ -599,10 +708,12 @@ class ab:
 def viz_traj_B(self, row, Lobjectpath=None, Robjectpath=None, time=None):
     # also wont work if  collapsed
     raise NotImplementedError
-    qL=ab(loadpath=Lobjectpath)
-    qR=ab(loadpath=Robjectpath)
-    assert qL.factorlist==qR.factorlist, f'different factorlists in objects {qL.factorlist} and {qR.factorlist}'
-    
+    qL = ab(loadpath=Lobjectpath)
+    qR = ab(loadpath=Robjectpath)
+    assert (
+        qL.factorlist == qR.factorlist
+    ), f"different factorlists in objects {qL.factorlist} and {qR.factorlist}"
+
     # BL and BR are betas to use interactive plotting function. [size should match with factorlist + itnercept]
     # def retrieve_trial_info(self, row, zkonly=True):
     # """given a row (trial), retrieve, zk, prior trajectory error and posterior+ from the fitted params
@@ -610,28 +721,32 @@ def viz_traj_B(self, row, Lobjectpath=None, Robjectpath=None, time=None):
     # # perhaps this would be more useful/natural in the other class but as it is auxiliary ideally
     # end user will just interact with ab class | that's no excuse
 
-    r = tinf(row, othermatrices=True, ab_instance=self, time_pre_portout=self.time_pre_portout,
-    time_post_portin=self.time_post_portin)
-    argsL =  [
-                r.pose[:,self.dim], # arg list # this could be cleaner.
-                r.N,
-                r.W
-            ] + [self.mu] * (not self.factors) +\
-            [ r.Fk, self.B ] * self.factors +\
-            [self.eps, self.dummy_span] # remaining parameters
+    r = tinf(
+        row,
+        othermatrices=True,
+        ab_instance=self,
+        time_pre_portout=self.time_pre_portout,
+        time_post_portin=self.time_post_portin,
+    )
+    argsL = (
+        [r.pose[:, self.dim], r.N, r.W]  # arg list # this could be cleaner.
+        + [self.mu] * (not self.factors)
+        + [r.Fk, self.B] * self.factors
+        + [self.eps, self.dummy_span]
+    )  # remaining parameters
     pmk, zk, llh = ab.E_step_worker_(argsL)
     # if zkonly:
     #     return zk
-        
+
     # L = np.linalg.pinv( # shape 6,6
     #         self.SIGMA_1 + r.N.T @ r.N/self.sigma**2 # args[1] = N
     # )
     # if not self.factors:
-    #     mu=self.mu  
+    #     mu=self.mu
     # else:
     #     mu = self.B @ r.Fk.reshape(-1,1) # args[3] = F if using factors
     # m = L @ (r.N.T @ r.pose[:,self.dim].reshape(-1,1)/self.sigma**2 + self.SIGMA_1 @ mu.reshape(-1,1))
     # posterior = r.N @ m
-    # prior = r.N @ mu 
+    # prior = r.N @ mu
     # se = np.sqrt(np.diag(r.N @ L @ r.N.T))
     # return r.tsegment, r.pose[self.dim], posterior, se, prior

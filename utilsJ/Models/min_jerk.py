@@ -1,7 +1,7 @@
-# # looks outdated & python2 
+# # looks outdated & python2
 #
 # trj, psg = min_jerk(pos, dur, vel, acc, psg)
-# 
+#
 # Compute minimum-jerk trajectory through specified points
 #
 # INPUTS:
@@ -30,34 +30,37 @@ import numpy as np
 import scipy.optimize
 from numpy.linalg import inv
 
+
 def min_jerk(pos=None, dur=None, vel=None, acc=None, psg=None):
 
-    N = pos.shape[0]					# number of point
-    D = pos.shape[1]					# dimensionality
+    N = pos.shape[0]  # number of point
+    D = pos.shape[1]  # dimensionality
 
     if not vel:
-        vel = np.zeros((2,D))			# default endpoint vel is 0
+        vel = np.zeros((2, D))  # default endpoint vel is 0
     if not acc:
-        acc = np.zeros((2,D))			# default endpoint acc is 0
+        acc = np.zeros((2, D))  # default endpoint acc is 0
 
-    t0 = np.array([[0],[dur]])
+    t0 = np.array([[0], [dur]])
 
-    if not psg:					# passage times unknown, optimize
+    if not psg:  # passage times unknown, optimize
         if N > 2:
-            psg = np.arange(dur/(N-1), dur-dur/(N-1)+1, dur/(N-1)).T
+            psg = np.arange(dur / (N - 1), dur - dur / (N - 1) + 1, dur / (N - 1)).T
             func = lambda psg_: mjCOST(psg_, pos, vel, acc, t0)
-            psg = scipy.optimize.fmin(func = func, x0 = psg)
+            psg = scipy.optimize.fmin(func=func, x0=psg)
         else:
             psg = []
 
-    #print(psg)
+    # print(psg)
     trj = mjTRJ(psg, pos, vel, acc, t0, dur)
 
     return trj, psg
 
+
 ################################################################
 ###### Compute jerk cost
 ################################################################
+
 
 def mjCOST(t, x, v0, a0, t0):
 
@@ -65,31 +68,54 @@ def mjCOST(t, x, v0, a0, t0):
     D = min(x.shape)
 
     v, a = mjVelAcc(t, x, v0, a0, t0)
-    aa   = np.concatenate(([a0[0][:]], a, [a0[1][:]]), axis = 0)
-    aa0  = aa[0:N-1][:]
-    aa1  = aa[1:N][:]
-    vv   = np.concatenate(([v0[0][:]], v, [v0[1][:]]), axis = 0)
-    vv0  = vv[0:N-1][:]
-    vv1  = vv[1:N][:]
-    tt   = np.concatenate((t0[0]   , t, t0[1]   ), axis = 0)
-    T    = np.diff(tt)[np.newaxis].T*np.ones((1,D))
-    xx0  = x[0:N-1][:]
-    xx1  = x[1:N][:]
+    aa = np.concatenate(([a0[0][:]], a, [a0[1][:]]), axis=0)
+    aa0 = aa[0 : N - 1][:]
+    aa1 = aa[1:N][:]
+    vv = np.concatenate(([v0[0][:]], v, [v0[1][:]]), axis=0)
+    vv0 = vv[0 : N - 1][:]
+    vv1 = vv[1:N][:]
+    tt = np.concatenate((t0[0], t, t0[1]), axis=0)
+    T = np.diff(tt)[np.newaxis].T * np.ones((1, D))
+    xx0 = x[0 : N - 1][:]
+    xx1 = x[1:N][:]
 
-    j=3*(3*aa0**2*T**4-2*aa0*aa1*T**4+3*aa1**2*T**4+24*aa0*T**3*vv0- \
-         16*aa1*T**3*vv0 + 64*T**2*vv0**2 + 16*aa0*T**3*vv1 - \
-         24*aa1*T**3*vv1 + 112*T**2*vv0*vv1 + 64*T**2*vv1**2 + \
-         40*aa0*T**2*xx0 - 40*aa1*T**2*xx0 + 240*T*vv0*xx0 + \
-         240*T*vv1*xx0 + 240*xx0**2 - 40*aa0*T**2*xx1 + 40*aa1*T**2*xx1- \
-         240*T*vv0*xx1 - 240*T*vv1*xx1 - 480*xx0*xx1 + 240*xx1**2)/T**5
+    j = (
+        3
+        * (
+            3 * aa0 ** 2 * T ** 4
+            - 2 * aa0 * aa1 * T ** 4
+            + 3 * aa1 ** 2 * T ** 4
+            + 24 * aa0 * T ** 3 * vv0
+            - 16 * aa1 * T ** 3 * vv0
+            + 64 * T ** 2 * vv0 ** 2
+            + 16 * aa0 * T ** 3 * vv1
+            - 24 * aa1 * T ** 3 * vv1
+            + 112 * T ** 2 * vv0 * vv1
+            + 64 * T ** 2 * vv1 ** 2
+            + 40 * aa0 * T ** 2 * xx0
+            - 40 * aa1 * T ** 2 * xx0
+            + 240 * T * vv0 * xx0
+            + 240 * T * vv1 * xx0
+            + 240 * xx0 ** 2
+            - 40 * aa0 * T ** 2 * xx1
+            + 40 * aa1 * T ** 2 * xx1
+            - 240 * T * vv0 * xx1
+            - 240 * T * vv1 * xx1
+            - 480 * xx0 * xx1
+            + 240 * xx1 ** 2
+        )
+        / T ** 5
+    )
 
-    J = sum(sum(abs(j)));
+    J = sum(sum(abs(j)))
 
     return J
+
 
 ################################################################
 ###### Compute trajectory
 ################################################################
+
 
 def mjTRJ(tx, x, v0, a0, t0, P):
 
@@ -99,106 +125,156 @@ def mjTRJ(tx, x, v0, a0, t0, P):
 
     if len(tx) > 0:
         v, a = mjVelAcc(tx, x, v0, a0, t0)
-        aa   = np.concatenate(([a0[0][:]],  a, [a0[1][:]]), axis = 0)
-        vv   = np.concatenate(([v0[0][:]],  v, [v0[1][:]]), axis = 0)
-        tt   = np.concatenate((t0[0]   , tx, t0[1]   ), axis = 0)
+        aa = np.concatenate(([a0[0][:]], a, [a0[1][:]]), axis=0)
+        vv = np.concatenate(([v0[0][:]], v, [v0[1][:]]), axis=0)
+        tt = np.concatenate((t0[0], tx, t0[1]), axis=0)
     else:
         aa = a0
         vv = v0
         tt = t0
 
     ii = 0
-    for i in range(1,int(P)+1):
-        t = (i-1)/(P-1)*(t0[1]-t0[0]) + t0[0]
-        if t > tt[ii+1]:
-            ii = ii+1
-        T = (tt[ii+1]-tt[ii])*np.ones((1,D))
-        t = (t-tt[ii])*np.ones((1,D))
+    for i in range(1, int(P) + 1):
+        t = (i - 1) / (P - 1) * (t0[1] - t0[0]) + t0[0]
+        if t > tt[ii + 1]:
+            ii = ii + 1
+        T = (tt[ii + 1] - tt[ii]) * np.ones((1, D))
+        t = (t - tt[ii]) * np.ones((1, D))
         aa0 = aa[ii][:]
-        aa1 = aa[ii+1][:]
+        aa1 = aa[ii + 1][:]
         vv0 = vv[ii][:]
-        vv1 = vv[ii+1][:]
+        vv1 = vv[ii + 1][:]
         xx0 = x[ii][:]
-        xx1 = x[ii+1][:]
+        xx1 = x[ii + 1][:]
 
-        tmp = aa0*t**2/2 + t*vv0 + xx0 + t**4*(3*aa0*T**2/2 - aa1*T**2 + \
-											   8*T*vv0 + 7*T*vv1 + 15*xx0 - 15*xx1)/T**4 + \
-              t**5*(-(aa0*T**2)/2 + aa1*T**2/2 - 3*T*vv0 - 3*T*vv1 - 6*xx0+ \
-                    6*xx1)/T**5 + t**3*(-3*aa0*T**2/2 + aa1*T**2/2 - 6*T*vv0 - \
-                                        4*T*vv1 - 10*xx0 + 10*xx1)/T**3
+        tmp = (
+            aa0 * t ** 2 / 2
+            + t * vv0
+            + xx0
+            + t ** 4
+            * (
+                3 * aa0 * T ** 2 / 2
+                - aa1 * T ** 2
+                + 8 * T * vv0
+                + 7 * T * vv1
+                + 15 * xx0
+                - 15 * xx1
+            )
+            / T ** 4
+            + t ** 5
+            * (
+                -(aa0 * T ** 2) / 2
+                + aa1 * T ** 2 / 2
+                - 3 * T * vv0
+                - 3 * T * vv1
+                - 6 * xx0
+                + 6 * xx1
+            )
+            / T ** 5
+            + t ** 3
+            * (
+                -3 * aa0 * T ** 2 / 2
+                + aa1 * T ** 2 / 2
+                - 6 * T * vv0
+                - 4 * T * vv1
+                - 10 * xx0
+                + 10 * xx1
+            )
+            / T ** 3
+        )
         X_list.append(tmp)
 
     X = np.concatenate(X_list)
 
     return X
 
+
 ################################################################
 ###### Compute intermediate velocities and accelerations
 ################################################################
+
 
 def mjVelAcc(t, x, v0, a0, t0):
 
     N = max(x.shape)
     D = min(x.shape)
-    mat = np.zeros((2*N-4,2*N-4))
-    vec = np.zeros((2*N-4,D))
-    tt = np.concatenate((t0[0], t, t0[1]), axis = 0)
+    mat = np.zeros((2 * N - 4, 2 * N - 4))
+    vec = np.zeros((2 * N - 4, D))
+    tt = np.concatenate((t0[0], t, t0[1]), axis=0)
 
-    for i in range(1, 2*N-4+1, 2):
+    for i in range(1, 2 * N - 4 + 1, 2):
 
-        ii = int(math.ceil(i/2.0))
-        T0 = tt[ii]-tt[ii-1]
-        T1 = tt[ii+1]-tt[ii]
+        ii = int(math.ceil(i / 2.0))
+        T0 = tt[ii] - tt[ii - 1]
+        T1 = tt[ii + 1] - tt[ii]
 
-        tmp = [-6/T0, -48/T0**2, 18*(1/T0+1/T1), \
-               72*(1/T1**2-1/T0**2), -6/T1, 48/T1**2]
+        tmp = [
+            -6 / T0,
+            -48 / T0 ** 2,
+            18 * (1 / T0 + 1 / T1),
+            72 * (1 / T1 ** 2 - 1 / T0 ** 2),
+            -6 / T1,
+            48 / T1 ** 2,
+        ]
 
         if i == 1:
             le = 0
         else:
             le = -2
 
-        if i == 2*N-5:
+        if i == 2 * N - 5:
             ri = 1
         else:
             ri = 3
 
-        mat[i-1][i+le-1:i+ri] = tmp[3+le-1:3+ri]
-        vec[i-1][:] = 120*(x[ii-1][:]-x[ii][:])/T0**3 \
-                      + 120*(x[ii+1][:]-x[ii][:])/T1**3
+        mat[i - 1][i + le - 1 : i + ri] = tmp[3 + le - 1 : 3 + ri]
+        vec[i - 1][:] = (
+            120 * (x[ii - 1][:] - x[ii][:]) / T0 ** 3
+            + 120 * (x[ii + 1][:] - x[ii][:]) / T1 ** 3
+        )
 
-    for i in range(2, 2*N-4+1, 2):
+    for i in range(2, 2 * N - 4 + 1, 2):
 
-        ii = int(math.ceil(i/2.0))
-        T0 = tt[ii]-tt[ii-1]
-        T1 = tt[ii+1]-tt[ii]
+        ii = int(math.ceil(i / 2.0))
+        T0 = tt[ii] - tt[ii - 1]
+        T1 = tt[ii + 1] - tt[ii]
 
-        tmp = [48/T0**2, 336/T0**3, 72*(1/T1**2-1/T0**2), \
-               384*(1/T1**3+1/T0**3), -48/T1**2, 336/T1**3]
+        tmp = [
+            48 / T0 ** 2,
+            336 / T0 ** 3,
+            72 * (1 / T1 ** 2 - 1 / T0 ** 2),
+            384 * (1 / T1 ** 3 + 1 / T0 ** 3),
+            -48 / T1 ** 2,
+            336 / T1 ** 3,
+        ]
 
         if i == 2:
             le = -1
         else:
             le = -3
 
-        if i == 2*N-4:
+        if i == 2 * N - 4:
             ri = 0
         else:
             ri = 2
 
-        mat[i-1][i+le-1:i+ri] = tmp[4+le-1:4+ri]
-        vec[i-1][:] = 720*(x[ii][:]-x[ii-1][:])/T0**4 \
-                      + 720*(x[ii+1][:]-x[ii][:])/T1**4
+        mat[i - 1][i + le - 1 : i + ri] = tmp[4 + le - 1 : 4 + ri]
+        vec[i - 1][:] = (
+            720 * (x[ii][:] - x[ii - 1][:]) / T0 ** 4
+            + 720 * (x[ii + 1][:] - x[ii][:]) / T1 ** 4
+        )
 
     T0 = tt[1] - tt[0]
-    T1 = tt[N-1]-tt[N-2]
-    vec[0][:] = vec[0][:] +  6/T0*a0[0][:]    +  48/T0**2*v0[0][:]
-    vec[1][:] = vec[1][:] - 48/T0**2*a0[0][:] - 336/T0**3*v0[0][:]
-    vec[2*N-6][:] = vec[2*N-6][:] +  6/T1*a0[1][:]    -  48/T1**2*v0[1][:]
-    vec[2*N-5][:] = vec[2*N-5][:] + 48/T1**2*a0[1][:] - 336/T1**3*v0[1][:]
+    T1 = tt[N - 1] - tt[N - 2]
+    vec[0][:] = vec[0][:] + 6 / T0 * a0[0][:] + 48 / T0 ** 2 * v0[0][:]
+    vec[1][:] = vec[1][:] - 48 / T0 ** 2 * a0[0][:] - 336 / T0 ** 3 * v0[0][:]
+    vec[2 * N - 6][:] = vec[2 * N - 6][:] + 6 / T1 * a0[1][:] - 48 / T1 ** 2 * v0[1][:]
+    vec[2 * N - 5][:] = (
+        vec[2 * N - 5][:] + 48 / T1 ** 2 * a0[1][:] - 336 / T1 ** 3 * v0[1][:]
+    )
 
     avav = inv(mat).dot(vec)
-    a = avav[0:2*N-4:2][:]
-    v = avav[1:2*N-4:2][:]
+    a = avav[0 : 2 * N - 4 : 2][:]
+    v = avav[1 : 2 * N - 4 : 2][:]
 
     return v, a
