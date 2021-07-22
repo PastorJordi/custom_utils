@@ -14,6 +14,7 @@ from scipy.stats import ttest_ind, sem
 from matplotlib import cm
 import swifter
 import seaborn as sns
+from scipy.stats import norm
 
 
 def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"):
@@ -792,3 +793,81 @@ def whole_simul(
     if return_data:
         plt.show()
         return df, out
+
+
+def p_rev_pro(rt,a_e=0.5,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1, k_iters=5):
+    """calculates probability to revert initial choice given that it was a
+    proactive trial. It wil flip it for negative priors, uses 0 drift
+    rt: reaction time (ms)
+    a_e: semibound (scaled)
+    allpriors: sum of priors in left-right space
+    glm2Ze_scaling: factor to scale prior estimate
+    confirm_thr: threshold to overcome in order to revert
+    k: iters for infinite sum
+    """
+    # start with drift=0, then update if possible
+    t = rt/1000
+    x_0 = abs(allpriors*glm2Ze_scaling * a_e) + a_e
+    rev_thr = a_e - confirm_thr*a_e 
+    a = a_e * 2
+
+    iterable = np.c_[np.arange(1,k_iters), -1*np.arange(1,k_iters)].flatten()
+    iterable = np.insert(iterable, 0, 0)
+
+    prob_list = []
+    for k in iterable:
+        first_ = norm(loc=2*k*a+x_0, scale=t)
+        first = np.subtract(
+            *first_.cdf([rev_thr, 0])
+        )
+        second_ = norm(loc=2*k*a-x_0, scale=t)
+        second = np.subtract(
+            *second_.cdf([rev_thr,0])
+        )
+
+        prob_list += [first - second]
+
+    p_wo_drift = np.array(prob_list).sum()
+
+    # do drift stuff here if required [oh no cannot with scipy]
+    return p_wo_drift
+
+def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1, k_iters=5):
+    """calculates probability to revert initial choice given that it was a
+    proactive trial. It wil flip it for negative priors, uses 0 drift
+    rt: reaction time (ms)
+    a_e: semibound (scaled)
+    drift:
+    allpriors: sum of priors in left-right space
+    glm2Ze_scaling: factor to scale prior estimate
+    confirm_thr: threshold to overcome in order to revert
+    k: iters for infinite sum
+    """
+    # start with drift=0, then update if possible
+    t = rt/1000
+    if allpriors<0: # prechoice left we will invert all the scheme
+        drift *= -1 
+    x_0 = abs(allpriors*glm2Ze_scaling * a_e) + a_e
+    rev_thr = a_e - confirm_thr*a_e 
+    a = a_e * 2
+
+    iterable = np.c_[np.arange(1,k_iters), -1*np.arange(1,k_iters)].flatten()
+    iterable = np.insert(iterable, 0, 0)
+
+    prob_list = []
+
+    for k in iterable:
+        first_ = norm(loc=2*k*a+x_0+drift*t, scale=t)
+        first = np.subtract(
+            *first_.cdf([rev_thr, 0])
+        )
+        second_ = norm(loc=2*k*a-x_0+drift*t, scale=t)
+        second = np.subtract(
+            *second_.cdf([rev_thr,0])
+        )
+        
+        prob_list += [ np.exp(2*k*a*drift) * (
+            first - np.exp(2*x_0*drift) *second)]
+
+    p = np.array(prob_list).sum()
+    return p

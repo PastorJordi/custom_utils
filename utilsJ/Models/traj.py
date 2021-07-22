@@ -237,7 +237,7 @@ def simul_psiam(
         u_mat = u_mat.astype(np.float32).cumsum(axis=1)  # cumsum in each trial
 
         categ_vec = dat.rewside.values * 2 - 1
-        if priortoZt is None:
+        if priortoZt is None: #warning. TODO: doublecheck this *a_e is not in conflict with the one below (aka multiplyed twice#
             x_e0 = (
                 rng.beta(a, B, size=n) * 2 - 1
             ) * a_e  # % initialize Decision Variable with std so that performance is around 60%
