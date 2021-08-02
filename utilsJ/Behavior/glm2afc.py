@@ -1815,8 +1815,8 @@ def civil_plot(
     xlabels,
     summary,
     ax=None,
-    error_kws={"marker": "o", "capsize": 2},
-    sign_kws={"marker": "*", "zorder": 3},
+    error_kws={},
+    sign_kws={},
     signiff_offset=0.1,
     c=None,
     label=None,
@@ -1830,6 +1830,11 @@ def civil_plot(
     Arrange labels= force using integers contained in label to avoid other problems (total ticks)
     """
     assert ax is not None, "provide axis"
+    # update default keywords
+    error_kws_def = {"marker": "o", "capsize": 2}
+    sign_kws_def = {"marker": "*", "zorder": 3}
+    error_kws_def.update(error_kws)
+    sign_kws_def.update(sign_kws)
 
     # adding shortcuts for oftenly used kwords
     if c is not None:
@@ -1861,11 +1866,11 @@ def civil_plot(
         xpos,
         summary.loc[xlabels, "coef"],
         yerr=summary.loc[xlabels, "std err"],
-        **error_kws,
+        **error_kws_def,
     )
     # stars
     ax.scatter(
-        xposs, summary.loc[xlabels[signifposition], "coef"] + signiff_offset, **sign_kws
+        xposs, summary.loc[xlabels[signifposition], "coef"] + signiff_offset, **sign_kws_def
     )
     # ax.set_xticks(np.arange(xpos_i.max()))
     # ax.set_xticklabels(xlabels)

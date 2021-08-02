@@ -4,6 +4,7 @@ from scipy.stats import norm, sem
 from scipy.optimize import minimize
 from scipy import interpolate
 from statsmodels.stats.proportion import proportion_confint
+from utilsJ.regularimports import groupby_binom_ci
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -11,7 +12,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import warnings
-from utilsJ.regularimports import groupby_binom_ci
 import types
 import swifter
 import tqdm
@@ -39,8 +39,9 @@ def distbysubj(
     df,
     data,
     by,
-    grid_kwargs=dict(col_wrap=2, hue="CoM_sugg", aspect=2),
-    dist_kwargs=dict(kde=False, norm_hist=True, bins=np.linspace(0, 400, 50)),
+    grid_kwargs={},
+    dist_kwargs={},
+    override_defaults=False
 ):
     """
     returns facet (g) so user can use extra methods
@@ -51,8 +52,18 @@ def distbysubj(
 
         returns sns.FacetGrid obj
     """
-    g = sns.FacetGrid(df, col=by, **grid_kwargs)
-    g = g.map(sns.distplot, data, **dist_kwargs)
+    if override_defaults:
+        def_grid_kw = grid_kwargs
+        def_dist_kw = dist_kwargs
+    else:
+        def_grid_kw = dict(col_wrap=2, hue="CoM_sugg", aspect=2)
+        def_grid_kw.update(grid_kwargs)
+
+        def_dist_kw = dict(kde=False, norm_hist=True, bins=np.linspace(0, 400, 50))
+        def_dist_kw.update(dist_kwargs)
+
+    g = sns.FacetGrid(df, col=by, **def_grid_kw)
+    g = g.map(sns.distplot, data, **def_dsit_kw)
     return g
 
 
@@ -286,11 +297,16 @@ def correcting_kiani(hit, rresp, com, ev, **kwargs):
 
 # transition com vs transition regular
 def com_heatmap(
-    x, y, com, flip=False, annotate=True, predefbins=None, return_mat=False, **kwargs
+    x, y, com, flip=False, annotate=True, predefbins=None, return_mat=False, folding=False, annotate_div=1,**kwargs
 ):
     """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe
     TODO: improve binning option, or let add custom bins
-    TODO: add example call"""
+    TODO: add example call
+    g = sns.FacetGrid(df[df.special_trial==0].dropna(subset=['avtrapz', 'rtbins']), col='rtbins', col_wrap=3, height=5, sharex=False)
+    g = g.map(plotting.com_heatmap, 'norm_prior','avtrapz','CoM_sugg', vmax=.15).set_axis_labels('prior', 'average stim')
+
+    annotate_div= number to divide
+    """
     warnings.warn("when used alone (ie single axis obj) by default sns y-flips it")
     tmp = pd.DataFrame(np.array([x, y, com]).T, columns=["prior", "stim", "com"])
 
@@ -303,9 +319,13 @@ def com_heatmap(
     else:
         predefbinsflag = True
         bins = predefbins[0]
+
+
     tmp.loc[:, "binned_prior"], priorbins = pd.cut(
         tmp.prior, bins=bins, retbins=True, labels=np.arange(7)
     )
+    
+
     tmp.loc[:, "binned_prior"] = tmp.loc[:, "binned_prior"].astype(int)
     priorlabels = [round((priorbins[i] + priorbins[i + 1]) / 2, 2) for i in range(7)]
 
@@ -349,8 +369,33 @@ def com_heatmap(
         plain_com_mat[i, switch.index.astype(int)] = switch.values
         matrix[i, crow.index.astype(int)] = crow
 
+
+    if folding: # get indexes
+        iu = np.triu_indices(7,1)
+        il = np.tril_indices(7,-1)
+        tmp_nmat = np.fliplr(nmat.copy())
+        tmp_nmat[iu] += tmp_nmat[il]
+        tmp_nmat[il] = 0
+        tmp_ncom = np.fliplr(plain_com_mat.copy())
+        tmp_ncom[iu] += tmp_ncom[il]
+        tmp_ncom[il] = 0
+        plain_com_mat = np.fliplr(tmp_ncom.copy())
+        matrix = tmp_ncom/tmp_nmat
+        matrix = np.fliplr(matrix)
+
     if return_mat:
         return matrix
+
+    if isinstance(annotate, str):
+        if annotate=='com':
+            annotate = True
+            annotmat = plain_com_mat/annotate_div
+        if annotate=='counts':
+            annotate = True
+            annotmat = nmat/annotate_div
+    else:
+        annotmat = nmat/annotate_div
+    
 
     if not kwargs:
         kwargs = dict(cmap="viridis", fmt=".0f")
@@ -360,7 +405,7 @@ def com_heatmap(
         # nmat = np.flipud(nmat)
         # stimlabels=np.flip(stimlabels)
         if annotate:
-            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(nmat), **kwargs).set(
+            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), **kwargs).set(
                 xlabel="prior",
                 ylabel="average stim",
                 xticklabels=priorlabels,
@@ -375,7 +420,7 @@ def com_heatmap(
             )
     else:
         if annotate:
-            g = sns.heatmap(matrix, annot=nmat, **kwargs).set(
+            g = sns.heatmap(matrix, annot=annotmat, **kwargs).set(
                 xlabel="prior",
                 ylabel="average stim",
                 xticklabels=priorlabels,
@@ -1701,3 +1746,49 @@ def get_traj_subplot_factors(row, invert=True, B=None, allSIGMA=None, sigma=5, d
             return np.nan, np.nan
         else:
             return np.nan, np.nan, np.nan, np.nan, np.nan
+
+
+def tachometric(
+    df, # filtered
+    ax=None,
+    hits = 'hithistory', # column name
+    evidence='avtrapz', # column name
+    evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]), # beware those with coh .2 and .4
+    rt='sound_len', # column
+    rtbins=np.arange(0,151,3),
+    error_kws={}, 
+    cmap='inferno',
+    subplots_kws={} # ignored if ax is provided
+):
+    """jeez how it took me so long"""
+
+    cmap = cm.get_cmap(cmap)
+    rtbinsize = rtbins[1]-rtbins[0]
+    error_kws_ = dict(marker='o', capsize=3)
+    error_kws_.update(error_kws)
+
+    tmp_df = df
+    tmp_df['rtbin'] = pd.cut(
+        tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1), 
+        retbins=False, include_lowest=True, right=True
+    ).astype(float)
+    if ax is None:
+        f, ax = plt.subplots(**subplots_kws)
+
+    for i in range(evidence_bins.size-1):
+        tmp = (
+            tmp_df.loc[(tmp_df[evidence].abs()>=evidence_bins[i])&(tmp_df[evidence].abs()<evidence_bins[i+1])] # select stim str
+            .groupby('rtbin')[hits].agg(['mean', groupby_binom_ci]).reset_index()
+            )
+
+        ax.errorbar(
+            tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+            tmp['mean'].values,
+            yerr=[
+                tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                tmp.groupby_binom_ci.apply(lambda x: x[1])
+            ],
+            label=f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}',
+            c = cmap(i/(evidence_bins.size-1)), **error_kws_
+        )
+

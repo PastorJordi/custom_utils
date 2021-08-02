@@ -2883,7 +2883,18 @@ def extraction_pipe(
     pat="p4",
     noffset_frames=0,
     GLM=False,
-    glm_kws={
+    glm_kws={},
+    parallel="ThreadPoolExecutor",
+):
+    """to avoid copying extraction scrpt all the way around
+    targets = list of subjects ![even if single]
+    sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
+                (ie needs matching target list)
+    pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
+    Poggers bar: https://github.com/tqdm/tqdm/issues/484
+    Parallel: should be either 'ThreadPoolExecutor' or 'ProcessPoolExecutor'
+    """
+    glm_def={ # defaults
         "lateralized": True,
         "dual": True,
         "plot": False,
@@ -2893,20 +2904,11 @@ def extraction_pipe(
         "savdir": "",
         "fixedbias": True,
         "return_coefs": True,
-        "subjcol": "subjid",
-    },
-    parallel="ThreadPoolExecutor",
-):
-    """to avoid copying extraction scrpt all the way around
-    targets = list of subjects
-    sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
-                (ie needs matching target list)
-    pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
-    Poggers bar: https://github.com/tqdm/tqdm/issues/484
-    Parallel: should be either ThreadPoolExecutor or ProcessPoolExecutor
-    """
+        "subjcol": "subjid"
+    }
+    glm_def.update(glm_kws)
 
-    assert isinstance(targets, list)
+    assert isinstance(targets, list), 'first arg must be a list of subjects (even for single subj.)'
     kwargs = {
         "normcoords": normcoords,
         "bodypart": bodypart,
@@ -2982,11 +2984,13 @@ def extraction_pipe(
                 .drop(columns="date")
             )
 
-        if GLM:
-            if not glm_kws:
-                raise NotImplementedError("default kws not ready yet")
-            df, glm_out = piped_moduleweight(df, **glm_kws)
-            return df, glm_out
+        if GLM: # what about return coefs?
+            if glm_kws.get('return_coefs', False):
+                df, glm_out = piped_moduleweight(df, **glm_def)
+                return df, glm_out
+            else:
+                df = piped_moduleweight(df, **glm_def)
+                return df
         else:
             return df
     else:
