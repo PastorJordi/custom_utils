@@ -144,7 +144,7 @@ def simul_psiam(
     x_e0_noise=0,
     confirm_thr=0,
     proportional_confirm=False,
-    confirm_ae=False,
+    confirm_ae=False
 ):
     """
     rewritting this so it is straightforward
@@ -170,6 +170,8 @@ def simul_psiam(
     priortoZt: if not none, scales prior to starting Zt (evidence integrator offset)
     confirm_thr: (inverse) fraction of Ze that needs to be surpassed in order to revert preplanned choice. E.g, with confirmthr==0.3 rat with zE 1 (right) will need to reach evidence
     value of at least -0.3 to choose left, if above -0.3 it will stick to preplanned choice (right)
+
+    # what if t_update gets delayed with trial index?
     """
     if seed is not None:
         rng = np.random.RandomState(seed=seed)
@@ -252,12 +254,23 @@ def simul_psiam(
             x_e0[dat.aftererror.values == 1] = 0  # aftererror set it to 0
         else:
             x_e0 = np.nansum(dat[["dW_trans", "dW_lat"]].values, axis=1) * priortoZt
+        
+        x_e0_prenoise = x_e0.copy()
 
-        if x_e0_noise:
-            # add gaussian
-            x_e0 += rng.normal(scale=x_e0_noise, size=x_e0.size)
+        if x_e0_noise: # here it is scaled with priortoZt
+            # add gaussian # up to .3
+            #x_e0 += rng.normal(scale=x_e0_noise, size=x_e0.size)
+            # replace it as beta? up to .015
+            x_e0 = (x_e0+1)/2 # 0-1 space for np.random.beta
+            alpha = ((1 - x_e0) / x_e0_noise - 1 / x_e0) * x_e0 ** 2
+            beta = alpha * (1 / x_e0 - 1)
 
-        x_e0 *= a_e  # scale it after noise!
+            x_e0 = rng.beta(alpha, beta)*2-1 # draw beta distr and put it back to -1 ~ 1
+
+        if priortoZt is not None:
+            x_e0 *= a_e  # scale it to bound height
+
+        # doublecheck so it is not wide enough and there's no reactive peak (RT)
 
         # calc e_drift according to stimulus str/coherence
         e_drift = (
@@ -312,7 +325,7 @@ def simul_psiam(
         if (
             proportional_confirm
         ):  # confirm thr is proportional to -Ze ; screws com matrix
-            newconfirm_thr = x_e0.copy() * -(
+            newconfirm_thr = x_e0_prenoise * -(
                 confirm_thr
             )  # x_e0 os a;ready in a_e scale
             # pred_choice[non_fb] = np.ceil((x_e[non_fb]-newconfirm_thr[non_fb])/1000)*2-1
@@ -437,8 +450,14 @@ def simul_traj_single(
     """load params from simulated df
     however this will just work for proactive responses, filter before applying
     both sides mu are precalculated"""
+    if not np.isnan(row.t_update):
+        tup = int(row.t_update)
+    else:
+        tup = np.nan
+
     if fixed_reactive_mu is None:
         fixed_reactive_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+        
     try:
         resp_len = int(trajMT_jerk_extension + row.resp_len * 1000)
         RLresp = row.R_response * 2 - 1  # in -1 ~ 1 space
@@ -482,7 +501,6 @@ def simul_traj_single(
             prior0 = (N @ initial_mu).flatten()
             if row.prechoice == 0:  # it was left, flip it back
                 prior0 *= -1
-            tup = int(row.t_update)
             # if t_update is too slow tup might happen after prior traj ended
             if (
                 tup - 1 > prior0.size
@@ -510,6 +528,13 @@ def simul_traj_single(
             else:
                 return final_traj.flatten()
     except Exception as e:
+        print(e)
+        print('expectedMT', row.expectedMT)
+        print('resp_len',row.resp_len)
+        print('tup index', tup)
+        #print('prior0',prior0.shape)
+        
+        
         raise e
         if return_both:
             return np.empty(0), np.empty(0)

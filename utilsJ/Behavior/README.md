@@ -1,13 +1,10 @@
-# custom_utils
-few python util functions I use regularly (or used to :suspect:) when working in brain circuits and behavior lab.  
-install within a python3 environment with `pip install -e .`  
 
-I attempted to segment functionallities into Behavior/Models, however the division is not really that simple (eg. 2AFC glm is inside Behavior). 
-Check respective readmes to find out more.  
+# Behavior section
+brief content:  
+* ComPipe: contains chom class and other functions to preprocess raw BPOD data \[parses video coordinates if provided\] into tabular like dataframe (1 row = 1 trial)  
+* glm2afc: to do glm analysis similar to the one found in hermoso et al 
+* plotting: functions to plot recurrent figures
 
-In the top directory there are two unclassified scripts  
-* one openephys modified to transform continuous to .dat
-* regularimports. My favourite libraries So I can import them all using a non orthodox way in my notebooks (`from utilsJ.regularimports import *`)  
 
 ## I guess the most useful thing here is the extraction pipe. It can be integrated with video coordinates but won't cover it here
 

@@ -15,6 +15,7 @@ from matplotlib import cm
 import swifter
 import seaborn as sns
 from scipy.stats import norm
+import warnings
 
 
 def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"):
@@ -186,6 +187,19 @@ def pcomRT(df, out, ax):
         traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls=":"),
     )
+    plotting.binned_curve(
+        out.loc[out.reactive == 0],
+        "CoM_sugg",
+        "sound_len",
+        bins=np.linspace(0, 250, 26),
+        xpos=10,
+        xoffset=5,
+        ax=ax,
+        errorbar_kw=dict(label="simul proactive", color="tab:purple"),
+        legend=False,
+        #traces="sstr",
+        #traces_kw=dict(color="grey", alpha=0.3, ls=":"),
+    )
     ax.set_ylabel("p(CoM)")
     ax.set_xlabel("RT(ms)")
     ax.set_title("pcom vs rt")
@@ -203,7 +217,7 @@ def pcomRT_proactive_only(df, out, ax):
         ax=ax,
         errorbar_kw=dict(label="simul", color="tab:orange"),
         legend=False,
-        traces="sstr",
+        #traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls=":"),
     )
     ax.set_ylabel("p(CoM)")
@@ -373,8 +387,9 @@ def plot1112(df, out, ax, ax2):
         ax=ax,
         cmap="viridis",
         fmt=".0f",
+        vmin=0
     )
-    ax.set_title(f"real p(CoM)")
+    ax.set_title(f"data p(CoM)")
     subset = out.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
     plotting.com_heatmap(
         subset.allpriors,
@@ -384,6 +399,7 @@ def plot1112(df, out, ax, ax2):
         ax=ax2,
         cmap="magma",
         fmt=".0f",
+        vmin=0
     )
     ax2.set_title(f" SIMULATIONS p(CoM)")
 
@@ -400,7 +416,7 @@ def whole_simul(
     subject,
     # grid,
     savpath=None,
-    dfpath="/home/jordi/DATA/Documents/changes_of_mind/data/paper/dani_clean.pkl",  # parameter grid
+    dfpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/",#dani_clean.pkl",  # parameter grid
     rtbins=np.linspace(0, 150, 7),
     params={
         "t_update": 80,
@@ -413,6 +429,7 @@ def whole_simul(
         "naive_jerk": False,
         "confirm_thr": 0,
         "proportional_confirm": False,
+        "t_update_noise":0,
     },
     batches=10,
     batch_size=1500,
@@ -432,6 +449,8 @@ def whole_simul(
     # both_traj: whether to return prior and final or just final (updated) trajectory,
     # silent trials = no drift in evidence;
     # sample_silent = just sample silent trials to reproduce data
+    if not dfpath.endswith('.pkl'): # use default naming
+        dfpath = f"{dfpath}{subject}_clean.pkl"
     if savpath is None:
         raise ValueError("provide save path")
 
@@ -549,17 +568,24 @@ def whole_simul(
         # fkmat = np.insert(fkmat, 0, 1,axis=1)
         tr.expected_mt(fkmat, add_intercept=False)
         out.loc[sdf.index, "expectedMT"] = tr.mt * 1000
-        if mtnoise:  # load error
+        if isinstance(mtnoise, bool):
+            mtnoise *= 1
+        if mtnoise:  # load mserror
             with open(
                 f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTmse.pkl",
                 "rb",
             ) as handle:
                 msedict = pickle.load(handle)
 
-            err = msedict[subject] ** 0.5
+            err = mtnoise * msedict[subject] ** 0.5
             out.loc[sdf.index, "expectedMT"] += np.random.normal(
                 scale=err, size=out.loc[sdf.index, "expectedMT"].values.size
-            )
+            ) * 1000 # big bug here, we were using ms already!
+
+            # beware, some noise can make impossible trajectories (ie expectedMT<=0)
+            # apply a threshold, expected mT cannot be below 125 ms 
+            out.loc[(out.reactive==0)&(out.expectedMT<125), 'expectedMT'] = 125
+
 
         if params["naive_jerk"]:
             naive_jerk = np.array([0, 0, 0, 75, 0, 0]).reshape(
@@ -612,19 +638,39 @@ def whole_simul(
     # out.loc[out.reactive==0, 't_update'] = params['t_update'] + out.loc[out.reactive==0, 'sound_len'] # a big bug lied here*
     out.loc[out.reactive == 0, "t_update"] = params[
         "t_update"
-    ]  # now it happen relative to movement onset!
+    #] + t_0_e # now it happen relative to movement onset!
+    ] + t_0_e//0.001 - 300 # new bug
+
     # how defek? shouldnt it be respective movement onset + te + tupdate? check model scketch?
     # TODO: probably this is a bug as well
 
     # UNCOMMENT LINE BELOW IF UPDATE CAN HAPPEN EARLIER WHEN EV-BOUND IS REACHED
     if not vanishing_bounds:
         # out.loc[out.e_after_u==1, 't_update'] = out.loc[out.e_after_u==1, 'e_time']
+
+        # 16/08 bug
+        # out.loc[out.e_after_u == 1, "t_update"] = (
+        #    (out.loc[out.e_after_u == 1, "e_time"] - remaining_sensory) # ?
+        #    + params["t_update"]
+        #)  # e_time is already respective sound onset!! but we need respective movement onset
+        # also it is in seconds rather than msecs
         out.loc[out.e_after_u == 1, "t_update"] = (
-            (out.loc[out.e_after_u == 1, "e_time"] - remaining_sensory)
-            + params["t_update"]
-        )  # e_time is already respective sound onset
+            out.loc[out.e_after_u == 1, "e_time"]-out.loc[out.e_after_u == 1, "u_time"]
+            ) * 1000  + params['t_update']#out.loc[out.e_after_u == 1, 'e_time']*1000 - (t_0_e*1000)  + 300 # aligned to sound onset
+            # - out.loc[out.e_after_u == 1, 'sound_len'] # aligned to movement onset, should be negative here
+            # + params['t_update']
+            #)# aligned to sound onset now
+        
+
         # sns.distplot(out.t_update.dropna())
         # plt.show()
+
+    if params['t_update_noise']:
+        out['t_update'] += np.random.normal(scale=params['t_update_noise'], size=len(out))
+
+    if (out['t_update']<0).sum():
+        warnings.warn('replacing t_updates < 0 to 0')
+        out.loc[out.t_update<0, 't_update'] = 0
 
     # add speed up for confirmed choices
     out["resp_len"] = np.nan
@@ -741,7 +787,7 @@ def whole_simul(
             (out.R_response == i) & (out.traj.apply(len) > 0), "time_to_thr"
         ] = out.loc[
             (out.R_response == i) & (out.traj.apply(len) > 0), "traj"
-        ].swifter.apply(
+        ].apply( #].swifter.apply(
             lambda x: np.argmax(np.abs(x) > thr)
         )
     out["rtbin"] = pd.cut(out.sound_len, rtbins, labels=False, include_lowest=True)
@@ -770,7 +816,36 @@ def whole_simul(
     # plot1(a,b, ax[1,0])
     plot2(a, b, ax[1, 0])
     pcomRT(a, b, ax[1, 1])
-    pcomRT_proactive_only(a, b, ax[1, 2])
+    # pcomRT_proactive_only(a, b, ax[1, 2])
+
+    
+    b['rev'] = 0
+    b.loc[(b.prechoice!=b.R_response)&(b.reactive==0), 'rev'] = 1
+    subset = b.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    plotting.com_heatmap(
+        subset.allpriors,
+        subset.avtrapz,
+        subset.rev,
+        flip=True,
+        ax=ax[1,2],
+        cmap="magma",
+        fmt=".0f",
+        vmin=0
+    )
+    ax[1,2].set_title('p(rev)')
+    
+    subset = b.loc[b.rev==1].dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    plotting.com_heatmap(
+        subset.allpriors,
+        subset.avtrapz,
+        subset.CoM_sugg,
+        flip=True,
+        ax=ax[1,3],
+        cmap="magma",
+        fmt=".0f",
+        vmin=0
+    )
+    ax[1,3].set_title('p(com) in proactive reversals')
     plot3(a, b, ax[0, 1])  # ushape
     plot4(a, b, ax[2, 0])
     # plot5(a,b,ax[2,1])
@@ -778,9 +853,25 @@ def whole_simul(
     #     splitplot(a,b,ax[2,1])
     # except:
     #     print("splitplot typically crashes with silent trials\nbecause in dani's tasks they all have the same coh")
+    plotting.tachometric(a, ax=ax[0,2], rtbins=np.arange(0,151,5))
+    ax[0,2].set_title('tachometric data')
+    plotting.tachometric(b, ax=ax[0,3], rtbins=np.arange(0,151,5))
+    ax[0,3].set_title('tachometric simul')
     # plot67(a,b,ax[0,2], ax[1,2])
     # plot910(a,b,ax[0,3], ax[1,3])
     plot1112(a, b, ax[2, 2], ax[2, 3])
+    for dset, label, col in [[a, 'data', 'tab:blue'], [b, 'simul', 'tab:orange']]:
+        plotting.binned_curve(
+            dset, 'CoM_sugg', 'origidx', np.linspace(0,600,61), xpos=np.arange(5,600,10),
+            ax=ax[2,1], errorbar_kw=dict(color=col,label=label), legend=False
+        )
+    ax[2,1].legend()
+    ax[2,1].set_ylabel('p(CoM)')
+    ax[2,1].set_xlabel('trial index')
+
+    #sns.histplot(
+    #    data=b[b.reactive==0], x='origidx', y='expectedMT', ax=ax[2,1]
+    #)
 
     fig.suptitle(pref_title + subject + " " + str(params))
     # suptitle
@@ -872,10 +963,10 @@ def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0
             first_n= np.subtract(*first_.cdf([a, 0]))
             second_n = np.subtract(*second_.cdf([a, 0]))
             prob_normed += [ np.exp(2*k*a*drift) * (
-                first_n - np.exp(2*x_0*drift) *second_n)]
+                first_n - np.exp(-2*x_0*drift) *second_n)]
 
         prob_list += [ np.exp(2*k*a*drift) * (
-            first - np.exp(2*x_0*drift) *second)]
+            first - np.exp(-2*x_0*drift) *second)]
 
     p = np.array(prob_list).sum()
     if not normalize:

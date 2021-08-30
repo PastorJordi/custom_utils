@@ -25,6 +25,8 @@ from utilsJ.Behavior.glm2afc import piped_moduleweight
 # TODO: finish: load_available(plot=True); describe_sessions()
 # TODO: label my own delay trials
 # TODO: add delay col so eventually we an plot various stuff vs delay in stim onset;
+# TODO: class needs a through rework so all params/settings are set when instantiating object, then just expand 
+#       kwargs on subsequent methods.
 
 # GET ALL TRAJECTORIES from transitions (startsound and previous, to get correct fixation) :s; so we get the goddamn trajectories for all trials
 
@@ -40,7 +42,7 @@ class chom:
     input subject (LEXX) and optionally datapath to instantiate class
     use help() method for further info:
     """
-
+    
     # pose_ext='DeepCut_resnet50_newsetup_general2019Jan07shuffle1_1030000.h5'
     pose_ext = "DeepCut_resnet50_metamix2019Jul03shuffle1_1030000.h5"
     video_ext = ".avi"
@@ -308,6 +310,7 @@ class chom:
         subject,
         parentpath="/home/jordi/Documents/changes_of_mind/data/",
         analyze_trajectories=True,
+        replace_silent=True
     ):
         ## ideally it contains all defaults so we can run whole pipe with a single call
         # perhaps we should create a 2nd class which inherits shared stuff from chom(subj)
@@ -329,6 +332,7 @@ class chom:
         self.framestamps = None  # session based
         self.normcoords = False
         self.active_ports = None  # session based
+        self.replace_silent = replace_silent
         self.dict_events = dict(
             zip([x for x in range(68, 85, 2)], [f"Port{x+1}" for x in range(8)])
         )
@@ -1002,14 +1006,16 @@ class chom:
         lenv = lenv.apply(lambda x: np.array(literal_eval(x)))
         renv = renv.apply(lambda x: np.array(literal_eval(x)))
 
-        # if silence task get indexes from silent trials to adapt envelope values to 0
+        
+            # if silence task get indexes from silent trials to adapt envelope values to 0
         if "silence" in self.CSVS_PATH + self.target + chom.csv_ext:
             silent_trial_idx = (
                 df1.loc[df1.MSG == "silence_trial", "trial_index"].values.astype(int)
                 - 1
             )  # 0 indexed
-            renv.iloc[silent_trial_idx] = [np.zeros(20)] * silent_trial_idx.size
-            lenv.iloc[silent_trial_idx] = [np.zeros(20)] * silent_trial_idx.size
+            if self.replace_silent:
+                renv.iloc[silent_trial_idx] = [np.zeros(20)] * silent_trial_idx.size
+                lenv.iloc[silent_trial_idx] = [np.zeros(20)] * silent_trial_idx.size
 
         kek = pd.DataFrame(
             data=np.array(
@@ -2885,6 +2891,8 @@ def extraction_pipe(
     GLM=False,
     glm_kws={},
     parallel="ThreadPoolExecutor",
+    replace_silent=True
+
 ):
     """to avoid copying extraction scrpt all the way around
     targets = list of subjects ![even if single]
@@ -2909,7 +2917,7 @@ def extraction_pipe(
     glm_def.update(glm_kws)
 
     assert isinstance(targets, list), 'first arg must be a list of subjects (even for single subj.)'
-    kwargs = {
+    kwargs = { # those will be passed to threaded_gather
         "normcoords": normcoords,
         "bodypart": bodypart,
         "skip_errors": skip_errors,
@@ -2921,7 +2929,8 @@ def extraction_pipe(
     df = pd.DataFrame([])
     for subj in targets:
         com_instance = chom(
-            subj, parentpath=parentpath, analyze_trajectories=analyze_trajectories
+            subj, parentpath=parentpath, analyze_trajectories=analyze_trajectories,
+            replace_silent=replace_silent
         )
         com_instance.load_available()  # I think default load available uses analyze_trajectories=True
         subj_sess = [x for x in com_instance.available if pat in x]
@@ -2950,6 +2959,7 @@ def extraction_pipe(
                             subj,
                             parentpath=parentpath,
                             analyze_trajectories=analyze_trajectories,
+                            replace_silent=replace_silent
                         ),
                         x,
                         kwargs,
@@ -3005,7 +3015,7 @@ def extraction_pipe(
 
 def build_videos_single(
     df,
-    dfindex,
+    dfindexes,
     outvidobject,
     pose_ext="DeepCut_resnet50_metamix2019Jul03shuffle1_1030000.h5",
     constant_text=None,
@@ -3031,52 +3041,61 @@ def build_videos_single(
         
     outvid_all.release()
     """
-    subj = df.loc[dfindex, "subjid"]
-    targ = df.loc[dfindex, "sessid"]
-    invideo_dir = f"../data/{subj}/videos/{targ}.avi"
-    intraj_dir = f"../data/{subj}/poses/{targ}{pose_ext}"
-    pose = pd.read_hdf(intraj_dir).xs(pose_ext[:-3], axis=1, drop_level=True)
+    if isinstance(dfindexes, pd.Index):
+        itreable=dfindexes
+    else:
+        iterable = [dfindexes]
+    
+    for dfindex in dfindexes:
+        subj = df.loc[dfindex, "subjid"]
+        targ = df.loc[dfindex, "sessid"]
+        trialno = df.loc[dfindex, "origidx"]
+        invideo_dir = f"/home/jordi/Documents/changes_of_mind/data/{subj}/videos/{targ}.avi"
+        intraj_dir = f"/home/jordi/Documents/changes_of_mind/data/{subj}/poses/{targ}{pose_ext}"
+        print(intraj_dir)
+        pose = pd.read_hdf(intraj_dir).xs(pose_ext[:-3], axis=1, drop_level=True)
 
-    startf = df.loc[dfindex, "vidfnum"] - 5
-    endf = startf + len(df.loc[dfindex, "trajectory_y"]) + 15
-    cap = cv2.VideoCapture(invideo_dir)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, startf)
-    # ycom = round(df.loc[dfindex, 'y_com'], 1)
-    traj_as = list(pose.iloc[startf:endf].loc[:, ("above-snout", ("x", "y"))].values)
-    traj_sn = list(pose.iloc[startf:endf].loc[:, ("snout", ("x", "y"))].values)
-    sfail = df.loc[dfindex, "soundrfail"]
-    for i, f in enumerate(range(startf, endf)):
-        ret, frame = cap.read()
-        if ret:
-            cv2.putText(
-                frame,
-                targ + "; #f: " + str(f),  # + ' y_px(AS) = ' + str(ycom),
-                (10, 30),
-                cv2.FONT_HERSHEY_DUPLEX,
-                0.4,
-                (255, 255, 255),
-                1,
-                cv2.LINE_AA,
-            )
-            if sfail:
+        startf = df.loc[dfindex, "vidfnum"] - 5
+        endf = startf + len(df.loc[dfindex, "trajectory_y"]) + 15
+        cap = cv2.VideoCapture(invideo_dir)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, startf)
+        # ycom = round(df.loc[dfindex, 'y_com'], 1)
+        traj_as = list(pose.iloc[startf:endf].loc[:, ("above-snout", ("x", "y"))].values)
+        traj_sn = list(pose.iloc[startf:endf].loc[:, ("snout", ("x", "y"))].values)
+        sfail = df.loc[dfindex, "soundrfail"]
+        for i, f in enumerate(range(startf, endf)):
+            ret, frame = cap.read()
+            if ret:
                 cv2.putText(
                     frame,
-                    "no sound",
-                    (30, 430),
+                    targ + f"{trialno}; #f: " + str(f),  # + ' y_px(AS) = ' + str(ycom),
+                    (10, 30),
                     cv2.FONT_HERSHEY_DUPLEX,
                     0.4,
                     (255, 255, 255),
                     1,
                     cv2.LINE_AA,
                 )
-            cv2.circle(
-                frame, tuple(traj_as[i].astype(int).tolist()), 3, (0, 255, 0), -1
-            )
-            cv2.circle(
-                frame, tuple(traj_sn[i].astype(int).tolist()), 3, (0, 0, 255), -1
-            )
-            outvidobject.write(frame)
-    cap.release()
+                if sfail:
+                    cv2.putText(
+                        frame,
+                        "no sound",
+                        (30, 430),
+                        cv2.FONT_HERSHEY_DUPLEX,
+                        0.4,
+                        (255, 255, 255),
+                        1,
+                        cv2.LINE_AA,
+                    )
+                cv2.circle(
+                    frame, tuple(traj_as[i].astype(int).tolist()), 3, (0, 255, 0), -1
+                )
+                cv2.circle(
+                    frame, tuple(traj_sn[i].astype(int).tolist()), 3, (0, 0, 255), -1
+                )
+                outvidobject.write(frame)
+        cap.release()
+    outvidobject.release()
 
 
 # def build_videos_threaded():
