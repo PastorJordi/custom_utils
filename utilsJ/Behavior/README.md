@@ -116,5 +116,5 @@ p.trial_sess.head() # preprocessed dataframe stored in attr. trial_sess of chom 
 **allpriors**: nan sum (axis0) of trans + lat modules  
 **choice_x_allpriors**: allpriors aligned to choice  
 
-from time to time I try reducing entropy using block code formatter
+from time to time I try reducing entropy using black code formatter
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
