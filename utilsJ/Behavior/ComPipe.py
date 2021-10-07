@@ -39,36 +39,42 @@ from utilsJ.Behavior.glm2afc import piped_moduleweight
 
 class chom:
     """
-    input subject (LEXX) and optionally datapath to instantiate class
-    use help() method for further info:
+    Class used to preprocess/transform join behavioral data (BPOD csvs) 
+    and video coordinates (.hdf5 output from deep_lab_cut).
     """
-    
-    # pose_ext='DeepCut_resnet50_newsetup_general2019Jan07shuffle1_1030000.h5'
-    pose_ext = "DeepCut_resnet50_metamix2019Jul03shuffle1_1030000.h5"
+    # file extensions to generalize across session base_name
+    # pose_ext='DeepCut_resnet50_newsetup_general2019Jan07shuffle1_1030000.h5' # old DCNN
+    pose_ext = "DeepCut_resnet50_metamix2019Jul03shuffle1_1030000.h5" # newer DCNN
     video_ext = ".avi"
     csv_ext = ".csv"
 
     # @staticmethod
 
     def rolling_window(a, size):
+        """ unreadable function to speedup transition pattern matching 
+        (eg for a correct fixation + response: port2In, tup, port2Out, portXIn)
+        a: array like where pattern will be searched
+        size: size of the pattern
+        """
         shape = a.shape[:-1] + (a.shape[-1] - size + 1, size)
         strides = a.strides + (a.strides[-1],)
         return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
     # @staticmethod
-
-    def get_fpositive_seq(df, seq, idx):  # this will operate with strings
-        window = len(seq)
-        sub_seq = (
-            df.iloc[idx:]
-            .loc[(df.TYPE == "EVENT") | (df.TYPE == "TRANSITION"), "MSG"]
-            .iloc[:window]
-            .values
-        )  # hell
-        return np.all(sub_seq == seq)
+    # deprec.
+    # def get_fpositive_seq(df, seq, idx):  # this will operate with strings
+    #     window = len(seq)
+    #     sub_seq = (
+    #         df.iloc[idx:]
+    #         .loc[(df.TYPE == "EVENT") | (df.TYPE == "TRANSITION"), "MSG"]
+    #         .iloc[:window]
+    #         .values
+    #     )  # hell
+    #     return np.all(sub_seq == seq)
 
     def polish_median(coordvec2d):
-        """returns median after purging >2sd outliers"""
+        """returns median after purging >2sd outliers, 
+        coordvec2d: is a 2d coordinate vector (x,y) through time"""
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")  # , r'All-NaN (slice|axis) encountered')
 
@@ -85,7 +91,7 @@ class chom:
         # FutureWarning: in the future insert will treat boolean arrays and array-likes as boolean index instead of casting it to integer
 
     def calculate_angle(point_a, point_b, c=(0, 0)):
-        """ Calculate angle between two points (assuming vertex=origin)"""
+        """ Calculate angle between two points (assuming vertex=origin"""
         ang_a = np.arctan2(*point_a[::-1])  # if 0,0 = 0
         ang_b = np.arctan2(*point_b[::-1])
         # return np.rad2deg((ang_a - ang_b) % (2 * np.pi))
@@ -120,7 +126,7 @@ class chom:
         return new_point + center_point
 
     def rearrange_fbidx(l):
-        """unreadable function to apply and tile fb frame indexes"""
+        """unreadable function to apply and tile fixation break frame indexes"""
         tlen = len(l)
         if not tlen:
             return np.array(l)
@@ -183,7 +189,8 @@ class chom:
 
     @staticmethod
     def get_rep(df):
-        """for old sessions with undeclared prob repeat"""
+        """function to retrieve rep/alt blocks, for those very early sessions (pilot) where it was not
+        explicitly stated in the csv."""
         blen = int(
             df.loc[(df.TYPE == "VAL") & (df.MSG == "VAR_BLEN"), "+INFO"].values[0]
         )
@@ -211,25 +218,26 @@ class chom:
             pass
         return np.repeat(probreporder * int(nblocks / 2), blen)
 
-    # rework this fucking crap | random_eda or glm_regressors notebooks have better stratj.
-    @staticmethod
-    def extr_listened_frames(soundvec, frames_listened):
-        """using this you take the risk of assuming that frames weight= throughout its duration in a future"""
-        if np.isnan(frames_listened):  # delay triaals where sound is not triggered
-            return np.nan
-        else:
-            a = soundvec[: 1 + int(frames_listened)].copy()
-            if frames_listened >= 20:  # with 20 it crashes
-                frames_listened = 19.99
-            normvec = np.concatenate(
-                (np.ones(int(frames_listened)), np.array([frames_listened % 1]))
-            )
-            a = a * normvec
-            return a.sum() / frames_listened
+    # rework this f**** cr** | random_eda or glm_regressors notebooks have better stratj.
+    # deprecated
+    # @staticmethod
+    # def extr_listened_frames(soundvec, frames_listened):
+    #     """using this you take the risk of assuming that frames weight= throughout its duration in a future"""
+    #     if np.isnan(frames_listened):  # delay triaals where sound is not triggered
+    #         return np.nan
+    #     else:
+    #         a = soundvec[: 1 + int(frames_listened)].copy()
+    #         if frames_listened >= 20:  # with 20 it crashes
+    #             frames_listened = 19.99
+    #         normvec = np.concatenate(
+    #             (np.ones(int(frames_listened)), np.array([frames_listened % 1]))
+    #         )
+    #         a = a * normvec
+    #         return a.sum() / frames_listened
 
     # removing from self
     def help(*args):
-        """this just accept strings, not methods"""
+        """In development. This just accept strings, not methods"""
         helpdict = {
             "filestructure": "files should be organized following this structure:\n"
             + "[...]/data\n"
@@ -312,6 +320,12 @@ class chom:
         analyze_trajectories=True,
         replace_silent=True
     ):
+        """
+        input subject (LEXX) and optionally datapath to instantiate class
+        parentpath: where to look for, this expect some file structure, check help for more info
+        analyze_trajectories: whether to analyze trajectories (requires: corresponding .avi, .npy, .hdf5)
+        replace_silent: whether to repace content of envelopes in silent trials by [0]*20
+        """
         ## ideally it contains all defaults so we can run whole pipe with a single call
         # perhaps we should create a 2nd class which inherits shared stuff from chom(subj)
         # instead of storing non shared stuff in above class (subj)
@@ -330,7 +344,7 @@ class chom:
         self.dirty_trajectories_trials = None  # session based
         self.info = {}  # session info
         self.framestamps = None  # session based
-        self.normcoords = False
+        self.normcoords = False # rotate coords, silly naming
         self.active_ports = None  # session based
         self.replace_silent = replace_silent
         self.dict_events = dict(
@@ -363,7 +377,7 @@ class chom:
 
     # this could be executed when creating instance
     def load_available(self, npy=True, plot=False, plot_kwargs={}):
-        """adapt to self.analyze_trajectories = False"""
+        """check available sessions in stated dir & subject & files"""
         if self.analyze_trajectories:
             pose_list = [x[: -len(chom.pose_ext)] for x in os.listdir(self.POSES_PATH)]
             csv_list = [x[: -len(chom.csv_ext)] for x in os.listdir(self.CSVS_PATH)]
@@ -401,7 +415,8 @@ class chom:
 
     # experimenter, box, task, num trials etc.. few descriptives a little more in depth than load available
     def describe_sessions_pre(self, df=None, pattern=None, deep=False, njobs=1):
-        """pattern should be either a string or a function which operates with list of session rawnames (LEXX_....csv) and returns a list
+        """ in development
+        pattern should be either a string or a function which operates with list of session rawnames (LEXX_....csv) and returns a list
         deep= whether to look for coms and extra process
         df= df which contain already processed sessions, uses pattern in sessid"""
         if not self.available:  # empty list
@@ -425,6 +440,7 @@ class chom:
         return None
 
     def load(self, target):  # target should be one of the available sessions
+        """loads csv (and perhaps more)"""
         self.target = target
         self.sess = pd.read_csv(
             self.CSVS_PATH + target + chom.csv_ext,
@@ -498,9 +514,11 @@ class chom:
     #     return posedf.iloc[np.where(mask)[1]].loc[:, bodypart].values
 
     @staticmethod
-    # 2nd function---perhaps I crash the function. If it works relace first one
+    # 2nd function---perhaps I crashed the function. If it works relace first one
     def get_port_coord2(sessdf, posedf, port, bodypart="rabove-snout"):
-        """port is a string eg Port1; requires fixed_int and self.sess"""
+        """attempts to find port coordinates. i.e. returns median x,y coordinate of
+        a given tracked bodypart while rat was in that port (between port-in and port-out)
+        port is a string eg Port1; requires fixed_int and self.sess"""
         ## np.unique(seq.reshape(-1,2), axis=0)
         seq = sessdf.loc[
             (sessdf.TYPE == "EVENT")
@@ -545,6 +563,9 @@ class chom:
 
     # , target=self.target) # switch default to normcoords?
     def process(self, normcoords=True, interpolate=False):
+        """preprocess data so it is organized by trials (1 row = 1 trial)
+        resulting df is stored in self.trial_sess
+        """
         # check if frame timestamps are available
         # first of all get rid of all last incomplete trial
         realendidx = self.sess[self.sess.MSG == "coherence01"].tail(1).index[0]
@@ -1288,6 +1309,7 @@ class chom:
         # needs to be done before get trajectories, because of Y component of V (speed)
         if normcoords & self.analyze_trajectories:
             # adding temp cols for other rotated bodyparts
+            # good learning curve there
             self.pose["rL-eye", "x"] = np.nan
             self.pose["rL-eye", "y"] = np.nan
             self.pose["rR-eye", "x"] = np.nan
@@ -1934,8 +1956,10 @@ class chom:
         # elif fixationbreaks and ('_noenv' in self.target):
         #    raise NotImplementedError  # idk whether to notimplemented error or simply not implemented
 
+
     def scatter_traj(self, idx, scatter_kwargs={}):
-        """plots trajectory of trial(idx, dataframe index, not session) from dataframe(df)"""
+        """deprecated
+        plots trajectory of trial(idx, dataframe index, not session) from dataframe(df)"""
         if not self.processed:
             raise ValueError("process data first")
 
@@ -2431,7 +2455,7 @@ class chom:
         except:
             return False
 
-    # above functions are totaltrash
+    # above functions are suboptimal, newer below (also, works with simulated trajectories)
     @staticmethod
     def did_he_hesitate(
         row,
@@ -2894,13 +2918,15 @@ def extraction_pipe(
     replace_silent=True
 
 ):
-    """to avoid copying extraction scrpt all the way around
+    """to avoid copying extraction scrpt all the way around, this function joins method calls
     targets = list of subjects ![even if single]
     sessions  =>  dict[subject] = [list of sessions!] ~ will be compared with available
                 (ie needs matching target list)
     pat: pattern to match in session name (overrided by sessions dict) eg p4_repalt
     Poggers bar: https://github.com/tqdm/tqdm/issues/484
     Parallel: should be either 'ThreadPoolExecutor' or 'ProcessPoolExecutor'
+    replace_silent: replaces silent envelope values by 0s
+    other args are actual kwargs for underlying methods
     """
     glm_def={ # defaults
         "lateralized": True,

@@ -96,6 +96,7 @@ class def_traj:
         if add_intercept:
             Fk = np.insert(Fk, 0, 1, axis=1)
         self.Fk = Fk
+        # clf.predict(Fk) would have been way simpler
         self.mt = np.c_[
             Fk[:, 0] * self.clf.intercept_, (Fk[:, 1:] * self.clf.coef_)
         ].sum(axis=1)
@@ -144,7 +145,8 @@ def simul_psiam(
     x_e0_noise=0,
     confirm_thr=0,
     proportional_confirm=False,
-    confirm_ae=False
+    confirm_ae=False,
+    drift_multiplier=1 
 ):
     """
     rewritting this so it is straightforward
@@ -170,7 +172,9 @@ def simul_psiam(
     priortoZt: if not none, scales prior to starting Zt (evidence integrator offset)
     confirm_thr: (inverse) fraction of Ze that needs to be surpassed in order to revert preplanned choice. E.g, with confirmthr==0.3 rat with zE 1 (right) will need to reach evidence
     value of at least -0.3 to choose left, if above -0.3 it will stick to preplanned choice (right)
-
+    proportional_confirm: whether to make confirm threshold proportional to starting offset (scaled, right?)
+    confirm_ae: whether to apply confirm threshold after errors
+    drift_multiplier: multiplies drift given by lluis (psiam parameters). It can be an array (size=4) to multiply sstr. 0, 0.25, 0.5, 1
     # what if t_update gets delayed with trial index?
     """
     if seed is not None:
@@ -198,7 +202,7 @@ def simul_psiam(
         _,
         _,
     ) = psiam_params
-    v = np.sort(v)
+    v = np.sort(v) * drift_multiplier
     # print('v_trial',v_trial)
     v_trial /= 1000
     # print('v_trial',v_trial)
@@ -206,9 +210,9 @@ def simul_psiam(
     mu = (z_e + 1) / 2  # 0~1 space (assuming z_e was in -1~1)
     a = (1 - mu) * (mu / (s / 2)) ** 2 - mu  # ; % parameter a for the beta distribution
     B = a * (1 / mu - 1)  # ; % parameter b for the beta distribution
-    df["rtbin"] = pd.cut(
-        df.sound_len, np.linspace(0, 150, 7), include_lowest=True, labels=False
-    )
+    # df["rtbin"] = pd.cut(
+    #     df.sound_len, np.linspace(0, 150, 7), include_lowest=True, labels=False
+    # )
     ntrials = df.shape[0]
     # for i, n in enumerate([
     #    'c', 'v_u', 'a_u', 't_0_u', 'v1', 'v2', 'v3', 'v4', 'a_e', 'z_e', 't_0_e', 't_0_e_silent', 'v_trial', 'b', 'd'
@@ -279,7 +283,7 @@ def simul_psiam(
                 .map({1.0: 3, 0.5: 2, 0.4: 2, 0.25: 1, 0.2: 1, 0.0: 0})
                 .values
             ]
-            * categ_vec
+            * categ_vec 
         )
         if silent_trials:  # perhaps in the future, add some tiny noise
             e_mat = np.zeros((n, int(1 / dt)))
@@ -312,7 +316,7 @@ def simul_psiam(
         # get x_e
         x_e = x_e0.copy()
         x_e[non_fb] = e_mat[non_fb, np.round((RT[non_fb] - 0.3) / dt).astype(int)]
-        # TODO: account here for those that listened less than t_e. ! should be fine with line above!
+        # old-to-do: account here for those that listened less than t_e. ! should be fine with line above!
 
         pred_choice = np.zeros(n)
         # pred_choice[non_fb] = np.ceil(x_e[non_fb]/1000)*2-1
@@ -370,6 +374,7 @@ def simul_psiam(
                 "avtrapz": dat.avtrapz.values[non_fb],
                 "delta_ev": conf_bias_x_e[non_fb],
                 "aftererror": dat.aftererror.values[non_fb],
+                "decision_threshold": newconfirm_thr[non_fb]
             }
         )
 
@@ -446,6 +451,7 @@ def simul_traj_single(
     return_both=False,
     silent_trials=False,
     trajMT_jerk_extension=0,
+    jerk_lock_ms=0
 ):
     """load params from simulated df
     however this will just work for proactive responses, filter before applying

@@ -46,12 +46,12 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
     ]  # &(df.R_response==side)
     mata = np.vstack(
         dat.loc[dat.coh2 == coh1]
-        .swifter.apply(lambda x: plotting.interpolapply(x), axis=1)
+        .apply(lambda x: plotting.interpolapply(x), axis=1) # removed swifter
         .values.tolist()
     )
     matb = np.vstack(
         dat.loc[(dat.coh2 == 0) & (dat.rewside == side)]
-        .swifter.apply(lambda x: plotting.interpolapply(x), axis=1)
+        .apply(lambda x: plotting.interpolapply(x), axis=1) # removed swifter
         .values.tolist()
     )
     for a in [mata, matb]:  # discard all nan rows
@@ -136,6 +136,29 @@ def splitplot(df, out, ax):
     ax.set_xlabel("rtbin")
     ax.set_ylabel("time to diverge")
     ax.legend(fancybox=False, frameon=False)
+
+def plot_com_contour(df, out, ax):
+    sns.kdeplot(out.loc[out.CoM_sugg,'CoM_peakf'].apply(lambda x: x[0]).values,
+            out.loc[out.CoM_sugg,'allpriors'].values, ax=ax)
+
+def plot_median_com_traj(df, out, ax):
+    ax.plot(
+        np.nanmedian(
+            np.vstack(
+            out.loc[(out.prechoice==0)&(out.R_response==1) & (out.allpriors<-1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
+            axis=0
+        ),
+        label = 'huge bias'
+    )
+    ax.plot(
+        np.nanmedian(
+            np.vstack(
+        out.loc[(out.prechoice==0) &(out.R_response==1)& (out.allpriors.abs()<1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
+        axis=0),
+        label = 'moderate to 0 bias'
+    )
+    ax.set_xlim([0,300])
+    ax.legend()
 
 
 def plot0(df, out, ax):
@@ -413,34 +436,38 @@ def safe_threshold(row, threshold):
 
 
 def whole_simul(
-    subject,
+    subject, #'LE44'
     # grid,
     savpath=None,
     dfpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/",#dani_clean.pkl",  # parameter grid
-    rtbins=np.linspace(0, 150, 7),
+    rtbins=np.linspace(0, 150, 7), # deprecated
     params={
-        "t_update": 80,
+        "t_update": 80, # ms
         "proact_deltaMT": 0.3,
         "reactMT_interc": 110,
         "reactMT_slope": 0.15,
         "com_gamma": 250,
         "glm2Ze_scaling": 0.25,
         "x_e0_noise": 0.001,
-        "naive_jerk": False,
+        "naive_jerk": True,
         "confirm_thr": 0,
         "proportional_confirm": False,
         "t_update_noise":0,
+        "com_deltaMT":0, # 0 = no modulation
+        "jerk_lock_ms":0
     },
     batches=10,
     batch_size=1500,
     return_data=False,
-    vanishing_bounds=True,
+    vanishing_bounds=False,
     both_traj=False,
     silent_trials=False,
     sample_silent_only=False,
     trajMT_jerk_extension=0,
     mtnoise=True,
     com_height=5,
+    drift_multiplier=1,
+    extra_t_0_e = 0 # secs
 ):
     # t_update: time it takes from bound hit to exert effect in movement
     # deltaMT: coef to reduce expected MT based on accumulated evidence
@@ -449,6 +476,7 @@ def whole_simul(
     # both_traj: whether to return prior and final or just final (updated) trajectory,
     # silent trials = no drift in evidence;
     # sample_silent = just sample silent trials to reproduce data
+    # dift_multiplier: 
     if not dfpath.endswith('.pkl'): # use default naming
         dfpath = f"{dfpath}{subject}_clean.pkl"
     if savpath is None:
@@ -470,14 +498,14 @@ def whole_simul(
     df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
         df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10)]
         .dropna(subset=["sound_len"])
-        .swifter.apply(
+        .apply(
             lambda x: np.argmax(plotting.interpolapply(x)[700:] > 30), axis=1
         )
     )  # axis arg not req. in series
     df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
         df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10)]
         .dropna(subset=["sound_len"])
-        .swifter.apply(
+        .apply(
             lambda x: np.argmax(plotting.interpolapply(x)[700:] < -30), axis=1
         )
     )  # axis arg not req. in series
@@ -508,7 +536,10 @@ def whole_simul(
         _,
         _,
     ) = psiam_params
-
+    assert extra_t_0_e<1, f't_0_e is in seconds, it should not be greater than 1 and it is {extra_t_0_e}'
+    if extra_t_0_e:
+        t_0_e += extra_t_0_e
+    
     out = pd.DataFrame([])
     print("psiam_simul began")
     if sample_silent_only:
@@ -526,7 +557,7 @@ def whole_simul(
                     1.3,
                     0.3,
                     1e-4,
-                    x,
+                    x, # seed
                     batches,
                     batch_size,
                     params["glm2Ze_scaling"],
@@ -536,6 +567,7 @@ def whole_simul(
                     params["confirm_thr"],
                     params["proportional_confirm"],
                     params["confirm_ae"],
+                    drift_multiplier
                 ],
             )
             for x in np.arange(7) * 50  # +1050#4200
@@ -561,7 +593,7 @@ def whole_simul(
 
     try:  ### PROACTIVE RESPONSES
         sdf = out.loc[out.reactive == 0]
-        tr.selectRT(0)
+        tr.selectRT(0) # carga LM de MT (trial_index)
         fkmat = sdf[["zidx", "dW_trans_i", "dW_lat_i"]].fillna(0).values
         fkmat = np.insert(fkmat, 0, 1, axis=1)
         # fkmat = sdf[['zidx', 'dW_trans', 'dW_lat']].fillna(0).values
@@ -620,12 +652,13 @@ def whole_simul(
     except Exception as e:
         raise e
 
-    out["e_after_u"] = 0
+    
     remaining_sensory = (t_0_e - 0.3) * 1000
     out["remaining_sensory"] = remaining_sensory
     out.loc[out.sound_len < remaining_sensory, "remaining_sensory"] = out.loc[
         out.sound_len < remaining_sensory, "sound_len"
     ]
+    out["e_after_u"] = 0
     out.loc[
         (out.e_time * 1000 < out.sound_len + out.remaining_sensory)
         & (out.reactive == 0),
@@ -704,7 +737,7 @@ def whole_simul(
                     (out.R_response == out.prechoice) & (out.reactive == 0), "t_update"
                 ]
             )  # prechoice==final choice aka confirm
-        else:
+        else: # samething but with x_e instead of delta_ev
             out.loc[
                 (out.R_response == out.prechoice) & (out.reactive == 0), "resp_len"
             ] = (
@@ -732,9 +765,15 @@ def whole_simul(
             )  # prechoice==final choice aka confirm
         #     out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  'resp_len'] = (1-deltaMT *out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0), 'x_e'].abs()/a_e ) * (out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0), 'resp_len'] - out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  't_update']) +\
         #                                                                     out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  't_update'] * com_handicap   # prechoice!=final choice aka com
+        
+        # changes of mind response length
         out.loc[(out.R_response != out.prechoice) & (out.reactive == 0), "resp_len"] = (
             out.loc[(out.R_response != out.prechoice) & (out.reactive == 0), "t_update"]
-            + params["com_gamma"]
+            + params["com_gamma"] * (
+                1-params['com_deltaMT']
+                * out.loc[(out.R_response != out.prechoice) & (out.reactive == 0), 'delta_ev'].abs()
+                )
+# why was this shit being added? # else we have a peak around gamma com
             + params["reactMT_slope"]
             * out.loc[
                 (out.R_response != out.prechoice) & (out.reactive == 0), "origidx"
@@ -754,7 +793,7 @@ def whole_simul(
     if both_traj:
         out["pretraj"] = np.nan
         out.pretraj = out.pretraj.astype(object)
-        out[["pretraj", "traj"]] = out.swifter.apply(
+        out[["pretraj", "traj"]] = out.apply(
             lambda x: traj.simul_traj_single(
                 x,
                 return_both=True,
@@ -765,7 +804,7 @@ def whole_simul(
             result_type="expand",
         )
     else:
-        out["traj"] = out.swifter.apply(
+        out["traj"] = out.apply(
             lambda x: traj.simul_traj_single(
                 x,
                 silent_trials=silent_trials,
@@ -811,11 +850,14 @@ def whole_simul(
     else:
         pref_title = ""
         a, b = df.loc[(df.special_trial == 0) & (df.subjid == subject)], out
-    fig, ax = plt.subplots(ncols=4, nrows=3, figsize=(24, 15))
+    fig, ax = plt.subplots(ncols=4, nrows=4, figsize=(24, 20))
     plot0(a, b, ax[0, 0])
     # plot1(a,b, ax[1,0])
     plot2(a, b, ax[1, 0])
     pcomRT(a, b, ax[1, 1])
+    _, ymax = ax[1,1].get_ylim()
+    if ymax>0.3:
+        ax[1,1].set_ylim(-0.05, 0.305)
     # pcomRT_proactive_only(a, b, ax[1, 2])
 
     
@@ -849,14 +891,20 @@ def whole_simul(
     plot3(a, b, ax[0, 1])  # ushape
     plot4(a, b, ax[2, 0])
     # plot5(a,b,ax[2,1])
-    # try:
-    #     splitplot(a,b,ax[2,1])
-    # except:
-    #     print("splitplot typically crashes with silent trials\nbecause in dani's tasks they all have the same coh")
+    try:
+        splitplot(a,b,ax[3,0])
+    except Exception as e:
+        print("splitplot typically crashes with silent trials\nbecause in dani's tasks they all have the same coh")
+        print(e)
+    
+    plot_com_contour(a, b, ax[3,1])
+    plot_median_com_traj(a, b, ax[3,2])
+
     plotting.tachometric(a, ax=ax[0,2], rtbins=np.arange(0,151,5))
     ax[0,2].set_title('tachometric data')
     plotting.tachometric(b, ax=ax[0,3], rtbins=np.arange(0,151,5))
     ax[0,3].set_title('tachometric simul')
+    ax[0,2].sharey(ax[0,3])
     # plot67(a,b,ax[0,2], ax[1,2])
     # plot910(a,b,ax[0,3], ax[1,3])
     plot1112(a, b, ax[2, 2], ax[2, 3])
@@ -868,7 +916,12 @@ def whole_simul(
     ax[2,1].legend()
     ax[2,1].set_ylabel('p(CoM)')
     ax[2,1].set_xlabel('trial index')
-
+    # t update distribution
+    sns.histplot(
+        b.loc[b.reactive==0, 't_update'].values,
+        ax=ax[3,3]
+    )
+    ax[3,3].set_title('effective t_update since movement onset')
     #sns.histplot(
     #    data=b[b.reactive==0], x='origidx', y='expectedMT', ax=ax[2,1]
     #)
@@ -879,11 +932,14 @@ def whole_simul(
     for k, i in params.items():
         fname += f"{k}-{i}-"
     fname = fname[:-1] + ".png"
-    # if not return_data:
-    fig.savefig(f"{savpath}{fname}")
-    if return_data:
+    if not return_data:
+        fig.savefig(f"{savpath}{fname}")
         plt.show()
         return df, out
+    else:
+        warnings.warn('return data is not implemented so we just return df, and out')
+        return df, out # matrices as well
+    
 
 
 def p_rev_pro(rt,a_e=0.5,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1, k_iters=5):
@@ -923,24 +979,35 @@ def p_rev_pro(rt,a_e=0.5,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1, k_ite
     # do drift stuff here if required [oh no cannot with scipy]
     return p_wo_drift
 
-def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1, k_iters=5, normalize=False):
+def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0.1,
+k_iters=5, normalize=False, return_normaliz_factor=False):
     """calculates probability to revert initial choice given that it was a
     proactive trial. It wil flip it for negative priors, uses 0 drift
-    rt: reaction time (ms)
+    rt: reaction time (ms), converted to seconds internally
     a_e: semibound (scaled)
     drift:
     allpriors: sum of priors in left-right space
     glm2Ze_scaling: factor to scale prior estimate
     confirm_thr: threshold to overcome in order to revert
     k: iters for infinite sum
+    normalize: (bool= whether to normalize), (float= normalizing factor)
     """
-    # start with drift=0, then update if possible
+    if return_normaliz_factor:
+        assert normalize, "to return normaliz factor requires normalize=True arg"
+    norm_factor = 1.0
+    # add external normalization so it can be reused
+    if isinstance(normalize, float):
+        norm_factor = normalize # store value
+        normalize=False # set the flag to false so 
+
+
     if not allpriors:
         allpriors=1e-6
     t = rt/1000
     if allpriors<0: # prechoice left we will invert all the scheme
         drift *= -1 
-    x_0 = abs(allpriors*glm2Ze_scaling * a_e) + a_e
+    x_0 = abs(allpriors*glm2Ze_scaling * a_e) + a_e # scale prior/x_0 and shift it, 
+    # so that lower bound is 0, top is a and middle/threshold is a_e
     rev_thr = a_e - confirm_thr*a_e 
     a = a_e * 2
 
@@ -951,11 +1018,12 @@ def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0
     if normalize:
         prob_normed = []
     for k in iterable:
-        first_ = norm(loc=2*k*a+x_0+drift*t, scale=t)
+        
+        first_ = norm(loc=(2*k*a+x_0+drift*t), scale=t)
         first = np.subtract(
             *first_.cdf([rev_thr, 0])
         )
-        second_ = norm(loc=2*k*a-x_0+drift*t, scale=t)
+        second_ = norm(loc=(2*k*a-x_0+drift*t), scale=t)
         second = np.subtract(
             *second_.cdf([rev_thr,0])
         )
@@ -970,9 +1038,15 @@ def p_rev_pro2(rt,a_e=0.5,drift=0,allpriors=0, glm2Ze_scaling=0.1, confirm_thr=0
 
     p = np.array(prob_list).sum()
     if not normalize:
-        return p
+        to_return=  p/norm_factor
     else:
-        return p/np.array(prob_normed).sum()
+        to_return = p/np.array(prob_normed).sum()
+    if return_normaliz_factor:
+        return [to_return, np.array(prob_normed)]
+    else:
+        return to_return
+
+    
 
 
 def threaded_particle_(args):
