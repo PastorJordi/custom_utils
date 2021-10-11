@@ -469,39 +469,76 @@ def whole_simul(
     mtnoise=True,
     com_height=5,
     drift_multiplier=1,
-    extra_t_0_e = 0 # secs
-):
-    # t_update: time it takes from bound hit to exert effect in movement
-    # deltaMT: coef to reduce expected MT based on accumulated evidence
-    # com_gamma:
-    # vanishing bounds, horiz bounds disappear after AI
-    # both_traj: whether to return prior and final or just final (updated) trajectory,
-    # silent trials = no drift in evidence;
-    # sample_silent = just sample silent trials to reproduce data
-    # dift_multiplier: 
+    extra_t_0_e = 0, # secs
+    use_fixed_bias = False
+
+):  
+    """
+    subject: 'LEXX' subject to simulate, since several params (psiam and silentMT are loaded from fits)
+    savpath: where to save resulting multi-pannel figure
+    dfpath: path where the data is stored. If it doe snot end with .pkl attempts appending {subject}_clean.pkl
+    rtbins: reaction time bins, semi deprecated
+    params: parameters to simulate
+        t_update: time it takes from bound hit to exert effect in movement
+        pract_deltaMT: coef to reduce expected MT based on accumulated evidence
+        reactMT_interc: intercept of reactive MT
+        reactMT_slope: slope of reactive MT (* trial_index)
+        com_gamma: motor time from updating trajectory to new (reverted) choice
+        glm2Ze_scaling: factor to scale down Ze (= Ze * glm2Ze_scaling * bound_height)
+        x_e0_noise: variance of the beta distr. centered at scaled Ze
+        naive_jerk: whether to use 
+            True => boundary conditions = (0,0,0,75,0,0) or 
+            False=> those fitted using alex EM procedure (deprecated)
+        confirm_thr: use some confirm threshold (ie evidence decision criterion != 0). units fraction of bound_height
+        proportional_confirm: whether to make it proportional to Ze/x_0_e
+        t_update_noise: scale of the gaussian noise to be added to t_update. (derpecated)
+        com_deltaMT: coef to reduce CoM MT based on accumulated evidence
+        jerk_lock_ms: ms of trajectory which keep locked @ y=0
+    batches: number of simulation batches
+    batch_size: amount of trials simulated per batch (too high -> memory errors)
+    return_data: deprecated
+    vanishing_bounds: whether to disable horizontal bounds after AI hits the bound till ev bounds collapse
+    both_traj: whether to return both trajectories in out dataframe (preplanned + final) or not (just final)
+    silent_trials: just simulate silent trials
+    sample_silent_only: only sample silent trials from data to simulate
+    trajMT_jerk_extension: ms of extension of the trajectory to simulate. Since subjects do not break
+        lateral photogate with x'=0 and x''=0 it may help getting simulated trajectories that resemble data
+    mtnoise: whether to add noise to predicted "expected MT". If float it adds gaussian noise scaled to that value * mae
+    com_height: com detection threshold in pxfor simulated data. Real data is already thresholded/detected at 5px
+    drift_multiplier: multiplies fited values of drift. It can be an array of shape (4,)
+    extra_t_0_e: extends t_0_e for this amound of SECONDS
+    """
+    # dev note
+    if use_fixed_bias:
+        raise NotImplementedError(
+            'fixed bias usage is not implemented because it might require to fit expectedMT again'
+            )
+    # append subject to data path
     if not dfpath.endswith('.pkl'): # use default naming
         dfpath = f"{dfpath}{subject}_clean.pkl"
-    if savpath is None:
-        raise ValueError("provide save path")
+
+    # if savpath is None:
+    #     raise ValueError("provide save path")
 
     # load real data
     df = pd.read_pickle(dfpath)
-    # this was giving issues, now restrict df usage to single subject
+    # ensure we just have a single subject
     df = df.loc[df.subjid == subject]
-    df["sstr"] = df.coh2.abs()
+    df["sstr"] = df.coh2.abs() # stimulus str column
     df["priorZt"] = np.nansum(
         df[["dW_lat", "dW_trans"]].values, axis=1
-    )  # 'dW_fixedbias'
-    df["prechoice"] = np.ceil(df.priorZt.values / 1000)
+    )  # 'dW_fixedbias' not considered in the evidence offset/pre-planned choice anymore*
+    df["prechoice"] = np.ceil(df.priorZt.values / 1000) # pre-planned choice
     df["prechoice"] = df.prechoice.astype(int)
-    df["time_to_thr"] = np.nan
+    df["time_to_thr"] = np.nan # initialize variable: time to reach arbitrary threshold in px
     # df.swifter.apply(lambda x: np.argmax(np.abs(plotting.interpolapply(x)[700:])>30), axis=1)
     # split lft and right now!
     df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
         df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10)]
         .dropna(subset=["sound_len"])
         .apply(
-            lambda x: np.argmax(plotting.interpolapply(x)[700:] > 30), axis=1
+            lambda x: np.argmax(plotting.interpolapply(x)[700:] > 30), axis=1 # from 700 because they are aligned
+            # to movement onset at 700 position (extreme case [fixation]+[stim]=700)
         )
     )  # axis arg not req. in series
     df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
@@ -518,6 +555,7 @@ def whole_simul(
     )  # , 'dW_fixedbias'
     df["choice_x_allpriors"] = (df.R_response * 2 - 1) * df.allpriors
 
+    # load and unpack psiam parameters
     psiam_params = loadmat(
         f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
     )["freepar_hat"][0]
@@ -542,13 +580,16 @@ def whole_simul(
     if extra_t_0_e:
         t_0_e += extra_t_0_e
     
-    out = pd.DataFrame([])
-    print("psiam_simul began")
+    out = pd.DataFrame([]) # init out dataframe
+    
     if sample_silent_only:
         df = df[df.special_trial == 2]
         print(
             f"just sampling from silent trials in subject {subject}\nwhich is around {len(df.loc[df.subjid==subject])}"
         )
+    # psiam simulations
+    print("psiam_simul began")
+    # this runs 7 times so we expect to have n_simul_trials = 7 * nbatches * batch_size
     with ThreadPoolExecutor(max_workers=7) as executor:
         jobs = [
             executor.submit(
@@ -572,36 +613,43 @@ def whole_simul(
                     drift_multiplier
                 ],
             )
-            for x in np.arange(7) * 50  # +1050#4200
+            for x in np.arange(7) * 50  # x is the seed so we do not simulate the same over and over
         ]
         for job in tqdm.tqdm_notebook(as_completed(jobs), total=7):
             out = out.append(job.result(), ignore_index=True)
+    # so psiam simulations are already in "out" dataframe
 
+    # initializes a class that will retrieve expected MT
     tr = traj.def_traj(subject, None)
+    # initialize some variables
     out["expectedMT"] = np.nan
     out["mu_boundary"] = np.nan
-    out["mu_boundary"] = out["mu_boundary"].astype(object)
+    out["mu_boundary"] = out["mu_boundary"].astype(object) # object because it will contain boundary conditions (vec)
 
-    # WARNING using fixed boas here...
+    
     out["priorZt"] = np.nansum(
         out[["dW_lat", "dW_trans"]].values, axis=1
     )  # 'dW_fixedbias',
     out["prechoice"] = np.ceil(out.priorZt.values / 1000)
     out["prechoice"] = out.prechoice.astype(int)
 
-    for col in ["dW_trans", "dW_lat"]:  # invert those factors in left choices
-        # out[f'{col}_i'] = out[col] * (out['R_response']*2-1)
+    for col in ["dW_trans", "dW_lat"]:  # invert those factors in left choices to align it to a single dimensino
         out[f"{col}_i"] = out[col] * (out["prechoice"] * 2 - 1)
 
     try:  ### PROACTIVE RESPONSES
-        sdf = out.loc[out.reactive == 0]
-        tr.selectRT(0) # carga LM de MT (trial_index)
+        sdf = out.loc[out.reactive == 0] # create a sliced dataframe of proactive responses to work with
+        tr.selectRT(0) # loads subject's MT LinearModel
+        # Generate design matrix to multiply with weights 
         fkmat = sdf[["zidx", "dW_trans_i", "dW_lat_i"]].fillna(0).values
-        fkmat = np.insert(fkmat, 0, 1, axis=1)
+        # (cumbersome we could use ".predict" behind scenes instead of doing this raw)
+        fkmat = np.insert(fkmat, 0, 1, axis=1) 
         # fkmat = sdf[['zidx', 'dW_trans', 'dW_lat']].fillna(0).values
         # fkmat = np.insert(fkmat, 0, 1,axis=1)
         tr.expected_mt(fkmat, add_intercept=False)
-        out.loc[sdf.index, "expectedMT"] = tr.mt * 1000
+        # store expectedMT in dataframe
+        out.loc[sdf.index, "expectedMT"] = tr.mt * 1000 # add expectedMT to those indexes in data frame "out"
+
+        # add noise to the predicted value
         if isinstance(mtnoise, bool):
             mtnoise *= 1
         if mtnoise:  # load mserror
@@ -632,7 +680,7 @@ def whole_simul(
             # out.loc[sdf.index, f'priortraj{side}'] = bo.prior_traj(Fk=fkmat,times=bo.mt+0.05,step=10)
 
         ### REACTIVE ONES
-        sdf = out.loc[out.reactive == 1]
+        sdf = out.loc[out.reactive == 1] # create a sliced dataframe of reactive responses to work with
         fkmat = sdf[["zidx", "dW_trans_i", "dW_lat_i"]].fillna(0).values
         fkmat = np.insert(fkmat, 0, 1, axis=1)
         times = (
@@ -655,50 +703,37 @@ def whole_simul(
         raise e
 
     
-    remaining_sensory = (t_0_e - 0.3) * 1000
+    remaining_sensory = (t_0_e - 0.3) * 1000 # that would be t_e delay
     out["remaining_sensory"] = remaining_sensory
+    # edit remaining sensory pipe where the stimulus was shorter than it
     out.loc[out.sound_len < remaining_sensory, "remaining_sensory"] = out.loc[
         out.sound_len < remaining_sensory, "sound_len"
     ]
-    out["e_after_u"] = 0
+    out["e_after_u"] = 0 # flag for those trials where EA bound is hit after AI
     out.loc[
         (out.e_time * 1000 < out.sound_len + out.remaining_sensory)
         & (out.reactive == 0),
         "e_after_u",
     ] = 1  # control for those which have listened less than the delay # done
-    # TODO is accu ev really taken into account?
+    
     out.prechoice = out.prechoice.astype(int)
     out["sstr"] = out.coh2.abs()
     out["t_update"] = np.nan
-    # out.loc[out.reactive==0, 't_update'] = params['t_update'] + out.loc[out.reactive==0, 'sound_len'] # a big bug lied here*
+    
+    # effective t_update for most of the trials is params['t_update']
     out.loc[out.reactive == 0, "t_update"] = params[
         "t_update"
     #] + t_0_e # now it happen relative to movement onset!
     ] + t_0_e//0.001 - 300 # new bug
 
-    # how defek? shouldnt it be respective movement onset + te + tupdate? check model scketch?
-    # TODO: probably this is a bug as well
 
     # UNCOMMENT LINE BELOW IF UPDATE CAN HAPPEN EARLIER WHEN EV-BOUND IS REACHED
     if not vanishing_bounds:
-        # out.loc[out.e_after_u==1, 't_update'] = out.loc[out.e_after_u==1, 'e_time']
-
-        # 16/08 bug
-        # out.loc[out.e_after_u == 1, "t_update"] = (
-        #    (out.loc[out.e_after_u == 1, "e_time"] - remaining_sensory) # ?
-        #    + params["t_update"]
-        #)  # e_time is already respective sound onset!! but we need respective movement onset
-        # also it is in seconds rather than msecs
+        # adapt t_update in those trials where EA bound is hit after AI bound
         out.loc[out.e_after_u == 1, "t_update"] = (
             out.loc[out.e_after_u == 1, "e_time"]-out.loc[out.e_after_u == 1, "u_time"]
-            ) * 1000  + params['t_update']#out.loc[out.e_after_u == 1, 'e_time']*1000 - (t_0_e*1000)  + 300 # aligned to sound onset
-            # - out.loc[out.e_after_u == 1, 'sound_len'] # aligned to movement onset, should be negative here
-            # + params['t_update']
-            #)# aligned to sound onset now
-        
+            ) * 1000  + params['t_update']
 
-        # sns.distplot(out.t_update.dropna())
-        # plt.show()
 
     if params['t_update_noise']:
         out['t_update'] += np.random.normal(scale=params['t_update_noise'], size=len(out))
@@ -712,7 +747,7 @@ def whole_simul(
     out["resp_len"] = out["expectedMT"]  # this include reactive
     out["base_mt"] = out["expectedMT"]  # this include reactive
     if not silent_trials:
-        if params["confirm_thr"] > 0:
+        if params["confirm_thr"] > 0: # if there's confirm_thr scale it relative to delta_ev
             out.loc[
                 (out.R_response == out.prechoice) & (out.reactive == 0), "resp_len"
             ] = (
@@ -765,8 +800,6 @@ def whole_simul(
                     (out.R_response == out.prechoice) & (out.reactive == 0), "t_update"
                 ]
             )  # prechoice==final choice aka confirm
-        #     out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  'resp_len'] = (1-deltaMT *out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0), 'x_e'].abs()/a_e ) * (out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0), 'resp_len'] - out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  't_update']) +\
-        #                                                                     out.loc[(out.R_response==i)&(out.prechoice==abs(i-1))&(out.reactive==0),  't_update'] * com_handicap   # prechoice!=final choice aka com
         
         # changes of mind response length
         out.loc[(out.R_response != out.prechoice) & (out.reactive == 0), "resp_len"] = (
@@ -775,15 +808,16 @@ def whole_simul(
                 1-params['com_deltaMT']
                 * out.loc[(out.R_response != out.prechoice) & (out.reactive == 0), 'delta_ev'].abs()
                 )
-# why was this shit being added? # else we have a peak around gamma com
-            + params["reactMT_slope"]
+            + params["reactMT_slope"] # why was this shit being added? # else we have a peak around gamma com
             * out.loc[
                 (out.R_response != out.prechoice) & (out.reactive == 0), "origidx"
             ]
         )  # tri_ind is new
 
-    out["resp_len"] /= 1000
-    out["base_mt"] /= 1000
+    out["resp_len"] /= 1000 # transform into seconds so it has same units in df and out
+    out["base_mt"] /= 1000 # idem
+
+    # not really elegant, but ensure they are float because we had some object datatype column
     for col in ["zidx", "origidx", "expectedMT", "resp_len", "base_mt"]:
         out[col] = out[col].astype(float)
 
@@ -816,10 +850,10 @@ def whole_simul(
             ),
             axis=1,
         )
-
+    # getting and concatenating gradients
     tmp = out.apply(
         lambda x: plotting.gradient_np_simul(x), axis=1, result_type="expand"
-    )  # add swifter
+    )
     tmp.columns = ["traj_d1", "traj_d2", "traj_d3"]
     out = pd.concat([out, tmp], axis=1)
 
@@ -847,7 +881,8 @@ def whole_simul(
     # print('saving data')
     # out.to_pickle(f'{savpath}.pkl')
 
-    # plotting
+    # plotting section
+    
     if silent_trials:
         pref_title = "silent_"
         a, b = df.loc[(df.special_trial == 2) & (df.subjid == subject)], out
