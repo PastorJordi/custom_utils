@@ -158,6 +158,8 @@ def plot_median_com_traj(df, out, ax):
         label = 'moderate to 0 bias'
     )
     ax.set_xlim([0,300])
+    ax.set_xlabel('ms from movement onset')
+    ax.set_ylabel('distance in px')
     ax.legend()
 
 
@@ -799,6 +801,7 @@ def whole_simul(
                 return_both=True,
                 silent_trials=silent_trials,
                 trajMT_jerk_extension=trajMT_jerk_extension,
+                jerk_lock_ms=params["jerk_lock_ms"]
             ),
             axis=1,
             result_type="expand",
@@ -809,6 +812,7 @@ def whole_simul(
                 x,
                 silent_trials=silent_trials,
                 trajMT_jerk_extension=trajMT_jerk_extension,
+                jerk_lock_ms=params["jerk_lock_ms"]
             ),
             axis=1,
         )
@@ -876,7 +880,7 @@ def whole_simul(
     )
     ax[1,2].set_title('p(rev)')
     
-    subset = b.loc[b.rev==1].dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    subset = b.loc[(b.rev==1)&(b.reactive==0)].dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
     plotting.com_heatmap(
         subset.allpriors,
         subset.avtrapz,
@@ -898,6 +902,9 @@ def whole_simul(
         print(e)
     
     plot_com_contour(a, b, ax[3,1])
+    ax[3,1].set_title('CoM peak moment')
+    ax[3,1].set_xlabel('time from movement onset (ms)')
+    ax[3,1].set_ylabel('absolute prior')
     plot_median_com_traj(a, b, ax[3,2])
 
     plotting.tachometric(a, ax=ax[0,2], rtbins=np.arange(0,151,5))

@@ -468,12 +468,13 @@ def simul_traj_single(
         resp_len = int(trajMT_jerk_extension + row.resp_len * 1000)
         RLresp = row.R_response * 2 - 1  # in -1 ~ 1 space
         if row.reactive:
-            t_arr = np.arange(resp_len)
-            M = ab.get_Mt0te(0, resp_len)
+            t_arr = np.arange(jerk_lock_ms,resp_len)
+            M = ab.get_Mt0te(jerk_lock_ms, resp_len)
             M_1 = np.linalg.inv(M)
             vt = ab.v_(t_arr)
             N = vt @ M_1
             prior0 = (N @ (fixed_reactive_mu * RLresp)).ravel()
+            prior0 = np.concatenate([[0]*jerk_lock_ms,prior0])
             if return_both:
                 return np.zeros(prior0.size), prior0
             else:
@@ -481,12 +482,13 @@ def simul_traj_single(
 
         elif silent_trials:
             initial_mu = row.mu_boundary
-            t_arr = np.arange(resp_len)
-            M = ab.get_Mt0te(0, resp_len)
+            t_arr = np.arange(jerk_lock_ms,resp_len)
+            M = ab.get_Mt0te(jerk_lock_ms, resp_len)
             M_1 = np.linalg.inv(M)
             vt = ab.v_(t_arr)
             N = vt @ M_1
             prior0 = (N @ (initial_mu * RLresp)).ravel()
+            prior0 = np.concatenate([[0]*jerk_lock_ms,prior0])
             if return_both:
                 return np.zeros(prior0.size), prior0
             else:
@@ -499,12 +501,14 @@ def simul_traj_single(
             if row.R_response == 0:  # flip it
                 final_mu *= -1
 
-            t_arr = np.arange(int(initial_expected_span))
-            M = ab.get_Mt0te(0, initial_expected_span)
+            t_arr = np.arange(jerk_lock_ms,int(initial_expected_span))
+            t_arr_from_z = np.arange(int(initial_expected_span))
+            M = ab.get_Mt0te(jerk_lock_ms, initial_expected_span)
             M_1 = np.linalg.inv(M)
             vt = ab.v_(t_arr)
             N = vt @ M_1
             prior0 = (N @ initial_mu).flatten()
+            prior0 = np.concatenate([[0]*jerk_lock_ms,prior0])
             if row.prechoice == 0:  # it was left, flip it back
                 prior0 *= -1
             # if t_update is too slow tup might happen after prior traj ended
@@ -515,8 +519,8 @@ def simul_traj_single(
                     return prior0, prior0
                 else:
                     return prior0
-            d1 = np.gradient(prior0, t_arr)
-            d2 = np.gradient(d1, t_arr)
+            d1 = np.gradient(prior0, t_arr_from_z)
+            d2 = np.gradient(d1, t_arr_from_z)
             Mf = ab.get_Mt0te(tup, resp_len)
             Mf_1 = np.linalg.inv(Mf)
             # init conditions are [prior0[tup], d1[tup], d2[tup]]
