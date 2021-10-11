@@ -461,6 +461,10 @@ def simul_traj_single(
     else:
         tup = np.nan
 
+    # avoid t_update happening before jerk_lock finishes
+    if tup<jerk_lock_ms:
+        tup = jerk_lock_ms
+
     if fixed_reactive_mu is None:
         fixed_reactive_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
         
@@ -515,6 +519,7 @@ def simul_traj_single(
             if (
                 tup - 1 > prior0.size
             ):  # should I substract trajMT_jerk_extension from prior0.size?
+                print(f'fuckuck here, reached the end before updating\ntup={tup}, priortraj={prior0.size}')
                 if return_both:
                     return prior0, prior0
                 else:

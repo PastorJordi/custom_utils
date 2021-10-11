@@ -22,7 +22,8 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     """a and b are traj matrices.
     returns ms after motor onset when they split
     startfrom: matrix index to start from (should be 0th position in ms
-    tot_iter= remaining)"""
+    tot_iter= remaining)
+    if ax, it plots medians + splittime"""
     for i in range(tot_iter):
         t2, p2 = ttest_ind(
             a[:, startfrom + i], b[:, startfrom + i], nan_policy=nan_policy
@@ -32,7 +33,7 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     return np.nan  # , -1
 
 
-def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfrom=700):
+def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfrom=700,  ax=None, plot_kwargs={}):
     """gets when they are statistically different by t_test"""
     # get matrices
     if side == 0:
@@ -42,7 +43,7 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
-        & (df.resp_len)
+       # & (df.resp_len)
     ]  # &(df.R_response==side)
     mata = np.vstack(
         dat.loc[dat.coh2 == coh1]
@@ -58,6 +59,12 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
         a = a[~np.isnan(a).all(axis=1)]
 
     ind = get_when_t(mata, matb, startfrom=startfrom)
+    
+    if ax is not None:
+        ax.plot(np.arange(mata.shape[1]) - startfrom ,np.nanmedian(mata, axis=0), **plot_kwargs)
+        ax.plot(np.arange(matb.shape[1]) - startfrom ,np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
+        ax.scatter(ind,np.nanmedian(mata[:,startfrom+ind]), marker='x',color=plot_kwargs['color'],
+        s=50, zorder=3)
     return ind  # mata, matb,
 
 
@@ -67,7 +74,9 @@ def shortpad(traj, upto=1000):
     return np.pad(traj, ((0, missing)), "constant", constant_values=np.nan)
 
 
-def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7)):
+def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), ax=None, plot_kwargs={}, 
+    return_mats=False # debugging purposes
+):
     """gets when they are statistically different by t_test
     here df is simulated df"""
     # get matrices
@@ -78,7 +87,7 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7)):
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
-        & (df.resp_len)
+        # & (df.resp_len) # ?
     ]  # &(df.R_response==side) this goes out
     mata = np.vstack(
         dat.loc[(dat.traj.apply(len) > 0) & (dat.coh2 == coh1), "traj"]
@@ -92,18 +101,27 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7)):
         .apply(shortpad)
         .values.tolist()
     )
+    matlist = [mata, matb]
+    for i in [0,1]:  # discard all nan rows # this is not working because a is a copy!
+        matlist[i] = matlist[i][~np.isnan(matlist[i]).all(axis=1)]
+    mata, matb = matlist
 
-    for a in [mata, matb]:  # discard all nan rows
-        a = a[~np.isnan(a).all(axis=1)]
-    #     for mat in [mata, matb]:
-    #         plt.plot(
-    #         np.nanmedian(mat, axis=0))
-    #     plt.show()
+    
+
     ind = get_when_t(mata, matb, startfrom=0)
+    if return_mats:
+        print(ind)
+        return mata, matb
+    
+    if ax is not None:
+        ax.plot(np.nanmedian(mata, axis=0), **plot_kwargs)
+        ax.plot(np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
+        ax.scatter(ind,np.nanmedian(mata[:,ind]), marker='x',color=plot_kwargs['color'], s=50,
+        zorder=3)
     return ind  # mata, matb,
 
 
-def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False):
+def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None):
     """calculates time it takes for each Side*rtbin coherence 1vs0 to split significantly"""
     _index = [0, 1]  # side
     _columns = np.arange(rtbins.size - 1)  # rtbins
@@ -114,17 +132,29 @@ def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False):
         splitfun = when_did_split_dat
     # tdf.columns = tdf.columns.set_names(['RTbin', 'side'])
     for b in range(rtbins.size - 1):
+        if (b==0) or (b==3):
+            cax = ax
+        else:
+            cax = None
         for s, side in enumerate(["L", "R"]):
-            split_time = splitfun(df, s, b, rtbins=rtbins)
+            if b:
+                tab='tab:'
+            else:
+                tab=''
+            if side=='L':
+                plot_kwargs=dict(color=tab+'green', label=f'rtbin={b}')
+            else:
+                plot_kwargs=dict(color=tab+'purple', label=f'rtbin={b}')
+            split_time = splitfun(df, s, b, rtbins=rtbins, ax=cax, plot_kwargs=plot_kwargs)
             tdf.loc[s, b] = split_time
 
     return tdf
 
 
-def splitplot(df, out, ax):
+def splitplot(df, out, ax, ax1, ax2):
     """plots trajectory split time (coh1 vs 0) per RT-bin"""
-    tdf = whole_splitting(df)
-    tdf2 = whole_splitting(out, simul=True)
+    tdf = whole_splitting(df, ax=ax1)
+    tdf2 = whole_splitting(out, simul=True, ax=ax2)
     colors = ["green", "purple"]
     for i, (dat, name, marker) in enumerate([[tdf, "data", "o"], [tdf2, "simul", "x"]]):
         for j, side in enumerate(["L", "R"]):
@@ -139,6 +169,12 @@ def splitplot(df, out, ax):
     ax.set_xlabel("rtbin")
     ax.set_ylabel("time to diverge")
     ax.legend(fancybox=False, frameon=False)
+    ax1.set_xlim(-20, 400)
+    ax1.legend(fancybox=False, frameon=False)
+    ax1.set_title('split traj data')
+    ax2.set_title('split traj simul')
+    ax2.set_xlim(-20, 400)
+    ax2.legend(fancybox=False, frameon=False)
 
 def plot_com_contour(df, out, ax):
     """contour of CoM peak vs prior"""
@@ -927,7 +963,7 @@ def whole_simul(
     else:
         pref_title = ""
         a, b = df.loc[(df.special_trial == 0) & (df.subjid == subject)], out
-    fig, ax = plt.subplots(ncols=4, nrows=4, figsize=(24, 20))
+    fig, ax = plt.subplots(ncols=4, nrows=5, figsize=(25, 25))
     plot0(a, b, ax[0, 0])
     # plot1(a,b, ax[1,0])
     plot2(a, b, ax[1, 0])
@@ -969,7 +1005,7 @@ def whole_simul(
     plot3(a, b, ax[0, 1])  # ushape
     plot4(a, b, ax[2, 0]) # fraction of proactive responses?
     try:
-        splitplot(a,b,ax[3,0])
+        splitplot(a,b,ax[4,0], ax[4,1], ax[4,2])
     except Exception as e:
         print("splitplot typically crashes with silent trials\nbecause in dani's tasks they all have the same coh")
         print(e)
@@ -997,7 +1033,9 @@ def whole_simul(
     ax[2,1].set_xlabel('trial index')
     # t update distribution
     sns.histplot(
-        b.loc[b.reactive==0, 't_update'].values,
+        data= b.loc[(b.reactive==0)&(b.rtbin<=12)],x='t_update', 
+        hue='rtbin', cumulative=True, element='step', fill=False,
+        stat="density", common_norm=False, common_bins=True,
         ax=ax[3,3]
     )
     ax[3,3].set_title('effective t_update since movement onset')
