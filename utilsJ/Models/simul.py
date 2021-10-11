@@ -20,7 +20,7 @@ import warnings
 
 def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"):
     """a and b are traj matrices.
-    returns ms after motor onset and median of the first one (to plot)
+    returns ms after motor onset when they split
     startfrom: matrix index to start from (should be 0th position in ms
     tot_iter= remaining)"""
     for i in range(tot_iter):
@@ -62,6 +62,7 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
 
 
 def shortpad(traj, upto=1000):
+    """pads nans to trajectories so it can be stacked in a matrix"""
     missing = upto - traj.size
     return np.pad(traj, ((0, missing)), "constant", constant_values=np.nan)
 
@@ -103,6 +104,7 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7)):
 
 
 def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False):
+    """calculates time it takes for each Side*rtbin coherence 1vs0 to split significantly"""
     _index = [0, 1]  # side
     _columns = np.arange(rtbins.size - 1)  # rtbins
     tdf = pd.DataFrame(np.ones((2, _columns.size)) * -1, index=_index, columns=_columns)
@@ -120,6 +122,7 @@ def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False):
 
 
 def splitplot(df, out, ax):
+    """plots trajectory split time (coh1 vs 0) per RT-bin"""
     tdf = whole_splitting(df)
     tdf2 = whole_splitting(out, simul=True)
     colors = ["green", "purple"]
@@ -138,10 +141,12 @@ def splitplot(df, out, ax):
     ax.legend(fancybox=False, frameon=False)
 
 def plot_com_contour(df, out, ax):
+    """contour of CoM peak vs prior"""
     sns.kdeplot(out.loc[out.CoM_sugg,'CoM_peakf'].apply(lambda x: x[0]).values,
             out.loc[out.CoM_sugg,'allpriors'].values, ax=ax)
 
 def plot_median_com_traj(df, out, ax):
+    """median trajectory for CoM, spliting by huge and moderate bias [only right responses]"""
     ax.plot(
         np.nanmedian(
             np.vstack(
@@ -164,6 +169,7 @@ def plot_median_com_traj(df, out, ax):
 
 
 def plot0(df, out, ax):
+    """RT distributions"""
     df.loc[(df.sound_len < 250)].sound_len.hist(
         bins=np.linspace(0, 250, 101),
         ax=ax,
@@ -186,6 +192,7 @@ def plot0(df, out, ax):
 
 
 def pcomRT(df, out, ax):
+    """p(CoM) vs RT"""
     plotting.binned_curve(
         df,
         "CoM_sugg",
@@ -232,6 +239,7 @@ def pcomRT(df, out, ax):
 
 
 def pcomRT_proactive_only(df, out, ax):
+    """deprecated"""
     plotting.binned_curve(
         out.loc[out.reactive == 0],
         "CoM_sugg",
@@ -252,6 +260,7 @@ def pcomRT_proactive_only(df, out, ax):
 
 
 def plot2(df, out, ax):
+    """MT distribution"""
     df.resp_len.hist(
         bins=np.linspace(0, 1, 81),
         ax=ax,
@@ -274,6 +283,7 @@ def plot2(df, out, ax):
 
 
 def plot3(df, out, ax):
+    """U shape MT vs RT"""
     titles = ["data all", "simul all"]
     datacol = ["resp_len", "resp_len"]
     traces_ls = ["-", ":"]
@@ -298,6 +308,7 @@ def plot3(df, out, ax):
 
 
 def plot4(df, out, ax):
+    """proportion of proactive trials"""
     counts_t, xpos = np.histogram(out.sound_len, bins=np.linspace(0, 250, 26))
     counts_p, _ = np.histogram(
         out.loc[out.reactive == 0, "sound_len"], bins=np.linspace(0, 250, 26)
@@ -310,11 +321,13 @@ def plot4(df, out, ax):
 
 
 def plot5(df, out, ax):
+    """incomplete"""
     ax.set_title("stimuli split trajectories")
     ax.annotate("splitting time per rtbin", (0, 0))
 
 
 def plot67(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
+    """deprecated"""
     markers = ["o", "x"]
     rtbins = np.linspace(0, 150, 7)
     priorbins = np.linspace(-2, 2, 6)
@@ -368,6 +381,7 @@ def plot67(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
 
 
 def plot910(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
+    """deprecated"""
     markers = ["o", "x"]
     cmap = cm.get_cmap("viridis_r")
     datres, simulres = pd.DataFrame([]), pd.DataFrame([])
@@ -403,6 +417,27 @@ def plot910(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
 
 
 def plot1112(df, out, ax, ax2):
+    """data and simul CoM Matrix """
+
+    # get max p(com) so colorbars are the same
+    subset = df.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    mat_data, _ = plotting.com_heatmap(
+        subset.allpriors,
+        subset.avtrapz,
+        subset.CoM_sugg,
+        return_mat=True
+    )
+    subset = out.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    mat_simul, _ = plotting.com_heatmap(
+        subset.allpriors,
+        subset.avtrapz,
+        subset.CoM_sugg,
+        return_mat=True
+    )
+    maxval = np.max(np.concatenate([
+        mat_data.flatten(), mat_simul.flatten()
+    ]))
+
     subset = df.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
     plotting.com_heatmap(
         subset.allpriors,
@@ -410,9 +445,10 @@ def plot1112(df, out, ax, ax2):
         subset.CoM_sugg,
         flip=True,
         ax=ax,
-        cmap="viridis",
+        cmap="magma",
         fmt=".0f",
-        vmin=0
+        vmin=0,
+        vmax=maxval
     )
     ax.set_title(f"data p(CoM)")
     subset = out.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
@@ -424,12 +460,14 @@ def plot1112(df, out, ax, ax2):
         ax=ax2,
         cmap="magma",
         fmt=".0f",
-        vmin=0
+        vmin=0,
+        vmax = maxval
     )
     ax2.set_title(f" SIMULATIONS p(CoM)")
 
 
 def _callsimul(args):
+    """unpacks all args so we can use concurrent futures with traj.simul_psiam"""
     return traj.simul_psiam(*args)
 
 
@@ -438,11 +476,10 @@ def safe_threshold(row, threshold):
 
 
 def whole_simul(
-    subject, #'LE44'
-    # grid,
+    subject, 
     savpath=None,
     dfpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/",#dani_clean.pkl",  # parameter grid
-    rtbins=np.linspace(0, 150, 7), # deprecated
+    rtbins=np.linspace(0, 150, 7), # deprecated ~ not yet
     params={
         "t_update": 80, # ms
         "proact_deltaMT": 0.3,
@@ -882,7 +919,8 @@ def whole_simul(
     # out.to_pickle(f'{savpath}.pkl')
 
     # plotting section
-    
+
+    # get data (a) and simul (b) sets to plot. Check each plot function to dig further
     if silent_trials:
         pref_title = "silent_"
         a, b = df.loc[(df.special_trial == 2) & (df.subjid == subject)], out
@@ -899,7 +937,7 @@ def whole_simul(
         ax[1,1].set_ylim(-0.05, 0.305)
     # pcomRT_proactive_only(a, b, ax[1, 2])
 
-    
+    # p rev matrix
     b['rev'] = 0
     b.loc[(b.prechoice!=b.R_response)&(b.reactive==0), 'rev'] = 1
     subset = b.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
@@ -915,6 +953,7 @@ def whole_simul(
     )
     ax[1,2].set_title('p(rev)')
     
+    # from proactive reversals, which are detected as CoM?
     subset = b.loc[(b.rev==1)&(b.reactive==0)].dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
     plotting.com_heatmap(
         subset.allpriors,
@@ -928,8 +967,7 @@ def whole_simul(
     )
     ax[1,3].set_title('p(com) in proactive reversals')
     plot3(a, b, ax[0, 1])  # ushape
-    plot4(a, b, ax[2, 0])
-    # plot5(a,b,ax[2,1])
+    plot4(a, b, ax[2, 0]) # fraction of proactive responses?
     try:
         splitplot(a,b,ax[3,0])
     except Exception as e:
@@ -947,8 +985,7 @@ def whole_simul(
     plotting.tachometric(b, ax=ax[0,3], rtbins=np.arange(0,151,5))
     ax[0,3].set_title('tachometric simul')
     ax[0,2].sharey(ax[0,3])
-    # plot67(a,b,ax[0,2], ax[1,2])
-    # plot910(a,b,ax[0,3], ax[1,3])
+
     plot1112(a, b, ax[2, 2], ax[2, 3])
     for dset, label, col in [[a, 'data', 'tab:blue'], [b, 'simul', 'tab:orange']]:
         plotting.binned_curve(
