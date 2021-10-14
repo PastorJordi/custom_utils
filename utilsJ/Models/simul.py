@@ -695,7 +695,7 @@ def whole_simul(
             executor.submit(
                 _callsimul,
                 [
-                    df.loc[df.subjid == subject],
+                    df, #df.loc[df.subjid == subject],
                     psiam_params,
                     1.3,
                     0.3,
