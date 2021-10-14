@@ -153,8 +153,8 @@ def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None):
 
 def splitplot(df, out, ax, ax1, ax2):
     """plots trajectory split time (coh1 vs 0) per RT-bin"""
-    tdf = whole_splitting(df, ax=ax1)
-    tdf2 = whole_splitting(out, simul=True, ax=ax2)
+    tdf = whole_splitting(df, rtbins=np.arange(0, 151, 10), ax=ax1)
+    tdf2 = whole_splitting(out,rtbins=np.arange(0, 151, 10), simul=True, ax=ax2)
     colors = ["green", "purple"]
     for i, (dat, name, marker) in enumerate([[tdf, "data", "o"], [tdf2, "simul", "x"]]):
         for j, side in enumerate(["L", "R"]):
@@ -186,7 +186,7 @@ def plot_median_com_traj(df, out, ax):
     ax.plot(
         np.nanmedian(
             np.vstack(
-            out.loc[(out.prechoice==0)&(out.R_response==1) & (out.allpriors<-1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
+            out.loc[(out.CoM_sugg) & (out.allpriors<-1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
             axis=0
         ),
         label = 'huge bias'
@@ -194,11 +194,12 @@ def plot_median_com_traj(df, out, ax):
     ax.plot(
         np.nanmedian(
             np.vstack(
-        out.loc[(out.prechoice==0) &(out.R_response==1)& (out.allpriors.abs()<1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
+        out.loc[(out.CoM_sugg) & (out.allpriors.abs()<1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
         axis=0),
         label = 'moderate to 0 bias'
     )
     ax.set_xlim([0,300])
+    ax.set_ylim([-30,80])
     ax.set_xlabel('ms from movement onset')
     ax.set_ylabel('distance in px')
     ax.legend()
@@ -587,7 +588,9 @@ def whole_simul(
             'fixed bias usage is not implemented because it might require to fit expectedMT again'
             )
     # append subject to data path
-    if not dfpath.endswith('.pkl'): # use default naming
+    if subject=='all':
+        dfpath = "/home/jordi/DATA/Documents/changes_of_mind/data/paper/dani_clean.pkl"
+    elif not dfpath.endswith('.pkl'): # use default naming
         dfpath = f"{dfpath}{subject}_clean.pkl"
 
     # if savpath is None:
@@ -596,7 +599,8 @@ def whole_simul(
     # load real data
     df = pd.read_pickle(dfpath)
     # ensure we just have a single subject
-    df = df.loc[df.subjid == subject]
+    if subject!='all':
+        df = df.loc[df.subjid == subject]
     df["sstr"] = df.coh2.abs() # stimulus str column
     df["priorZt"] = np.nansum(
         df[["dW_lat", "dW_trans"]].values, axis=1
@@ -629,26 +633,42 @@ def whole_simul(
     df["choice_x_allpriors"] = (df.R_response * 2 - 1) * df.allpriors
 
     # load and unpack psiam parameters
-    psiam_params = loadmat(
-        f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
-    )["freepar_hat"][0]
-    (
-        c,
-        v_u,
-        a_u,
-        t_0_u,
-        *v,
-        a_e,
-        z_e,
-        t_0_e,
-        t_0_e_silent,
-        v_trial,
-        b,
-        d,
-        _,
-        _,
-        _,
-    ) = psiam_params
+    if subject=='all':
+        (
+            c,
+            v_u,
+            a_u,
+            t_0_u,
+            *v,
+            a_e,
+            z_e,
+            t_0_e,
+            t_0_e_silent,
+            v_trial,
+            b,
+            d
+        ) = pd.read_pickle('/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/all.pkl').mean(axis=1).tolist()
+    else:
+        psiam_params = loadmat(
+            f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
+        )["freepar_hat"][0]
+        (
+            c,
+            v_u,
+            a_u,
+            t_0_u,
+            *v,
+            a_e,
+            z_e,
+            t_0_e,
+            t_0_e_silent,
+            v_trial,
+            b,
+            d,
+            _,
+            _,
+            _,
+        ) = psiam_params
     assert extra_t_0_e<1, f't_0_e is in seconds, it should not be greater than 1 and it is {extra_t_0_e}'
     if extra_t_0_e:
         t_0_e += extra_t_0_e
@@ -1014,7 +1034,10 @@ def whole_simul(
     ax[3,1].set_title('CoM peak moment')
     ax[3,1].set_xlabel('time from movement onset (ms)')
     ax[3,1].set_ylabel('absolute prior')
-    plot_median_com_traj(a, b, ax[3,2])
+    try:
+        plot_median_com_traj(a, b, ax[3,2])
+    except:
+        print('no CoMs found')
 
     plotting.tachometric(a, ax=ax[0,2], rtbins=np.arange(0,151,5))
     ax[0,2].set_title('tachometric data')

@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 requirements = [
     'numpy', 'pandas', 'sklearn', 'slackclient', 'statsmodels', 
     'matplotlib', 'seaborn', 'plotly', 'swifter', 
-    'python-opencv' # this one does not contain some codecs,
+    'opencv-python' # this one does not contain some codecs,
     # if you care about it, uninstall it and try with conda-forge opencv (blas)
 ]
 
