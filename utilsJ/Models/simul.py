@@ -634,6 +634,7 @@ def whole_simul(
 
     # load and unpack psiam parameters
     if subject=='all':
+        psiam_path = '/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/all.pkl'
         (
             c,
             v_u,
@@ -647,10 +648,11 @@ def whole_simul(
             v_trial,
             b,
             d
-        ) = pd.read_pickle('/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/all.pkl').mean(axis=1).tolist()
+        ) = pd.read_pickle(psiam_path).mean(axis=1).tolist()
     else:
+        psiam_path = f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
         psiam_params = loadmat(
-            f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
+            psiam_path
         )["freepar_hat"][0]
         (
             c,
@@ -683,13 +685,18 @@ def whole_simul(
     # psiam simulations
     print("psiam_simul began")
     # this runs 7 times so we expect to have n_simul_trials = 7 * nbatches * batch_size
+    # pack psiam parameters again to pass them as arg
+    psiam_params = [
+        c,v_u, a_u, t_0_u, v[0], v[1], v[2], v[3], a_e, z_e, t_0_e, t_0_e_silent,
+        v_trial, b, d, 0, 0, 0
+    ]
     with ThreadPoolExecutor(max_workers=7) as executor:
         jobs = [
             executor.submit(
                 _callsimul,
                 [
                     df.loc[df.subjid == subject],
-                    f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat",
+                    psiam_params,
                     1.3,
                     0.3,
                     1e-4,
@@ -746,13 +753,15 @@ def whole_simul(
         if isinstance(mtnoise, bool):
             mtnoise *= 1
         if mtnoise:  # load mserror
-            with open(
-                f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTmse.pkl",
-                "rb",
-            ) as handle:
-                msedict = pickle.load(handle)
-
-            err = mtnoise * msedict[subject] ** 0.5
+            # with open(
+            #     f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTmse.pkl",
+            #     "rb",
+            # ) as handle:
+            #     msedict = pickle.load(handle)
+            # err = mtnoise * msedict[subject] ** 0.5
+            # now it is store in clf object [retrieve it with tr.clf.mse_]
+            err = mtnoise * tr.clf.mse_ ** 0.5
+            
             out.loc[sdf.index, "expectedMT"] += np.random.normal(
                 scale=err, size=out.loc[sdf.index, "expectedMT"].values.size
             ) * 1000 # big bug here, we were using ms already!

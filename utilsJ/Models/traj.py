@@ -34,6 +34,7 @@ class def_traj:
         self.side = side
         self.B = None
         self.factor_mask = None
+        #self.mse_ = None
 
     def selectRT(self, RTbin):
         if self.side is None:
@@ -181,9 +182,9 @@ def simul_psiam(
         rng = np.random.RandomState(seed=seed)
     else:
         rng = np.random
-
-    if isinstance(psiam_params, str):
-        psiam_params = loadmat(psiam_params)["freepar_hat"][0]
+    # forbidden because we might edit t_e
+    # if isinstance(psiam_params, str):
+    #    psiam_params = loadmat(psiam_params)["freepar_hat"][0]
 
     (
         c,
