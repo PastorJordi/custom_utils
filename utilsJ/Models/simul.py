@@ -597,6 +597,7 @@ def whole_simul(
     #     raise ValueError("provide save path")
 
     # load real data
+    # unpickling whole dataframe (6 subjects) takes 4 minutes
     df = pd.read_pickle(dfpath)
     # ensure we just have a single subject
     if subject!='all':
@@ -738,7 +739,10 @@ def whole_simul(
 
     try:  ### PROACTIVE RESPONSES
         sdf = out.loc[out.reactive == 0] # create a sliced dataframe of proactive responses to work with
-        tr.selectRT(0) # loads subject's MT LinearModel
+        if subject!='all':
+            tr.selectRT(0) # loads subject's MT LinearModel
+        else:
+            tr.load_all() # specific method to load average*
         # Generate design matrix to multiply with weights 
         fkmat = sdf[["zidx", "dW_trans_i", "dW_lat_i"]].fillna(0).values
         # (cumbersome we could use ".predict" behind scenes instead of doing this raw)
@@ -988,10 +992,18 @@ def whole_simul(
     # get data (a) and simul (b) sets to plot. Check each plot function to dig further
     if silent_trials:
         pref_title = "silent_"
-        a, b = df.loc[(df.special_trial == 2) & (df.subjid == subject)], out
+        if subject=='all':
+            filter_mask =  (df.special_trial == 2)
+        else:
+            filter_mask = (df.special_trial == 2) & (df.subjid == subject)
+        a, b = df.loc[filter_mask], out
     else:
         pref_title = ""
-        a, b = df.loc[(df.special_trial == 0) & (df.subjid == subject)], out
+        if subject=='all':
+            filter_mask =  (df.special_trial == 0)
+        else:
+            filter_mask = (df.special_trial == 0) & (df.subjid == subject)
+        a, b = df.loc[filter_mask], out
     fig, ax = plt.subplots(ncols=4, nrows=5, figsize=(25, 25))
     plot0(a, b, ax[0, 0])
     # plot1(a,b, ax[1,0])

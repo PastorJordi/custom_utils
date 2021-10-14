@@ -36,7 +36,11 @@ class def_traj:
         self.factor_mask = None
         #self.mse_ = None
 
-    def selectRT(self, RTbin):
+    def load_all(self, path="/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_allinone.pkl"):
+      # do stuff
+        self.clf = loadclf(path=path)
+        
+    def selectRT(self, RTbin): # called
         if self.side is None:
             abobject = ab.ab(
                 loadpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_full2.pkl"
