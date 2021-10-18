@@ -188,14 +188,14 @@ def plot_median_com_traj(df, out, ax):
             np.vstack(
             out.loc[(out.CoM_sugg) & (out.allpriors<-1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
             axis=0
-        ),
+        ), color='navy',
         label = 'huge bias'
     )
     ax.plot(
         np.nanmedian(
             np.vstack(
         out.loc[(out.CoM_sugg) & (out.allpriors.abs()<1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
-        axis=0),
+        axis=0), color='tab:blue',
         label = 'moderate to 0 bias'
     )
     ax.set_xlim([0,300])
