@@ -1775,6 +1775,7 @@ def tachometric(
     evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]), # beware those with coh .2 and .4
     rt='sound_len', # column
     rtbins=np.arange(0,151,3),
+    fill_error=False, # if true it uses fill between instead of errorbars
     error_kws={}, 
     cmap='inferno',
     subplots_kws={},  # ignored if ax is provided,
@@ -1805,16 +1806,30 @@ def tachometric(
             clabel = f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}'
         else:
             clabel= labels[i]
-        ax.errorbar(
-            tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-            tmp['mean'].values,
-            yerr=[
-                tmp.groupby_binom_ci.apply(lambda x: x[0]),
-                tmp.groupby_binom_ci.apply(lambda x: x[1])
-            ],
-            label= clabel,
-            c = cmap(i/(evidence_bins.size-1)), **error_kws_
-        )
+        if fill_error:
+            ax.plot(
+                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                tmp['mean'].values, label=clabel, c=cmap(i/(evidence_bins.size-1)),
+                marker=error_kws.get('marker', 'o')
+            )
+            ax.fill_between(
+                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                tmp['mean'].values + tmp.groupby_binom_ci.apply(lambda x: x[1]),
+                y2=tmp['mean'].values - tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                color=cmap(i/(evidence_bins.size-1)),
+                alpha=error_kws.get('alpha', 0.3)
+            )
+        else:
+            ax.errorbar(
+                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                tmp['mean'].values,
+                yerr=[
+                    tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                    tmp.groupby_binom_ci.apply(lambda x: x[1])
+                ],
+                label= clabel,
+                c = cmap(i/(evidence_bins.size-1)), **error_kws_
+            )
 
 
 def com_heatmap_paper_marginal_pcom_side(

@@ -168,7 +168,7 @@ def splitplot(df, out, ax, ax1, ax2):
 
     ax.set_xlabel("rtbin")
     ax.set_ylabel("time to diverge")
-    ax.legend(fancybox=False, frameon=False)
+    # ax.legend(fancybox=False, frameon=False) # call it later
     ax1.set_xlim(-20, 400)
     ax1.legend(fancybox=False, frameon=False)
     ax1.set_title('split traj data')
@@ -551,6 +551,7 @@ def whole_simul(
     subject: 'LEXX' subject to simulate, since several params (psiam and silentMT are loaded from fits)
     savpath: where to save resulting multi-pannel figure
     dfpath: path where the data is stored. If it doe snot end with .pkl attempts appending {subject}_clean.pkl
+        *new*: if a df is passed it skips loading + some preprocessing
     rtbins: reaction time bins, semi deprecated
     params: parameters to simulate
         t_update: time it takes from bound hit to exert effect in movement
@@ -587,10 +588,15 @@ def whole_simul(
         raise NotImplementedError(
             'fixed bias usage is not implemented because it might require to fit expectedMT again'
             )
-    # append subject to data path
-    if subject=='all':
+    
+    df = pd.DataFrame([])
+    preprocessed_flag = False
+    if isinstance(dfpath, pd.DataFrame):
+        df = dfpath
+        preprocessed_flag=True
+    elif subject=='all':
         dfpath = "/home/jordi/DATA/Documents/changes_of_mind/data/paper/dani_clean.pkl"
-    elif not dfpath.endswith('.pkl'): # use default naming
+    elif not dfpath.endswith('.pkl'): # use default naming # append subject to data path
         dfpath = f"{dfpath}{subject}_clean.pkl"
 
     # if savpath is None:
@@ -598,40 +604,42 @@ def whole_simul(
 
     # load real data
     # unpickling whole dataframe (6 subjects) takes 4 minutes
-    df = pd.read_pickle(dfpath)
+    if not len(df): # df is empty
+        df = pd.read_pickle(dfpath)
     # ensure we just have a single subject
     if subject!='all':
         df = df.loc[df.subjid == subject]
-    df["sstr"] = df.coh2.abs() # stimulus str column
-    df["priorZt"] = np.nansum(
-        df[["dW_lat", "dW_trans"]].values, axis=1
-    )  # 'dW_fixedbias' not considered in the evidence offset/pre-planned choice anymore*
-    df["prechoice"] = np.ceil(df.priorZt.values / 1000) # pre-planned choice
-    df["prechoice"] = df.prechoice.astype(int)
-    df["time_to_thr"] = np.nan # initialize variable: time to reach arbitrary threshold in px
-    # df.swifter.apply(lambda x: np.argmax(np.abs(plotting.interpolapply(x)[700:])>30), axis=1)
-    # split lft and right now!
-    df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
-        df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10)]
-        .dropna(subset=["sound_len"])
-        .apply(
-            lambda x: np.argmax(plotting.interpolapply(x)[700:] > 30), axis=1 # from 700 because they are aligned
-            # to movement onset at 700 position (extreme case [fixation]+[stim]=700)
-        )
-    )  # axis arg not req. in series
-    df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
-        df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10)]
-        .dropna(subset=["sound_len"])
-        .apply(
-            lambda x: np.argmax(plotting.interpolapply(x)[700:] < -30), axis=1
-        )
-    )  # axis arg not req. in series
-    df["rtbin"] = pd.cut(df.sound_len, rtbins, labels=False, include_lowest=True)
-    df["choice_x_coh"] = (df.R_response * 2 - 1) * df.coh2
-    df["allpriors"] = np.nansum(
-        df[["dW_trans", "dW_lat"]].values, axis=1
-    )  # , 'dW_fixedbias'
-    df["choice_x_allpriors"] = (df.R_response * 2 - 1) * df.allpriors
+    if not preprocessed_flag:
+        df["sstr"] = df.coh2.abs() # stimulus str column
+        df["priorZt"] = np.nansum(
+            df[["dW_lat", "dW_trans"]].values, axis=1
+        )  # 'dW_fixedbias' not considered in the evidence offset/pre-planned choice anymore*
+        df["prechoice"] = np.ceil(df.priorZt.values / 1000) # pre-planned choice
+        df["prechoice"] = df.prechoice.astype(int)
+        df["time_to_thr"] = np.nan # initialize variable: time to reach arbitrary threshold in px
+        # df.swifter.apply(lambda x: np.argmax(np.abs(plotting.interpolapply(x)[700:])>30), axis=1)
+        # split lft and right now!
+        df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
+            df.loc[(df.R_response == 1) & (df.trajectory_y.apply(len) > 10)]
+            .dropna(subset=["sound_len"])
+            .apply(
+                lambda x: np.argmax(plotting.interpolapply(x)[700:] > 30), axis=1 # from 700 because they are aligned
+                # to movement onset at 700 position (extreme case [fixation]+[stim]=700)
+            )
+        )  # axis arg not req. in series
+        df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10), "time_to_thr"] = (
+            df.loc[(df.R_response == 0) & (df.trajectory_y.apply(len) > 10)]
+            .dropna(subset=["sound_len"])
+            .apply(
+                lambda x: np.argmax(plotting.interpolapply(x)[700:] < -30), axis=1
+            )
+        )  # axis arg not req. in series
+        df["rtbin"] = pd.cut(df.sound_len, rtbins, labels=False, include_lowest=True)
+        df["choice_x_coh"] = (df.R_response * 2 - 1) * df.coh2
+        df["allpriors"] = np.nansum(
+            df[["dW_trans", "dW_lat"]].values, axis=1
+        )  # , 'dW_fixedbias'
+        df["choice_x_allpriors"] = (df.R_response * 2 - 1) * df.allpriors
 
     # load and unpack psiam parameters
     if subject=='all':
@@ -1008,10 +1016,10 @@ def whole_simul(
     plot0(a, b, ax[0, 0])
     # plot1(a,b, ax[1,0])
     plot2(a, b, ax[1, 0])
-    pcomRT(a, b, ax[1, 1])
-    _, ymax = ax[1,1].get_ylim()
+    pcomRT(a, b, ax[2, 1])
+    _, ymax = ax[2,1].get_ylim()
     if ymax>0.3:
-        ax[1,1].set_ylim(-0.05, 0.305)
+        ax[2,1].set_ylim(-0.05, 0.305)
     # pcomRT_proactive_only(a, b, ax[1, 2])
 
     # p rev matrix
@@ -1043,10 +1051,45 @@ def whole_simul(
         vmin=0
     )
     ax[1,3].set_title('p(com) in proactive reversals')
-    plot3(a, b, ax[0, 1])  # ushape
-    plot4(a, b, ax[2, 0]) # fraction of proactive responses?
+    # pcomRT but with rev and detected com [1,1]
+    plotting.binned_curve(
+        b[b.reactive==0],
+        "rev",
+        "sound_len",
+        bins=np.linspace(0, 250, 26),
+        xpos=10,
+        xoffset=5,
+        ax=ax[1,1],
+        errorbar_kw=dict(label="proactive-reversals", color="tab:olive"),
+        legend=False,
+        traces="sstr",
+        traces_kw=dict(color="grey", alpha=0.3, ls=":"),
+    )
+    plotting.binned_curve(
+        b[b.reactive==0],
+        "CoM_sugg",
+        "sound_len",
+        bins=np.linspace(0, 250, 26),
+        xpos=10,
+        xoffset=5,
+        ax=ax[1,1],
+        errorbar_kw=dict(label="proactive-CoM", color="tab:purple"),
+        legend=False,
+        traces="sstr",
+        traces_kw=dict(color="grey", alpha=0.3, ls="-"),
+    )
+    ax[1,1].legend(frameon=False, fancybox=False)
+    ax[1,1].set_title('reversing proactive vs RT')
+
+    plot3(a, b, ax[2, 0])  # ushape
+    plot4(a, b, ax[0, 1]) # fraction of proactive responses?
     try:
         splitplot(a,b,ax[4,0], ax[4,1], ax[4,2])
+        ax[4,0].axhline(params['jerk_lock_ms'], color='gray', ls=':', label='jerk lock')
+        ax[4,0].axhline(params['t_update'], color='r', ls=':', label='t_update')
+        ax[4,0].axhline((t_0_e-0.3)*1000, color='teal', ls=':', label='t_e')
+        ax[4,0].legend(fancybox=False, frameon=False)
+
     except Exception as e:
         print("splitplot typically crashes with silent trials\nbecause in dani's tasks they all have the same coh")
         print(e)
@@ -1060,9 +1103,14 @@ def whole_simul(
     except:
         print('no CoMs found')
 
-    plotting.tachometric(a, ax=ax[0,2], rtbins=np.arange(0,151,5))
+    tacho_kws = dict(
+        rtbins=np.arange(0,151,5),
+        labels=[f'sstr {x}' for x in [0, .25, .5, 1 ]],
+        fill_error=True
+        )
+    plotting.tachometric(a, ax=ax[0,2], **tacho_kws)
     ax[0,2].set_title('tachometric data')
-    plotting.tachometric(b, ax=ax[0,3], rtbins=np.arange(0,151,5))
+    plotting.tachometric(b, ax=ax[0,3],**tacho_kws)
     ax[0,3].set_title('tachometric simul')
     ax[0,2].sharey(ax[0,3])
 
@@ -1070,11 +1118,11 @@ def whole_simul(
     for dset, label, col in [[a, 'data', 'tab:blue'], [b, 'simul', 'tab:orange']]:
         plotting.binned_curve(
             dset, 'CoM_sugg', 'origidx', np.linspace(0,600,61), xpos=np.arange(5,600,10),
-            ax=ax[2,1], errorbar_kw=dict(color=col,label=label), legend=False
+            ax=ax[3,0], errorbar_kw=dict(color=col,label=label), legend=False
         )
-    ax[2,1].legend()
-    ax[2,1].set_ylabel('p(CoM)')
-    ax[2,1].set_xlabel('trial index')
+    ax[3,0].legend()
+    ax[3,0].set_ylabel('p(CoM)')
+    ax[3,0].set_xlabel('trial index')
     # t update distribution
     sns.histplot(
         data= b.loc[(b.reactive==0)&(b.rtbin<=12)],x='t_update', 
