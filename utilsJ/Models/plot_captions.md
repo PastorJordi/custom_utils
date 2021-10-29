@@ -38,9 +38,10 @@ Some acronyms:
 - [3,0]: p(CoM) vs trial index (Means and C.I.). 10 trial bins. It is expected to decrease, since trial index linearly increase "expected MT" (the time taken to execute the preplanned choice) hence being easier to detect CoMs in early trials (they are farther when they revert).  
 - [3,1]: contour plot of CoM in simulated data (detected CoMs). x-axis: motor time in ms, y-axis: prior.  
 - [3,2]: median trajectories in simulated CoM trials where the bias was "big-to.moderate" or "moderate-to-zero"  
-- [3,3]: cummulative histograms of "effective t_update" in proactive trials per RT bin (10ms each). If only in the last bump  = only trials where EA hits when collapsing. Else some fraction hits at horizontal bounds (after AI sets the RT!).  
+- [3,3]: cummulative histograms of "effective t_update" in proactive trials per RT bin (10ms each). "effective t_update" is the time it takes the trajectory to be updated. It is composed from sensory delay (t_e) and some extra motor delay ("t_update"). However t_e section might vary if EA hits an horizontal bound before collapsing. If only in the last bump  = only trials where EA hits when collapsing. Else some fraction hits at horizontal bounds (after AI sets the RT!).  
 - [4,0]: **Time to diverge, summary**: ms it takes trajectories  to diverge sstr 1 (purple) or -1 (green) from sstr 0. Relative to movement onset. Dots = data, crosses = simulations. Each RT bin (x-axis) is 10ms.  
 - [4,1]: Time to diverge data: it actually shows median trajectories (y coord vs motor time). Bright colors= rt from 100 to 125ms, darker ones RT {0~25}ms   
 - [4,2]: Time to diverge simul: same but synthetic trajectories  
-- [4,3]: empty
+- \[4,3\]: empty.  
+
 

@@ -151,7 +151,8 @@ def simul_psiam(
     confirm_thr=0,
     proportional_confirm=False,
     confirm_ae=False,
-    drift_multiplier=1 
+    drift_multiplier=1,
+    return_matrices=False 
 ):
     """
     rewritting this so it is straightforward
@@ -228,6 +229,7 @@ def simul_psiam(
     # simulate independently per session! # if it works create a worker later to paralelize
     # as it is done in compipe
     outdf = pd.DataFrame([])  # empty
+    e_mat_list, u_mat_list = [], []
     for i in range(batches):
         if not sample_silent_only:
             dat = df.loc[(df.special_trial == 0) & (df.origidx != 1)].sample(
@@ -384,8 +386,14 @@ def simul_psiam(
         )
 
         outdf = pd.concat([outdf, newdf], ignore_index=True)
+        if return_matrices:
+            e_mat_list += [e_mat[non_fb]]
+            u_mat_list += [u_mat[non_fb]]
 
-    return outdf
+    if not return_matrices:
+        return outdf
+    else:
+        return outdf, np.vstack(e_mat_list), np.vstack(u_mat_list) # so we can alight with outdf
 
 
 # def simul_traj(row): # whats the difference with function below?

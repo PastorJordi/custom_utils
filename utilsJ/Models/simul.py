@@ -33,8 +33,12 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     return np.nan  # , -1
 
 
-def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfrom=700,  ax=None, plot_kwargs={}):
+def when_did_split_dat(
+    df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), 
+    startfrom=700,  ax=None, plot_kwargs={}, align='movement'
+    ):
     """gets when they are statistically different by t_test"""
+    # TODO: addapt to align= sound
     # get matrices
     if side == 0:
         coh1 = -1
@@ -45,14 +49,18 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
         & (df.sound_len >= rtbins[rtbin])
        # & (df.resp_len)
     ]  # &(df.R_response==side)
+    if align=='movement':
+        kw={'align':'action'}
+    elif align=='sound':
+        kw={'align':'sound'}
     mata = np.vstack(
         dat.loc[dat.coh2 == coh1]
-        .apply(lambda x: plotting.interpolapply(x), axis=1) # removed swifter
+        .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
         .values.tolist()
     )
     matb = np.vstack(
         dat.loc[(dat.coh2 == 0) & (dat.rewside == side)]
-        .apply(lambda x: plotting.interpolapply(x), axis=1) # removed swifter
+        .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
         .values.tolist()
     )
     for a in [mata, matb]:  # discard all nan rows
@@ -63,18 +71,31 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), startfr
     if ax is not None:
         ax.plot(np.arange(mata.shape[1]) - startfrom ,np.nanmedian(mata, axis=0), **plot_kwargs)
         ax.plot(np.arange(matb.shape[1]) - startfrom ,np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
-        ax.scatter(ind,np.nanmedian(mata[:,startfrom+ind]), marker='x',color=plot_kwargs['color'],
+        ax.scatter(ind,np.nanmedian(mata[:,startfrom+ind]), marker='x',color=plot_kwargs.get('color'),
         s=50, zorder=3)
     return ind  # mata, matb,
 
 
-def shortpad(traj, upto=1000):
+def shortpad(traj, upto=1000, pad_value=np.nan):
     """pads nans to trajectories so it can be stacked in a matrix"""
     missing = upto - traj.size
-    return np.pad(traj, ((0, missing)), "constant", constant_values=np.nan)
+    return np.pad(traj, ((0, missing)), "constant", constant_values=pad_value)
 
+def shortpad2(row, upto=1000, align='movement', pad_value=np.nan, pad_pre=0):
+    """pads nans to trajectories so it can be stacked in a matrix
+    align can be either 'movement' (0 is movement onset), or 'sound'
+    """
+    if align=='movement':
+        missing = upto - row.traj.size
+        return np.pad(traj, ((0, missing)), "constant", constant_values=pad_value)
+    elif align=='sound': # 
+        missing_pre = int(row.sound_len)
+        missing_after = upto - missing_pre - row.traj.size
+        return np.pad(traj, ((missing_pre, missing_after)), "constant", constant_values=(pad_pre, pad_value))
 
-def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), ax=None, plot_kwargs={}, 
+def when_did_split_simul(
+    df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), 
+    ax=None, plot_kwargs={}, align='movement',
     return_mats=False # debugging purposes
 ):
     """gets when they are statistically different by t_test
@@ -84,21 +105,24 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), ax=No
         coh1 = -1
     else:
         coh1 = 1
+    shortpad_kws = {}
+    if align=='sound':
+        shortpad_kws = dict(upto=1400, align='sound')
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
         # & (df.resp_len) # ?
     ]  # &(df.R_response==side) this goes out
     mata = np.vstack(
-        dat.loc[(dat.traj.apply(len) > 0) & (dat.coh2 == coh1), "traj"]
-        .apply(shortpad)
+        dat.loc[(dat.traj.apply(len) > 0) & (dat.coh2 == coh1)]
+        .apply(lambda row: shortpad2(row, **shortpad_kws))
         .values.tolist()
     )
     matb = np.vstack(
         dat.loc[
-            (dat.traj.apply(len) > 0) & (dat.coh2 == 0) & (dat.rewside == side), "traj"
+            (dat.traj.apply(len) > 0) & (dat.coh2 == 0) & (dat.rewside == side)
         ]
-        .apply(shortpad)
+        .apply(lambda row: shortpad2(row, **shortpad_kws))
         .values.tolist()
     )
     matlist = [mata, matb]
@@ -107,8 +131,9 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), ax=No
     mata, matb = matlist
 
     
-
+    
     ind = get_when_t(mata, matb, startfrom=0)
+    
     if return_mats:
         print(ind)
         return mata, matb
@@ -121,8 +146,10 @@ def when_did_split_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), ax=No
     return ind  # mata, matb,
 
 
-def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None):
-    """calculates time it takes for each Side*rtbin coherence 1vs0 to split significantly"""
+def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None, align='movement'):
+    """calculates time it takes for each Side*rtbin 
+    coherence 1vs0 to split significantly
+    """
     _index = [0, 1]  # side
     _columns = np.arange(rtbins.size - 1)  # rtbins
     tdf = pd.DataFrame(np.ones((2, _columns.size)) * -1, index=_index, columns=_columns)
@@ -145,7 +172,10 @@ def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None):
                 plot_kwargs=dict(color=tab+'green', label=f'rtbin={b}')
             else:
                 plot_kwargs=dict(color=tab+'purple', label=f'rtbin={b}')
-            split_time = splitfun(df, s, b, rtbins=rtbins, ax=cax, plot_kwargs=plot_kwargs)
+            split_time = splitfun(
+                df, s, b, rtbins=rtbins, ax=cax, align=align, 
+                plot_kwargs=plot_kwargs
+                )
             tdf.loc[s, b] = split_time
 
     return tdf
@@ -166,16 +196,23 @@ def splitplot(df, out, ax, ax1, ax2):
                 label=f"{name} {side}",
             )
 
-    ax.set_xlabel("rtbin")
-    ax.set_ylabel("time to diverge")
+    ax.set_xlabel("RT (ms)",fontsize=14)
+    ax.set_ylabel("time to diverge",fontsize=14)
+    xarr = np.array([0,2,4,6,8,10,12,14])
+    ax.set_xticks(xarr)
+    ax.set_xticklabels(xarr*10+5)
     # ax.legend(fancybox=False, frameon=False) # call it later
     ax1.set_xlim(-20, 400)
     ax1.legend(fancybox=False, frameon=False)
-    ax1.set_title('split traj data')
-    ax2.set_title('split traj simul')
+    ax1.set_title(' trajectory divergence in rat data')
+    
+    ax2.set_title('trajectory divergence in model')
     ax2.set_xlim(-20, 400)
     ax2.legend(fancybox=False, frameon=False)
-
+    al = [ax1,ax2]
+    for i in [0,1]:
+        al[i].set_xlabel('MT (ms)',fontsize=14)
+        al[i].set_ylabel('y coordinate',fontsize=14)
 def plot_com_contour(df, out, ax):
     """contour of CoM peak vs prior"""
     sns.kdeplot(out.loc[out.CoM_sugg,'CoM_peakf'].apply(lambda x: x[0]).values,
@@ -189,20 +226,20 @@ def plot_median_com_traj(df, out, ax):
             out.loc[(out.CoM_sugg) & (out.allpriors<-1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
             axis=0
         ), color='navy',
-        label = 'huge bias'
+        label = 'huge prior'
     )
     ax.plot(
         np.nanmedian(
             np.vstack(
         out.loc[(out.CoM_sugg) & (out.allpriors.abs()<1.25), 'traj'].dropna().apply(lambda x: shortpad(x, upto=700)).values),
         axis=0), color='tab:blue',
-        label = 'moderate to 0 bias'
+        label = 'moderate to 0 prior'
     )
     ax.set_xlim([0,300])
     ax.set_ylim([-30,80])
-    ax.set_xlabel('ms from movement onset')
-    ax.set_ylabel('distance in px')
-    ax.legend()
+    ax.set_xlabel('ms from movement onset',fontsize=14)
+    ax.set_ylabel('distance in px',fontsize=14)
+    ax.legend(fancybox=False, frameon=False)
 
 
 def plot0(df, out, ax):
@@ -210,7 +247,7 @@ def plot0(df, out, ax):
     df.loc[(df.sound_len < 250)].sound_len.hist(
         bins=np.linspace(0, 250, 101),
         ax=ax,
-        label="data",
+        label="Rat data",
         density=True,
         alpha=0.5,
         grid=False,
@@ -218,13 +255,14 @@ def plot0(df, out, ax):
     out.sound_len.hist(
         bins=np.linspace(0, 250, 101),
         ax=ax,
-        label="simul all",
+        label="Model",
         density=True,
         alpha=0.5,
         grid=False,
     )
-    ax.set_xlabel("RT (ms)")
-    ax.set_title("RT distr")
+    ax.set_xlabel("RT (ms)",fontsize=14)
+    ax.set_ylabel('density',fontsize=14)
+    #ax.set_title("RT distr")
     ax.legend(frameon=False, fancybox=False)
 
 
@@ -238,7 +276,7 @@ def pcomRT(df, out, ax):
         xpos=10,
         xoffset=5,
         ax=ax,
-        errorbar_kw=dict(label="data", color="tab:blue"),
+        errorbar_kw=dict(label="Rat data", color="tab:blue"),
         legend=False,
         traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls="-"),
@@ -251,7 +289,7 @@ def pcomRT(df, out, ax):
         xpos=10,
         xoffset=5,
         ax=ax,
-        errorbar_kw=dict(label="simul", color="tab:orange"),
+        errorbar_kw=dict(label="Model", color="tab:orange"),
         legend=False,
         traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls=":"),
@@ -264,14 +302,14 @@ def pcomRT(df, out, ax):
         xpos=10,
         xoffset=5,
         ax=ax,
-        errorbar_kw=dict(label="simul proactive", color="tab:purple"),
+        errorbar_kw=dict(label="Model (proactive trials)", color="tab:purple"),
         legend=False,
         #traces="sstr",
         #traces_kw=dict(color="grey", alpha=0.3, ls=":"),
     )
-    ax.set_ylabel("p(CoM)")
-    ax.set_xlabel("RT(ms)")
-    ax.set_title("pcom vs rt")
+    ax.set_ylabel("p(detected-CoM)",fontsize=14)
+    ax.set_xlabel("RT(ms)",fontsize=14)
+    #ax.set_title("pcom vs rt")
     ax.legend(frameon=False, fancybox=False)
 
 
@@ -290,9 +328,9 @@ def pcomRT_proactive_only(df, out, ax):
         #traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls=":"),
     )
-    ax.set_ylabel("p(CoM)")
-    ax.set_xlabel("RT(ms)")
-    ax.set_title("pcom in proactive")
+    ax.set_ylabel("p(CoM)",fontsize=14)
+    ax.set_xlabel("RT(ms)",fontsize=14)
+    #ax.set_title("pcom in proactive")
     ax.legend(frameon=False, fancybox=False)
 
 
@@ -301,7 +339,7 @@ def plot2(df, out, ax):
     df.resp_len.hist(
         bins=np.linspace(0, 1, 81),
         ax=ax,
-        label="data",
+        label="Rat data",
         density=True,
         alpha=0.5,
         grid=False,
@@ -309,19 +347,20 @@ def plot2(df, out, ax):
     out.resp_len.hist(
         bins=np.linspace(0, 1, 81),
         ax=ax,
-        label="simul all",
+        label="Model",
         density=True,
         alpha=0.5,
         grid=False,
     )
-    ax.set_xlabel("MT (secs)")
-    ax.set_title("MT distr")
+    ax.set_xlabel("MT (secs)",fontsize=14)
+    ax.set_ylabel('density',fontsize=14)
+    #ax.set_title("MT distr")
     ax.legend(frameon=False, fancybox=False)
 
 
 def plot3(df, out, ax):
     """U shape MT vs RT"""
-    titles = ["data all", "simul all"]
+    titles = ["Rat data", "Model"]
     datacol = ["resp_len", "resp_len"]
     traces_ls = ["-", ":"]
     for i, dfobj in enumerate([df, out]):  # .loc[out.reactive==0]
@@ -336,11 +375,11 @@ def plot3(df, out, ax):
             traces="sstr",
             traces_kw=dict(color="grey", alpha=0.3, ls=traces_ls[i]),
             xoffset=5,
-            errorbar_kw={"ls": "none", "marker": "o", "label": titles[i]},
+            errorbar_kw={"marker": "o", "label": titles[i]},
         )
-        ax.set_xlabel("RT (ms)")
-        ax.set_ylabel("MT (s)")
-        ax.set_title("MT vs RT")
+        ax.set_xlabel("RT (ms)",fontsize=14)
+        ax.set_ylabel("MT (s)",fontsize=14)
+        ax.set_title("MT vs RT",fontsize=14)
         ax.legend(frameon=False, fancybox=False)
 
 
@@ -352,8 +391,8 @@ def plot4(df, out, ax):
     )
     prop_pro = counts_p / counts_t
     ax.plot(xpos[:-1] + 5, prop_pro, marker="o")
-    ax.set_ylabel("proportion proactive")
-    ax.set_xlabel("RT")
+    ax.set_ylabel("proportion proactive",fontsize=14)
+    ax.set_xlabel("RT (ms)", fontsize=14)
     ax.set_ylim([-0.05, 1.05])
 
 
@@ -399,13 +438,13 @@ def plot67(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
                     }
                 ax.errorbar(tmp.index, tmp["m"], yerr=tmp["e"], **kws)
     ax.legend().remove()
-    ax.set_ylabel("ms to threshold (30px)")
-    ax.set_xlabel("congruence (choice * prior)")
+    ax.set_ylabel("ms to threshold (30px)",fontsize=14)
+    ax.set_xlabel("congruence (choice * prior)",fontsize=14)
     ax.set_title("prior congruence on MT (o=data, x=simul)")
     diffdf = datres - simulres
     ax2.axhline(0, c="gray", ls=":")
-    ax2.set_xlabel("congruence (choice * prior)")
-    ax2.set_ylabel("data - simul")
+    ax2.set_xlabel("congruence (choice * prior)",fontsize=14)
+    ax2.set_ylabel("data - simul",fontsize=14)
     for i in range(rtbins.size - 1):
         ax2.scatter(
             [-2, -1, 0, 1, 2],
@@ -434,13 +473,13 @@ def plot910(df, out, ax, ax2, rtbins=np.linspace(0, 150, 7)):
             if j % 2 == 0:
                 c = cmap(j / (rtbins.size - 1))
                 ax.errorbar(tmp.index, tmp["m"], yerr=tmp["e"], **kwargs, c=c)
-    ax.set_xlabel("coh * choice")
-    ax.set_ylabel("ms to threshold (30px)")
+    ax.set_xlabel("coh * choice",fontsize=14)
+    ax.set_ylabel("ms to threshold (30px)",fontsize=14)
     ax.set_title("coherence congruence on MT (o=data, x=simul)")
     diffdf = datres - simulres
     ax2.axhline(0, c="gray", ls=":")
-    ax2.set_xlabel("coh * choice")
-    ax2.set_ylabel("data - simul")
+    ax2.set_xlabel("coh * choice",fontsize=14)
+    ax2.set_ylabel("data - simul",fontsize=14)
     ax2.set_title("coherence congruence on MT (data - simul)")
     for i in range(rtbins.size - 1):
         ax2.scatter(
@@ -544,7 +583,8 @@ def whole_simul(
     com_height=5,
     drift_multiplier=1,
     extra_t_0_e = 0, # secs
-    use_fixed_bias = False
+    use_fixed_bias = False,
+    return_matrices=False
 
 ):  
     """
@@ -582,6 +622,8 @@ def whole_simul(
     com_height: com detection threshold in pxfor simulated data. Real data is already thresholded/detected at 5px
     drift_multiplier: multiplies fited values of drift. It can be an array of shape (4,)
     extra_t_0_e: extends t_0_e for this amound of SECONDS
+    use_fixed_bias: not implemented
+    return_matrices: psiam returns outdf, and evidence_matrix, and urgency_matrix # beware this can take a lot of memory
     """
     # dev note
     if use_fixed_bias:
@@ -685,6 +727,9 @@ def whole_simul(
         t_0_e += extra_t_0_e
     
     out = pd.DataFrame([]) # init out dataframe
+    if return_matrices:
+        u_mat_list = []
+        e_mat_list = []
     
     if sample_silent_only:
         df = df[df.special_trial == 2]
@@ -719,13 +764,21 @@ def whole_simul(
                     params["confirm_thr"],
                     params["proportional_confirm"],
                     params["confirm_ae"],
-                    drift_multiplier
+                    drift_multiplier,
+                    return_matrices
                 ],
             )
             for x in np.arange(7) * 50  # x is the seed so we do not simulate the same over and over
         ]
-        for job in tqdm.tqdm_notebook(as_completed(jobs), total=7):
-            out = out.append(job.result(), ignore_index=True)
+        if not return_matrices:
+            for job in tqdm.tqdm_notebook(as_completed(jobs), total=7):
+                out = out.append(job.result(), ignore_index=True)
+        else:
+            for job in tqdm.tqdm_notebook(as_completed(jobs), total=7):
+                res1, res2, res3 = job.result()
+                out = out.append(res1, ignore_index=True)
+                e_mat_list += [res2]
+                u_mat_list += [res3]
     # so psiam simulations are already in "out" dataframe
 
     # initializes a class that will retrieve expected MT
@@ -1060,7 +1113,7 @@ def whole_simul(
         xpos=10,
         xoffset=5,
         ax=ax[1,1],
-        errorbar_kw=dict(label="proactive-reversals", color="tab:olive"),
+        errorbar_kw=dict(label="CoM", color="tab:olive"),
         legend=False,
         traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls=":"),
@@ -1073,7 +1126,7 @@ def whole_simul(
         xpos=10,
         xoffset=5,
         ax=ax[1,1],
-        errorbar_kw=dict(label="proactive-CoM", color="tab:purple"),
+        errorbar_kw=dict(label="detected-CoM", color="tab:purple"),
         legend=False,
         traces="sstr",
         traces_kw=dict(color="grey", alpha=0.3, ls="-"),
@@ -1096,8 +1149,8 @@ def whole_simul(
     
     plot_com_contour(a, b, ax[3,1])
     ax[3,1].set_title('CoM peak moment')
-    ax[3,1].set_xlabel('time from movement onset (ms)')
-    ax[3,1].set_ylabel('absolute prior')
+    ax[3,1].set_xlabel('MT (ms)', fontsize=14)
+    ax[3,1].set_ylabel('prior',fontsize=14)
     try:
         plot_median_com_traj(a, b, ax[3,2])
     except:
@@ -1109,10 +1162,17 @@ def whole_simul(
         fill_error=True
         )
     plotting.tachometric(a, ax=ax[0,2], **tacho_kws)
-    ax[0,2].set_title('tachometric data')
+    ax[0,2].set_title('Rats')
+    
+    ax[0,2].set_ylabel('accuracy',fontsize=14)
+    ax[0,3].set_ylabel('accuracy',fontsize=14)
     plotting.tachometric(b, ax=ax[0,3],**tacho_kws)
-    ax[0,3].set_title('tachometric simul')
+    ax[0,3].set_title('Model simul')
     ax[0,2].sharey(ax[0,3])
+    for i in [2,3]:
+        ax[0,i].set_xlabel('RT (ms)',fontsize=14)
+        ax[0,i].legend(frameon=False, fancybox=False)
+    
 
     plot1112(a, b, ax[2, 2], ax[2, 3])
     for dset, label, col in [[a, 'data', 'tab:blue'], [b, 'simul', 'tab:orange']]:
@@ -1120,17 +1180,18 @@ def whole_simul(
             dset, 'CoM_sugg', 'origidx', np.linspace(0,600,61), xpos=np.arange(5,600,10),
             ax=ax[3,0], errorbar_kw=dict(color=col,label=label), legend=False
         )
-    ax[3,0].legend()
-    ax[3,0].set_ylabel('p(CoM)')
-    ax[3,0].set_xlabel('trial index')
+    ax[3,0].legend(frameon=False, fancybox=False)
+    ax[3,0].set_ylabel('p(detected-CoM)',fontsize=14)
+    ax[3,0].set_xlabel('trial index',fontsize=14)
     # t update distribution
     sns.histplot(
         data= b.loc[(b.reactive==0)&(b.rtbin<=12)],x='t_update', 
         hue='rtbin', cumulative=True, element='step', fill=False,
         stat="density", common_norm=False, common_bins=True,
-        ax=ax[3,3]
+        ax=ax[3,3], legend=False
     )
     ax[3,3].set_title('effective t_update since movement onset')
+    ax[3,3].legend(frameon=False, fancybox=False)
     #sns.histplot(
     #    data=b[b.reactive==0], x='origidx', y='expectedMT', ax=ax[2,1]
     #)
@@ -1141,13 +1202,14 @@ def whole_simul(
     for k, i in params.items():
         fname += f"{k}-{i}-"
     fname = fname[:-1] + ".png"
-    if not return_data:
+    if not return_matrices:
         fig.savefig(f"{savpath}{fname}")
         plt.show()
         return df, out
     else:
-        warnings.warn('return data is not implemented so we just return df, and out')
-        return df, out # matrices as well
+        fig.savefig(f"{savpath}{fname}")
+        plt.show()
+        return df, out, e_mat_list, u_mat_list # matrices as well
     
 
 

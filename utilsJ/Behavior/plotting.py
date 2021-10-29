@@ -855,7 +855,7 @@ def trajectory_thr(
         if ax_traj is not None:  # original stuff
             if cmap is not None:
                 traj_kws.pop("color", None)
-                traj_kws["color"] = cmap(b / niters)
+                traj_kws["color"] = cmap(b / (niters-1))
             if "label" not in traj_kws.keys():
                 if bintype == "categorical":
                     extra_kw["label"] = f"{bincol}={round(bins[b],2)}"
@@ -899,7 +899,7 @@ def trajectory_thr(
                     y_points[i] + fixation_delay_offset,
                     yerr=y_err[i],
                     **error_kwargs,
-                    color=cmap(i / niters),
+                    color=cmap(i / (niters-1)),
                     **extra_kw,
                 )
         else:
@@ -926,7 +926,7 @@ def trajectory_thr(
                     y_points[i] + fixation_delay_offset,
                     yerr=y_err[i],
                     **error_kwargs,
-                    color=cmap(i / niters),
+                    color=cmap(i / (niters-1)),
                     **extra_kw,
                 )
         else:
@@ -1839,7 +1839,8 @@ def com_heatmap_paper_marginal_pcom_side(
     adjust_marginal_axes=False, # sets same max=y/x value
     nbins=7, # nbins for the square matrix 
     com_heatmap_kws={}, # avoid, binning and return_mat already handled by this function
-    com_col = 'CoM_sugg', priors_col = 'norm_allpriors', stim_col = 'avtrapz'
+    com_col = 'CoM_sugg', priors_col = 'norm_allpriors', stim_col = 'avtrapz',
+    average_across_subjects = False
 ):
     assert side in [0,1], "side value must be either 0 or 1"
     assert df[priors_col].abs().max()<=1, "prior must be normalized between -1 and 1"
@@ -1862,6 +1863,8 @@ def com_heatmap_paper_marginal_pcom_side(
         gridspec_kw={'width_ratios':[8, 3], 'height_ratios': [3, 8]},
         figsize=(7, 5.5), sharex='col', sharey='row'
     )
+
+    # some aestethics
     if fcolorwhite:
         f.patch.set_facecolor('white')
         for i in [0,1]:
@@ -1890,23 +1893,45 @@ def com_heatmap_paper_marginal_pcom_side(
             np.linspace(-1,1,nbins+1),np.linspace(-1,1,nbins+1)
         ]
         })
-    
-    mat, nmat = com_heatmap(
-        tmp.norm_allpriors.values,
-        tmp.avtrapz.values,
-        tmp.tmp_com.values,
-        **com_heatmap_kws
-    )
-    # change data to match vertical axis image standards (0,0) -> in the top left
+    if not average_across_subjects:
+        mat, nmat = com_heatmap(
+            tmp.norm_allpriors.values,
+            tmp.avtrapz.values,
+            tmp.tmp_com.values,
+            **com_heatmap_kws
+        )
+        # fill nans with 0
+        mat[np.isnan(mat)] = 0 
+        nmat[np.isnan(nmat)] = 0 
+        # change data to match vertical axis image standards (0,0) -> in the top left
+    else:
+        com_mat_list, number_mat_list = [],[]
+        for subject in tmp.subjid.unique():
+            cmat, cnmat = com_heatmap(
+            tmp.loc[tmp.subjid==subject, 'norm_allpriors'].values,
+            tmp.loc[tmp.subjid==subject, 'avtrapz'].values,
+            tmp.loc[tmp.subjid==subject,'tmp_com'].values,
+            **com_heatmap_kws
+            )
+            cmat[np.isnan(cmat)] = 0 
+            cnmat[np.isnan(cnmat)] = 0 
+            com_mat_list += [cmat]
+            number_mat_list += [cnmat]
+
+        mat = np.stack(com_mat_list).mean(axis=0)
+        nmat = np.stack(number_mat_list).mean(axis=0)
+
+
     mat= np.flipud(mat)
     nmat = np.flipud(nmat)
-    # fill nans with 0
-    for m in [mat, nmat]:
-        m[np.isnan(m)] = 0 
+        
+        
     
 
     # marginal plots
     if counts_on_matrix:
+        if average_across_subjects:
+            raise NotImplementedError(' across subjects + conunts is not implemented')
         ax[0,0].bar(np.arange(nbins), nmat.sum(axis=0), width=1, edgecolor='k')
         ax[1,1].barh(np.arange(nbins), nmat.sum(axis=1), height=1, edgecolor='k')
         if hide_marginal_axis: # hack to avoid missing edge in last bar
@@ -1917,19 +1942,67 @@ def com_heatmap_paper_marginal_pcom_side(
 
     else:
         xpos=(np.linspace(-0.5,nbins-0.5,n_points_marginal+1)[:-1]+np.linspace(-0.5,nbins-0.5,n_points_marginal+1)[1:])/2
+        if not average_across_subjects:
+            _, means1, yerr1 = binned_curve(
+                tmp, 'tmp_com', 'norm_allpriors', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+                sem_err=False, return_data=True
+            )
+            
 
-        _, means1, yerr1 = binned_curve(
-            tmp, 'tmp_com', 'norm_allpriors', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
-            sem_err=False, return_data=True
-        )
+            _, means2, yerr2 = binned_curve(
+                tmp, 'tmp_com', 'avtrapz', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+                sem_err=False, return_data=True
+            )
+            ax[0,0].errorbar(xpos, means1, yerr=yerr1)
+            ax[1,1].errorbar(means2, xpos[::-1], xerr=yerr2)
+        else:
+            bins=np.linspace(-1,1,n_points_marginal+1)
+            df['tmp_bin'] = pd.cut(
+                df.norm_allpriors,
+                bins,
+                labels=np.arange(bins.size-1), 
+                retbins=False, include_lowest=True, right=True
+                ).astype(float)
+            tmp = (
+                df.groupby(['subject','tmp_bin'])
+                .CoM_sugg.mean()
+                .reset_index()
+                .groupby('tmp_bin').agg(['mean', sem])
+            )
+            ax[0,0].errorbar(xpos, tmp[('CoM_sugg', 'mean')], yerr=tmp[('CoM_sugg', 'sem')])
+
+            bins=np.linspace(-1,1,n_points_marginal+1)
+            df['tmp_bin'] = pd.cut(
+                df.avtrapz,
+                bins,
+                labels=np.arange(bins.size-1), 
+                retbins=False, include_lowest=True, right=True
+                ).astype(float)
+            tmp = (
+                df.groupby(['subject','tmp_bin'])
+                .CoM_sugg.mean()
+                .reset_index()
+                .groupby('tmp_bin').agg(['mean', sem])
+            )
+            ax[1,1].errorbar(tmp[('CoM_sugg', 'mean')], xpos[::-1], xerr=tmp[('CoM_sugg', 'sem')])
+
+            # this was the old strategy, trying a cleaner & more robust
+            #means1_list, means2_list = [],[]
+            #for subject in tmp.subjid.unique():
+            #    _, means1, _ = binned_curve(
+            #        tmp.loc[tmp.subjid==subject], 'tmp_com', 'norm_allpriors', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+            #        sem_err=False, return_data=True
+            #    )
+            #
+            #    _, means2, _ = binned_curve(
+            #        tmp[tmp.subjid==subject], 'tmp_com', 'avtrapz', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+            #        sem_err=False, return_data=True
+            #    )
+            #    means1_list += [means1]
+            #    means2_list += [means2]         
+            # ax[0,0].errorbar(xpos, means1.mean(axis=0), yerr=sem(means1, axis=0, nan_policy='omit'))
+            # ax[1,1].errorbar(means2.mean(axis=0), xpos[::-1], xerr=sem(means2, axis=0, nan_policy='omit'))
         
-
-        _, means2, yerr2 = binned_curve(
-            tmp, 'tmp_com', 'avtrapz', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
-            sem_err=False, return_data=True
-        )
-        ax[0,0].errorbar(xpos, means1, yerr=yerr1)
-        ax[1,1].errorbar(means2, xpos[::-1], xerr=yerr2)
 
         #find max val to normalize
     # if normalize_marginal:
