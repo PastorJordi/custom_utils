@@ -116,7 +116,7 @@ def raw_psych(y, x, lapses=True):
 def psych_curve(
     target,
     coherence,
-    ret_ax=None,
+    ret_ax=None, # if none returns data
     annot=False,
     xspace=np.linspace(-1, 1, 50),
     kwargs_plot={},
@@ -173,6 +173,8 @@ def psych_curve(
     loglike = minimize(sigmoid, [1, 1, 0, 0], (coherence, target))
     s, b, RL, LL = loglike["x"]
     y_fit = RL + (1 - RL - LL) / (1 + np.exp(-(s * xspace + b)))
+
+
     if ret_ax is None:
         return (
             tab.index.values,
@@ -199,6 +201,8 @@ def psych_curve(
                 (tab.index.values.min(), 0.55),
                 ha="left",
             )
+
+        ret_ax.set_ylim(-0.05, 1.05)
         return ret_ax
 
 

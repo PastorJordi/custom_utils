@@ -87,11 +87,11 @@ def shortpad2(row, upto=1000, align='movement', pad_value=np.nan, pad_pre=0):
     """
     if align=='movement':
         missing = upto - row.traj.size
-        return np.pad(traj, ((0, missing)), "constant", constant_values=pad_value)
+        return np.pad(row.traj, ((0, missing)), "constant", constant_values=pad_value)
     elif align=='sound': # 
         missing_pre = int(row.sound_len)
         missing_after = upto - missing_pre - row.traj.size
-        return np.pad(traj, ((missing_pre, missing_after)), "constant", constant_values=(pad_pre, pad_value))
+        return np.pad(row.traj, ((missing_pre, missing_after)), "constant", constant_values=(pad_pre, pad_value))
 
 def when_did_split_simul(
     df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), 
@@ -115,14 +115,14 @@ def when_did_split_simul(
     ]  # &(df.R_response==side) this goes out
     mata = np.vstack(
         dat.loc[(dat.traj.apply(len) > 0) & (dat.coh2 == coh1)]
-        .apply(lambda row: shortpad2(row, **shortpad_kws))
+        .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
         .values.tolist()
     )
     matb = np.vstack(
         dat.loc[
             (dat.traj.apply(len) > 0) & (dat.coh2 == 0) & (dat.rewside == side)
         ]
-        .apply(lambda row: shortpad2(row, **shortpad_kws))
+        .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
         .values.tolist()
     )
     matlist = [mata, matb]
@@ -643,6 +643,9 @@ def whole_simul(
 
     # if savpath is None:
     #     raise ValueError("provide save path")
+
+    if 'sstr' not in df.columns:
+        preprocessed_flag = False
 
     # load real data
     # unpickling whole dataframe (6 subjects) takes 4 minutes

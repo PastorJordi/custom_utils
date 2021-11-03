@@ -7,8 +7,9 @@
 
 from utilsJ.regularimports import * 
 from utilsJ.Behavior import plotting
-from scipy.stats import norm
+from scipy.stats import norm, sem
 from scipy.optimize import minimize
+from matplotlib import cm
 
 
 SAVPATH = '/home/jordi/Documents/changes_of_mind/changes_of_mind_scripts/PAPER/paperfigs/test_fig_scripts/' # where to save figs
@@ -35,6 +36,8 @@ def opt_sig(y, x):
 def exp_decay(t, N0=1, tau=1.5):
     return N0 * np.exp(-t / tau)
 
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w
 
 
 ### FIG1
@@ -92,7 +95,106 @@ def b(StimLen = 100, offset=150, maxval=1000, savpath=SAVPATH):
         f.savefig(f'{savpath}1b_trial_scheme.svg')
     plt.show()
 
-def d(df, average=False, savpath=SAVPATH):
+
+def d(df, average=False, bins=np.linspace(-1,1,8), savpath=SAVPATH):
+    # here we will stack priors and scale them
+    nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1)==2].index
+    df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values,axis=1)
+    df.loc[nanidx, 'allpriors'] = np.nan
+
+    df['norm_allpriors'] = (
+        df.allpriors
+        / df.groupby('subjid').allpriors.transform(lambda x: np.max(np.abs(x)))
+    )
+    # transform to rep-alt space
+    df['prev_response'] = df.R_response.shift(1)*2 -1
+    df.loc[df.origidx==1, 'prev_response'] = np.nan
+    df['norm_allpriors_repalt'] = df.prev_response * df.norm_allpriors
+    df['rep_response'] = (df.prev_response * (df.R_response*2-1)+1)/2
+    df['ev_repeat'] = df.avtrapz * df.prev_response
+    df['coh2repalt'] = df.coh2 * df.prev_response
+    cmap = cm.get_cmap('coolwarm')
+
+    if average:
+        f, ax = plt.subplots(figsize=(6,6))
+        f.patch.set_facecolor('white')
+        ax.set_facecolor('white')
+        ax.set_ylabel('p(Repeat)')
+        ax.set_xlabel('evidence to repeat')
+        curves = np.zeros(
+            (df.subjid.unique().size, bins.size-1, 50) # dimensions: subject, curve/serie/prior, npoints/curve
+        ) * np.nan
+        dots = np.zeros(
+            (df.subjid.unique().size, bins.size-1, 7)
+        ) * np.nan
+        for i, subject in enumerate(df.subjid.unique()):
+            for j in range(bins.size-1): # prior bins
+                test = df.loc[
+                    (df.subjid==subject)
+                    &(df.special_trial==0)
+                    &(df.norm_allpriors_repalt>=bins[j])
+                    &(df.norm_allpriors_repalt<=bins[j+1])
+                    ].dropna(subset=['ev_repeat', 'norm_allpriors_repalt', 'rep_response'])
+                xpoints, ypoints, _, (xcurve, ycurve), _=plotting.psych_curve(
+                    test.rep_response,
+                    test.coh2repalt,
+                    kwargs_plot=dict(color=cmap(np.linspace(0,1,7)[j])),
+                    kwargs_error=dict(color=cmap(np.linspace(0,1,7)[j])),
+                    ret_ax=None
+                )
+                if xpoints.size==7:
+                    try:
+                        curves[i,j,:] = ycurve
+                        dots[i, j, :] = ypoints
+                    except Exception as e:
+                        print(subject)
+                        print(ypoints)
+                        raise(e)
+
+        # average
+        curves = np.nanmean(curves, axis=0)
+        dots_sem = sem(dots, axis=0, nan_policy='omit')
+        dots = np.nanmean(dots, axis=0)
+
+        for b in range(bins.size-1):
+            ccolor = cmap(b/(bins.size-1))
+            ax.plot(xcurve, curves[b], color=ccolor)
+            ax.errorbar(
+                xpoints, dots[b], yerr=dots_sem[i], color=ccolor,
+                marker='o', capsize=2
+            )
+
+    else:
+        f, ax = plt.subplots(nrows=6, ncols=3, figsize=(15,30), sharey=True, sharex='col')
+        f.patch.set_facecolor('white')
+        ax =ax.flatten()
+        
+        
+        for i, subject in enumerate(df.subjid.unique()):
+            ax[i].set_title(subject)
+            ax[i].set_ylabel('p(Repeat)')
+            ax[i].set_xlabel('evidence to repeat')
+            for j in range(bins.size-1): # prior bins
+                test = df.loc[
+                    (df.subjid==subject)
+                    &(df.special_trial==0)
+                    &(df.norm_allpriors_repalt>=bins[j])
+                    &(df.norm_allpriors_repalt<=bins[j+1])
+                    ].dropna(subset=['ev_repeat', 'norm_allpriors_repalt', 'rep_response'])
+                plotting.psych_curve(
+                    test.rep_response,
+                    test.coh2repalt,
+                    kwargs_plot=dict(color=cmap(np.linspace(0,1,7)[j])),
+                    kwargs_error=dict(color=cmap(np.linspace(0,1,7)[j])),
+                    ret_ax=ax[i]
+                )
+        if SAVEPLOTS:
+            f.savefig(f'{savpath}1d_individual_psychometric_curves2d.svg')
+        plt.show()
+
+
+
+def d_3d(df, average=False, savpath=SAVPATH):
     """tachometric 3d, this splits all subjects. adjust subplots and figsize if single"""
     # here we will stack priors and scale them
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1)==2].index
@@ -182,7 +284,7 @@ def e(
 ):
     """main idea here is to show block structure and that they follow it"""
     # precalc / adjust to rep/alt space
-    s = df[df.sessid=='LE36_p4_20190312-162050'] # session
+    s = df[df.sessid==session] # session
     if accu_axis:
         f, (ax, ax2) = plt.subplots(nrows=2, sharex=True,figsize=(20,6))
     else:
@@ -202,6 +304,9 @@ def e(
 
     RB = np.vstack(out)[:,1]
     RB = RB/np.abs(RB).max()
+    # prob_rep_estimate = moving_average(
+    #     np.array(prob_rep_estimate), wlen
+    # )
     prob_rep_estimate = np.array(prob_rep_estimate) / np.abs(np.array(prob_rep_estimate)).max()
 
     for i, (side, offset) in enumerate([['left', -1], ['right', 1]]):
@@ -232,7 +337,7 @@ def e(
 
 
     
-    ax.plot(np.arange(RB.size)+wlen/2, RB, label='Repeating bias')
+    ax.plot(np.arange(RB.size)+wlen, RB, label='Repeating bias')
     ax.plot(np.arange(RB.size)+wlen, prob_rep_estimate, label='local estimate p(rep)')
     ax.set_facecolor('white')
     sns.despine(ax=ax, left=True, bottom=True)
@@ -259,7 +364,7 @@ def e(
     ax.set_xticklabels([])
     ax.set_xlim(0,s.origidx.max())
     ax.axhline(0, ls=':', color='gray', zorder=0)
-    ax.legend(fancybox=False, frameon=False)
+    ax.legend(loc='upper left')
     ax.set_xlabel('trial index')
 
     if SAVPATH:
