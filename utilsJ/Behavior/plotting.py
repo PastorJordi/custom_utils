@@ -825,7 +825,7 @@ def trajectory_thr(
         #    print('collapsing sides!')
         matrix_dic[b] = np.concatenate(
             test.loc[idx_dic[b]]
-            .swifter.progress_bar(False)
+            #.swifter.progress_bar(False) # swifter removed
             .apply(
                 lambda x: interpolapply(
                     x,

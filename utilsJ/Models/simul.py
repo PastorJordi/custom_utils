@@ -35,9 +35,20 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
 
 def when_did_split_dat(
     df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), 
-    startfrom=700,  ax=None, plot_kwargs={}, align='movement'
+    startfrom=700,  ax=None, plot_kwargs={}, align='movement',
+    collapse_sides=False
     ):
-    """gets when they are statistically different by t_test"""
+    """
+    gets when they are statistically different by t_test,
+    df= dataframe
+    side= {0,1} left or right,
+    rtbins
+    startfrom= index to start checking diffs. movement==700;
+    ax: where to plot suff if provided
+    plot_kwargs: plot kwargs for ax.plot
+    align: whether to align 0 to movement(action) or sound
+    collapse_sides: collapse sides, so "side" arg has no effect
+    """
     # TODO: addapt to align= sound
     # get matrices
     if side == 0:
@@ -53,16 +64,48 @@ def when_did_split_dat(
         kw={'align':'action'}
     elif align=='sound':
         kw={'align':'sound'}
-    mata = np.vstack(
-        dat.loc[dat.coh2 == coh1]
-        .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
-        .values.tolist()
-    )
-    matb = np.vstack(
-        dat.loc[(dat.coh2 == 0) & (dat.rewside == side)]
-        .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
-        .values.tolist()
-    )
+    if not collapse_sides:
+        mata = np.vstack(
+            dat.loc[dat.coh2 == coh1]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+        matb = np.vstack(
+            dat.loc[(dat.coh2 == 0) & (dat.rewside == side)]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+    else:
+        mata_0 = np.vstack(
+            dat.loc[dat.coh2 == -1]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+        mata_1 = np.vstack(
+            dat.loc[dat.coh2 == 1]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+        mata = np.vstack(
+            [mata_0*-1, mata_1]
+        )
+
+        matb_0 = np.vstack(
+            dat.loc[(dat.coh2 == 0) & (dat.rewside == 0)]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+        matb_1 = np.vstack(
+            dat.loc[(dat.coh2 == 0) & (dat.rewside == 1)]
+            .apply(lambda x: plotting.interpolapply(x, **kw), axis=1) # removed swifter
+            .values.tolist()
+        )
+        matb = np.vstack(
+            [matb_0*-1, matb_1]
+        )
+
+
+
     for a in [mata, matb]:  # discard all nan rows
         a = a[~np.isnan(a).all(axis=1)]
 
