@@ -11,7 +11,7 @@ SAVEPLOTS = False # whether to save plots or just show them
 # TODO: how to merge them weigthed?
 # mean and SEMs
 
-def a(df, average=False, savpath=SAVPATH):
+def a(df, average=False, trajectory="trajectory_y", velocity=("traj_d1", 1), savpath=SAVPATH):
     """median position and velocity in silent trials splitting by prior"""
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1)==2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values,axis=1)
@@ -19,12 +19,13 @@ def a(df, average=False, savpath=SAVPATH):
     df['choice_x_prior'] = (df.R_response*2-1) * df.allpriors
 
     if not average:
-        for subject in dani_rats:
+        for subject in df.subjid.unique(): # dani_rats:
             f, ax = plt.subplots(ncols=2, nrows=2,figsize=(11,8),gridspec_kw={'width_ratios': [1,3]})
             ax = ax.flatten()
             xpoints,ypoints, _, mat, dic =  plotting.trajectory_thr(
                 df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True,
-                thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis'
+                thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
+                trajectory=trajectory
             )
 
 
@@ -39,8 +40,9 @@ def a(df, average=False, savpath=SAVPATH):
             ax[1].set_ylim([-10, 80])
             threshold = .2
             xpoints,ypoints, _, mat, dic =  plotting.trajectory_thr(
-                df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True, trajectory=('traj_d1',1), # TODO ACCELY col name?
-                thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis'
+                df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True,
+                thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
+                trajectory=velocity # TODO ACCELY col name?
             )
 
 
@@ -64,11 +66,12 @@ def a(df, average=False, savpath=SAVPATH):
         median_list_vel = []
         mean_thr_pose = []
         mean_thr_vel = []
-        for subject in dani_rats:
+        for subject in df.subjid.unique(): # dani_rats:
             # position
             xpoints,ypoints1, _, mat, dic =  plotting.trajectory_thr(
                 df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True,
-                thr=30, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis'
+                thr=30, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
+                trajectory=trajectory
             )
             median_mat1 = np.zeros((5, 1700)) * np.nan
 
@@ -79,8 +82,9 @@ def a(df, average=False, savpath=SAVPATH):
 
             # velocity
             xpoints,ypoints2, _, mat, dic =  plotting.trajectory_thr(
-                df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True, trajectory=('traj_d1',1), # TODO ACCELY col name?
-                thr=.2, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis'
+                df.loc[(df.subjid==subject)&(df.special_trial==2)], 'choice_x_prior', np.linspace(-3,3,6), collapse_sides=True,
+                thr=.2, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
+                trajectory=velocity # TODO ACCELY col name?
             )
             median_mat2 = np.zeros((5, 1700)) * np.nan
             for i, m in mat.items():
@@ -125,7 +129,7 @@ def a(df, average=False, savpath=SAVPATH):
         threshold = .2
         ax[3].set_xlim([-50, 500])
         ax[3].set_xlabel('time from movement onset (MT, ms)')
-        ax[3].set_ylim([-0.05, 0.5])
+        ax[3].set_ylim([-0.05, 0.6])
         for i in [0,threshold]:
             ax[3].axhline(i, ls=':', c='gray')
         ax[3].set_ylabel('y coord velocity (px/ms)')
@@ -140,6 +144,8 @@ def a(df, average=False, savpath=SAVPATH):
 def b(
     df, average=False, prior_limit=0.25, rt_lim=25,
     after_correct_only=True, 
+    trajectory="trajectory_y",
+    velocity=("traj_d1", 1), 
     savpath=SAVPATH,
     ):
     """median position and velocity in silent trials splitting by prior"""
@@ -168,7 +174,8 @@ def b(
                     ], 
                 'choice_x_coh', bins, collapse_sides=True,
                 thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True, 
-                error_kwargs=dict(marker='o'), cmap='viridis', bintype='categorical'
+                error_kwargs=dict(marker='o'), cmap='viridis', bintype='categorical',
+                trajectory=trajectory
             )
 
             ax[1].set_xlim([-50, 500])
@@ -189,8 +196,9 @@ def b(
                     &(df.special_trial==0)
                     &(df.sound_len<rt_lim)
                     ], 
-                'choice_x_coh', bins, collapse_sides=True, trajectory=('traj_d1',1), # TODO ACCELY col name?
-                thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis', bintype='categorical'
+                'choice_x_coh', bins, collapse_sides=True,
+                thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis', bintype='categorical',
+                trajectory=velocity # TODO ACCELY col name?
             )
 
             ax[3].set_xlim([-50, 500])
@@ -229,7 +237,7 @@ def b(
         ax[1].set_ylim([-10, 80])
         ax[3].set_xlim([-50, 500])
         ax[3].set_xlabel('time from movement onset (MT, ms)')
-        ax[3].set_ylim([-0.05, 0.5])
+        ax[3].set_ylim([-0.05, 0.6])
         for i in [0,.2]:
             ax[3].axhline(i, ls=':', c='gray')
         ax[3].set_ylabel('y coord velocity (px/ms)')
@@ -253,7 +261,8 @@ def b(
                     ], 
                 'choice_x_coh', bins, collapse_sides=True,
                 thr=30, ax=None, ax_traj=None, return_trash=True, 
-                error_kwargs=dict(marker='o'), cmap='viridis', bintype='categorical'
+                error_kwargs=dict(marker='o'), cmap='viridis', bintype='categorical',
+                trajectory=trajectory
             )
             median_mat1 = np.zeros((7, 1700)) * np.nan
 
@@ -270,8 +279,9 @@ def b(
                     &(df.special_trial==0)
                     &(df.sound_len<rt_lim)
                     ], 
-                'choice_x_coh', bins, collapse_sides=True, trajectory=('traj_d1',1), # TODO ACCELY col name?
-                thr=.2, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis', bintype='categorical'
+                'choice_x_coh', bins, collapse_sides=True,
+                thr=.2, ax=None, ax_traj=None, return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis', bintype='categorical',
+                trajectory=velocity # TODO ACCELY col name?
             )
 
             median_mat2 = np.zeros((7, 1700)) * np.nan
@@ -370,7 +380,10 @@ def c(df, average=False, collapse_sides=False, savpath=SAVPATH):
 
 def d(df, collapse_sides=False, rtbins=np.linspace(0,150,16), 
     connect_points=True, draw_line=((0,90),(90,0)),
-    threshold=300, savpath=SAVPATH):
+    threshold=300,
+    trajectory="trajectory_y",
+    savpath=SAVPATH):
+
     # split time/subject by coherence
     # threshold= bigger than that are turned to nan so it doesnt break figure range
     # this wont work if when_did_split_dat returns Nones instead of NaNs
@@ -383,7 +396,8 @@ def d(df, collapse_sides=False, rtbins=np.linspace(0,150,16),
                     df.loc[(df.special_trial==0)&(df.subjid==subject)],
                     0, # side has no effect because this is collapsing_sides
                     rtbin=i, rtbins=rtbins,
-                    collapse_sides=True
+                    collapse_sides=True,
+                    trajectory=trajectory
                 )
                 out_data += [current_split_index]
             else:
@@ -392,7 +406,8 @@ def d(df, collapse_sides=False, rtbins=np.linspace(0,150,16),
                         df.loc[df.subjid==subject],
                         j, # side has no effect because this is collapsing_sides
                         rtbin=i, rtbins=rtbins,
-                        collapse_sides=True
+                        collapse_sides=True,
+                        trajectory=trajectory
                     )
                     out_data += [current_split_index]
 

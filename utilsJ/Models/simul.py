@@ -36,7 +36,8 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
 def when_did_split_dat(
     df, side, rtbin=0, rtbins=np.linspace(0, 150, 7), 
     startfrom=700,  ax=None, plot_kwargs={}, align='movement',
-    collapse_sides=False
+    collapse_sides=False,
+    trajectory="trajectory_y"
     ):
     """
     gets when they are statistically different by t_test,
@@ -49,6 +50,8 @@ def when_did_split_dat(
     align: whether to align 0 to movement(action) or sound
     collapse_sides: collapse sides, so "side" arg has no effect
     """
+    kw = {"trajectory": trajectory}
+
     # TODO: addapt to align= sound
     # get matrices
     if side == 0:
@@ -61,9 +64,10 @@ def when_did_split_dat(
        # & (df.resp_len)
     ]  # &(df.R_response==side)
     if align=='movement':
-        kw={'align':'action'}
+        kw["align"] = "action"
     elif align=='sound':
-        kw={'align':'sound'}
+        kw["align"] = "sound"
+
     if not collapse_sides:
         mata = np.vstack(
             dat.loc[dat.coh2 == coh1]
