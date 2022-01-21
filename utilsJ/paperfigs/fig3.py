@@ -417,6 +417,9 @@ def d(df, collapse_sides=False, rtbins=np.linspace(0,150,16),
     # set axes: rtbins, subject, sides
     out_data = np.swapaxes(out_data, 0,1)
 
+    # change the type so we can have NaNs
+    out_data = out_data.astype(float)
+
     out_data[out_data>threshold] = np.nan
 
     f, ax = plt.subplots(figsize=(8,6))
