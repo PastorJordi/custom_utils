@@ -823,7 +823,7 @@ def trajectory_thr(
 
         # if collapse_sides:
         #    print('collapsing sides!')
-        matrix_dic[b] = np.concatenate(
+        arrays = (
             test.loc[idx_dic[b]]
             #.swifter.progress_bar(False) # swifter removed
             .apply(
@@ -834,12 +834,15 @@ def trajectory_thr(
                     align=align,
                     interp_extend=interp_extend,
                     trajectory=trajectory,
-                    discarded_tstamp=discarded_tstamp,
+                    discarded_tstamp=discarded_tstamp
                 ),
                 axis=1,
             )
             .values
-        ).reshape(-1, interpolatespace.size)
+        )
+
+        if arrays.size > 0:
+            matrix_dic[b] = np.concatenate(arrays).reshape(-1, interpolatespace.size)
 
         tmp_mat = matrix_dic[b][:, zeropos_interp:]
         # wont iterate anymore
