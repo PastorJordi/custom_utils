@@ -16,7 +16,7 @@ import swifter
 import seaborn as sns
 from scipy.stats import norm
 import warnings
-
+general_path = traj.general_path
 
 def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"):
     """a and b are traj matrices.
@@ -601,7 +601,7 @@ def safe_threshold(row, threshold):
 def whole_simul(
     subject, 
     savpath=None,
-    dfpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/",#dani_clean.pkl",  # parameter grid
+    dfpath=f"{general_path}paper/",#dani_clean.pkl",  # parameter grid
     rtbins=np.linspace(0, 150, 7), # deprecated ~ not yet
     params={
         "t_update": 80, # ms
@@ -684,7 +684,7 @@ def whole_simul(
         df = dfpath
         preprocessed_flag=True
     elif subject=='all':
-        dfpath = "/home/jordi/DATA/Documents/changes_of_mind/data/paper/dani_clean.pkl"
+        dfpath = f"{general_path}paper/dani_clean.pkl"
     elif not dfpath.endswith('.pkl'): # use default naming # append subject to data path
         dfpath = f"{dfpath}{subject}_clean.pkl"
 
@@ -735,7 +735,7 @@ def whole_simul(
 
     # load and unpack psiam parameters
     if subject=='all':
-        psiam_path = '/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/all.pkl'
+        psiam_path = f"{general_path}paper/fits_psiam/all.pkl"
         (
             c,
             v_u,
@@ -751,7 +751,7 @@ def whole_simul(
             d
         ) = pd.read_pickle(psiam_path).mean(axis=1).tolist()
     else:
-        psiam_path = f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
+        psiam_path = f"{general_path}paper/fits_psiam/{subject} D2Mconstrainedfit_fitonly.mat"
         psiam_params = loadmat(
             psiam_path
         )["freepar_hat"][0]
@@ -1253,7 +1253,7 @@ def whole_simul(
         fname += f"{k}-{i}-"
     fname = fname[:-1] + ".png"
     if not return_matrices:
-        fig.savefig(f"{savpath}{fname}")
+        fig.savefig(f"{savpath}{subject}.png")
         plt.show()
         return df, out
     else:
@@ -1464,3 +1464,18 @@ def prob_rev( # slower than original one
         return p
     else:
         return p/np.array(norm_probs).sum()
+    
+
+def com_matrix_comparison(df):
+    # comparing CoM matrix for silent vs non-silent samples
+    filter_mask_silent = (df.special_trial == 2)
+    filter_mask_nonsilent = (df.special_trial == 0)
+    silent = df.loc[filter_mask_silent]
+    nonsilent = df.loc[filter_mask_nonsilent]
+    silent_subset = silent.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    nonsilent_subset = nonsilent.dropna(subset=["avtrapz", "allpriors", "CoM_sugg"])
+    plt.figure()
+    plt.title('p(CoM) in silent vs nonsilent trials')
+    plt.plot(silent_subset.allpriors, silent_subset.CoM_sugg, label='PCom silent data')
+    plt.plot(nonsilent_subset.allpriors, nonsilent_subset.loc[nonsilent_subset.avtrapz==0,"CoM_sugg"], label='PCom nonsilent data')
+    plt.legend()

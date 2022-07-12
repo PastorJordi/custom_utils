@@ -16,6 +16,10 @@ import matplotlib.pyplot as plt
 # testL='/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_LE42_left_RT0.pkl'
 # mtclfL = loadclf('/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_LE42_left_RT0.pkl')
 
+# General path
+general_path = 'C:/Users/alexg/Desktop/CRM/Alex/'  # for Alex G-D
+# general_path = '/home/jordi/DATA/Documents/changes_of_mind/data/'  # for Jordi
+
 # writting a short class to make it easier to wrte in notebooks
 
 
@@ -36,24 +40,24 @@ class def_traj:
         self.factor_mask = None
         #self.mse_ = None
 
-    def load_all(self, path="/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_allinone.pkl"):
+    def load_all(self, path=f"{general_path}paper/trajectory_fit/MTclf_allinone.pkl"):
       # do stuff
         self.clf = loadclf(path=path)
         
     def selectRT(self, RTbin): # called
         if self.side is None:
             abobject = ab.ab(
-                loadpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_full2.pkl"
+                loadpath=f"{general_path}paper/trajectory_fit/silent_{self.subject}_full2.pkl"
             )
             self.clf = loadclf(
-                f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_full.pkl"
+                f"{general_path}paper/trajectory_fit/MTclf_{self.subject}_full.pkl"
             )
         else:
             abobject = ab.ab(
-                loadpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{RTbin}.pkl"
+                loadpath=f"{general_path}paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{RTbin}.pkl"
             )
             self.clf = loadclf(
-                f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{RTbin}.pkl"
+                f"{general_path}paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{RTbin}.pkl"
             )
         self.B = abobject.B
         self.factorlist = abobject.factorlist
@@ -63,7 +67,7 @@ class def_traj:
         self.clfs = {}
         if self.side is None:
             abobject = ab.ab(
-                loadpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_full2.pkl"
+                loadpath=f"{general_path}paper/trajectory_fit/silent_{self.subject}_full2.pkl"
             )
             self.B = abobject.B
             self.factor_mask = abobject.factor_mask
@@ -74,7 +78,7 @@ class def_traj:
             for i in range(6):
                 try:
                     abobject = ab.ab(
-                        loadpath=f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{i}.pkl"
+                        loadpath=f"{general_path}paper/trajectory_fit/silent_{self.subject}_{self.side}_RT{i}.pkl"
                     )
                     self.Bs[i] = abobject.B
                     if not i:
@@ -83,7 +87,7 @@ class def_traj:
                     warnings.warn(f"could not retrieve B for {self.subject} in RT {i}")
                 try:
                     self.clfs[i] = loadclf(
-                        f"/home/jordi/DATA/Documents/changes_of_mind/data/paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{i}.pkl"
+                        f"{general_path}paper/trajectory_fit/MTclf_{self.subject}_{self.side}_RT{i}.pkl"
                     )
                 except:
                     warnings.warn(
