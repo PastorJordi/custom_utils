@@ -27,8 +27,8 @@ def a(df, average=False, trajectory="trajectory_y", velocity=("traj_d1", 1), sav
                 thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
                 trajectory=trajectory
             )
-
-
+            ax[1].legend(labels=['-2','-1','0', '1', '2'],
+                         title='Prior')
             ax[1].set_xlim([-50, 500])
             ax[1].set_xlabel('time from movement onset (MT, ms)')
             for i in [0,30]:
@@ -37,6 +37,7 @@ def a(df, average=False, trajectory="trajectory_y", velocity=("traj_d1", 1), sav
             ax[0].set_xlabel('prior towards response')
             ax[0].set_ylabel('time to threshold (30px)')
             ax[0].plot(xpoints,ypoints, color='k', ls=':')
+
             ax[1].set_ylim([-10, 80])
             threshold = .2
             xpoints,ypoints, _, mat, dic =  plotting.trajectory_thr(
@@ -44,7 +45,8 @@ def a(df, average=False, trajectory="trajectory_y", velocity=("traj_d1", 1), sav
                 thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis',
                 trajectory=velocity # TODO ACCELY col name?
             )
-
+            ax[3].legend(labels=['-2','-1','0', '1', '2'],
+                         title='Prior')
 
             ax[3].set_xlim([-50, 500])
             ax[3].set_xlabel('time from movement onset (MT, ms)')
@@ -177,7 +179,8 @@ def b(
                 error_kwargs=dict(marker='o'), cmap='viridis', bintype='categorical',
                 trajectory=trajectory
             )
-
+            ax[1].legend(labels=['-1','-0.5','-0.25', '0', '0.25', '0.5','1'],
+                         title='Coherence')
             ax[1].set_xlim([-50, 500])
             ax[1].set_xlabel('time from movement onset (MT, ms)')
             for i in [0,30]:
@@ -200,7 +203,8 @@ def b(
                 thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True, error_kwargs=dict(marker='o'),cmap='viridis', bintype='categorical',
                 trajectory=velocity # TODO ACCELY col name?
             )
-
+            ax[3].legend(labels=['-1','-0.5','-0.25', '0', '0.25', '0.5','1'],
+                         title='Coherence')
             ax[3].set_xlim([-50, 500])
             ax[3].set_xlabel('time from movement onset (MT, ms)')
             ax[3].set_ylim([-0.05, 0.5])
