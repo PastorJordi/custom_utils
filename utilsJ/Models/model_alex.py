@@ -86,7 +86,7 @@ def trial_ev_vectorized(offset, Ve, fluc, bound, dt, t_motor, num_tr, plot=False
             hit_bound = np.where(np.abs(E[:, i_c]) >= bound)[0][0]
             first_ind.append(hit_bound)
             resp_first[i_c] *= ((-1)**(E[hit_bound, i_c] < 0))
-            indx_fin_ch = min(hit_bound+t_motor, E.shape[1])
+            indx_fin_ch = min(hit_bound+t_motor-1, E.shape[1]-1)
             resp_fin[i_c] *= ((-1)**(E[indx_fin_ch, i_c] < 0))
         else:
             first_ind.append(E.shape[0])
@@ -102,7 +102,7 @@ def trial_ev_vectorized(offset, Ve, fluc, bound, dt, t_motor, num_tr, plot=False
 if __name__ == '__main__':
     plt.close('all')
     bound = 1
-    fluc = 1
+    fluc = 2
     bound = 1
     dt = 1e-3
     t_motor = 80*1e-3
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     ax.axhline(y=1, linestyle='--', color='k', linewidth=0.8)
     ax.axhline(y=-1, linestyle='--', color='k', linewidth=0.8)
-    ax.axhline(y=0, linestyle='--', color='k', linewidth=0.4)
+    ax.axhline(y=0, linestyle='--', color='r', linewidth=0.4)
 
     import sys
     sys.exit()
