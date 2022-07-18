@@ -79,22 +79,29 @@ def trial_ev_vectorized(offset, Ve, fluc, bound, dt, t_motor, num_tr, plot=False
     com = False
     # reaction_time = 300
     first_ind = []
+    second_ind = []
     resp_first = np.ones(E.shape[1])
     resp_fin = np.ones(E.shape[1])
     for i_c in range(E.shape[1]):
-        if (np.abs(E[:, i_c]) >= bound).any():
-            hit_bound = np.where(np.abs(E[:, i_c]) >= bound)[0][0]
+        indx_hit_bound = np.abs(E[:, i_c]) >= bound
+        if (indx_hit_bound).any():
+            hit_bound = np.where(indx_hit_bound)[0][0]
             first_ind.append(hit_bound)
-            resp_first[i_c] *= ((-1)**(E[hit_bound, i_c] < 0))
-            indx_fin_ch = min(hit_bound+t_motor-1, E.shape[1]-1)
-            resp_fin[i_c] *= ((-1)**(E[indx_fin_ch, i_c] < 0))
+            # first response
+            resp_first[i_c] *= (-1)**(E[hit_bound, i_c] < 0)
+            # second response
+            second_thought = hit_bound+t_motor
+            indx_fin_ch = min(second_thought, E.shape[0]-1)
+            second_ind.append(indx_fin_ch)
+            resp_fin[i_c] *= (-1)**(E[indx_fin_ch, i_c] < 0)
         else:
             first_ind.append(E.shape[0])
+            second_ind.append(E.shape[0])
             resp_first[i_c] *= resp_first[i_c]*((-1)**(E[-1, i_c] < 0))
             resp_fin[i_c] = resp_first[i_c]
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
-    return E, com, first_ind, resp_first, resp_fin
+    return E, com, first_ind, second_ind, resp_first, resp_fin
 
 #
 
@@ -107,25 +114,24 @@ if __name__ == '__main__':
     dt = 1e-3
     t_motor = 80*1e-3
     t_motor = int(round(t_motor/(dt)))
-    num_tr = 1000
+    num_tr = 100
     plot = False
     offset = np.random.randn(num_tr)*1e-2
     Ve = np.random.randn(num_tr)*1e-5
-    E, com, first_ind, resp_first, resp_fin =\
+    E, com, first_ind, second_ind, resp_first, resp_fin =\
         trial_ev_vectorized(offset=offset, Ve=Ve, fluc=fluc,
                             bound=bound, dt=dt, t_motor=t_motor,
                             num_tr=num_tr, plot=plot)
     f, ax = plt.subplots()
-    indx_no_com = np.where(~com)[0][0]
-    print(resp_first[indx_no_com])
-    print(resp_fin[indx_no_com])
-    ax.plot(E[:first_ind[indx_no_com]+t_motor, indx_no_com], 'r')
-    ax.plot(E[:first_ind[indx_no_com]+1, indx_no_com], 'b')
-    indx_com = np.where(com)[0][0]
-    print(resp_first[indx_com])
-    print(resp_fin[indx_com])
-    ax.plot(E[:first_ind[indx_com]+t_motor, indx_com], '--r')
-    ax.plot(E[:first_ind[indx_com]+1, indx_com], '--b')
+    # indx_no_com = np.where(~com)[0][0]
+    # ax.plot(E[:, indx_no_com], 'k')
+    # ax.plot(E[:first_ind[indx_no_com]+t_motor, indx_no_com], 'r')
+    # ax.plot(E[:first_ind[indx_no_com]+1, indx_no_com], 'b')
+    indx_com = np.where(com)[0]
+    for i_c in indx_com:
+    # ax.plot(E[:, indx_com], '--k')
+        ax.plot(E[:first_ind[i_c]+t_motor+1, i_c], 'r')
+        ax.plot(E[:first_ind[i_c]+1, i_c], 'b')
 
     ax.axhline(y=1, linestyle='--', color='k', linewidth=0.8)
     ax.axhline(y=-1, linestyle='--', color='k', linewidth=0.8)
