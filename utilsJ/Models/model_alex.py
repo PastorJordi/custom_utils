@@ -116,7 +116,7 @@ def plotting(com, E, second_ind, first_ind):
 
 
 def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
-                        p_t_m, p_t_e, p_t_a, num_tr, p_w_a, p_a_noise, plot=False):
+                        p_t_m, p_t_eff, p_t_a, num_tr, p_w_a, p_a_noise, plot=False):
     bound = 1
     bound_a = 1
     prior = zt*p_w_zt
@@ -126,9 +126,10 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
     N = stim.shape[0]  # int(trial_dur/dt)  # number of timesteps
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+Va
-    dW[:p_t_e+1, :] = 0
-    dA[:p_t_a+1, :] = 0
-    dW[0] += prior
+    dW[:p_t_eff, :] = 0
+    dA[:p_t_a, :] = 0
+    dW[0, :] = prior  # +np.random.randn(p_t_eff, num_tr)*p_e_noise
+    dA[0, :] = prior  # +np.random.randn(p_t_a, num_tr)*p_a_noise
     E = np.cumsum(dW, axis=0)
     A = np.cumsum(dA, axis=0)
     com = False
@@ -152,15 +153,15 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
         resp_first[i_c] *= (-1)**(E[hit_dec, i_c] < 0)
         com_bound_temp = (-resp_first[i_c])*p_com_bound
         # second response
-        second_thought = hit_dec+p_t_e
+        second_thought = hit_dec+p_t_eff
         indx_fin_ch = min(second_thought, E.shape[0]-1)
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
-        indx_fin_ch = E.shape[0]-1 if len(indx_com) == 0 else\
+        indx_update_ch = E.shape[0]-1 if len(indx_com) == 0 else\
             (indx_com[0] + hit_dec)
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
-        second_ind.append(indx_fin_ch)
+        second_ind.append(indx_update_ch)
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     return E, A, com, first_ind, second_ind, resp_first, resp_fin
@@ -177,9 +178,10 @@ if __name__ == '__main__':
     num_tr = 100
     plot = False
     zt = np.random.randn(num_tr)*1e-2
-    p_t_e = 40
+    p_t_eff = 40
+    p_t_a = p_t_eff
     num_timesteps = 1000
-    stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_e
+    stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_eff
                                                         , num_tr)*1e-1
     p_t_m = 40
     p_w_zt = 0.2
@@ -189,42 +191,13 @@ if __name__ == '__main__':
     Va = np.abs(np.random.randn(num_tr))*1e-1
     fluc_a = 0.5
     bound_a = 1
-    p_w_a = 0.005
+    p_w_a = 0.05
     p_a_noise = 0.05
     E, A, com, first_ind, second_ind, resp_first, resp_fin =\
         trial_ev_vectorized(zt=zt, stim=stim, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                             p_com_bound=p_com_bound,
-                            p_t_m=p_t_m, p_t_e=p_t_e, p_t_a=p_t_e,
-                            num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise, plot=False)
+                            p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
+                            num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
+                            plot=False)
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind)
-
-    import sys
-    sys.exit()
-    flucs = np.linspace(0, 5, num=50)
-    bounds = np.linspace(0, 1, num=50)
-    com_mat = np.zeros((len(flucs), len(bounds)))
-    rtmat = np.zeros((len(flucs), len(bounds)))
-    for i in range(len(flucs)):
-        for j in range(len(bounds)):
-            com_list = []
-            react_time = []
-            for num in range(50):
-                _, rt, com = evidence(
-                    0, 0.2, flucs[i], bounds[j], 1e3, 80*1e-3)
-                com_list.append(com)
-                react_time.append(rt)
-                com_mat[j, i] = np.mean(com_list)
-                rtmat[j, i] = np.nanmean(react_time)
-    np.save('CoM_state_space_fluc_drift_0off.npy', com_mat)
-    plt.contourf(flucs, bounds, com_mat)
-    plt.xlabel("Fluctuation, $\sigma_{E}$", fontsize=14)
-    plt.ylabel('Bound, $\\theta_{E}$', fontsize=14)
-    plt.colorbar()
-    plt.title('pCoM', fontsize=16)
-    plt.figure()
-    plt.contourf(flucs, bounds, rtmat)
-    plt.xlabel("Fluctuation, $\sigma_{E}$", fontsize=14)
-    plt.ylabel('Bound, $\\theta_{E}$', fontsize=14)
-    plt.colorbar()
-    plt.title('RT(s)', fontsize=16)
