@@ -82,8 +82,9 @@ def get_Mt0te(t0, te):
     return Mt0te
 
 
-def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
-                        p_t_m, p_t_eff, p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
+def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
+                        p_e_noise, p_com_bound, p_t_m, p_t_eff,
+                        p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
                         plot=False):
     bound = 1
     bound_a = 1
@@ -131,7 +132,7 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
-        indx_update_ch = E.shape[0]-1 if len(indx_com) == 0 else\
+        indx_update_ch = hit_dec + p_t_eff if len(indx_com) == 0 else\
             (indx_com[0] + hit_dec)
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
         second_ind.append(indx_update_ch)
@@ -140,44 +141,52 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
     RLresp = resp_fin
-    # prechoice = resp_first
+    prechoice = resp_first
     jerk_lock_ms = 0
     initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
     # initial positions, speed and acc; final position, speed and acc
-    trajs = []
+    init_trajs = []
+    final_trajs = []
+    total_traj = []
     for i_t in range(E.shape[1]):
-        # final_mu = initial_mu.copy().flatten()
-        # if com[i_t]:  # flip it
-        #     final_mu *= -1
-        #     initial_expected_span = expectedMT
-        #     t_arr_from_z = np.arange(int(initial_expected_span))
-        #     d1 = np.gradient(prior0, t_arr_from_z)
-        #     d2 = np.gradient(d1, t_arr_from_z)
-        #     Mf = ab.get_Mt0te(tup, resp_len)
-        #     Mf_1 = np.linalg.inv(Mf)
-        #     # init conditions are [prior0[tup], d1[tup], d2[tup]]
-        #     mu_prime = np.array(
-        #         [prior0[tup], d1[tup], d2[tup], final_mu[3], final_mu[4],
-        #          final_mu[5]]
-        #     ).reshape(
-        #         6, 1
-        #     )  # final mu contains choice*
-        #     t_arr_prime = np.arange(tup, resp_len)
-        #     N_prime = ab.v_(t_arr_prime) @ Mf_1
-        #     updated_fragment = N_prime @ mu_prime  # .flatten()
-        #     final_traj = np.concatenate([prior0[:tup],
-        #                                  updated_fragment.flatten()])
-        # else:
-        resp_len = p_w_updt/first_ev[i_t]
-        t_arr = np.arange(jerk_lock_ms, resp_len)
-        M = get_Mt0te(jerk_lock_ms, resp_len)
+        MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
+        first_resp_len = float((MT) *
+                               np.abs(p_w_updt/first_ev[i_t]))
+        # first_resp_len: evidence affectation on MT. The higher the ev,
+        # the lower the MT depending on the parameter p_w_updt
+        t_arr = np.arange(jerk_lock_ms, first_resp_len)
+        M = get_Mt0te(jerk_lock_ms, first_resp_len)
         M_1 = np.linalg.inv(M)
         vt = v_(t_arr)
         N = vt @ M_1
-        prior0 = (N @ (initial_mu * RLresp[i_t])).ravel()
-        prior0 = np.concatenate([[0]*jerk_lock_ms, prior0])
-        trajs.append(prior0)
-    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, trajs
+        prior0 = (N @ (initial_mu * prechoice[i_t])).ravel()
+        prior0 = np.concatenate([[0]*jerk_lock_ms, prior0])  # initial trajectory
+        init_trajs.append(prior0)
+        # TRAJ. UPDATE
+        vel_all = np.gradient(prior0)
+        t_ind = int(second_ind[i_t] - first_ind[i_t])  # time index
+        vel = vel_all[t_ind]  # velocity at the timepoint
+        acc = np.gradient(vel_all)[t_ind]  # acceleration
+        pos = prior0[t_ind]  # position
+        mu_update = np.array([pos, vel, acc, 75*RLresp[i_t], 0, 0]).reshape(-1, 1)
+        # new mu, considering new position/speed/acceleration
+        second_response_len = float((first_resp_len-t_ind) *
+                                    np.abs(p_w_updt/second_ev[i_t]))
+        # second_response_len: time left affected by the evidence on the
+        # SECOND readout
+        t_arr_2 = np.arange(jerk_lock_ms, second_response_len)
+        Mf = get_Mt0te(jerk_lock_ms, second_response_len)
+        M_1_f = np.linalg.inv(Mf)
+        vt = v_(t_arr_2)
+        Nf = vt @ M_1_f
+        traj_fin = (Nf @ mu_update).ravel()
+        traj_fin = np.concatenate([[0]*jerk_lock_ms, traj_fin])  # update
+        final_trajs.append(traj_fin)
+        total_traj.append(np.concatenate(
+            [prior0[0:second_ind[i_t]-first_ind[i_t]],
+             traj_fin]))  # conjoined trajectories
+    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+        total_traj, init_trajs, final_trajs
 
 
 # --- MAIN
@@ -191,6 +200,8 @@ if __name__ == '__main__':
     num_timesteps = 1000
     stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_eff,
                                                         num_tr)*1e-1
+    MT_slope = 0.15
+    MT_intercep = 110
     p_t_m = 40
     p_w_zt = 0.2
     p_w_stim = 0.3
@@ -202,18 +213,24 @@ if __name__ == '__main__':
     p_w_a = 0.05
     p_a_noise = 0.05
     p_w_updt = 1
-    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, trajs =\
-        trial_ev_vectorized(zt=zt, stim=stim, p_w_zt=p_w_zt,
+    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
+        init_trajs, final_trajs =\
+        trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
+                            MT_intercep=MT_intercep,
+                            p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                             p_com_bound=p_com_bound,
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
                             p_w_updt=p_w_updt, plot=False)
-    plt.figure()
-    for tr in trajs:
-        plt.plot(tr)
-    # import sys
-    # sys.exit()
+    for i in range(4):
+        t = np.random.randint(0, num_tr)
+        plt.figure()
+        plt.plot(init_trajs[t], label='initial traj')
+        plt.plot(total_traj[t], label='updated traj')
+        plt.legend()
+    import sys
+    sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff)
