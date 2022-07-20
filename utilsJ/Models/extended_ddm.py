@@ -202,8 +202,13 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         total_traj = []
         for i_t in range(E.shape[1]):
             MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
-            first_resp_len = float((MT) *
-                                   np.abs(p_w_updt/(first_ev[i_t])))
+            first_resp_len = float(MT*np.abs(p_w_updt/(first_ev[i_t])))
+            # alternative: set motor time as a function of the distance to 
+            # the chosen bound
+            # ref_bound = np.sign(first_ev[i_t])
+            # distance_to_bound = np.abs(ref_bound-first_ev[i_t])
+            # first_resp_len = float(MT*np.abs(p_w_updt*distance_to_bound))
+            
             # first_resp_len: evidence affectation on MT. The higher the ev,
             # the lower the MT depending on the parameter p_w_updt
             initial_mu_side = initial_mu * prechoice[i_t]
@@ -211,16 +216,21 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                                   resp_len=first_resp_len)
             init_trajs.append(prior0)
             # TRAJ. UPDATE
-            vel_all = np.gradient(prior0)
+            velocities = np.gradient(prior0)
+            accelerations = np.gradient(velocities)  # acceleration
             t_ind = int(second_ind[i_t] - first_ind[i_t])  # time index
-            vel = vel_all[t_ind]  # velocity at the timepoint
-            acc = np.gradient(vel_all)[t_ind]  # acceleration
+            vel = velocities[t_ind]  # velocity at the timepoint
+            acc = accelerations[t_ind]
             pos = prior0[t_ind]  # position
-            mu_update = np.array([pos, vel, acc,
-                                  75*RLresp[i_t], 0, 0]).reshape(-1, 1)
+            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                  0, 0]).reshape(-1, 1)
             # new mu, considering new position/speed/acceleration
-            second_response_len = float((first_resp_len-t_ind) *
-                                        np.abs(p_w_updt/(second_ev[i_t])))
+            ref_bound = resp_first[i_c]
+            remaining_m_time = first_resp_len-t_ind
+            distance_first_dec = np.abs(ref_bound-second_ev[i_t])
+            second_response_len = float(remaining_m_time *
+                                        np.abs(p_w_updt*distance_first_dec))
+            # p_delay_com/p_com_bound*com[i_t])
             # second_response_len: time left affected by the evidence on the
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
@@ -269,8 +279,8 @@ if __name__ == '__main__':
                             p_com_bound=p_com_bound,
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
-                            p_w_updt=p_w_updt, plot=False, trajectories=False)
-    # plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
+                            p_w_updt=p_w_updt, plot=False, trajectories=True)
+    plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
     import sys
     sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
