@@ -6,6 +6,7 @@ Created on Sat Jul 16 12:17:47 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 # import scipy as sp
 
 # ddm
@@ -120,6 +121,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_m, p_t_eff,
                         p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
                         plot=False):
+    print('Starting simulation, PSIAM')
     bound = 1
     bound_a = 1
     prior = zt*p_w_zt
@@ -174,6 +176,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
+    # Trajectories
+    print('Starting with trajectories')
     RLresp = resp_fin
     prechoice = resp_first
     jerk_lock_ms = 0
@@ -216,8 +220,18 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
 # --- MAIN
 if __name__ == '__main__':
+    # import data for 1 rat
+    # dfpath = 'C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl'
+    # print('Loading data')
+    # df = pd.read_pickle(dfpath)
+    # df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2']]
+    # df_rat["priorZt"] = np.nansum(
+    #         df[["dW_lat", "dW_trans"]].values, axis=1)
+    # print('Ended loading data')
+    
+    
     plt.close('all')
-    num_tr = 100
+    num_tr = int(1e2)
     plot = False
     zt = np.random.randn(num_tr)*1e-2
     p_t_eff = 40
@@ -225,6 +239,7 @@ if __name__ == '__main__':
     num_timesteps = 1000
     stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_eff,
                                                         num_tr)*1e-1
+    # stim = np.array([stim for stim in df_rat.res_sound[:100]]).T
     MT_slope = 0.15
     MT_intercep = 110
     p_t_m = 40
@@ -235,7 +250,7 @@ if __name__ == '__main__':
     Va = np.abs(np.random.randn(num_tr))*1e-1
     fluc_a = 0.5
     bound_a = 1
-    p_w_a = 0.05
+    p_w_a = 0.005
     p_a_noise = 0.05
     p_w_updt = 1
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
