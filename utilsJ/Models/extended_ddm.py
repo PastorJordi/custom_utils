@@ -64,6 +64,29 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[1]].set_ylabel(l+' AI')
 
 
+def plotting_trajs(init_trajs, total_traj, com, pro_vs_re):
+    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 12))
+    ax = ax.flatten()
+    ax[0].set_title('CoM')
+    ax[1].set_title('No-CoM')
+    ax[2].set_xlabel('Time (ms)')
+    ax[3].set_xlabel('Time (ms)')
+    trials = [0, 0, 1, 1]
+    mat_indx = [np.logical_and(com, pro_vs_re == 0),
+                np.logical_and(~com, pro_vs_re == 0),
+                np.logical_and(com, pro_vs_re == 1),
+                np.logical_and(~com, pro_vs_re == 1)]
+    y_lbls = ['CoM Proactive', 'No CoM Proactive', 'CoM Reactive',
+              'No CoM Reactive']
+    for i, (t, m, l) in enumerate(zip(trials, mat_indx, y_lbls)):
+        trial = np.where(m)[0][t]
+        ax[i].plot(total_traj[trial], label='Updated traj.')
+        ax[i].plot(init_trajs[trial], label='Initial traj.')
+        ax[i].set_ylabel(l+', y(px)')
+        ax[i].set_ylabel(l+', y(px)')
+        ax[i].legend()
+
+
 def v_(t):
     return t.reshape(-1, 1) ** np.arange(6)
 
@@ -130,7 +153,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             hit_bound = np.where(indx_hit_bound)[0][0]
         if (indx_hit_action).any():
             hit_action = np.where(indx_hit_action)[0][0]
-        hit_dec = min(hit_bound, hit_action)
+        hit_dec = min(hit_bound, hit_action)  # reactive or proactive
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         first_ind.append(hit_dec)
         first_ev.append(E[hit_dec, i_c])
@@ -162,7 +185,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     for i_t in range(E.shape[1]):
         MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
         first_resp_len = float((MT) *
-                               np.abs(p_w_updt/(first_ev[i_t]+1e-2)))
+                               np.abs(p_w_updt/(first_ev[i_t])))
         # first_resp_len: evidence affectation on MT. The higher the ev,
         # the lower the MT depending on the parameter p_w_updt
         initial_mu_side = initial_mu * prechoice[i_t]
@@ -178,7 +201,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         mu_update = np.array([pos, vel, acc, 75*RLresp[i_t], 0, 0]).reshape(-1, 1)
         # new mu, considering new position/speed/acceleration
         second_response_len = float((first_resp_len-t_ind) *
-                                    np.abs(p_w_updt/(second_ev[i_t]+1e-2)))
+                                    np.abs(p_w_updt/(second_ev[i_t])))
         # second_response_len: time left affected by the evidence on the
         # SECOND readout
         traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
@@ -186,7 +209,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         final_trajs.append(traj_fin)
         total_traj.append(np.concatenate(
             [prior0[0:second_ind[i_t]-first_ind[i_t]],
-             traj_fin]))  # conjoined trajectories
+             traj_fin]))  # joined trajectories
     return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
         total_traj, init_trajs, final_trajs
 
@@ -225,12 +248,7 @@ if __name__ == '__main__':
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
                             p_w_updt=p_w_updt, plot=False)
-    for i in range(8):
-        t = np.random.randint(0, num_tr)
-        plt.figure()
-        plt.plot(init_trajs[t], label='initial traj')
-        plt.plot(total_traj[t], label='updated traj')
-        plt.legend()
+    plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
     import sys
     sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
