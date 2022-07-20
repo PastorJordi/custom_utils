@@ -60,6 +60,24 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[1]].set_ylabel(l+' AI')
 
 
+def v_(t):
+    return t.reshape(-1, 1) ** np.arange(6)
+
+
+def get_Mt0te(t0, te):
+    Mt0te = np.array(
+        [
+            [1, t0, t0 ** 2, t0 ** 3, t0 ** 4, t0 ** 5],
+            [0, 1, 2 * t0, 3 * t0 ** 2, 4 * t0 ** 3, 5 * t0 ** 4],
+            [0, 0, 2, 6 * t0, 12 * t0 ** 2, 20 * t0 ** 3],
+            [1, te, te ** 2, te ** 3, te ** 4, te ** 5],
+            [0, 1, 2 * te, 3 * te ** 2, 4 * te ** 3, 5 * te ** 4],
+            [0, 0, 2, 6 * te, 12 * te ** 2, 20 * te ** 3],
+        ]
+    )
+    return Mt0te
+
+
 def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
                         p_t_m, p_t_eff, p_t_a, num_tr, p_w_a, p_a_noise,
                         plot=False):
@@ -113,7 +131,44 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re
+    resp_len = first_ind
+    RLresp = resp_fin
+    prechoice = resp_first
+    jerk_lock_ms = 0
+    initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+    # initial positions, speed and acc; final position, speed and acc
+    trajs = []
+    for i_t in range(E.shape[1]):
+        # final_mu = initial_mu.copy().flatten()
+        # if com[i_t]:  # flip it
+        #     final_mu *= -1
+        #     initial_expected_span = expectedMT
+        #     t_arr_from_z = np.arange(int(initial_expected_span))
+            
+        #     d1 = np.gradient(prior0, t_arr_from_z)
+        #     d2 = np.gradient(d1, t_arr_from_z)
+        #     Mf = ab.get_Mt0te(tup, resp_len)
+        #     Mf_1 = np.linalg.inv(Mf)
+        #     # init conditions are [prior0[tup], d1[tup], d2[tup]]
+        #     mu_prime = np.array(
+        #         [prior0[tup], d1[tup], d2[tup], final_mu[3], final_mu[4], final_mu[5]]
+        #     ).reshape(
+        #         6, 1
+        #     )  # final mu contains choice*
+        #     t_arr_prime = np.arange(tup, resp_len)
+        #     N_prime = ab.v_(t_arr_prime) @ Mf_1
+        #     updated_fragment = N_prime @ mu_prime  # .flatten()
+        #     final_traj = np.concatenate([prior0[:tup], updated_fragment.flatten()])
+        # else:
+        t_arr = np.arange(jerk_lock_ms, resp_len[i_t])
+        M = get_Mt0te(jerk_lock_ms, resp_len[i_t])
+        M_1 = np.linalg.inv(M)
+        vt = v_(t_arr)
+        N = vt @ M_1
+        prior0 = (N @ (initial_mu * RLresp[i_t])).ravel()
+        prior0 = np.concatenate([[0]*jerk_lock_ms, prior0])
+        trajs.append(prior0)
+    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, trajs
 
 
 # --- MAIN
@@ -137,7 +192,7 @@ if __name__ == '__main__':
     bound_a = 1
     p_w_a = 0.05
     p_a_noise = 0.05
-    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re =\
+    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, trajs =\
         trial_ev_vectorized(zt=zt, stim=stim, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                             p_com_bound=p_com_bound,
