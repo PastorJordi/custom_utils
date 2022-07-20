@@ -79,7 +79,7 @@ def get_Mt0te(t0, te):
 
 
 def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
-                        p_t_m, p_t_eff, p_t_a, num_tr, p_w_a, p_a_noise,
+                        p_t_m, p_t_eff, p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
                         plot=False):
     bound = 1
     bound_a = 1
@@ -101,6 +101,8 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
     first_ind = []
     second_ind = []
     pro_vs_re = []
+    first_ev = []
+    second_ev = []
     resp_first = np.ones(E.shape[1])
     resp_fin = np.ones(E.shape[1])
     for i_c in range(E.shape[1]):
@@ -115,6 +117,7 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
         hit_dec = min(hit_bound, hit_action)
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         first_ind.append(hit_dec)
+        first_ev.append(E[hit_dec, i_c])
         # first response
         resp_first[i_c] *= (-1)**(E[hit_dec, i_c] < 0)
         com_bound_temp = (-resp_first[i_c])*p_com_bound
@@ -128,12 +131,12 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
             (indx_com[0] + hit_dec)
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
         second_ind.append(indx_update_ch)
+        second_ev.append(E[indx_update_ch, i_c])
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    resp_len = first_ind
     RLresp = resp_fin
-    prechoice = resp_first
+    # prechoice = resp_first
     jerk_lock_ms = 0
     initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
     # initial positions, speed and acc; final position, speed and acc
@@ -144,24 +147,26 @@ def trial_ev_vectorized(zt, stim, p_w_zt, p_w_stim, p_e_noise, p_com_bound,
         #     final_mu *= -1
         #     initial_expected_span = expectedMT
         #     t_arr_from_z = np.arange(int(initial_expected_span))
-            
         #     d1 = np.gradient(prior0, t_arr_from_z)
         #     d2 = np.gradient(d1, t_arr_from_z)
         #     Mf = ab.get_Mt0te(tup, resp_len)
         #     Mf_1 = np.linalg.inv(Mf)
         #     # init conditions are [prior0[tup], d1[tup], d2[tup]]
         #     mu_prime = np.array(
-        #         [prior0[tup], d1[tup], d2[tup], final_mu[3], final_mu[4], final_mu[5]]
+        #         [prior0[tup], d1[tup], d2[tup], final_mu[3], final_mu[4],
+        #          final_mu[5]]
         #     ).reshape(
         #         6, 1
         #     )  # final mu contains choice*
         #     t_arr_prime = np.arange(tup, resp_len)
         #     N_prime = ab.v_(t_arr_prime) @ Mf_1
         #     updated_fragment = N_prime @ mu_prime  # .flatten()
-        #     final_traj = np.concatenate([prior0[:tup], updated_fragment.flatten()])
+        #     final_traj = np.concatenate([prior0[:tup],
+        #                                  updated_fragment.flatten()])
         # else:
-        t_arr = np.arange(jerk_lock_ms, resp_len[i_t])
-        M = get_Mt0te(jerk_lock_ms, resp_len[i_t])
+        resp_len = p_w_updt/first_ev[i_t]
+        t_arr = np.arange(jerk_lock_ms, resp_len)
+        M = get_Mt0te(jerk_lock_ms, resp_len)
         M_1 = np.linalg.inv(M)
         vt = v_(t_arr)
         N = vt @ M_1
@@ -199,6 +204,11 @@ if __name__ == '__main__':
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
                             plot=False)
+    plt.figure()
+    for tr in trajs:
+        plt.plot(tr)
+    import sys
+    sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff)
