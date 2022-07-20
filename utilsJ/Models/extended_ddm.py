@@ -82,6 +82,17 @@ def get_Mt0te(t0, te):
     return Mt0te
 
 
+def compute_traj(jerk_lock_ms, mu, resp_len):
+    t_arr = np.arange(jerk_lock_ms, resp_len)
+    M = get_Mt0te(jerk_lock_ms, resp_len)
+    M_1 = np.linalg.inv(M)
+    vt = v_(t_arr)
+    N = vt @ M_1
+    traj = (N @ mu).ravel()
+    traj = np.concatenate([[0]*jerk_lock_ms, traj])  # trajectory
+    return traj
+
+
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_m, p_t_eff,
                         p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
@@ -151,16 +162,12 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     for i_t in range(E.shape[1]):
         MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
         first_resp_len = float((MT) *
-                               np.abs(p_w_updt/first_ev[i_t]))
+                               np.abs(p_w_updt/(first_ev[i_t]+1e-2)))
         # first_resp_len: evidence affectation on MT. The higher the ev,
         # the lower the MT depending on the parameter p_w_updt
-        t_arr = np.arange(jerk_lock_ms, first_resp_len)
-        M = get_Mt0te(jerk_lock_ms, first_resp_len)
-        M_1 = np.linalg.inv(M)
-        vt = v_(t_arr)
-        N = vt @ M_1
-        prior0 = (N @ (initial_mu * prechoice[i_t])).ravel()
-        prior0 = np.concatenate([[0]*jerk_lock_ms, prior0])  # initial trajectory
+        initial_mu_side = initial_mu * prechoice[i_t]
+        prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                              resp_len=first_resp_len)
         init_trajs.append(prior0)
         # TRAJ. UPDATE
         vel_all = np.gradient(prior0)
@@ -171,16 +178,11 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         mu_update = np.array([pos, vel, acc, 75*RLresp[i_t], 0, 0]).reshape(-1, 1)
         # new mu, considering new position/speed/acceleration
         second_response_len = float((first_resp_len-t_ind) *
-                                    np.abs(p_w_updt/second_ev[i_t]))
+                                    np.abs(p_w_updt/(second_ev[i_t]+1e-2)))
         # second_response_len: time left affected by the evidence on the
         # SECOND readout
-        t_arr_2 = np.arange(jerk_lock_ms, second_response_len)
-        Mf = get_Mt0te(jerk_lock_ms, second_response_len)
-        M_1_f = np.linalg.inv(Mf)
-        vt = v_(t_arr_2)
-        Nf = vt @ M_1_f
-        traj_fin = (Nf @ mu_update).ravel()
-        traj_fin = np.concatenate([[0]*jerk_lock_ms, traj_fin])  # update
+        traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                resp_len=second_response_len)
         final_trajs.append(traj_fin)
         total_traj.append(np.concatenate(
             [prior0[0:second_ind[i_t]-first_ind[i_t]],
@@ -223,7 +225,7 @@ if __name__ == '__main__':
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
                             p_w_updt=p_w_updt, plot=False)
-    for i in range(4):
+    for i in range(8):
         t = np.random.randint(0, num_tr)
         plt.figure()
         plt.plot(init_trajs[t], label='initial traj')
