@@ -12,6 +12,10 @@ import matplotlib.pyplot as plt
 
 
 def draw_lines(ax, frst, sec, p_t_eff):
+    ax[0].spines['right'].set_visible(False)
+    ax[0].spines['top'].set_visible(False)
+    ax[1].spines['right'].set_visible(False)
+    ax[1].spines['top'].set_visible(False)
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
@@ -27,7 +31,7 @@ def draw_lines(ax, frst, sec, p_t_eff):
 
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_eff, trial=0):
-    f, ax = plt.subplots(nrows=4, ncols=2, figsize=(8, 12))
+    f, ax = plt.subplots(nrows=4, ncols=2, figsize=(10, 12))
     ax = ax.flatten()
     ax[0].set_title('CoM')
     ax[1].set_title('No-CoM')
@@ -197,18 +201,19 @@ if __name__ == '__main__':
     bound_a = 1
     p_w_a = 0.05
     p_a_noise = 0.05
+    p_w_updt = 1
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, trajs =\
         trial_ev_vectorized(zt=zt, stim=stim, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                             p_com_bound=p_com_bound,
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
-                            plot=False)
+                            p_w_updt=p_w_updt, plot=False)
     plt.figure()
     for tr in trajs:
         plt.plot(tr)
-    import sys
-    sys.exit()
+    # import sys
+    # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff)
