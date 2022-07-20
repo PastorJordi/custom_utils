@@ -117,10 +117,23 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
     return traj
 
 
+def get_data(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl'):
+    # import data for 1 rat
+    print('Loading data')
+    df = pd.read_pickle(dfpath)
+    df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2']]
+    df_rat["priorZt"] = np.nansum(
+            df[["dW_lat", "dW_trans"]].values, axis=1)
+    print('Ended loading data')
+    stim = np.array([stim for stim in df_rat.res_sound])
+    prior = df_rat.priorZt
+    return df_rat, stim, prior
+
+
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_m, p_t_eff,
                         p_t_a, num_tr, p_w_a, p_a_noise, p_w_updt,
-                        plot=False):
+                        plot=False, trajectories=False):
     print('Starting simulation, PSIAM')
     bound = 1
     bound_a = 1
@@ -168,7 +181,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
-        indx_update_ch = hit_dec + p_t_eff if len(indx_com) == 0 else\
+        indx_update_ch = hit_dec if len(indx_com) == 0 else\
             (indx_com[0] + hit_dec)
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
         second_ind.append(indx_update_ch)
@@ -176,60 +189,55 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    # Trajectories
-    print('Starting with trajectories')
-    RLresp = resp_fin
-    prechoice = resp_first
-    jerk_lock_ms = 0
-    initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
-    # initial positions, speed and acc; final position, speed and acc
-    init_trajs = []
-    final_trajs = []
-    total_traj = []
-    for i_t in range(E.shape[1]):
-        MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
-        first_resp_len = float((MT) *
-                               np.abs(p_w_updt/(first_ev[i_t])))
-        # first_resp_len: evidence affectation on MT. The higher the ev,
-        # the lower the MT depending on the parameter p_w_updt
-        initial_mu_side = initial_mu * prechoice[i_t]
-        prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
-                              resp_len=first_resp_len)
-        init_trajs.append(prior0)
-        # TRAJ. UPDATE
-        vel_all = np.gradient(prior0)
-        t_ind = int(second_ind[i_t] - first_ind[i_t])  # time index
-        vel = vel_all[t_ind]  # velocity at the timepoint
-        acc = np.gradient(vel_all)[t_ind]  # acceleration
-        pos = prior0[t_ind]  # position
-        mu_update = np.array([pos, vel, acc, 75*RLresp[i_t], 0, 0]).reshape(-1, 1)
-        # new mu, considering new position/speed/acceleration
-        second_response_len = float((first_resp_len-t_ind) *
-                                    np.abs(p_w_updt/(second_ev[i_t])))
-        # second_response_len: time left affected by the evidence on the
-        # SECOND readout
-        traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
-                                resp_len=second_response_len)
-        final_trajs.append(traj_fin)
-        total_traj.append(np.concatenate(
-            [prior0[0:second_ind[i_t]-first_ind[i_t]],
-             traj_fin]))  # joined trajectories
-    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-        total_traj, init_trajs, final_trajs
+    if trajectories:
+        # Trajectories
+        print('Starting with trajectories')
+        RLresp = resp_fin
+        prechoice = resp_first
+        jerk_lock_ms = 0
+        initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+        # initial positions, speed and acc; final position, speed and acc
+        init_trajs = []
+        final_trajs = []
+        total_traj = []
+        for i_t in range(E.shape[1]):
+            MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
+            first_resp_len = float((MT) *
+                                   np.abs(p_w_updt/(first_ev[i_t])))
+            # first_resp_len: evidence affectation on MT. The higher the ev,
+            # the lower the MT depending on the parameter p_w_updt
+            initial_mu_side = initial_mu * prechoice[i_t]
+            prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                                  resp_len=first_resp_len)
+            init_trajs.append(prior0)
+            # TRAJ. UPDATE
+            vel_all = np.gradient(prior0)
+            t_ind = int(second_ind[i_t] - first_ind[i_t])  # time index
+            vel = vel_all[t_ind]  # velocity at the timepoint
+            acc = np.gradient(vel_all)[t_ind]  # acceleration
+            pos = prior0[t_ind]  # position
+            mu_update = np.array([pos, vel, acc,
+                                  75*RLresp[i_t], 0, 0]).reshape(-1, 1)
+            # new mu, considering new position/speed/acceleration
+            second_response_len = float((first_resp_len-t_ind) *
+                                        np.abs(p_w_updt/(second_ev[i_t])))
+            # second_response_len: time left affected by the evidence on the
+            # SECOND readout
+            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                    resp_len=second_response_len)
+            final_trajs.append(traj_fin)
+            total_traj.append(np.concatenate(
+                [prior0[0:second_ind[i_t]-first_ind[i_t]],
+                 traj_fin]))  # joined trajectories
+        return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+            total_traj, init_trajs, final_trajs
+    else:
+        return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+            None, None, None
 
 
 # --- MAIN
 if __name__ == '__main__':
-    # import data for 1 rat
-    # dfpath = 'C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl'
-    # print('Loading data')
-    # df = pd.read_pickle(dfpath)
-    # df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2']]
-    # df_rat["priorZt"] = np.nansum(
-    #         df[["dW_lat", "dW_trans"]].values, axis=1)
-    # print('Ended loading data')
-    
-    
     plt.close('all')
     num_tr = int(1e2)
     plot = False
@@ -239,18 +247,17 @@ if __name__ == '__main__':
     num_timesteps = 1000
     stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_eff,
                                                         num_tr)*1e-1
-    # stim = np.array([stim for stim in df_rat.res_sound[:100]]).T
     MT_slope = 0.15
     MT_intercep = 110
     p_t_m = 40
     p_w_zt = 0.2
-    p_w_stim = 0.3
+    p_w_stim = 0.2
     p_e_noise = 0.2
     p_com_bound = 0.5
     Va = np.abs(np.random.randn(num_tr))*1e-1
     fluc_a = 0.5
     bound_a = 1
-    p_w_a = 0.005
+    p_w_a = 0.05
     p_a_noise = 0.05
     p_w_updt = 1
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
@@ -262,8 +269,8 @@ if __name__ == '__main__':
                             p_com_bound=p_com_bound,
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
-                            p_w_updt=p_w_updt, plot=False)
-    plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
+                            p_w_updt=p_w_updt, plot=False, trajectories=False)
+    # plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
     import sys
     sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
