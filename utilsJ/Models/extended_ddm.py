@@ -179,28 +179,28 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
     Returns
     -------
-    E : TYPE
-        DESCRIPTION.
-    A : TYPE
-        DESCRIPTION.
-    com : TYPE
-        DESCRIPTION.
-    first_ind : TYPE
-        DESCRIPTION.
-    second_ind : TYPE
-        DESCRIPTION.
-    resp_first : TYPE
-        DESCRIPTION.
-    resp_fin : TYPE
-        DESCRIPTION.
-    pro_vs_re : TYPE
-        DESCRIPTION.
-    TYPE
-        DESCRIPTION.
-    TYPE
-        DESCRIPTION.
-    TYPE
-        DESCRIPTION.
+    E : array
+        evidence integration matrix (num_tr x stim.shape[0]).
+    A : array
+        action integration matrix (num_tr x stim.shape[0]).
+    com : boolean array
+        whether each trial is or not a change-of-mind (num_tr x 1).
+    first_ind : list
+        first choice indexes (num_tr x 1).
+    second_ind : list
+        second choice indexes (num_tr x 1).
+    resp_first : list
+        first choice (-1 if left and 1 if right, num_tr x 1).
+    resp_fin : list
+        second (final) choice (-1 if left and 1 if right, num_tr x 1).
+    pro_vs_re : boolean array
+        whether each trial is reactive or not (proactive) ( num_tr x 1).
+    total_traj: tuple
+        total trajectory of the rat, containing the update (num_tr x 1).
+    init_trajs: tuple
+        pre-planned trajectory of the rat.
+    final_trajs: tuple
+        trajectory after the update.
 
     """
     print('Starting simulation, PSIAM')
