@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from sklearn.metrics import mean_squared_error as mse
 # import scipy as sp
 
 # ddm
@@ -241,17 +242,23 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
     return traj
 
 
-def get_data(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl'):
+def get_data_and_matrix(
+        dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl',
+        savepath='C:/Users/alexg/Documents/GitHub/custom_utils/utilsJ/Models'):
     # import data for 1 rat
     print('Loading data')
     df = pd.read_pickle(dfpath)
-    df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2']]
+    df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2',
+                 'CoM_sugg']]
     df_rat["priorZt"] = np.nansum(
             df[["dW_lat", "dW_trans"]].values, axis=1)
     print('Ended loading data')
     stim = np.array([stim for stim in df_rat.res_sound])
     prior = df_rat.priorZt
-    return df_rat, stim, prior
+    com = df_rat.CoM_sugg
+    matrix, _ = com_heatmap_jordi(prior, df_rat.coh2, com, return_mat=True)
+    np.save(savepath + '/CoM_vs_prior_and_stim.npy', matrix)
+    return df_rat, stim, prior, com, matrix
 
 
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -378,8 +385,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    com_heatmap_jordi(zt, np.mean(stim, axis=0), com,
-                      return_mat=False)
+    matrix, _ = com_heatmap_jordi(zt, np.mean(stim, axis=0), com,
+                                  return_mat=True)
     if trajectories:
         # Trajectories
         print('Starting with trajectories')
@@ -425,16 +432,25 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             traj_before_uptd = prior0[0:t_ind]
             total_traj.append(np.concatenate((traj_before_uptd,  traj_fin)))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            total_traj, init_trajs, final_trajs, motor_updt_time
+            matrix, total_traj, init_trajs, final_trajs, motor_updt_time
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            None, None, None, None
+            matrix, None, None, None, None
+
+
+def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/\
+                      custom_utils/utilsJ/Models/',
+                      npyname='CoM_vs_prior_and_stim.npy'):
+    matrix_data = np.load(npypath+npyname)
+    rmse = np.sqrt(mse(matrix, matrix_data))
+    print(rmse)
+    return rmse
 
 
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    num_tr = int(1e4)
+    num_tr = int(1e5)
     zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
     p_t_eff = 40
     p_t_a = p_t_eff
@@ -452,16 +468,17 @@ if __name__ == '__main__':
     p_a_noise = 0.05
     p_w_updt = 15
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
-        init_trajs, final_trajs, motor_updt_time =\
+        init_trajs, final_trajs, motor_updt_time, matrix =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
                             MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                             p_com_bound=p_com_bound, p_t_m=p_t_m,
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-                            trajectories=True)
-    # import sys
-    # sys.exit()
+                            trajectories=False)
+    matrix_comparison(matrix)
+    import sys
+    sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff, init_trajs=init_trajs, total_traj=total_traj,
