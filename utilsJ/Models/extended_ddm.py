@@ -202,7 +202,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         total_traj = []
         for i_t in range(E.shape[1]):
             MT = (MT_slope*i_t + MT_intercep)  # pre-planned Motor Time
-            first_resp_len = float(MT*np.abs(p_w_updt/(first_ev[i_t])))
+            ref_bound = np.sign(first_ev[i_t])
+            first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
             # alternative: set motor time as a function of the distance to 
             # the chosen bound
             # ref_bound = np.sign(first_ev[i_t])
@@ -225,11 +226,13 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
                                   0, 0]).reshape(-1, 1)
             # new mu, considering new position/speed/acceleration
-            ref_bound = resp_first[i_c]
+            # ref_bound = resp_first[i_c]
             remaining_m_time = first_resp_len-t_ind
-            distance_first_dec = np.abs(ref_bound-second_ev[i_t])
-            second_response_len = float(remaining_m_time *
-                                        np.abs(p_w_updt*distance_first_dec))
+            # distance_first_dec = np.abs(ref_bound-second_ev[i_t])
+            sign_ = resp_first[i_t]
+            second_response_len = float(remaining_m_time-sign_*p_w_updt*second_ev[i_t])
+            # second_response_len = float(remaining_m_time *
+            #                             np.abs(p_w_updt*distance_first_dec))
             # p_delay_com/p_com_bound*com[i_t])
             # second_response_len: time left affected by the evidence on the
             # SECOND readout
@@ -269,7 +272,7 @@ if __name__ == '__main__':
     bound_a = 1
     p_w_a = 0.05
     p_a_noise = 0.05
-    p_w_updt = 1
+    p_w_updt = 10
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
         init_trajs, final_trajs =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
