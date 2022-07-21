@@ -136,7 +136,7 @@ def get_data(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl'):
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_m, p_t_eff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
-                        plot=False, trajectories=False):
+                        trajectories=False):
     """
     Generate stim and time integration and trajectories
 
@@ -161,22 +161,21 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         first choice).
     p_t_m : float
         fitting parameter: standard deviation of evidence noise (gaussian).
-    p_t_eff : TYPE
-        DESCRIPTION.
-    p_t_a : TYPE
-        DESCRIPTION.
-    p_w_a : TYPE
-        DESCRIPTION.
-    p_a_noise : TYPE
-        DESCRIPTION.
-    p_w_updt : TYPE
-        DESCRIPTION.
-    num_tr : TYPE
-        DESCRIPTION.
-    plot : TYPE, optional
-        DESCRIPTION. The default is False.
-    trajectories : TYPE, optional
-        DESCRIPTION. The default is False.
+    p_t_eff : float
+        fitting parameter: afferent latency time to integrate stimulus.
+    p_t_a : float
+        fitting parameter: afferent latency time for action integration.
+    p_w_a : float
+        fitting parameter: drift of action noise.
+    p_a_noise : float
+        fitting parameter: standard deviation of action noise (gaussian).
+    p_w_updt : float
+        fitting parameter: slope of the linear realtion with time and evidence
+        for trajectory update.
+    num_tr : int
+        number of trials.
+    trajectories : boolean, optional
+        Whether trajectories are computed or not. The default is False.
 
     Returns
     -------
@@ -311,7 +310,6 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 if __name__ == '__main__':
     plt.close('all')
     num_tr = int(1e2)
-    plot = False
     zt = np.random.randn(num_tr)*1e-2
     p_t_eff = 40
     p_t_a = p_t_eff
@@ -339,7 +337,7 @@ if __name__ == '__main__':
                             p_com_bound=p_com_bound, p_t_m=p_t_m,
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-                            plot=False, trajectories=True)
+                            trajectories=True)
     plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj,
                    com, pro_vs_re)
     # import sys
