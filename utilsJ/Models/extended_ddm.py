@@ -13,32 +13,26 @@ import pandas as pd
 
 
 def draw_lines(ax, frst, sec, p_t_eff):
-    ax[0].spines['right'].set_visible(False)
-    ax[0].spines['top'].set_visible(False)
-    ax[1].spines['right'].set_visible(False)
-    ax[1].spines['top'].set_visible(False)
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
     ax[0].axhline(y=0.5, color='purple', linewidth=1, linestyle='--')
     ax[0].axhline(y=-0.5, color='green', linewidth=1, linestyle='--')
     ax[1].axhline(y=1, color='k', linewidth=1, linestyle='--')
-    ax[0].axvline(x=frst, color='c', linewidth=1, linestyle='--')
-    ax[1].axvline(x=frst, color='c', linewidth=1, linestyle='--')
-    if sec < frst+p_t_eff:
-        ax[0].axvline(x=sec, color='c', linewidth=1, linestyle='--')
-        ax[1].axvline(x=sec, color='c', linewidth=1, linestyle='--')
+    for a in ax:
+        a.axvline(x=frst, color='c', linewidth=1, linestyle='--')
+        a.spines['right'].set_visible(False)
+        a.spines['top'].set_visible(False)
+        a.axvline(x=sec, color='c', linewidth=1, linestyle='--')
 
 
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_eff, trial=0):
-    f, ax = plt.subplots(nrows=4, ncols=2, figsize=(10, 12))
+             p_t_eff, init_trajs, total_traj, p_t_m, motor_updt_time, trial=0):
+    f, ax = plt.subplots(nrows=3, ncols=4, figsize=(15, 12))
     ax = ax.flatten()
-    ax[0].set_title('CoM')
-    ax[1].set_title('No-CoM')
     ax[6].set_xlabel('Time (ms)')
     ax[7].set_xlabel('Time (ms)')
-    axes = [[0, 2], [1, 3], [4, 6], [5, 7]]
+    axes = [np.array([0, 4, 8])+i for i in range(4)]
     trials = [0, 0, 1, 1]
     mat_indx = [np.logical_and(com, pro_vs_re == 0),
                 np.logical_and(~com, pro_vs_re == 0),
@@ -46,6 +40,9 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
                 np.logical_and(~com, pro_vs_re == 1)]
     y_lbls = ['CoM Proactive', 'No CoM Proactive', 'CoM Reactive',
               'No CoM Reactive']
+    for i_ax in range(4):
+        ax[i_ax].set_title(y_lbls[i_ax])
+    max_xlim = 0
     for i, (a, t, m, l) in enumerate(zip(axes, trials, mat_indx, y_lbls)):
         trial = np.where(m)[0][t]
         draw_lines(ax[np.array(a)], frst=first_ind[trial], sec=second_ind[trial],
@@ -63,32 +60,22 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[1]].set_ylim([-0.1, 1.5])
         ax[a[0]].set_ylabel(l+' EA')
         ax[a[1]].set_ylabel(l+' AI')
-
-
-def plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj, com,
-                   pro_vs_re):
-    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 12))
-    ax = ax.flatten()
-    ax[0].set_title('CoM')
-    ax[1].set_title('No-CoM')
-    ax[2].set_xlabel('Time (ms)')
-    ax[3].set_xlabel('Time (ms)')
-    trials = [0, 0, 1, 1]
-    mat_indx = [np.logical_and(com, pro_vs_re == 0),
-                np.logical_and(~com, pro_vs_re == 0),
-                np.logical_and(com, pro_vs_re == 1),
-                np.logical_and(~com, pro_vs_re == 1)]
-    y_lbls = ['CoM Proactive', 'No CoM Proactive', 'CoM Reactive',
-              'No CoM Reactive']
-    for i, (t, m, l) in enumerate(zip(trials, mat_indx, y_lbls)):
-        trial = np.where(m)[0][t]
+        # trajectories
         sec_ev = round(E[second_ind[trial], trial], 2)
-        ax[i].plot(total_traj[trial], label=f'Updated traj., E:{sec_ev}')
+        # updt_motor = first_ind[trial]+motor_updt_time[trial]
+        init_motor = first_ind[trial]+p_t_m
+        xs = np.arange(init_motor, init_motor+len(total_traj[trial]))
+        max_xlim = max(max_xlim, np.max(xs))
+        ax[a[2]].plot(xs, total_traj[trial], label=f'Updated traj., E:{sec_ev}')
         first_ev = round(E[first_ind[trial], trial], 2)
-        ax[i].plot(init_trajs[trial], label=f'Initial traj. E:{first_ev}')
-        ax[i].set_ylabel(l+', y(px)')
-        ax[i].set_ylabel(l+', y(px)')
-        ax[i].legend()
+        xs = np.arange(init_motor, init_motor+len(init_trajs[trial]))
+        max_xlim = max(max_xlim, np.max(xs))
+        ax[a[2]].plot(xs, init_trajs[trial], label=f'Initial traj. E:{first_ev}')
+        ax[a[2]].set_ylabel(l+', y(px)')
+        ax[a[2]].set_ylabel(l+', y(px)')
+        ax[a[2]].legend()
+    for a in ax:
+        a.set_xlim([0, max_xlim])
 
 
 def v_(t):
@@ -268,6 +255,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         init_trajs = []
         final_trajs = []
         total_traj = []
+        motor_updt_time = []
         for i_t in range(E.shape[1]):
             MT = MT_slope*i_t + MT_intercep  # pre-planned Motor Time
             first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
@@ -281,6 +269,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
             t_ind = int(p_t_m+second_ind[i_t] - first_ind[i_t])  # time index
+            motor_updt_time.append(t_ind)
             vel = velocities[t_ind]  # velocity at the timepoint
             acc = accelerations[t_ind]
             pos = prior0[t_ind]  # position
@@ -300,10 +289,10 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             traj_before_uptd = prior0[0:t_ind]
             total_traj.append(np.concatenate((traj_before_uptd,  traj_fin)))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            total_traj, init_trajs, final_trajs
+            total_traj, init_trajs, final_trajs, motor_updt_time
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            None, None, None
+            None, None, None, None
 
 
 # --- MAIN
@@ -330,7 +319,7 @@ if __name__ == '__main__':
     p_a_noise = 0.05
     p_w_updt = 15
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
-        init_trajs, final_trajs =\
+        init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
                             MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
@@ -338,10 +327,11 @@ if __name__ == '__main__':
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             trajectories=True)
-    plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj,
-                   com, pro_vs_re)
+    # plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj,
+    #                com, pro_vs_re)
     # import sys
     # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
-             p_t_eff=p_t_eff)
+             p_t_eff=p_t_eff, init_trajs=init_trajs, total_traj=total_traj,
+             p_t_m=p_t_m, motor_updt_time=motor_updt_time)
