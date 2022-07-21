@@ -65,7 +65,7 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[1]].set_ylabel(l+' AI')
 
 
-def plotting_trajs(init_trajs, total_traj, com, pro_vs_re):
+def plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj, com, pro_vs_re):
     f, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 12))
     ax = ax.flatten()
     ax[0].set_title('CoM')
@@ -81,8 +81,10 @@ def plotting_trajs(init_trajs, total_traj, com, pro_vs_re):
               'No CoM Reactive']
     for i, (t, m, l) in enumerate(zip(trials, mat_indx, y_lbls)):
         trial = np.where(m)[0][t]
-        ax[i].plot(total_traj[trial], label='Updated traj.')
-        ax[i].plot(init_trajs[trial], label='Initial traj.')
+        ax[i].plot(total_traj[trial],
+                   label=f'Updated traj., E:{round(E[second_ind[trial], trial], 2)}')
+        ax[i].plot(init_trajs[trial],
+                   label=f'Initial traj. E:{round(E[first_ind[trial], trial], 2)}')
         ax[i].set_ylabel(l+', y(px)')
         ax[i].set_ylabel(l+', y(px)')
         ax[i].legend()
@@ -181,7 +183,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
-        indx_update_ch = hit_dec if len(indx_com) == 0 else\
+        indx_update_ch = hit_dec+p_t_eff if len(indx_com) == 0 else\
             (indx_com[0] + hit_dec)
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
         second_ind.append(indx_update_ch)
@@ -272,7 +274,7 @@ if __name__ == '__main__':
     bound_a = 1
     p_w_a = 0.05
     p_a_noise = 0.05
-    p_w_updt = 10
+    p_w_updt = 15
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
         init_trajs, final_trajs =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
@@ -283,9 +285,9 @@ if __name__ == '__main__':
                             p_t_m=p_t_m, p_t_eff=p_t_eff, p_t_a=p_t_a,
                             num_tr=num_tr, p_w_a=p_w_a, p_a_noise=p_a_noise,
                             p_w_updt=p_w_updt, plot=False, trajectories=True)
-    plotting_trajs(init_trajs, total_traj, com, pro_vs_re)
-    import sys
-    sys.exit()
+    plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj, com, pro_vs_re)
+    # import sys
+    # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff)
