@@ -7,6 +7,7 @@ Created on Sat Jul 16 12:17:47 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 # import scipy as sp
 
 # ddm
@@ -76,6 +77,139 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[2]].legend()
     for a in ax:
         a.set_xlim([0, max_xlim])
+
+
+def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
+                      predefbins=None, return_mat=False,
+                      folding=False, annotate_div=1, **kwargs):
+    """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated
+    from tmp dataframe
+    g = sns.FacetGrid(df[df.special_trial==0].dropna(
+        subset=['avtrapz', 'rtbins']), col='rtbins',
+        col_wrap=3, height=5, sharex=False)
+    g = g.map(plotting.com_heatmap, 'norm_prior','avtrapz','CoM_sugg',
+              vmax=.15).set_axis_labels('prior', 'average stim')
+
+    annotate_div= number to divide
+    """
+    tmp = pd.DataFrame(np.array([x, y, com]).T, columns=["prior", "stim", "com"])
+
+    # make bins
+    tmp["binned_prior"] = np.nan
+    maxedge_prior = tmp.prior.abs().max()
+    if predefbins is None:
+        predefbinsflag = False
+        bins = np.linspace(-maxedge_prior - 0.01, maxedge_prior + 0.01, 8)
+    else:
+        predefbinsflag = True
+        bins = np.asarray(predefbins[0])
+
+    tmp.loc[:, "binned_prior"], priorbins = pd.cut(
+        tmp.prior, bins=bins, retbins=True,
+        labels=np.arange(bins.size-1), include_lowest=True)
+
+    tmp.loc[:, "binned_prior"] = tmp.loc[:, "binned_prior"].astype(int)
+    priorlabels = [round((priorbins[i] + priorbins[i + 1]) / 2, 2)
+                   for i in range(bins.size-1)]
+
+    tmp["binned_stim"] = np.nan
+    maxedge_stim = tmp.stim.abs().max()
+    if not predefbinsflag:
+        bins = np.linspace(-maxedge_stim - 0.01, maxedge_stim + 0.01, 8)
+    else:
+        bins = np.asarray(predefbins[1])
+    tmp.loc[:, "binned_stim"], stimbins = pd.cut(
+        tmp.stim, bins=bins, retbins=True, labels=np.arange(bins.size-1),
+        include_lowest=True)
+    tmp.loc[:, "binned_stim"] = tmp.loc[:, "binned_stim"].astype(int)
+    stimlabels = [round((stimbins[i] + stimbins[i + 1]) / 2, 2)
+                  for i in range(bins.size-1)]
+
+    # populate matrices
+    matrix = np.zeros((len(stimlabels), len(priorlabels)))
+    nmat = matrix.copy()
+    plain_com_mat = matrix.copy()
+    for i in range(len(stimlabels)):
+        switch = (tmp.loc[(tmp.com == True) & (tmp.binned_stim == i)]
+                  .groupby("binned_prior")["binned_prior"].count())
+        nobs = (switch + tmp.loc[(tmp.com == False) & (tmp.binned_stim == i)]
+                .groupby("binned_prior")["binned_prior"].count())
+        # fill where there are no CoM (instead it will be nan)
+        nobs.loc[nobs.isna()] = (tmp.loc[(tmp.com == False) &
+                                         (tmp.binned_stim == i)]
+                                 .groupby("binned_prior")["binned_prior"]
+                                 .count()
+                                 .loc[nobs.isna()])  # index should be the same!
+        crow = switch / nobs  # .values
+        nmat[i, nobs.index.astype(int)] = nobs
+        plain_com_mat[i, switch.index.astype(int)] = switch.values
+        matrix[i, crow.index.astype(int)] = crow
+
+    if folding:  # get indexes
+        iu = np.triu_indices(len(stimlabels), 1)
+        il = np.tril_indices(len(stimlabels), -1)
+        tmp_nmat = np.fliplr(nmat.copy())
+        tmp_nmat[iu] += tmp_nmat[il]
+        tmp_nmat[il] = 0
+        tmp_ncom = np.fliplr(plain_com_mat.copy())
+        tmp_ncom[iu] += tmp_ncom[il]
+        tmp_ncom[il] = 0
+        plain_com_mat = np.fliplr(tmp_ncom.copy())
+        matrix = tmp_ncom/tmp_nmat
+        matrix = np.fliplr(matrix)
+
+    if return_mat:
+        # matrix is com/obs, nmat is number of observations
+        return matrix, nmat
+
+    if isinstance(annotate, str):
+        if annotate == 'com':
+            annotate = True
+            annotmat = plain_com_mat/annotate_div
+        if annotate == 'counts':
+            annotate = True
+            annotmat = nmat/annotate_div
+    else:
+        annotmat = nmat/annotate_div
+
+    if not kwargs:
+        kwargs = dict(cmap="viridis", fmt=".0f")
+    if flip:  # this shit is not workin # this works in custom subplot grid
+        # just retrieve ax and ax.invert_yaxis
+        # matrix = np.flipud(matrix)
+        # nmat = np.flipud(nmat)
+        # stimlabels=np.flip(stimlabels)
+        if annotate:
+            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat),
+                            **kwargs).set(xlabel="prior",
+                                          ylabel="average stim",
+                                          xticklabels=priorlabels,
+                                          yticklabels=np.flip(stimlabels))
+
+        else:
+            g = sns.heatmap(np.flipud(matrix), annot=None, **kwargs).set(
+                xlabel="prior",
+                ylabel="average stim",
+                xticklabels=priorlabels,
+                yticklabels=np.flip(stimlabels),
+            )
+    else:
+        if annotate:
+            g = sns.heatmap(matrix, annot=annotmat, **kwargs).set(
+                xlabel="prior",
+                ylabel="average stim",
+                xticklabels=priorlabels,
+                yticklabels=stimlabels,
+            )
+        else:
+            g = sns.heatmap(matrix, annot=None, **kwargs).set(
+                xlabel="prior",
+                ylabel="average stim",
+                xticklabels=priorlabels,
+                yticklabels=stimlabels,
+            )
+
+    return g
 
 
 def v_(t):
@@ -244,6 +378,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
+    com_heatmap_jordi(zt, np.mean(stim, axis=0), com,
+                      return_mat=False)
     if trajectories:
         # Trajectories
         print('Starting with trajectories')
@@ -298,23 +434,20 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    num_tr = int(1e2)
-    zt = np.random.randn(num_tr)*1e-2
+    num_tr = int(1e4)
+    zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
     p_t_eff = 40
     p_t_a = p_t_eff
     num_timesteps = 1000
-    stim = np.random.randn(num_tr)*1e-3+np.random.randn(num_timesteps+p_t_eff,
-                                                        num_tr)*1e-1
+    stim = np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
+        np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
     MT_slope = 0.15
     MT_intercep = 110
     p_t_m = 10
-    p_w_zt = 0.2
+    p_w_zt = 0.4
     p_w_stim = 0.2
     p_e_noise = 0.2
     p_com_bound = 0.5
-    Va = np.abs(np.random.randn(num_tr))*1e-1
-    fluc_a = 0.5
-    bound_a = 1
     p_w_a = 0.05
     p_a_noise = 0.05
     p_w_updt = 15
@@ -327,8 +460,6 @@ if __name__ == '__main__':
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             trajectories=True)
-    # plotting_trajs(E, second_ind, first_ind, init_trajs, total_traj,
-    #                com, pro_vs_re)
     # import sys
     # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
