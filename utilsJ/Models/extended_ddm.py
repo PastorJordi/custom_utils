@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from sklearn.metrics import mean_squared_error as mse
 # import scipy as sp
 
 # ddm
@@ -438,19 +437,23 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             matrix, None, None, None, None
 
 
-def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/\
-                      custom_utils/utilsJ/Models/',
+def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
+                      'custom_utils/utilsJ/Models/',
                       npyname='CoM_vs_prior_and_stim.npy'):
+    print('Starting comparison')
     matrix_data = np.load(npypath+npyname)
-    rmse = np.sqrt(mse(matrix, matrix_data))
+    MSE = np.square(np.subtract(matrix, matrix_data))
+    rmse = np.sqrt(MSE)
+    print('RMSE: ')
     print(rmse)
+    sns.heatmap(rmse)
     return rmse
 
 
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    num_tr = int(1e5)
+    num_tr = int(1e4)
     zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
     p_t_eff = 40
     p_t_a = p_t_eff
@@ -467,8 +470,8 @@ if __name__ == '__main__':
     p_w_a = 0.05
     p_a_noise = 0.05
     p_w_updt = 15
-    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, total_traj,\
-        init_trajs, final_trajs, motor_updt_time, matrix =\
+    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
+        total_traj, init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
                             MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
@@ -476,7 +479,7 @@ if __name__ == '__main__':
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             trajectories=False)
-    matrix_comparison(matrix)
+    rmse = matrix_comparison(matrix)
     import sys
     sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
