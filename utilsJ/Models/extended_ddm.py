@@ -441,26 +441,68 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
 def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
                       'custom_utils/utilsJ/Models/',
-                      npyname='CoM_vs_prior_and_stim.npy'):
+                      npyname='CoM_vs_prior_and_stim.npy', plotting=False):
     print('Starting comparison')
     matrix_data = np.load(npypath+npyname)
     difference = np.subtract(matrix, matrix_data)
     MSE = np.square(difference)
     rmse = np.sqrt(MSE)
-    print('RMSE: ')
-    print(rmse)
-    plt.figure()
-    sns.heatmap(matrix_data, cmap='viridis')
-    plt.title('Data')
-    plt.figure()
-    sns.heatmap(matrix, cmap='viridis')
-    plt.title('Sims')
-    plt.figure()
-    sns.heatmap(difference, cmap='viridis')
-    plt.title('Difference')
+    # print('RMSE: ')
+    # print(rmse)
+    if plotting:
+        plt.figure()
+        sns.heatmap(matrix_data, cmap='viridis')
+        plt.title('Data')
+        plt.figure()
+        sns.heatmap(matrix, cmap='viridis')
+        plt.title('Sims')
+        plt.figure()
+        sns.heatmap(difference, cmap='viridis')
+        plt.title('Difference')
     return rmse
 
 
+def brute_force(stim, zt, num_timesteps):
+    p_w_zt_list = np.linspace(0.005, 1, num=5)
+    p_w_stim_list = np.linspace(0.005, 10, num=5)
+    p_e_noise_list = np.linspace(0.005, 10, num=5)
+    p_com_bound_list = np.linspace(0.1, 1, num=5)
+    p_w_a_list = np.logspace(-3, -1, num=5)
+    p_a_noise_list = np.linspace(0.01, 0.1, num=5)
+    p_w_updt_list = 10
+    p_t_eff = 1
+    p_t_a = p_t_eff
+    p_t_m = 1
+    MT_slope = 0.15
+    MT_intercep = 110
+    rmse_list = []
+    compute_trajectories = False
+    for p_w_zt in p_w_zt_list:
+        for p_w_stim in p_w_stim_list:
+            for p_e_noise in p_e_noise_list:
+                for p_com_bound in p_com_bound_list:
+                    for p_a_noise in p_a_noise_list:
+                            for p_w_a in p_w_a_list:
+                                _, _, _, _, _, _, _, _, matrix,\
+                                    _, _, _, _ =\
+                                    trial_ev_vectorized(zt=zt, stim=stim,
+                                                        MT_slope=MT_slope,
+                                                        MT_intercep=MT_intercep,
+                                                        p_w_zt=p_w_zt,
+                                                        p_w_stim=p_w_stim,
+                                                        p_e_noise=p_e_noise,
+                                                        p_com_bound=p_com_bound,
+                                                        p_t_m=p_t_m,
+                                                        p_t_eff=p_t_eff, p_t_a=p_t_a,
+                                                        num_tr=num_tr,
+                                                        p_w_a=p_w_a,
+                                                        p_a_noise=p_a_noise,
+                                                        p_w_updt=p_w_updt,
+                                            compute_trajectories=compute_trajectories)
+                                rmse_total = matrix_comparison(matrix)
+                                rmse_mean = np.mean(rmse_total)
+                                rmse_list.append(rmse_mean)
+    return rmse_list
 # --- MAIN
 if __name__ == '__main__':
     # _, stim, zt, _, _ = get_data_and_matrix()
@@ -472,9 +514,9 @@ if __name__ == '__main__':
     plt.close('all')
     # num_tr = stim.shape[0]
     # zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
-    p_t_eff = 2
+    p_t_eff = 1
     p_t_a = p_t_eff
-    p_t_m = 2
+    p_t_m = 1
     stim = np.concatenate((stim, np.zeros((p_t_eff+p_t_m, stim.shape[1]))))
     num_timesteps = stim.shape[1]
     # 1000
@@ -484,14 +526,17 @@ if __name__ == '__main__':
     MT_slope = 0.15
     MT_intercep = 110
 
-    p_w_zt = 0.05
-    p_w_stim = 2
-    p_e_noise = 1
-    p_com_bound = 0.7
-    p_w_a = 0.08
-    p_a_noise = 0.05
-    p_w_updt = 10
-    compute_trajectories = True
+    # p_w_zt = 0.05
+    # p_w_stim = 2
+    # p_e_noise = 1
+    # p_com_bound = 0.7
+    # p_w_a = 0.08
+    # p_a_noise = 0.05
+    # p_w_updt = 10
+    compute_trajectories = False
+    rmse_list = brute_force(stim, zt, num_timesteps)
+    import sys
+    sys.exit()
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
         total_traj, init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
@@ -501,8 +546,8 @@ if __name__ == '__main__':
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             compute_trajectories=compute_trajectories)
-    npypath = '/home/manuel/custom_utils/utilsJ/Models/'
-    rmse = matrix_comparison(matrix, npypath=npypath)
+    # npypath = '/home/manuel/custom_utils/utilsJ/Models/'
+    rmse = matrix_comparison(matrix)
     # import sys
     # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
