@@ -28,7 +28,8 @@ def draw_lines(ax, frst, sec, p_t_eff):
 
 
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_eff, init_trajs, total_traj, p_t_m, motor_updt_time, trial=0):
+             p_t_eff, init_trajs, total_traj, p_t_m, motor_updt_time,
+             stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(15, 12))
     ax = ax.flatten()
     ax[6].set_xlabel('Time (ms)')
@@ -57,19 +58,19 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[a[1]].plot(A[:first_ind[trial]+p_t_eff+1, trial], color=color2,
                       alpha=0.7)
         ax[a[1]].plot(A[:first_ind[trial]+1, trial], color=color1, lw=2)
-        ax[a[0]].set_ylim([-1.5, 1.5])
-        ax[a[1]].set_ylim([-0.1, 1.5])
+        # ax[a[0]].set_ylim([-1.5, 1.5])
+        # ax[a[1]].set_ylim([-0.1, 1.5])
         ax[a[0]].set_ylabel(l+' EA')
         ax[a[1]].set_ylabel(l+' AI')
         # trajectories
         sec_ev = round(E[second_ind[trial], trial], 2)
         # updt_motor = first_ind[trial]+motor_updt_time[trial]
         init_motor = first_ind[trial]+p_t_m
-        xs = np.arange(init_motor, init_motor+len(total_traj[trial]))
+        xs = init_motor+np.arange(0, len(total_traj[trial]))/stim_res
         max_xlim = max(max_xlim, np.max(xs))
         ax[a[2]].plot(xs, total_traj[trial], label=f'Updated traj., E:{sec_ev}')
         first_ev = round(E[first_ind[trial], trial], 2)
-        xs = np.arange(init_motor, init_motor+len(init_trajs[trial]))
+        xs = init_motor+np.arange(0, len(init_trajs[trial]))/stim_res
         max_xlim = max(max_xlim, np.max(xs))
         ax[a[2]].plot(xs, init_trajs[trial], label=f'Initial traj. E:{first_ev}')
         ax[a[2]].set_ylabel(l+', y(px)')
@@ -263,7 +264,7 @@ def get_data_and_matrix(
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_m, p_t_eff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
-                        trajectories=False):
+                        compute_trajectories=False):
     """
     Generate stim and time integration and trajectories
 
@@ -387,7 +388,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, np.mean(stim, axis=0), com,
                                   return_mat=True)
-    if trajectories:
+    if compute_trajectories:
         # Trajectories
         print('Starting with trajectories')
         RLresp = resp_fin
@@ -459,7 +460,7 @@ if __name__ == '__main__':
     # _, stim, zt, _, _ = get_data_and_matrix()
     # np.save('stim.npy', stim)
     # np.save('zt.npy', zt)
-    num_tr = int(5e4)
+    num_tr = int(5e3)
     zt = np.load('zt.npy')[:num_tr]
     stim = np.load('stim.npy')[:num_tr].T
     plt.close('all')
@@ -477,13 +478,14 @@ if __name__ == '__main__':
     MT_slope = 0.15
     MT_intercep = 110
 
-    p_w_zt = 0.4
-    p_w_stim = 0.2  # 10
-    p_e_noise = 0.1  # 1
+    p_w_zt = 0.05
+    p_w_stim = 2
+    p_e_noise = 1
     p_com_bound = 0.7
     p_w_a = 0.08
     p_a_noise = 0.05
-    p_w_updt = 15
+    p_w_updt = 10
+    compute_trajectories = True
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
         total_traj, init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
@@ -492,11 +494,11 @@ if __name__ == '__main__':
                             p_com_bound=p_com_bound, p_t_m=p_t_m,
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-                            trajectories=False)
+                            compute_trajectories=compute_trajectories)
     npypath = '/home/manuel/custom_utils/utilsJ/Models/'
     rmse = matrix_comparison(matrix, npypath=npypath)
-    import sys
-    sys.exit()
+    # import sys
+    # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_eff=p_t_eff, init_trajs=init_trajs, total_traj=total_traj,
