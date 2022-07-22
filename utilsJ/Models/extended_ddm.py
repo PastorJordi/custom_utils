@@ -130,12 +130,12 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
     nmat = matrix.copy()
     plain_com_mat = matrix.copy()
     for i in range(len(stimlabels)):
-        switch = (tmp.loc[(tmp.com == True) & (tmp.binned_stim == i)]
+        switch = (tmp.loc[(tmp.com == 1) & (tmp.binned_stim == i)]
                   .groupby("binned_prior")["binned_prior"].count())
-        nobs = (switch + tmp.loc[(tmp.com == False) & (tmp.binned_stim == i)]
+        nobs = (switch + tmp.loc[(tmp.com == 0) & (tmp.binned_stim == i)]
                 .groupby("binned_prior")["binned_prior"].count())
         # fill where there are no CoM (instead it will be nan)
-        nobs.loc[nobs.isna()] = (tmp.loc[(tmp.com == False) &
+        nobs.loc[nobs.isna()] = (tmp.loc[(tmp.com == 0) &
                                          (tmp.binned_stim == i)]
                                  .groupby("binned_prior")["binned_prior"]
                                  .count()
@@ -335,6 +335,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     bound_a = 1
     prior = zt*p_w_zt
     Ve = np.concatenate((np.zeros((p_t_eff, num_tr)), stim*p_w_stim))
+    max_integration_time = Ve.shape[0]-1
     Va = p_w_a
     # trial_dur = 1  # trial duration (s)
     N = Ve.shape[0]  # int(trial_dur/dt)  # number of timesteps
@@ -357,8 +358,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     for i_c in range(E.shape[1]):
         indx_hit_bound = np.abs(E[:, i_c]) >= bound
         indx_hit_action = np.abs(A[:, i_c]) >= bound_a
-        hit_bound = E.shape[0]-1
-        hit_action = E.shape[0]-1
+        hit_bound = max_integration_time  # -p_t_eff-p_t_m
+        hit_action = max_integration_time  # -p_t_m-p_t_a
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
         if (indx_hit_action).any():
@@ -371,13 +372,13 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         resp_first[i_c] *= (-1)**(E[hit_dec, i_c] < 0)
         com_bound_temp = (-resp_first[i_c])*p_com_bound
         # second response
-        second_thought = hit_dec+p_t_eff+p_t_m
-        indx_fin_ch = min(second_thought, E.shape[0]-1)
+        indx_fin_ch = hit_dec+p_t_eff+p_t_m
+        indx_fin_ch = min(indx_fin_ch, max_integration_time)
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
-        indx_update_ch = second_thought if len(indx_com) == 0 else\
-            (indx_com[0] + hit_dec)
+        indx_update_ch = indx_fin_ch if len(indx_com) == 0\
+            else indx_com[0] + hit_dec
         resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
         second_ind.append(indx_update_ch)
         second_ev.append(E[indx_update_ch, i_c])
@@ -447,28 +448,40 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
     rmse = np.sqrt(MSE)
     print('RMSE: ')
     print(rmse)
-    sns.heatmap(difference)
+    sns.heatmap(matrix, cmap='viridis')
+    plt.figure()
+    sns.heatmap(rmse)
     return rmse
 
 
 # --- MAIN
 if __name__ == '__main__':
+    # _, stim, zt, _, _ = get_data_and_matrix()
+    # np.save('stim.npy', stim)
+    # np.save('zt.npy', zt)
+    num_tr = int(5e4)
+    zt = np.load('zt.npy')[:num_tr]
+    stim = np.load('stim.npy')[:num_tr].T
     plt.close('all')
-    num_tr = int(1e4)
-    zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
-    p_t_eff = 40
+    # num_tr = stim.shape[0]
+    # zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
+    p_t_eff = 2
     p_t_a = p_t_eff
-    num_timesteps = 1000
-    stim = np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-        np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
+    p_t_m = 2
+    stim = np.concatenate((stim, np.zeros((p_t_eff+p_t_m, stim.shape[1]))))
+    num_timesteps = stim.shape[1]
+    # 1000
+    # stim = \
+    #     np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
+    #         np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
     MT_slope = 0.15
     MT_intercep = 110
-    p_t_m = 10
+
     p_w_zt = 0.4
-    p_w_stim = 0.2
-    p_e_noise = 0.2
-    p_com_bound = 0.5
-    p_w_a = 0.05
+    p_w_stim = 0.2  # 10
+    p_e_noise = 0.1  # 1
+    p_com_bound = 0.7
+    p_w_a = 0.08
     p_a_noise = 0.05
     p_w_updt = 15
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
