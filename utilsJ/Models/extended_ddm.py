@@ -357,8 +357,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     for i_c in range(E.shape[1]):
         indx_hit_bound = np.abs(E[:, i_c]) >= bound
         indx_hit_action = np.abs(A[:, i_c]) >= bound_a
-        hit_bound = E.shape[0]-1
-        hit_action = E.shape[0]-1
+        hit_bound = E.shape[0]-1  # -p_t_eff-p_t_m
+        hit_action = E.shape[0]-1  # -p_t_m-p_t_a
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
         if (indx_hit_action).any():
@@ -446,28 +446,39 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
     rmse = np.sqrt(MSE)
     print('RMSE: ')
     print(rmse)
+    sns.heatmap(matrix, cmap='viridis')
+    plt.figure()
     sns.heatmap(rmse)
     return rmse
 
 
 # --- MAIN
 if __name__ == '__main__':
+    # _, stim, zt, _, _ = get_data_and_matrix()
+    # np.save('stim.npy', stim)
+    # np.save('zt.npy', zt)
+    zt = np.load('zt.npy')[:10000]
+    stim = np.load('stim.npy')[:10000].T
     plt.close('all')
     num_tr = int(1e4)
-    zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
-    p_t_eff = 40
+    # num_tr = stim.shape[0]
+    # zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
+    p_t_eff = 2
     p_t_a = p_t_eff
-    num_timesteps = 1000
-    stim = np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-        np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
+    p_t_m = 2
+    stim = np.concatenate((stim, np.zeros((p_t_eff+p_t_m, stim.shape[1]))))
+    num_timesteps = stim.shape[1]
+    # 1000
+    # stim = np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
+    #         np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
     MT_slope = 0.15
     MT_intercep = 110
-    p_t_m = 10
+
     p_w_zt = 0.4
-    p_w_stim = 0.2
-    p_e_noise = 0.2
-    p_com_bound = 0.5
-    p_w_a = 0.05
+    p_w_stim = 10
+    p_e_noise = 1
+    p_com_bound = 0.7
+    p_w_a = 0.08
     p_a_noise = 0.05
     p_w_updt = 15
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
