@@ -449,9 +449,15 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
     rmse = np.sqrt(MSE)
     print('RMSE: ')
     print(rmse)
-    sns.heatmap(matrix, cmap='viridis')
     plt.figure()
-    sns.heatmap(rmse)
+    sns.heatmap(matrix_data, cmap='viridis')
+    plt.title('Data')
+    plt.figure()
+    sns.heatmap(matrix, cmap='viridis')
+    plt.title('Sims')
+    plt.figure()
+    sns.heatmap(difference, cmap='viridis')
+    plt.title('Difference')
     return rmse
 
 
