@@ -442,11 +442,12 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
                       npyname='CoM_vs_prior_and_stim.npy'):
     print('Starting comparison')
     matrix_data = np.load(npypath+npyname)
-    MSE = np.square(np.subtract(matrix, matrix_data))
+    difference = np.subtract(matrix, matrix_data)
+    MSE = np.square(difference)
     rmse = np.sqrt(MSE)
     print('RMSE: ')
     print(rmse)
-    sns.heatmap(rmse)
+    sns.heatmap(difference)
     return rmse
 
 
@@ -479,7 +480,8 @@ if __name__ == '__main__':
                             p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             trajectories=False)
-    rmse = matrix_comparison(matrix)
+    npypath = '/home/manuel/custom_utils/utilsJ/Models/'
+    rmse = matrix_comparison(matrix, npypath=npypath)
     import sys
     sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
