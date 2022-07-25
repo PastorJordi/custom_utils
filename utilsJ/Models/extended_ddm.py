@@ -13,7 +13,7 @@ import seaborn as sns
 # ddm
 
 
-def draw_lines(ax, frst, sec, p_t_eff):
+def draw_lines(ax, frst, sec, p_t_aff):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
@@ -28,7 +28,7 @@ def draw_lines(ax, frst, sec, p_t_eff):
 
 
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_eff, init_trajs, total_traj, p_t_m, motor_updt_time,
+             p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time,
              stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(15, 12))
     ax = ax.flatten()
@@ -48,14 +48,14 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     for i, (a, t, m, l) in enumerate(zip(axes, trials, mat_indx, y_lbls)):
         trial = np.where(m)[0][t]
         draw_lines(ax[np.array(a)], frst=first_ind[trial], sec=second_ind[trial],
-                   p_t_eff=p_t_eff)
+                   p_t_aff=p_t_aff)
         color1 = 'green' if resp_first[trial] < 0 else 'purple'
         color2 = 'green' if resp_fin[trial] < 0 else 'purple'
 
-        ax[a[0]].plot(E[:first_ind[trial]+p_t_eff+1, trial], color=color2,
+        ax[a[0]].plot(E[:first_ind[trial]+p_t_aff+1, trial], color=color2,
                       alpha=0.7)
         ax[a[0]].plot(E[:first_ind[trial]+1, trial], color=color1, lw=2)
-        ax[a[1]].plot(A[:first_ind[trial]+p_t_eff+1, trial], color=color2,
+        ax[a[1]].plot(A[:first_ind[trial]+p_t_aff+1, trial], color=color2,
                       alpha=0.7)
         ax[a[1]].plot(A[:first_ind[trial]+1, trial], color=color1, lw=2)
         # ax[a[0]].set_ylim([-1.5, 1.5])
@@ -65,7 +65,7 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         # trajectories
         sec_ev = round(E[second_ind[trial], trial], 2)
         # updt_motor = first_ind[trial]+motor_updt_time[trial]
-        init_motor = first_ind[trial]+p_t_m
+        init_motor = first_ind[trial]+p_t_eff
         xs = init_motor+np.arange(0, len(total_traj[trial]))/stim_res
         max_xlim = max(max_xlim, np.max(xs))
         ax[a[2]].plot(xs, total_traj[trial], label=f'Updated traj., E:{sec_ev}')
@@ -262,7 +262,7 @@ def get_data_and_matrix(
 
 
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
-                        p_e_noise, p_com_bound, p_t_m, p_t_eff,
+                        p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False):
     """
@@ -287,12 +287,12 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     p_com_bound : float
         fitting parameter: change-of-mind bound (will have opposite sign of
         first choice).
-    p_t_m : float
-        fitting parameter: standard deviation of evidence noise (gaussian).
     p_t_eff : float
-        fitting parameter: afferent latency time to integrate stimulus.
+        fitting parameter: efferent latency to initiate movement.
+    p_t_aff : float
+        fitting parameter: afferent latency to integrate stimulus.
     p_t_a : float
-        fitting parameter: afferent latency time for action integration.
+        fitting parameter: latency for action integration.
     p_w_a : float
         fitting parameter: drift of action noise.
     p_a_noise : float
@@ -335,7 +335,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     bound = 1
     bound_a = 1
     prior = zt*p_w_zt
-    Ve = np.concatenate((np.zeros((p_t_eff, num_tr)), stim*p_w_stim))
+    Ve = np.concatenate((np.zeros((p_t_aff, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
     Va = p_w_a
     # trial_dur = 1  # trial duration (s)
@@ -343,7 +343,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+Va
     dA[:p_t_a, :] = 0
-    dW[0, :] = prior  # +np.random.randn(p_t_eff, num_tr)*p_e_noise
+    dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
     dA[0, :] = prior  # +np.random.randn(p_t_a, num_tr)*p_a_noise
     E = np.cumsum(dW, axis=0)
     A = np.cumsum(dA, axis=0)
@@ -359,8 +359,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     for i_c in range(E.shape[1]):
         indx_hit_bound = np.abs(E[:, i_c]) >= bound
         indx_hit_action = np.abs(A[:, i_c]) >= bound_a
-        hit_bound = max_integration_time  # -p_t_eff-p_t_m
-        hit_action = max_integration_time  # -p_t_m-p_t_a
+        hit_bound = max_integration_time  # -p_t_aff-p_t_eff
+        hit_action = max_integration_time  # -p_t_eff-p_t_a
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
         if (indx_hit_action).any():
@@ -373,7 +373,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         resp_first[i_c] *= (-1)**(E[hit_dec, i_c] < 0)
         com_bound_temp = (-resp_first[i_c])*p_com_bound
         # second response
-        indx_fin_ch = hit_dec+p_t_eff+p_t_m
+        indx_fin_ch = hit_dec+p_t_aff+p_t_eff
         indx_fin_ch = min(indx_fin_ch, max_integration_time)
         post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
         indx_com =\
@@ -412,7 +412,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # TRAJ. UPDATE
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
-            t_ind = int(p_t_m+second_ind[i_t] - first_ind[i_t])  # time index
+            t_ind = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time index
             motor_updt_time.append(t_ind)
             vel = velocities[t_ind]  # velocity at the timepoint
             acc = accelerations[t_ind]
@@ -472,15 +472,15 @@ if __name__ == '__main__':
     plt.close('all')
     # num_tr = stim.shape[0]
     # zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
+    p_t_aff = 2
+    p_t_a = p_t_aff
     p_t_eff = 2
-    p_t_a = p_t_eff
-    p_t_m = 2
-    stim = np.concatenate((stim, np.zeros((p_t_eff+p_t_m, stim.shape[1]))))
+    stim = np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
     num_timesteps = stim.shape[1]
     # 1000
     # stim = \
     #     np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-    #         np.random.randn(num_timesteps+p_t_eff, num_tr)*1e-1
+    #         np.random.randn(num_timesteps+p_t_aff, num_tr)*1e-1
     MT_slope = 0.15
     MT_intercep = 110
 
@@ -497,8 +497,8 @@ if __name__ == '__main__':
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
                             MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                             p_w_stim=p_w_stim, p_e_noise=p_e_noise,
-                            p_com_bound=p_com_bound, p_t_m=p_t_m,
-                            p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
+                            p_com_bound=p_com_bound, p_t_eff=p_t_eff,
+                            p_t_aff=p_t_aff, p_t_a=p_t_a, num_tr=num_tr,
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             compute_trajectories=compute_trajectories)
     npypath = '/home/manuel/custom_utils/utilsJ/Models/'
@@ -507,5 +507,5 @@ if __name__ == '__main__':
     # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
-             p_t_eff=p_t_eff, init_trajs=init_trajs, total_traj=total_traj,
-             p_t_m=p_t_m, motor_updt_time=motor_updt_time)
+             p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
+             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time)
