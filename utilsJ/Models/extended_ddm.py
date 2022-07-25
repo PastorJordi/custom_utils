@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import itertools
 # import scipy as sp
 
 # ddm
@@ -469,6 +470,9 @@ def brute_force(stim, zt, num_timesteps):
     p_com_bound_list = np.linspace(0.1, 1, num=5)
     p_w_a_list = np.logspace(-3, -1, num=5)
     p_a_noise_list = np.linspace(0.01, 0.1, num=5)
+    configurations = itertools.product(p_w_zt_list, p_w_stim_list,
+                                       p_e_noise_list, p_com_bound_list,
+                                       p_w_a_list, p_a_noise_list)
     # p_w_updt_list = 10
     p_t_eff = 1
     p_t_a = p_t_eff
@@ -477,31 +481,25 @@ def brute_force(stim, zt, num_timesteps):
     MT_intercep = 110
     rmse_list = []
     compute_trajectories = False
-    for p_w_zt in p_w_zt_list:
-        for p_w_stim in p_w_stim_list:
-            for p_e_noise in p_e_noise_list:
-                for p_com_bound in p_com_bound_list:
-                    for p_a_noise in p_a_noise_list:
-                        for p_w_a in p_w_a_list:
-                            _, _, _, _, _, _, _, _, matrix,\
-                                _, _, _, _ =\
-                                trial_ev_vectorized(zt=zt, stim=stim,
-                                                    MT_slope=MT_slope,
-                                                    MT_intercep=MT_intercep,
-                                                    p_w_zt=p_w_zt,
-                                                    p_w_stim=p_w_stim,
-                                                    p_e_noise=p_e_noise,
-                                                    p_com_bound=p_com_bound,
-                                                    p_t_m=p_t_m,
-                                                    p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                                    num_tr=num_tr,
-                                                    p_w_a=p_w_a,
-                                                    p_a_noise=p_a_noise,
-                                                    p_w_updt=p_w_updt,
-                                                    compute_trajectories=compute_trajectories)
-                            rmse_total = matrix_comparison(matrix)
-                            rmse_mean = np.mean(rmse_total)
-                            rmse_list.append(rmse_mean)
+    for conf in configurations:
+        p_w_zt = conf[0]
+        p_w_stim = conf[1]
+        p_e_noise = conf[2]
+        p_com_bound = conf[3]
+        p_w_a = conf[4]
+        p_a_noise = conf[5]
+        _, _, _, _, _, _, _, _, matrix,\
+            _, _, _, _ =\
+            trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
+                                MT_intercep=MT_intercep, p_w_zt=p_w_zt,
+                                p_w_stim=p_w_stim, p_e_noise=p_e_noise,
+                                p_com_bound=p_com_bound, p_t_m=p_t_m,
+                                p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
+                                p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=0,
+                                compute_trajectories=compute_trajectories)
+        rmse_total = matrix_comparison(matrix)
+        rmse_mean = np.mean(rmse_total)
+        rmse_list.append(rmse_mean)
     return rmse_list
 
 
