@@ -10,8 +10,7 @@ import pandas as pd
 import seaborn as sns
 import itertools
 # import scipy as sp
-
-# ddm
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/'
 
 
 def draw_lines(ax, frst, sec, p_t_aff):
@@ -31,12 +30,12 @@ def draw_lines(ax, frst, sec, p_t_aff):
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time,
              stim_res=50, trial=0):
-    f, ax = plt.subplots(nrows=3, ncols=4, figsize=(15, 12))
+    f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[6].set_xlabel('Time (ms)')
     ax[7].set_xlabel('Time (ms)')
     axes = [np.array([0, 4, 8])+i for i in range(4)]
-    trials = [0, 0, 1, 1]
+    trials = [0, 0, 0, 0]
     mat_indx = [np.logical_and(com, pro_vs_re == 0),
                 np.logical_and(~com, pro_vs_re == 0),
                 np.logical_and(com, pro_vs_re == 1),
@@ -47,38 +46,45 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         ax[i_ax].set_title(y_lbls[i_ax])
     max_xlim = 0
     for i, (a, t, m, l) in enumerate(zip(axes, trials, mat_indx, y_lbls)):
-        trial = np.where(m)[0][t]
-        draw_lines(ax[np.array(a)], frst=first_ind[trial], sec=second_ind[trial],
-                   p_t_aff=p_t_aff)
-        color1 = 'green' if resp_first[trial] < 0 else 'purple'
-        color2 = 'green' if resp_fin[trial] < 0 else 'purple'
+        trials_temp = np.where(m)[0]
+        if len(trials_temp) > 0:
+            trial = trials_temp[t]
+            draw_lines(ax[np.array(a)], frst=first_ind[trial],
+                       sec=second_ind[trial], p_t_aff=p_t_aff)
+            color1 = 'green' if resp_first[trial] < 0 else 'purple'
+            color2 = 'green' if resp_fin[trial] < 0 else 'purple'
 
-        ax[a[0]].plot(E[:first_ind[trial]+p_t_aff+1, trial], color=color2,
-                      alpha=0.7)
-        ax[a[0]].plot(E[:first_ind[trial]+1, trial], color=color1, lw=2)
-        ax[a[1]].plot(A[:first_ind[trial]+p_t_aff+1, trial], color=color2,
-                      alpha=0.7)
-        ax[a[1]].plot(A[:first_ind[trial]+1, trial], color=color1, lw=2)
-        # ax[a[0]].set_ylim([-1.5, 1.5])
-        # ax[a[1]].set_ylim([-0.1, 1.5])
-        ax[a[0]].set_ylabel(l+' EA')
-        ax[a[1]].set_ylabel(l+' AI')
-        # trajectories
-        sec_ev = round(E[second_ind[trial], trial], 2)
-        # updt_motor = first_ind[trial]+motor_updt_time[trial]
-        init_motor = first_ind[trial]+p_t_eff
-        xs = init_motor+np.arange(0, len(total_traj[trial]))/stim_res
-        max_xlim = max(max_xlim, np.max(xs))
-        ax[a[2]].plot(xs, total_traj[trial], label=f'Updated traj., E:{sec_ev}')
-        first_ev = round(E[first_ind[trial], trial], 2)
-        xs = init_motor+np.arange(0, len(init_trajs[trial]))/stim_res
-        max_xlim = max(max_xlim, np.max(xs))
-        ax[a[2]].plot(xs, init_trajs[trial], label=f'Initial traj. E:{first_ev}')
-        ax[a[2]].set_ylabel(l+', y(px)')
-        ax[a[2]].set_ylabel(l+', y(px)')
-        ax[a[2]].legend()
+            ax[a[0]].plot(E[:second_ind[trial]+1, trial], color=color2,
+                          alpha=0.7)
+            ax[a[0]].plot(E[:first_ind[trial]+1, trial], color=color1, lw=2)
+            ax[a[1]].plot(A[:second_ind[trial]+1, trial], color=color2,
+                          alpha=0.7)
+            ax[a[1]].plot(A[:first_ind[trial]+1, trial], color=color1, lw=2)
+            # ax[a[0]].set_ylim([-1.5, 1.5])
+            # ax[a[1]].set_ylim([-0.1, 1.5])
+            ax[a[0]].set_ylabel(l+' EA')
+            ax[a[1]].set_ylabel(l+' AI')
+            # trajectories
+            sec_ev = round(E[second_ind[trial], trial], 2)
+            # updt_motor = first_ind[trial]+motor_updt_time[trial]
+            init_motor = first_ind[trial]+p_t_eff
+            xs = init_motor+np.arange(0, len(total_traj[trial]))/stim_res
+            max_xlim = max(max_xlim, np.max(xs))
+            ax[a[2]].plot(xs, total_traj[trial],
+                          label=f'Updated traj., E:{sec_ev}')
+            first_ev = round(E[first_ind[trial], trial], 2)
+            xs = init_motor+np.arange(0, len(init_trajs[trial]))/stim_res
+            max_xlim = max(max_xlim, np.max(xs))
+            ax[a[2]].plot(xs, init_trajs[trial],
+                          label=f'Initial traj. E:{first_ev}')
+            ax[a[2]].set_ylabel(l+', y(px)')
+            ax[a[2]].set_ylabel(l+', y(px)')
+            ax[a[2]].legend()
+        else:
+            print('There are no '+l)
     for a in ax:
         a.set_xlim([0, max_xlim])
+    f.savefig(SV_FOLDER+'example_trials.svg', dpi=400, bbox_inches='tight')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -423,9 +429,15 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # new mu, considering new position/speed/acceleration
             remaining_m_time = first_resp_len-t_ind
             sign_ = resp_first[i_t]
+            # this sets the maximum updating evidence equal to the evidence bound
+            # and avoids having negative second_response_len (impossibly fast
+            # responses) because of very strong confirmation evidence. Note that
+            # theoretically this problema does not exists because CoM_bound will
+            # be less or equal to the bounds.
+            updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
             # second_response_len: time left affected by the evidence on the
             second_response_len =\
-                float(remaining_m_time-sign_*p_w_updt*second_ev[i_t])
+                float(remaining_m_time-sign_*p_w_updt*updt_ev)
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
@@ -433,6 +445,17 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # joined trajectories
             traj_before_uptd = prior0[0:t_ind]
             total_traj.append(np.concatenate((traj_before_uptd,  traj_fin)))
+            # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
+            #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
+            #     print(MT)
+            #     print(first_resp_len)
+            #     print(remaining_m_time)
+            #     print(second_response_len)
+            #     print('------------------')
+            #     plt.figure()
+            #     plt.plot(init_trajs[-1])
+            #     plt.plot(total_traj[-1], '--')
+            #     asd
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time
     else:
@@ -444,22 +467,28 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
                       'custom_utils/utilsJ/Models/',
                       npyname='CoM_vs_prior_and_stim.npy', plotting=False):
     print('Starting comparison')
-    matrix_data = np.load(npypath+npyname)
-    difference = np.subtract(matrix, matrix_data)
-    MSE = np.square(difference)
-    rmse = np.sqrt(MSE)
+    try:
+        matrix_data = np.load(npypath+npyname)
+        difference = np.subtract(matrix, matrix_data)
+        MSE = np.square(difference)
+        rmse = np.sqrt(MSE)
+    except FileNotFoundError:
+        rmse = None
     # print('RMSE: ')
     # print(rmse)
     if plotting:
         plt.figure()
-        sns.heatmap(matrix_data, cmap='viridis')
-        plt.title('Data')
-        plt.figure()
         sns.heatmap(matrix, cmap='viridis')
         plt.title('Sims')
-        plt.figure()
-        sns.heatmap(difference, cmap='viridis')
-        plt.title('Difference')
+        try:
+            plt.figure()
+            sns.heatmap(matrix_data, cmap='viridis')
+            plt.title('Data')
+            plt.figure()
+            sns.heatmap(difference, cmap='viridis')
+            plt.title('Difference')
+        except NameError as m:
+            print(m)
     return rmse
 
 
@@ -505,38 +534,43 @@ def brute_force(stim, zt, num_timesteps):
 
 # --- MAIN
 if __name__ == '__main__':
-    # _, stim, zt, _, _ = get_data_and_matrix()
-    # np.save('stim.npy', stim)
-    # np.save('zt.npy', zt)
-    num_tr = int(5e3)
-    zt = np.load('zt.npy')[:num_tr]
-    stim = np.load('stim.npy')[:num_tr].T
     plt.close('all')
-    # num_tr = stim.shape[0]
-    # zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
-    p_t_aff = 2
-    p_t_a = p_t_aff
-    p_t_eff = 2
-    stim = np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
-    num_timesteps = stim.shape[1]
-    # 1000
-    # stim = \
-    #     np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-    #         np.random.randn(num_timesteps+p_t_aff, num_tr)*1e-1
+    num_tr = int(1e3)
+    load_data = False
+    if load_data:
+        p_t_aff = 2
+        p_t_eff = 2
+        # _, stim, zt, _, _ = get_data_and_matrix()
+        # np.save('stim.npy', stim)
+        # np.save('zt.npy', zt)
+        zt = np.load('zt.npy')[:num_tr]
+        stim = np.load('stim.npy')[:num_tr].T
+        stim = np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
+        num_timesteps = stim.shape[1]
+        stim_res = 50
+    else:
+        p_t_aff = 10
+        p_t_eff = 10
+        num_timesteps = 1000
+        zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
+        stim = \
+            np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
+            np.random.randn(num_timesteps+p_t_aff, num_tr)*1e-1
+        stim_res = 1
     MT_slope = 0.15
     MT_intercep = 110
-
-    p_w_zt = 0.05
-    p_w_stim = 2
-    p_e_noise = 1
-    p_com_bound = 0.7
-    p_w_a = 0.08
+    p_t_a = 0
+    p_w_zt = 0.4
+    p_w_stim = 0.1
+    p_e_noise = 0.1
+    p_com_bound = 0.5
+    p_w_a = 0.05
     p_a_noise = 0.05
-    p_w_updt = 10
-    compute_trajectories = False
-    rmse_list = brute_force(stim, zt, num_timesteps)
-    import sys
-    sys.exit()
+    p_w_updt = 30
+    compute_trajectories = True
+    # rmse_list = brute_force(stim, zt, num_timesteps)
+    # import sys
+    # sys.exit()
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
         total_traj, init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
@@ -547,10 +581,10 @@ if __name__ == '__main__':
                             p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                             compute_trajectories=compute_trajectories)
     # npypath = '/home/manuel/custom_utils/utilsJ/Models/'
-    rmse = matrix_comparison(matrix)
+    rmse = matrix_comparison(matrix, plotting=True)
     # import sys
     # sys.exit()
     plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
              resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
              p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
-             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time)
+             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time, stim_res=stim_res)
