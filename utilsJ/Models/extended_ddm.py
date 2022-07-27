@@ -13,6 +13,25 @@ import itertools
 SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/'
 
 
+def tests_trajectory_update(remaining_time=100, w_updt=10):
+    f, ax = plt.subplots()
+    leg = ['1st response = -1', '1st response = 1']
+    for i_s1r, s1r in enumerate([-1, 1]):
+        CoM_bound = -0.5*np.sign(s1r)
+        bound = np.sign(s1r)
+        evidences = np.linspace(CoM_bound, bound, 50)
+        ax.plot(evidences, remaining_time - s1r*w_updt*evidences,
+                label=leg[i_s1r])
+        ax.axvline(x=CoM_bound, linestyle='--', color='k', lw=0.5)
+        ax.axvline(x=bound, linestyle='--', color='k')
+
+    ax.axhline(y=remaining_time, linestyle='--', color='k', lw=0.5)
+    ax.axvline(x=0, linestyle='--', color='k', lw=0.5)
+    ax.set_xlabel('Update evidence')
+    ax.set_ylabel('2nd response time')
+    ax.legend()
+
+
 def draw_lines(ax, frst, sec, p_t_aff):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
@@ -351,7 +370,6 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dA = np.random.randn(N, num_tr)*p_a_noise+Va
     dA[:p_t_a, :] = 0
     dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
-    dA[0, :] = prior  # +np.random.randn(p_t_a, num_tr)*p_a_noise
     E = np.cumsum(dW, axis=0)
     A = np.cumsum(dA, axis=0)
     com = False
@@ -535,6 +553,8 @@ def brute_force(stim, zt, num_timesteps):
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
+    tests_trajectory_update(remaining_time=100, w_updt=10)
+    asdasd
     num_tr = int(1e3)
     load_data = False
     if load_data:
@@ -559,7 +579,7 @@ if __name__ == '__main__':
         stim_res = 1
     MT_slope = 0.15
     MT_intercep = 110
-    p_t_a = 0
+    p_t_a = 5
     p_w_zt = 0.4
     p_w_stim = 0.1
     p_e_noise = 0.1
