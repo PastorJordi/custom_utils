@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import itertools
+import glob
+import time
 # import scipy as sp
 SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/'
 
@@ -269,11 +271,21 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
 
 def get_data_and_matrix(
-        dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/LE42_clean.pkl',
+        dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
         savepath='C:/Users/alexg/Documents/GitHub/custom_utils/utilsJ/Models'):
     # import data for 1 rat
     print('Loading data')
-    df = pd.read_pickle(dfpath)
+    files = glob.glob(dfpath+'*.pkl')
+    start = time.time()
+    for f in files:
+        start_1 = time.time()
+        df = pd.read_pickle(f)
+        end = time.time()
+        print(f)
+        print(end - start_1)
+        print(len(df))
+    end = time.time()
+    print(end - start)
     df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2',
                  'CoM_sugg']]
     df_rat["priorZt"] = np.nansum(
@@ -290,7 +302,7 @@ def get_data_and_matrix(
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
-                        compute_trajectories=False):
+                        compute_trajectories=False, num_trials_per_session=500):
     """
     Generate stim and time integration and trajectories
 
@@ -381,9 +393,9 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     second_ev = []
     resp_first = np.ones(E.shape[1])
     resp_fin = np.ones(E.shape[1])
-    for i_c in range(E.shape[1]):
-        indx_hit_bound = np.abs(E[:, i_c]) >= bound
-        indx_hit_action = np.abs(A[:, i_c]) >= bound_a
+    for i_t in range(E.shape[1]):
+        indx_hit_bound = np.abs(E[:, i_t]) >= bound
+        indx_hit_action = np.abs(A[:, i_t]) >= bound_a
         hit_bound = max_integration_time  # -p_t_aff-p_t_eff
         hit_action = max_integration_time  # -p_t_eff-p_t_a
         if (indx_hit_bound).any():
@@ -393,21 +405,21 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         hit_dec = min(hit_bound, hit_action)  # reactive or proactive
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         first_ind.append(hit_dec)
-        first_ev.append(E[hit_dec, i_c])
+        first_ev.append(E[hit_dec, i_t])
         # first response
-        resp_first[i_c] *= (-1)**(E[hit_dec, i_c] < 0)
-        com_bound_temp = (-resp_first[i_c])*p_com_bound
+        resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
+        com_bound_temp = (-resp_first[i_t])*p_com_bound
         # second response
         indx_fin_ch = hit_dec+p_t_aff+p_t_eff
         indx_fin_ch = min(indx_fin_ch, max_integration_time)
-        post_dec_integration = E[hit_dec:indx_fin_ch, i_c]-com_bound_temp
+        post_dec_integration = E[hit_dec:indx_fin_ch, i_t]-com_bound_temp
         indx_com =\
-            np.where(np.sign(E[hit_dec, i_c]) != np.sign(post_dec_integration))[0]
+            np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         indx_update_ch = indx_fin_ch if len(indx_com) == 0\
             else indx_com[0] + hit_dec
-        resp_fin[i_c] = resp_first[i_c] if len(indx_com) == 0 else -resp_first[i_c]
+        resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)
-        second_ev.append(E[indx_update_ch, i_c])
+        second_ev.append(E[indx_update_ch, i_t])
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
@@ -426,7 +438,9 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         total_traj = []
         motor_updt_time = []
         for i_t in range(E.shape[1]):
-            MT = MT_slope*i_t + MT_intercep  # pre-planned Motor Time
+            # pre-planned Motor Time, the modulo prevents trial-index from
+            # growing indefinitely
+            MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
             first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
             # first_resp_len: evidence affectation on MT. The higher the ev,
             # the lower the MT depending on the parameter p_w_updt
@@ -515,71 +529,96 @@ def brute_force(stim, zt, num_timesteps):
     p_w_stim_list = np.linspace(0.005, 10, num=5)
     p_e_noise_list = np.linspace(0.005, 10, num=5)
     p_com_bound_list = np.linspace(0.1, 1, num=5)
+    p_t_aff_list = [0, 1, 2]
+    p_t_eff_list = [0, 1, 2]
+    p_t_a_list = [0, 1, 2]
     p_w_a_list = np.logspace(-3, -1, num=5)
     p_a_noise_list = np.linspace(0.01, 0.1, num=5)
-    configurations = itertools.product(p_w_zt_list, p_w_stim_list,
-                                       p_e_noise_list, p_com_bound_list,
-                                       p_w_a_list, p_a_noise_list)
+    p_w_updt_list = [0, 1, 2]
+    configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
+                                            p_e_noise_list, p_com_bound_list,
+                                            p_t_aff_list, p_t_eff_list, p_t_a_list,
+                                            p_w_a_list, p_a_noise_list,
+                                            p_w_updt_list))
     # p_w_updt_list = 10
-    p_t_eff = 1
-    p_t_a = p_t_eff
-    p_t_m = 1
     MT_slope = 0.15
     MT_intercep = 110
     rmse_list = []
     compute_trajectories = False
     for conf in configurations:
-        p_w_zt = conf[0]
-        p_w_stim = conf[1]
-        p_e_noise = conf[2]
-        p_com_bound = conf[3]
-        p_w_a = conf[4]
-        p_a_noise = conf[5]
-        _, _, _, _, _, _, _, _, matrix,\
-            _, _, _, _ =\
-            trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
+        start = time.time()
+        p_w_zt = conf[0]+np.random.rand()*np.diff(p_w_zt_list)[0]/4
+        p_w_stim = conf[1]+np.random.rand()*np.diff(p_w_stim_list)[0]/4
+        p_e_noise = conf[2]+np.random.rand()*np.diff(p_e_noise_list)[0]/4
+        p_com_bound = conf[3]+np.random.rand()*np.diff(p_com_bound_list)[0]/4
+        p_t_aff = conf[4]
+        p_t_eff = conf[5]
+        p_t_a = conf[6]
+        p_w_a = conf[7]+np.random.rand()*np.diff(p_w_a_list)[0]/4
+        p_a_noise = conf[8]+np.random.rand()*np.diff(p_a_noise_list)[0]/4
+        p_w_updt = conf[9]+np.random.rand()*np.diff(p_w_updt_list)[0]/4
+        stim_temp =\
+            np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
+
+        print('p_w_zt: '+str(p_w_zt))
+        print('p_w_stim: '+str(p_w_stim))
+        print('p_e_noise: '+str(p_e_noise))
+        print('p_com_bound: '+str(p_com_bound))
+        print('p_t_aff: '+str(p_t_aff))
+        print('p_t_eff: '+str(p_t_eff))
+        print('p_t_a: '+str(p_t_a))
+        print('p_w_a: '+str(p_w_a))
+        print('p_a_noise: '+str(p_a_noise))
+        print('p_w_updt: '+str(p_w_updt))
+        print('--------------')
+        E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+            matrix, _, _, _, _ =\
+            trial_ev_vectorized(zt=zt, stim=stim_temp, MT_slope=MT_slope,
                                 MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                                 p_w_stim=p_w_stim, p_e_noise=p_e_noise,
-                                p_com_bound=p_com_bound, p_t_m=p_t_m,
+                                p_com_bound=p_com_bound, p_t_aff=p_t_aff,
                                 p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
-                                p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=0,
+                                p_w_a=p_w_a, p_a_noise=p_a_noise,
+                                p_w_updt=p_w_updt,
                                 compute_trajectories=compute_trajectories)
-        rmse_total = matrix_comparison(matrix)
-        rmse_mean = np.mean(rmse_total)
-        rmse_list.append(rmse_mean)
+        # rmse_total = matrix_comparison(matrix)
+        end = time.time()
+        print(end-start)
+        # rmse_mean = np.mean(rmse_total)
+        # rmse_list.append(rmse_mean)
     return rmse_list
 
 
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    tests_trajectory_update(remaining_time=100, w_updt=10)
-    asdasd
-    num_tr = int(1e3)
-    load_data = False
+    # tests_trajectory_update(remaining_time=100, w_updt=10)
+    # asdasd
+    num_tr = int(1e5)
+    load_data = True
     if load_data:
         p_t_aff = 2
         p_t_eff = 2
-        # _, stim, zt, _, _ = get_data_and_matrix()
+        p_t_a = 2
+        # _, stim, zt, _, _ =\
+        #     get_data_and_matrix(dfpath='/home/molano/ChangesOfMind/data/')
         # np.save('stim.npy', stim)
         # np.save('zt.npy', zt)
         zt = np.load('zt.npy')[:num_tr]
         stim = np.load('stim.npy')[:num_tr].T
-        stim = np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
-        num_timesteps = stim.shape[1]
         stim_res = 50
     else:
         p_t_aff = 10
         p_t_eff = 10
+        p_t_a = 10
         num_timesteps = 1000
         zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
         stim = \
             np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-            np.random.randn(num_timesteps+p_t_aff, num_tr)*1e-1
+            np.random.randn(num_timesteps, num_tr)*1e-1
         stim_res = 1
     MT_slope = 0.15
     MT_intercep = 110
-    p_t_a = 5
     p_w_zt = 0.4
     p_w_stim = 0.1
     p_e_noise = 0.1
@@ -588,9 +627,9 @@ if __name__ == '__main__':
     p_a_noise = 0.05
     p_w_updt = 30
     compute_trajectories = True
-    # rmse_list = brute_force(stim, zt, num_timesteps)
-    # import sys
-    # sys.exit()
+    rmse_list = brute_force(stim, zt)
+    import sys
+    sys.exit()
     E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
         total_traj, init_trajs, final_trajs, motor_updt_time =\
         trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
