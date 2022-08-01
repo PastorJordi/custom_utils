@@ -535,40 +535,22 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
     return rmse
 
 
-def brute_force(stim, zt, num_vals=3):
+def run_model(stim, zt, configurations, jitters, compute_trajectories=False):
     num_tr = stim.shape[1]
-    p_w_zt_list = np.linspace(0.005, 1, num=num_vals)
-    p_w_stim_list = np.linspace(0.005, 2, num=num_vals)
-    p_e_noise_list = [0.1]  # np.linspace(0.005, 10, num=num_vals)
-    p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
-    p_t_aff_list = [1, 2]
-    p_t_eff_list = [1, 2]
-    p_t_a_list = [0, 1, 2]
-    p_w_a_list = np.logspace(-3, -1, num=num_vals)
-    p_a_noise_list = [0.1]  # np.linspace(0.01, 0.1, num=num_vals)
-    p_w_updt_list = np.linspace(0.1, 2, num=num_vals)
-    configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
-                                            p_e_noise_list, p_com_bound_list,
-                                            p_t_aff_list, p_t_eff_list, p_t_a_list,
-                                            p_w_a_list, p_a_noise_list,
-                                            p_w_updt_list))
-    # p_w_updt_list = 10
     MT_slope = 0.15
     MT_intercep = 110
-    rmse_list = []
-    compute_trajectories = False
     for conf in configurations:
         start = time.time()
-        p_w_zt = conf[0]+np.random.rand()*np.diff(p_w_zt_list)[0]/8
-        p_w_stim = conf[1]+np.random.rand()*np.diff(p_w_stim_list)[0]/8
-        p_e_noise = conf[2]  # +np.random.rand()*np.diff(p_e_noise_list)[0]/8
-        p_com_bound = conf[3]+np.random.rand()*np.diff(p_com_bound_list)[0]/8
-        p_t_aff = conf[4]
-        p_t_eff = conf[5]
-        p_t_a = conf[6]
-        p_w_a = conf[7]+np.random.rand()*np.diff(p_w_a_list)[0]/8
-        p_a_noise = conf[8]  # +np.random.rand()*np.diff(p_a_noise_list)[0]/8
-        p_w_updt = conf[9]+np.random.rand()*np.diff(p_w_updt_list)[0]/8
+        p_w_zt = conf[0]+jitters[0]*np.random.rand()
+        p_w_stim = conf[1]+jitters[1]*np.random.rand()
+        p_e_noise = conf[2]+jitters[2]*np.random.rand()
+        p_com_bound = conf[3]+jitters[3]*np.random.rand()
+        p_t_aff = round(conf[4]+jitters[4]*np.random.rand())
+        p_t_eff = round(conf[5]++jitters[5]*np.random.rand())
+        p_t_a = round(conf[6]++jitters[6]*np.random.rand())
+        p_w_a = conf[7]+jitters[7]*np.random.rand()
+        p_a_noise = conf[8]+jitters[8]*np.random.rand()
+        p_w_updt = conf[9]+jitters[9]*np.random.rand()
         stim_temp =\
             np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
 
@@ -584,7 +566,7 @@ def brute_force(stim, zt, num_vals=3):
         print('p_w_updt: '+str(p_w_updt))
         print('--------------')
         E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, _, _, _, _ =\
+            matrix, total_traj, init_trajs, final_trajs, motor_updt_time =\
             trial_ev_vectorized(zt=zt, stim=stim_temp, MT_slope=MT_slope,
                                 MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                                 p_w_stim=p_w_stim, p_e_noise=p_e_noise,
@@ -596,10 +578,13 @@ def brute_force(stim, zt, num_vals=3):
         # rmse_total = matrix_comparison(matrix)
         end = time.time()
         print(end-start)
-        data = {'p_w_zt': p_w_zt, 'p_w_stim': p_w_stim, 'p_e_noise': p_e_noise,
-                'p_com_bound': p_com_bound, 'p_t_aff': p_t_aff, 'p_t_eff': p_t_eff,
-                'p_t_a': p_t_a, 'p_w_a': p_w_a, 'p_a_noise': p_a_noise,
-                'p_w_updt': p_w_updt, 'matrix': matrix}
+        data = {'p_w_zt': (conf[0], p_w_zt), 'p_w_stim': (conf[1], p_w_stim),
+                'p_e_noise': (conf[2], p_e_noise),
+                'p_com_bound': (conf[3], p_com_bound),
+                'p_t_aff': (conf[4], p_t_aff), 'p_t_eff': (conf[5], p_t_eff),
+                'p_t_a': (conf[6], p_t_a), 'p_w_a': (conf[7], p_w_a),
+                'p_a_noise': (conf[8], p_a_noise), 'p_w_updt': (conf[9], p_w_updt),
+                'matrix': matrix}
         # 'E': E, 'A': A, 'com': com, 'first_ind': first_ind,
         # 'second_ind': second_ind, 'resp_first': resp_first,
         # 'resp_fin': resp_fin, 'pro_vs_re': pro_vs_re,
@@ -609,13 +594,43 @@ def brute_force(stim, zt, num_vals=3):
                 name += str(np.round(data[k], 3))+'_'
         name = name[:-1]
         np.savez(SV_FOLDER+'/results/'+name+'.npz', **data)
-        # f = plt.figure()
-        # plt.imshow(matrix, aspect='auto')
-        # f.savefig(SV_FOLDER+'/figures/'+name+'.png', dpi=400,
-        #           bbox_inches='tight')
-        # rmse_mean = np.mean(rmse_total)
-        # rmse_list.append(rmse_mean)
-    return rmse_list
+
+
+def set_parameters(num_vals=3, factor=8):
+    p_w_zt_list = np.linspace(0.005, 1, num=num_vals)
+    p_w_stim_list = np.linspace(0.005, 2, num=num_vals)
+    p_e_noise_list = [0.1]  # np.linspace(0.005, 10, num=num_vals)
+    p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
+    p_t_aff_list = np.array([10, 20])
+    p_t_eff_list = np.array([10, 20])
+    p_t_a_list = np.array([0, 10, 20])
+    p_w_a_list = np.logspace(-3, -1, num=num_vals)
+    p_a_noise_list = [0.1]  # np.linspace(0.01, 0.1, num=num_vals)
+    p_w_updt_list = np.linspace(0.1, 2, num=num_vals)
+    configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
+                                            p_e_noise_list, p_com_bound_list,
+                                            p_t_aff_list, p_t_eff_list, p_t_a_list,
+                                            p_w_a_list, p_a_noise_list,
+                                            p_w_updt_list))
+    jitters = [np.diff(p_w_zt_list)[0]/factor,
+               np.diff(p_w_stim_list)[0]/factor,
+               0.05,
+               np.diff(p_com_bound_list)[0]/factor,
+               np.diff(p_t_aff_list)[0]/factor,
+               np.diff(p_t_eff_list)[0]/factor,
+               np.diff(p_t_a_list)[0]/factor,
+               np.diff(p_w_a_list)[0]/factor,
+               0.05,
+               np.diff(p_w_updt_list)[0]/factor]
+    return configurations, jitters
+
+
+def data_augmentation(stim, daf, sigma=0):
+    augm_stim = np.zeros((daf*stim.shape[0], stim.shape[1]))
+    for tmstp in range(stim.shape[0]):
+        augm_stim[daf*tmstp:daf*(tmstp+1), :] =\
+            np.random.randn()*sigma+stim[tmstp, :]
+    return augm_stim
 
 
 # --- MAIN
@@ -626,6 +641,7 @@ if __name__ == '__main__':
     num_tr = int(1e5)
     load_data = True
     new_sample = False
+    data_augment_factor = 10
     if load_data:
         p_t_aff = 2
         p_t_eff = 2
@@ -641,7 +657,8 @@ if __name__ == '__main__':
             data = np.load(files[np.random.choice(a=len(files))])
             stim = data['stim']
             zt = data['zt']
-        stim_res = 50
+            stim = data_augmentation(stim=stim, daf=data_augment_factor)
+        stim_res = 50/data_augment_factor
     else:
         p_t_aff = 10
         p_t_eff = 10
@@ -662,7 +679,9 @@ if __name__ == '__main__':
     p_a_noise = 0.05
     p_w_updt = 30
     compute_trajectories = True
-    rmse_list = brute_force(stim, zt)
+
+    configurations, jitters = set_parameters(num_vals=3)
+    run_model(stim=stim, zt=zt, configurations=configurations, jitters=jitters)
     # import sys
     # sys.exit()
     # E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
