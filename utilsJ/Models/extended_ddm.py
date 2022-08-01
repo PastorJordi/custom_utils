@@ -12,7 +12,8 @@ import itertools
 import glob
 import time
 # import scipy as sp
-SV_FOLDER = '/home/molano/ChangesOfMind/'
+# SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/'  # Alex
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -278,7 +279,7 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     files = glob.glob(dfpath+'*.pkl')
     start = time.time()
     prior = np.empty((0, ))
-    stim = np.empty((0, 20))
+    stim = np.empty((0, ))
     com = np.empty((0, ))
     for f in files:
         start_1 = time.time()
@@ -293,19 +294,20 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
             indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
                                     replace=False)
         prior_tmp = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        stim_tmp = np.array([stim for stim in df.res_sound])
+        # stim_tmp = np.array([stim for stim in df.res_sound])
+        stim_tmp = np.array(df.coh2)
         com_tmp = df.CoM_sugg.values
         prior = np.concatenate((prior, prior_tmp[indx]))
-        stim = np.concatenate((stim, stim_tmp[indx, :]))
+        stim = np.concatenate((stim, stim_tmp[indx]))
         com = np.concatenate((com, com_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
         print(len(df))
     print(end - start)
-    print('Ended loading data')
-    # matrix, _ = com_heatmap_jordi(prior, df.coh2, com, return_mat=True)
-    # np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
+    print('Ended loading data, start computing matrix')
+    matrix, _ = com_heatmap_jordi(prior, stim, com, return_mat=True)
+    np.save(SV_FOLDER + 'results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     return stim, prior, com  # , matrix
 
@@ -313,7 +315,8 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
-                        compute_trajectories=False, num_trials_per_session=500):
+                        compute_trajectories=False, num_trials_per_session=500,
+                        proactive_integration=True):
     """
     Generate stim and time integration and trajectories
 
@@ -390,11 +393,17 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     # trial_dur = 1  # trial duration (s)
     N = Ve.shape[0]  # int(trial_dur/dt)  # number of timesteps
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
-    dA = np.random.randn(N, num_tr)*p_a_noise+Va
-    dA[:p_t_a, :] = 0
+    Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
+          % num_trials_per_session)*2.5*1e-3 + 5.2
+    if proactive_integration:
+        dA = np.random.randn(N, num_tr)*p_a_noise+Va
+        dA[:p_t_a, :] = 0
+        A = np.cumsum(dA, axis=0)
+    else:
+        rt_a = [np.random.wald(bound_a/va, bound_a**2)*1e3 + p_t_a for va in Va]
+        A = rt_a
     dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
     E = np.cumsum(dW, axis=0)
-    A = np.cumsum(dA, axis=0)
     com = False
     # reaction_time = 300
     first_ind = []
@@ -406,13 +415,16 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     resp_fin = np.ones(E.shape[1])
     for i_t in range(E.shape[1]):
         indx_hit_bound = np.abs(E[:, i_t]) >= bound
-        indx_hit_action = np.abs(A[:, i_t]) >= bound_a
         hit_bound = max_integration_time  # -p_t_aff-p_t_eff
-        hit_action = max_integration_time  # -p_t_eff-p_t_a
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
-        if (indx_hit_action).any():
-            hit_action = np.where(indx_hit_action)[0][0]
+        if proactive_integration:
+            indx_hit_action = np.abs(A[:, i_t]) >= bound_a
+            hit_action = max_integration_time  # -p_t_eff-p_t_a
+            if (indx_hit_action).any():
+                hit_action = np.where(indx_hit_action)[0][0]
+        else:
+            hit_action = rt_a[i_t]
         hit_dec = min(hit_bound, hit_action)  # reactive or proactive
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         first_ind.append(hit_dec)
@@ -506,33 +518,26 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             matrix, None, None, None, None
 
 
-def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
-                      'custom_utils/utilsJ/Models/',
-                      npyname='CoM_vs_prior_and_stim.npy', plotting=False):
-    print('Starting comparison')
-    try:
-        matrix_data = np.load(npypath+npyname)
-        difference = np.subtract(matrix, matrix_data)
-        MSE = np.square(difference)
-        rmse = np.sqrt(MSE)
-    except FileNotFoundError:
-        rmse = None
-    # print('RMSE: ')
-    # print(rmse)
-    if plotting:
-        plt.figure()
-        sns.heatmap(matrix, cmap='viridis')
-        plt.title('Sims')
-        try:
-            plt.figure()
-            sns.heatmap(matrix_data, cmap='viridis')
-            plt.title('Data')
-            plt.figure()
-            sns.heatmap(difference, cmap='viridis')
-            plt.title('Difference')
-        except NameError as m:
-            print(m)
-    return rmse
+def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/results/',
+                      mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/'):
+    data_mat = np.load(mat_path + 'CoM_vs_prior_and_stim.npy')
+    data_mat_norm = data_mat / data_mat.max()
+    files = glob.glob(res_path+'*.npz')
+    diff_mn = []
+    for f in files:
+        with np.load(f, allow_pickle=True) as data:
+            mat = data['matrix']
+            mat[np.isnan(mat)] = 0
+            mat_norm = mat / mat.max()
+            diff = np.nanmean(np.subtract(mat_norm, data_mat_norm))
+            diff_mn.append(diff)
+    ind_min = np.nanargmin(np.abs(diff_mn))
+    data_min = files[ind_min]
+    optimal_params = {}
+    with np.load(data_min, allow_pickle=True) as data:
+        for k in data.keys():
+            optimal_params[k] = data[k]
+    return data_mat, optimal_params
 
 
 def brute_force(stim, zt, num_vals=3):
@@ -625,7 +630,7 @@ if __name__ == '__main__':
     # asdasd
     num_tr = int(1e5)
     load_data = True
-    new_sample = False
+    new_sample = True
     if load_data:
         p_t_aff = 2
         p_t_eff = 2
@@ -661,19 +666,20 @@ if __name__ == '__main__':
     p_w_a = 0.05
     p_a_noise = 0.05
     p_w_updt = 30
-    compute_trajectories = True
-    rmse_list = brute_force(stim, zt)
+    compute_trajectories = False
+    # rmse_list = brute_force(stim, zt)
     # import sys
     # sys.exit()
-    # E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
-    #     total_traj, init_trajs, final_trajs, motor_updt_time =\
-    #     trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
-    #                         MT_intercep=MT_intercep, p_w_zt=p_w_zt,
-    #                         p_w_stim=p_w_stim, p_e_noise=p_e_noise,
-    #                         p_com_bound=p_com_bound, p_t_eff=p_t_eff,
-    #                         p_t_aff=p_t_aff, p_t_a=p_t_a, num_tr=num_tr,
-    #                         p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-    #                         compute_trajectories=compute_trajectories)
+    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
+        total_traj, init_trajs, final_trajs, motor_updt_time =\
+        trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
+                            MT_intercep=MT_intercep, p_w_zt=p_w_zt,
+                            p_w_stim=p_w_stim, p_e_noise=p_e_noise,
+                            p_com_bound=p_com_bound, p_t_eff=p_t_eff,
+                            p_t_aff=p_t_aff, p_t_a=p_t_a, num_tr=num_tr,
+                            p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
+                            compute_trajectories=compute_trajectories,
+                            proactive_integration=False)
     # # npypath = '/home/manuel/custom_utils/utilsJ/Models/'
     # rmse = matrix_comparison(matrix, plotting=True)
     # # import sys
