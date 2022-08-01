@@ -12,7 +12,7 @@ import itertools
 import glob
 import time
 # import scipy as sp
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/'
+SV_FOLDER = '/home/molano/ChangesOfMind/'
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -48,7 +48,7 @@ def draw_lines(ax, frst, sec, p_t_aff):
         a.axvline(x=sec, color='c', linewidth=1, linestyle='--')
 
 
-def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
+def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time,
              stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
@@ -105,7 +105,8 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             print('There are no '+l)
     for a in ax:
         a.set_xlim([0, max_xlim])
-    f.savefig(SV_FOLDER+'example_trials.svg', dpi=400, bbox_inches='tight')
+    f.savefig(SV_FOLDER+'/figures/example_trials.svg', dpi=400,
+              bbox_inches='tight')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -270,33 +271,43 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
     return traj
 
 
-def get_data_and_matrix(
-        dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
-        savepath='C:/Users/alexg/Documents/GitHub/custom_utils/utilsJ/Models'):
+def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
+                        num_tr_per_rat=int(1e4), after_correct=True):
     # import data for 1 rat
     print('Loading data')
     files = glob.glob(dfpath+'*.pkl')
     start = time.time()
+    prior = np.empty((0, ))
+    stim = np.empty((0, 20))
+    com = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
         end = time.time()
+        if after_correct:
+            indx_prev_error = np.where(df['aftererror'].values == 0)[0]
+            selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
+                                             size=(num_tr_per_rat), replace=False)
+            indx = indx_prev_error[selected_indx]
+        else:
+            indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
+                                    replace=False)
+        prior_tmp = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        stim_tmp = np.array([stim for stim in df.res_sound])
+        com_tmp = df.CoM_sugg.values
+        prior = np.concatenate((prior, prior_tmp[indx]))
+        stim = np.concatenate((stim, stim_tmp[indx, :]))
+        com = np.concatenate((com, com_tmp[indx]))
+        end = time.time()
         print(f)
         print(end - start_1)
         print(len(df))
-    end = time.time()
     print(end - start)
-    df_rat = df[['origidx', 'res_sound', 'R_response', 'trajectory_y', 'coh2',
-                 'CoM_sugg']]
-    df_rat["priorZt"] = np.nansum(
-            df[["dW_lat", "dW_trans"]].values, axis=1)
     print('Ended loading data')
-    stim = np.array([stim for stim in df_rat.res_sound])
-    prior = df_rat.priorZt
-    com = df_rat.CoM_sugg
-    matrix, _ = com_heatmap_jordi(prior, df_rat.coh2, com, return_mat=True)
-    np.save(savepath + '/CoM_vs_prior_and_stim.npy', matrix)
-    return df_rat, stim, prior, com, matrix
+    # matrix, _ = com_heatmap_jordi(prior, df.coh2, com, return_mat=True)
+    # np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
+    stim = stim.T
+    return stim, prior, com  # , matrix
 
 
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -524,17 +535,18 @@ def matrix_comparison(matrix, npypath='C:/Users/alexg/Documents/GitHub/' +
     return rmse
 
 
-def brute_force(stim, zt, num_timesteps):
-    p_w_zt_list = np.linspace(0.005, 1, num=5)
-    p_w_stim_list = np.linspace(0.005, 10, num=5)
-    p_e_noise_list = np.linspace(0.005, 10, num=5)
-    p_com_bound_list = np.linspace(0.1, 1, num=5)
-    p_t_aff_list = [0, 1, 2]
-    p_t_eff_list = [0, 1, 2]
+def brute_force(stim, zt, num_vals=3):
+    num_tr = stim.shape[1]
+    p_w_zt_list = np.linspace(0.005, 1, num=num_vals)
+    p_w_stim_list = np.linspace(0.005, 2, num=num_vals)
+    p_e_noise_list = [0.1]  # np.linspace(0.005, 10, num=num_vals)
+    p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
+    p_t_aff_list = [1, 2]
+    p_t_eff_list = [1, 2]
     p_t_a_list = [0, 1, 2]
-    p_w_a_list = np.logspace(-3, -1, num=5)
-    p_a_noise_list = np.linspace(0.01, 0.1, num=5)
-    p_w_updt_list = [0, 1, 2]
+    p_w_a_list = np.logspace(-3, -1, num=num_vals)
+    p_a_noise_list = [0.1]  # np.linspace(0.01, 0.1, num=num_vals)
+    p_w_updt_list = np.linspace(0.1, 2, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -547,16 +559,16 @@ def brute_force(stim, zt, num_timesteps):
     compute_trajectories = False
     for conf in configurations:
         start = time.time()
-        p_w_zt = conf[0]+np.random.rand()*np.diff(p_w_zt_list)[0]/4
-        p_w_stim = conf[1]+np.random.rand()*np.diff(p_w_stim_list)[0]/4
-        p_e_noise = conf[2]+np.random.rand()*np.diff(p_e_noise_list)[0]/4
-        p_com_bound = conf[3]+np.random.rand()*np.diff(p_com_bound_list)[0]/4
+        p_w_zt = conf[0]+np.random.rand()*np.diff(p_w_zt_list)[0]/8
+        p_w_stim = conf[1]+np.random.rand()*np.diff(p_w_stim_list)[0]/8
+        p_e_noise = conf[2]  # +np.random.rand()*np.diff(p_e_noise_list)[0]/8
+        p_com_bound = conf[3]+np.random.rand()*np.diff(p_com_bound_list)[0]/8
         p_t_aff = conf[4]
         p_t_eff = conf[5]
         p_t_a = conf[6]
-        p_w_a = conf[7]+np.random.rand()*np.diff(p_w_a_list)[0]/4
-        p_a_noise = conf[8]+np.random.rand()*np.diff(p_a_noise_list)[0]/4
-        p_w_updt = conf[9]+np.random.rand()*np.diff(p_w_updt_list)[0]/4
+        p_w_a = conf[7]+np.random.rand()*np.diff(p_w_a_list)[0]/8
+        p_a_noise = conf[8]  # +np.random.rand()*np.diff(p_a_noise_list)[0]/8
+        p_w_updt = conf[9]+np.random.rand()*np.diff(p_w_updt_list)[0]/8
         stim_temp =\
             np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
 
@@ -584,6 +596,23 @@ def brute_force(stim, zt, num_timesteps):
         # rmse_total = matrix_comparison(matrix)
         end = time.time()
         print(end-start)
+        data = {'p_w_zt': p_w_zt, 'p_w_stim': p_w_stim, 'p_e_noise': p_e_noise,
+                'p_com_bound': p_com_bound, 'p_t_aff': p_t_aff, 'p_t_eff': p_t_eff,
+                'p_t_a': p_t_a, 'p_w_a': p_w_a, 'p_a_noise': p_a_noise,
+                'p_w_updt': p_w_updt, 'matrix': matrix}
+        # 'E': E, 'A': A, 'com': com, 'first_ind': first_ind,
+        # 'second_ind': second_ind, 'resp_first': resp_first,
+        # 'resp_fin': resp_fin, 'pro_vs_re': pro_vs_re,
+        name = ''
+        for k in data.keys():
+            if k[:2] == 'p_':
+                name += str(np.round(data[k], 3))+'_'
+        name = name[:-1]
+        np.savez(SV_FOLDER+'/results/'+name+'.npz', **data)
+        # f = plt.figure()
+        # plt.imshow(matrix, aspect='auto')
+        # f.savefig(SV_FOLDER+'/figures/'+name+'.png', dpi=400,
+        #           bbox_inches='tight')
         # rmse_mean = np.mean(rmse_total)
         # rmse_list.append(rmse_mean)
     return rmse_list
@@ -596,16 +625,22 @@ if __name__ == '__main__':
     # asdasd
     num_tr = int(1e5)
     load_data = True
+    new_sample = False
     if load_data:
         p_t_aff = 2
         p_t_eff = 2
         p_t_a = 2
-        # _, stim, zt, _, _ =\
-        #     get_data_and_matrix(dfpath='/home/molano/ChangesOfMind/data/')
-        # np.save('stim.npy', stim)
-        # np.save('zt.npy', zt)
-        zt = np.load('zt.npy')[:num_tr]
-        stim = np.load('stim.npy')[:num_tr].T
+        if new_sample:
+            stim, zt, _ =\
+                get_data_and_matrix(dfpath=SV_FOLDER+'/data/')
+            data = {'stim': stim, 'zt': zt}
+            np.savez(SV_FOLDER+'/data/sample_'+str(time.time())[-5:]+'.npz',
+                     **data)
+        else:
+            files = glob.glob(SV_FOLDER+'/data/sample_*')
+            data = np.load(files[np.random.choice(a=len(files))])
+            stim = data['stim']
+            zt = data['zt']
         stim_res = 50
     else:
         p_t_aff = 10
@@ -628,22 +663,22 @@ if __name__ == '__main__':
     p_w_updt = 30
     compute_trajectories = True
     rmse_list = brute_force(stim, zt)
-    import sys
-    sys.exit()
-    E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
-        total_traj, init_trajs, final_trajs, motor_updt_time =\
-        trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
-                            MT_intercep=MT_intercep, p_w_zt=p_w_zt,
-                            p_w_stim=p_w_stim, p_e_noise=p_e_noise,
-                            p_com_bound=p_com_bound, p_t_eff=p_t_eff,
-                            p_t_aff=p_t_aff, p_t_a=p_t_a, num_tr=num_tr,
-                            p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-                            compute_trajectories=compute_trajectories)
-    # npypath = '/home/manuel/custom_utils/utilsJ/Models/'
-    rmse = matrix_comparison(matrix, plotting=True)
     # import sys
     # sys.exit()
-    plotting(E=E, com=com, second_ind=second_ind, first_ind=first_ind,
-             resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
-             p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
-             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time, stim_res=stim_res)
+    # E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re, matrix,\
+    #     total_traj, init_trajs, final_trajs, motor_updt_time =\
+    #     trial_ev_vectorized(zt=zt, stim=stim, MT_slope=MT_slope,
+    #                         MT_intercep=MT_intercep, p_w_zt=p_w_zt,
+    #                         p_w_stim=p_w_stim, p_e_noise=p_e_noise,
+    #                         p_com_bound=p_com_bound, p_t_eff=p_t_eff,
+    #                         p_t_aff=p_t_aff, p_t_a=p_t_a, num_tr=num_tr,
+    #                         p_w_a=p_w_a, p_a_noise=p_a_noise, p_w_updt=p_w_updt,
+    #                         compute_trajectories=compute_trajectories)
+    # # npypath = '/home/manuel/custom_utils/utilsJ/Models/'
+    # rmse = matrix_comparison(matrix, plotting=True)
+    # # import sys
+    # # sys.exit()
+    # plotting(E=E, A=A, com=com, second_ind=second_ind, first_ind=first_ind,
+    #          resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
+    #          p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
+    #          p_t_eff=p_t_eff, motor_updt_time=motor_updt_time, stim_res=stim_res)
