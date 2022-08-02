@@ -12,8 +12,8 @@ import itertools
 import glob
 import time
 # import scipy as sp
-SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/'  # Alex
+# SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -279,8 +279,9 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     files = glob.glob(dfpath+'*.pkl')
     start = time.time()
     prior = np.empty((0, ))
-    stim = np.empty((0, ))
+    stim = np.empty((0, 20))
     com = np.empty((0, ))
+    coh = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
@@ -294,11 +295,12 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
             indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
                                     replace=False)
         prior_tmp = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        # stim_tmp = np.array([stim for stim in df.res_sound])
-        stim_tmp = np.array(df.coh2)
+        stim_tmp = np.array([stim for stim in df.res_sound])
+        coh_mat = np.array(df.coh2)
         com_tmp = df.CoM_sugg.values
         prior = np.concatenate((prior, prior_tmp[indx]))
-        stim = np.concatenate((stim, stim_tmp[indx]))
+        stim = np.concatenate((stim, stim_tmp[indx, :]))
+        coh = np.concatenate((coh, coh_mat[indx]))
         com = np.concatenate((com, com_tmp[indx]))
         end = time.time()
         print(f)
@@ -306,8 +308,8 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
-    matrix, _ = com_heatmap_jordi(prior, stim, com, return_mat=True)
-    np.save(SV_FOLDER + 'results/CoM_vs_prior_and_stim.npy', matrix)
+    matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
+    np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     return stim, prior, com  # , matrix
 
@@ -315,8 +317,8 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
-                        compute_trajectories=False, num_trials_per_session=500,
-                        proactive_integration=True):
+                        compute_trajectories=False, num_trials_per_session=600,
+                        proactive_integration=False):
     """
     Generate stim and time integration and trajectories
 
@@ -385,7 +387,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     """
     print('Starting simulation, PSIAM')
     bound = 1
-    bound_a = 1
+    bound_a = 3
     prior = zt*p_w_zt
     Ve = np.concatenate((np.zeros((p_t_aff, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
@@ -394,13 +396,14 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     N = Ve.shape[0]  # int(trial_dur/dt)  # number of timesteps
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
-          % num_trials_per_session)*2.5*1e-3 + 5.2
+          % num_trials_per_session)*(-2.5)*1e-6 + 5.2*1e-3
     if proactive_integration:
         dA = np.random.randn(N, num_tr)*p_a_noise+Va
         dA[:p_t_a, :] = 0
         A = np.cumsum(dA, axis=0)
     else:
-        rt_a = [np.random.wald(bound_a/va, bound_a**2)*1e3 + p_t_a for va in Va]
+        rt_a = [np.random.wald(mean=bound_a/va, scale=bound_a**2) + p_t_a
+                for va in Va]
         A = rt_a
     dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
     E = np.cumsum(dW, axis=0)
@@ -652,7 +655,7 @@ if __name__ == '__main__':
     load_data = True
     new_sample = False
     single_run = True
-    data_augment_factor = 10
+    data_augment_factor = 50
     if load_data:
         if new_sample:
             stim, zt, _ =\
@@ -661,6 +664,7 @@ if __name__ == '__main__':
             data = {'stim': stim, 'zt': zt}
             np.savez(SV_FOLDER+'/data/sample_'+str(time.time())[-5:]+'.npz',
                      **data)
+            stim = data_augmentation(stim=stim, daf=data_augment_factor)
         else:
             files = glob.glob(SV_FOLDER+'/data/sample_*')
             data = np.load(files[np.random.choice(a=len(files))])
@@ -679,13 +683,13 @@ if __name__ == '__main__':
     if single_run:
         MT_slope = 0.15
         MT_intercep = 110
-        p_t_aff = 3
-        p_t_eff = 3
-        p_t_a = 3
-        p_w_zt = 0.4
-        p_w_stim = 0.1
-        p_e_noise = 0.1
-        p_com_bound = 0.5
+        p_t_aff = 80
+        p_t_eff = 80
+        p_t_a = -50
+        p_w_zt = 0.2
+        p_w_stim = 0.05
+        p_e_noise = 0.3
+        p_com_bound = 0.3
         p_w_a = 0.05
         p_a_noise = 0.1
         p_w_updt = 3
