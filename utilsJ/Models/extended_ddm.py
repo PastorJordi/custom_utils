@@ -547,6 +547,18 @@ def run_model(stim, zt, configurations, jitters, stim_res,
     num_tr = stim.shape[1]
     MT_slope = 0.15
     MT_intercep = 110
+    names = []
+    p_w_zt_vals = []
+    p_w_stim_vals = []
+    p_e_noise_vals = []
+    p_com_bound_vals = []
+    p_t_aff_vals = []
+    p_t_eff_vals = []
+    p_t_a_vals = []
+    p_w_a_vals = []
+    p_a_noise_vals = []
+    p_w_updt_vals = []
+    all_mats = []
     for conf in configurations:
         start = time.time()
         p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -591,6 +603,17 @@ def run_model(stim, zt, configurations, jitters, stim_res,
                      p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
                      p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
                      stim_res=stim_res)
+        p_w_zt_vals.append([conf[0], p_w_zt])
+        p_w_stim_vals.append([conf[1], p_w_stim])
+        p_e_noise_vals.append([conf[2], p_e_noise])
+        p_com_bound_vals.append([conf[3], p_e_noise])
+        p_t_aff_vals.append([conf[4], p_t_aff])
+        p_t_eff_vals.append([conf[5], p_t_eff])
+        p_t_a_vals.append([conf[6], p_t_a])
+        p_w_a_vals.append([conf[7], p_w_a])
+        p_a_noise_vals.append([conf[8], p_a_noise])
+        p_w_updt_vals.append([conf[9], p_w_updt])
+        all_mats.append(matrix)
         data = {'p_w_zt': (conf[0], p_w_zt), 'p_w_stim': (conf[1], p_w_stim),
                 'p_e_noise': (conf[2], p_e_noise),
                 'p_com_bound': (conf[3], p_com_bound),
@@ -606,7 +629,16 @@ def run_model(stim, zt, configurations, jitters, stim_res,
             if k[:2] == 'p_':
                 name += str(np.round(data[k], 3))+'_'
         name = name[:-1]
-        np.savez(SV_FOLDER+'/results/'+name+'.npz', **data)
+        names.append(name)
+    data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
+                  'p_e_noise': p_e_noise_vals,
+                  'p_com_bound': p_com_bound_vals,
+                  'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
+                  'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
+                  'p_a_noise': p_a_noise_vals,
+                  'p_w_updt': p_w_updt_vals,
+                  'matrix': all_mats}
+    np.savez(SV_FOLDER+'/results/'+name+'.npz', **data_final)
 
 
 def set_parameters(num_vals=4, factor=8):
@@ -625,16 +657,19 @@ def set_parameters(num_vals=4, factor=8):
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
                                             p_w_a_list, p_a_noise_list,
                                             p_w_updt_list))
-    jitters = [np.diff(p_w_zt_list)[0]/factor,
-               np.diff(p_w_stim_list)[0]/factor,
-               0.01,
-               np.diff(p_com_bound_list)[0]/factor,
-               np.diff(p_t_aff_list)[0]/factor,
-               np.diff(p_t_eff_list)[0]/factor,
-               np.diff(p_t_a_list)[0]/factor,
-               np.diff(p_w_a_list)[0]/factor,
-               0.01,
-               np.nan]
+    if num_vals == 1:
+        jitters = np.repeat(0.01, 10)
+    else:
+        jitters = [np.diff(p_w_zt_list)[0]/factor,
+                   np.diff(p_w_stim_list)[0]/factor,
+                   0.01,
+                   np.diff(p_com_bound_list)[0]/factor,
+                   np.diff(p_t_aff_list)[0]/factor,
+                   np.diff(p_t_eff_list)[0]/factor,
+                   np.diff(p_t_a_list)[0]/factor,
+                   np.diff(p_w_a_list)[0]/factor,
+                   0.01,
+                   np.nan]
     return configurations, jitters
 
 
@@ -699,7 +734,7 @@ if __name__ == '__main__':
         stim = stim[:, :int(1e5)]
         zt = zt[:int(1e5)]
     else:
-        configurations, jitters = set_parameters(num_vals=4)
+        configurations, jitters = set_parameters(num_vals=1)
         compute_trajectories = False
         plot = False
 
