@@ -721,7 +721,7 @@ if __name__ == '__main__':
         stim = stim[:, :int(1e5)]
         zt = zt[:int(1e5)]
     else:
-        configurations, jitters = set_parameters(num_vals=1)
+        configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = False
         plot = False
 
