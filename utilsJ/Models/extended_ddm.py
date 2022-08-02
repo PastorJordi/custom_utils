@@ -12,8 +12,8 @@ import itertools
 import glob
 import time
 # import scipy as sp
-# SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
+# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -318,7 +318,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=False):
+                        proactive_integration=True):
     """
     Generate stim and time integration and trajectories
 
@@ -387,7 +387,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     """
     print('Starting simulation, PSIAM')
     bound = 1
-    bound_a = 3
+    bound_a = 1
     prior = zt*p_w_zt
     Ve = np.concatenate((np.zeros((p_t_aff, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
@@ -395,8 +395,8 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     # trial_dur = 1  # trial duration (s)
     N = Ve.shape[0]  # int(trial_dur/dt)  # number of timesteps
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
-    Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
-          % num_trials_per_session)*(-2.5)*1e-6 + 5.2*1e-3
+    # Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
+    #       % num_trials_per_session)*(-2.5)*1e-6 + 5.2*1e-3
     if proactive_integration:
         dA = np.random.randn(N, num_tr)*p_a_noise+Va
         dA[:p_t_a, :] = 0
@@ -408,7 +408,6 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
     E = np.cumsum(dW, axis=0)
     com = False
-    # reaction_time = 300
     first_ind = []
     second_ind = []
     pro_vs_re = []
@@ -610,17 +609,17 @@ def run_model(stim, zt, configurations, jitters, stim_res,
         np.savez(SV_FOLDER+'/results/'+name+'.npz', **data)
 
 
-def set_parameters(num_vals=3, factor=8):
-    p_w_zt_list = np.linspace(0.005, 1, num=num_vals)
-    p_w_stim_list = np.linspace(0.005, 2, num=num_vals)
-    p_e_noise_list = [0.1]  # np.linspace(0.005, 10, num=num_vals)
+def set_parameters(num_vals=4, factor=8):
+    p_w_zt_list = np.linspace(0.005, 0.5, num=num_vals)
+    p_w_stim_list = np.linspace(0.005, 0.5, num=num_vals)
+    p_e_noise_list = [0.05, 0.1]  # np.linspace(0.005, 10, num=num_vals)
     p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
-    p_t_aff_list = np.array([10, 20])
-    p_t_eff_list = np.array([10, 20])
-    p_t_a_list = np.array([0, 10, 20])
-    p_w_a_list = np.logspace(-3, -1, num=num_vals)
-    p_a_noise_list = [0.1]  # np.linspace(0.01, 0.1, num=num_vals)
-    p_w_updt_list = np.linspace(0.1, 2, num=num_vals)
+    p_t_aff_list = np.array([8, 16, 24])
+    p_t_eff_list = np.array([8, 16, 24])
+    p_t_a_list = np.array([0, 8])
+    p_w_a_list = np.linspace(0.005, 0.5, num=num_vals)
+    p_a_noise_list = [0.05, 0.1]  # np.linspace(0.01, 0.1, num=num_vals)
+    p_w_updt_list = [np.nan]  # np.linspace(0.1, 2, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -628,14 +627,14 @@ def set_parameters(num_vals=3, factor=8):
                                             p_w_updt_list))
     jitters = [np.diff(p_w_zt_list)[0]/factor,
                np.diff(p_w_stim_list)[0]/factor,
-               0.05,
+               0.01,
                np.diff(p_com_bound_list)[0]/factor,
                np.diff(p_t_aff_list)[0]/factor,
                np.diff(p_t_eff_list)[0]/factor,
                np.diff(p_t_a_list)[0]/factor,
                np.diff(p_w_a_list)[0]/factor,
-               0.05,
-               np.diff(p_w_updt_list)[0]/factor]
+               0.01,
+               np.nan]
     return configurations, jitters
 
 
@@ -654,8 +653,8 @@ if __name__ == '__main__':
     num_tr = int(1e5)
     load_data = True
     new_sample = False
-    single_run = True
-    data_augment_factor = 50
+    single_run = False
+    data_augment_factor = 10
     if load_data:
         if new_sample:
             stim, zt, _ =\
@@ -664,13 +663,12 @@ if __name__ == '__main__':
             data = {'stim': stim, 'zt': zt}
             np.savez(SV_FOLDER+'/data/sample_'+str(time.time())[-5:]+'.npz',
                      **data)
-            stim = data_augmentation(stim=stim, daf=data_augment_factor)
         else:
             files = glob.glob(SV_FOLDER+'/data/sample_*')
             data = np.load(files[np.random.choice(a=len(files))])
             stim = data['stim']
             zt = data['zt']
-            stim = data_augmentation(stim=stim, daf=data_augment_factor)
+        stim = data_augmentation(stim=stim, daf=data_augment_factor)
         stim_res = 50/data_augment_factor
     else:
         num_timesteps = 1000
@@ -683,9 +681,9 @@ if __name__ == '__main__':
     if single_run:
         MT_slope = 0.15
         MT_intercep = 110
-        p_t_aff = 80
-        p_t_eff = 80
-        p_t_a = -50
+        p_t_aff = 16
+        p_t_eff = 16
+        p_t_a = -10
         p_w_zt = 0.2
         p_w_stim = 0.05
         p_e_noise = 0.3
@@ -701,9 +699,9 @@ if __name__ == '__main__':
         stim = stim[:, :int(1e5)]
         zt = zt[:int(1e5)]
     else:
-        configurations, jitters = set_parameters(num_vals=3)
-        compute_trajectories = True
-        plot = True
+        configurations, jitters = set_parameters(num_vals=4)
+        compute_trajectories = False
+        plot = False
 
     run_model(stim=stim, zt=zt, configurations=configurations, jitters=jitters,
               compute_trajectories=compute_trajectories, plot=plot,
