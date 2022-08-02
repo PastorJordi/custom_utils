@@ -12,9 +12,9 @@ import itertools
 import glob
 import time
 # import scipy as sp
-SV_FOLDER = '/home/molano/ChangesOfMind/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
     f, ax = plt.subplots()
@@ -544,10 +544,19 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/results/',
 
 def run_model(stim, zt, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False):
+    def save_data():
+        data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
+                      'p_e_noise': p_e_noise_vals,
+                      'p_com_bound': p_com_bound_vals,
+                      'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
+                      'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
+                      'p_a_noise': p_a_noise_vals,
+                      'p_w_updt': p_w_updt_vals,
+                      'matrix': all_mats}
+        np.savez(SV_FOLDER+'/results/all_results.npz', **data_final)
     num_tr = stim.shape[1]
     MT_slope = 0.15
     MT_intercep = 110
-    names = []
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_noise_vals = []
@@ -559,7 +568,7 @@ def run_model(stim, zt, configurations, jitters, stim_res,
     p_a_noise_vals = []
     p_w_updt_vals = []
     all_mats = []
-    for conf in configurations:
+    for i_conf, conf in enumerate(configurations):
         start = time.time()
         p_w_zt = conf[0]+jitters[0]*np.random.rand()
         p_w_stim = conf[1]+jitters[1]*np.random.rand()
@@ -573,7 +582,7 @@ def run_model(stim, zt, configurations, jitters, stim_res,
         p_w_updt = conf[9]+jitters[9]*np.random.rand()
         stim_temp =\
             np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
-
+        print('--------------')
         print('p_w_zt: '+str(p_w_zt))
         print('p_w_stim: '+str(p_w_stim))
         print('p_e_noise: '+str(p_e_noise))
@@ -584,7 +593,6 @@ def run_model(stim, zt, configurations, jitters, stim_res,
         print('p_w_a: '+str(p_w_a))
         print('p_a_noise: '+str(p_a_noise))
         print('p_w_updt: '+str(p_w_updt))
-        print('--------------')
         E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time =\
             trial_ev_vectorized(zt=zt, stim=stim_temp, MT_slope=MT_slope,
@@ -596,6 +604,7 @@ def run_model(stim, zt, configurations, jitters, stim_res,
                                 p_w_updt=p_w_updt,
                                 compute_trajectories=compute_trajectories)
         end = time.time()
+        print(np.mean(com))
         print(end-start)
         if plot:
             plotting(com=com, E=E, A=A, second_ind=second_ind, first_ind=first_ind,
@@ -614,31 +623,9 @@ def run_model(stim, zt, configurations, jitters, stim_res,
         p_a_noise_vals.append([conf[8], p_a_noise])
         p_w_updt_vals.append([conf[9], p_w_updt])
         all_mats.append(matrix)
-        data = {'p_w_zt': (conf[0], p_w_zt), 'p_w_stim': (conf[1], p_w_stim),
-                'p_e_noise': (conf[2], p_e_noise),
-                'p_com_bound': (conf[3], p_com_bound),
-                'p_t_aff': (conf[4], p_t_aff), 'p_t_eff': (conf[5], p_t_eff),
-                'p_t_a': (conf[6], p_t_a), 'p_w_a': (conf[7], p_w_a),
-                'p_a_noise': (conf[8], p_a_noise), 'p_w_updt': (conf[9], p_w_updt),
-                'matrix': matrix}
-        # 'E': E, 'A': A, 'com': com, 'first_ind': first_ind,
-        # 'second_ind': second_ind, 'resp_first': resp_first,
-        # 'resp_fin': resp_fin, 'pro_vs_re': pro_vs_re,
-        name = ''
-        for k in data.keys():
-            if k[:2] == 'p_':
-                name += str(np.round(data[k], 3))+'_'
-        name = name[:-1]
-        names.append(name)
-    data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
-                  'p_e_noise': p_e_noise_vals,
-                  'p_com_bound': p_com_bound_vals,
-                  'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
-                  'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
-                  'p_a_noise': p_a_noise_vals,
-                  'p_w_updt': p_w_updt_vals,
-                  'matrix': all_mats}
-    np.savez(SV_FOLDER+'/results/'+name+'.npz', **data_final)
+        if i_conf % 10 == 0:
+            save_data()
+    save_data()
 
 
 def set_parameters(num_vals=4, factor=8):
@@ -687,19 +674,19 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1e5)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = False
     data_augment_factor = 10
     if load_data:
         if new_sample:
             stim, zt, _ =\
-                get_data_and_matrix(dfpath=SV_FOLDER+'/data/',
+                get_data_and_matrix(dfpath=DATA_FOLDER,
                                     num_tr_per_rat=int(1e4), after_correct=True)
             data = {'stim': stim, 'zt': zt}
-            np.savez(SV_FOLDER+'/data/sample_'+str(time.time())[-5:]+'.npz',
+            np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                      **data)
         else:
-            files = glob.glob(SV_FOLDER+'/data/sample_*')
+            files = glob.glob(DATA_FOLDER+'/sample_*')
             data = np.load(files[np.random.choice(a=len(files))])
             stim = data['stim']
             zt = data['zt']
