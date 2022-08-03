@@ -13,7 +13,7 @@ import pandas as pd
 import seaborn as sns
 import warnings
 import types
-import swifter
+# import swifter
 import tqdm
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from scipy.interpolate import interp1d

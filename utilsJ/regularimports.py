@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import pandas as pd
-import swifter as sw
+# import swifter as sw
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
@@ -40,14 +40,14 @@ dani_rats = [f"LE{x}" for x in range(42, 48)]
 jordi_rats = [f"LE{x}" for x in range(82, 88)]
 
 
-def apply_expand_concat(df, fun, newcolnames):
-    """returns apply+expand concatenated to df,
-	fun: lambda x: func(row) should work too?
-	newcolnames = list of newly generated columns
-	"""
-    tmp = df.swifter.apply(fun, axis=1, result_type="expand")
-    tmp.columns = newcolnames
-    return pd.concat([df, tmp], axis=1)
+# def apply_expand_concat(df, fun, newcolnames):
+#     """returns apply+expand concatenated to df,
+# 	fun: lambda x: func(row) should work too?
+# 	newcolnames = list of newly generated columns
+# 	"""
+#     tmp = df.swifter.apply(fun, axis=1, result_type="expand")
+#     tmp.columns = newcolnames
+#     return pd.concat([df, tmp], axis=1)
 
 
 def set_share_axes(axs, target=None, sharex=False, sharey=False, visible_lab=False):
