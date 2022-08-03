@@ -152,7 +152,7 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
     tmp = pd.DataFrame(np.array([x, y, com]).T, columns=["prior", "stim", "com"])
 
     # make bins
-    tmp["binned_prior"] = np.nan
+    tmp["binned_prior"] = 0
     maxedge_prior = tmp.prior.abs().max()
     if predefbins is None:
         predefbinsflag = False
@@ -169,7 +169,7 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
     priorlabels = [round((priorbins[i] + priorbins[i + 1]) / 2, 2)
                    for i in range(bins.size-1)]
 
-    tmp["binned_stim"] = np.nan
+    tmp["binned_stim"] = 0
     maxedge_stim = tmp.stim.abs().max()
     if not predefbinsflag:
         bins = np.linspace(-maxedge_stim - 0.01, maxedge_stim + 0.01, 8)
@@ -189,6 +189,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
     for i in range(len(stimlabels)):
         switch = (tmp.loc[(tmp.com == 1) & (tmp.binned_stim == i)]
                   .groupby("binned_prior")["binned_prior"].count())
+        for ind in tmp.binned_prior.unique():
+            if ind not in switch.index.values:
+                switch[ind] = 0
         nobs = (switch + tmp.loc[(tmp.com == 0) & (tmp.binned_stim == i)]
                 .groupby("binned_prior")["binned_prior"].count())
         # fill where there are no CoM (instead it will be nan)
@@ -308,10 +311,12 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     stim = np.empty((0, 20))
     com = np.empty((0, ))
     coh = np.empty((0, ))
+    gt = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
         end = time.time()
+        # max_num_tr = max(num_tr_per_rat, len(df))
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
             selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
@@ -324,10 +329,12 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
         stim_tmp = np.array([stim for stim in df.res_sound])
         coh_mat = np.array(df.coh2)
         com_tmp = df.CoM_sugg.values
+        gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
         stim = np.concatenate((stim, stim_tmp[indx, :]))
         coh = np.concatenate((coh, coh_mat[indx]))
         com = np.concatenate((com, com_tmp[indx]))
+        gt = np.concatenate((gt, gt_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
@@ -337,10 +344,10 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
-    return stim, prior, coh, com  # , matrix
+    return stim, prior, coh, gt, com  # , matrix
 
 
-def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
+def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
@@ -474,7 +481,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    matrix, _ = com_heatmap_jordi(zt, np.mean(stim, axis=0), com,
+    matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
     if compute_trajectories:
         # Trajectories
@@ -549,6 +556,7 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
                       mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/'):
     data_mat = np.load(mat_path + 'CoM_vs_prior_and_stim.npy')
+    data_mat[np.isnan(data_mat)] = 0
     data_mat_norm = data_mat / np.nanmax(data_mat)
     files = glob.glob(res_path+'*all_results.npz')
     diff_mn = []
@@ -556,9 +564,13 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
         with np.load(f, allow_pickle=True) as data:
             matrix_list = data.get('matrix')
             for mat in matrix_list:
+                # if np.sum(np.isnan(mat)) > 45:
+                #     continue
+                # else:
                 mat[np.isnan(mat)] = 0
                 mat_norm = mat / np.nanmax(mat)
-                diff = np.nanmean(np.subtract(mat_norm, data_mat_norm))
+                diff = np.sqrt(np.nansum(np.subtract(mat_norm,
+                                                     data_mat_norm) ** 2))
                 diff_mn.append(diff)
     ind_min = np.nanargmin(np.abs(diff_mn))
     # data_min = files[ind_min]
@@ -566,10 +578,16 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
     with np.load(files[0], allow_pickle=True) as data:
         for k in data.files:
             optimal_params[k] = data[k][ind_min]
+    optimal_params['matrix'][np.isnan(optimal_params['matrix'])] = 0
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
+    sns.heatmap(optimal_params['matrix'], ax=ax[0])
+    ax[0].set_title('Simulation')
+    sns.heatmap(data_mat, ax=ax[1])
+    ax[1].set_title('Data')
     return data_mat, optimal_params
 
 
-def run_model(stim, zt, coh, configurations, jitters, stim_res,
+def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
@@ -622,7 +640,7 @@ def run_model(stim, zt, coh, configurations, jitters, stim_res,
         print('p_w_updt: '+str(p_w_updt))
         E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time =\
-            trial_ev_vectorized(zt=zt, stim=stim_temp, MT_slope=MT_slope,
+            trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh, MT_slope=MT_slope,
                                 MT_intercep=MT_intercep, p_w_zt=p_w_zt,
                                 p_w_stim=p_w_stim, p_e_noise=p_e_noise,
                                 p_com_bound=p_com_bound, p_t_aff=p_t_aff,
@@ -634,17 +652,23 @@ def run_model(stim, zt, coh, configurations, jitters, stim_res,
         print(np.mean(com))
         print(end-start)
         if plot:
-            plotting(com=com, E=E, A=A, second_ind=second_ind, first_ind=first_ind,
-                     resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
-                     p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
-                     p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
-                     stim_res=stim_res)
-            hits = resp_fin == np.sign(np.mean(stim, axis=0))
+            if compute_trajectories:
+                plotting(com=com, E=E, A=A, second_ind=second_ind,
+                         first_ind=first_ind,
+                         resp_first=resp_first, resp_fin=resp_fin,
+                         pro_vs_re=pro_vs_re,
+                         p_t_aff=p_t_aff, init_trajs=init_trajs,
+                         total_traj=total_traj,
+                         p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
+                         stim_res=stim_res)
+            hits = resp_fin == gt
             data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
                             'first_resp': resp_first, 'final_resp': resp_fin,
                             'hithistory': hits, 'avtrapz': coh}
             df_plot = pd.DataFrame(data_to_plot)
             plot_misc(df_plot)
+            plt.figure()
+            sns.heatmap(matrix)
         p_w_zt_vals.append([conf[0], p_w_zt])
         p_w_stim_vals.append([conf[1], p_w_stim])
         p_e_noise_vals.append([conf[2], p_e_noise])
@@ -712,10 +736,10 @@ if __name__ == '__main__':
     data_augment_factor = 10
     if load_data:
         if new_sample:
-            stim, zt, coh, _ =\
+            stim, zt, coh, gt, com =\
                 get_data_and_matrix(dfpath=DATA_FOLDER,
                                     num_tr_per_rat=int(1e4), after_correct=True)
-            data = {'stim': stim, 'zt': zt, 'coh': coh}
+            data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
             np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                      **data)
         else:
@@ -724,6 +748,8 @@ if __name__ == '__main__':
             stim = data['stim']
             zt = data['zt']
             coh = data['coh']
+            com = data['com']
+            gt = data['gt']
         stim = data_augmentation(stim=stim, daf=data_augment_factor)
         stim_res = 50/data_augment_factor
     else:
@@ -747,19 +773,21 @@ if __name__ == '__main__':
         p_w_a = 0.005
         p_a_noise = 0.1
         p_w_updt = 3
-        compute_trajectories = True
+        compute_trajectories = False
         plot = True
         configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                           p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
         jitters = len(configurations[0])*[0]
-        stim = stim[:, :int(1e5)]
-        zt = zt[:int(1e5)]
-        coh = coh[:int(1e5)]
+        stim = stim[:, :int(num_tr)]
+        zt = zt[:int(num_tr)]
+        coh = coh[:int(num_tr)]
+        com = com[:int(num_tr)]
+        gt = gt[:int(num_tr)]
     else:
         configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = False
         plot = False
 
-    run_model(stim=stim, zt=zt, coh=coh, configurations=configurations,
+    run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
               plot=plot, stim_res=stim_res)
