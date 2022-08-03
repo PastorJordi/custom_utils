@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # import subfolders here
-from utilsJ.Slack.hooks import msger, whisp
+# from utilsJ.Slack.hooks import msger, whisp
 
 # should remove above import, bad practise
 # from utilsJ.Behavior import glm2afc, plotting, models, ComPipe

@@ -11,10 +11,17 @@ import seaborn as sns
 import itertools
 import glob
 import time
-# import scipy as sp
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
+import sys
+sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils/")
+import utilsJ
+from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
+# import os
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
+DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'
+
+
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
     f, ax = plt.subplots()
@@ -108,6 +115,25 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         a.set_xlim([0, max_xlim])
     f.savefig(SV_FOLDER+'/figures/example_trials.svg', dpi=400,
               bbox_inches='tight')
+
+
+def plot_misc(df_plot):
+    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+    ax = ax.flatten()
+    binned_curve(df_plot, 'CoM', 'sound_len', bins=np.linspace(0, 250, 26),
+                 ax=ax[0])
+    ax[0].set_xlabel('RT (ms)')
+    ax[0].set_ylabel('PCoM')
+    tachometric(df_plot, ax=ax[1])
+    ax[1].set_xlabel('RT (ms)')
+    ax[1].set_ylabel('Accuracy')
+    psych_curve(df_plot.hithistory, np.abs(df_plot.avtrapz), ret_ax=ax[2])
+    ax[2].set_xlabel('Evidence')
+    ax[2].set_ylabel('Accuracy')
+    ax[2].set_xlim(-0.05, 1.05)
+    psych_curve((df_plot.final_resp+1)/2, df_plot.avtrapz, ret_ax=ax[3])
+    ax[3].set_xlabel('Evidence')
+    ax[3].set_ylabel('Probability of right')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -311,7 +337,7 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
-    return stim, prior, com  # , matrix
+    return stim, prior, coh, com  # , matrix
 
 
 def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -520,29 +546,30 @@ def trial_ev_vectorized(zt, stim, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             matrix, None, None, None, None
 
 
-def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/results/',
+def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
                       mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/'):
     data_mat = np.load(mat_path + 'CoM_vs_prior_and_stim.npy')
-    data_mat_norm = data_mat / data_mat.max()
-    files = glob.glob(res_path+'*.npz')
+    data_mat_norm = data_mat / np.nanmax(data_mat)
+    files = glob.glob(res_path+'*all_results.npz')
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
-            mat = data['matrix']
-            mat[np.isnan(mat)] = 0
-            mat_norm = mat / mat.max()
-            diff = np.nanmean(np.subtract(mat_norm, data_mat_norm))
-            diff_mn.append(diff)
+            matrix_list = data.get('matrix')
+            for mat in matrix_list:
+                mat[np.isnan(mat)] = 0
+                mat_norm = mat / np.nanmax(mat)
+                diff = np.nanmean(np.subtract(mat_norm, data_mat_norm))
+                diff_mn.append(diff)
     ind_min = np.nanargmin(np.abs(diff_mn))
-    data_min = files[ind_min]
+    # data_min = files[ind_min]
     optimal_params = {}
-    with np.load(data_min, allow_pickle=True) as data:
-        for k in data.keys():
-            optimal_params[k] = data[k]
+    with np.load(files[0], allow_pickle=True) as data:
+        for k in data.files:
+            optimal_params[k] = data[k][ind_min]
     return data_mat, optimal_params
 
 
-def run_model(stim, zt, configurations, jitters, stim_res,
+def run_model(stim, zt, coh, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
@@ -612,6 +639,12 @@ def run_model(stim, zt, configurations, jitters, stim_res,
                      p_t_aff=p_t_aff, init_trajs=init_trajs, total_traj=total_traj,
                      p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
                      stim_res=stim_res)
+            hits = resp_fin == np.sign(np.mean(stim, axis=0))
+            data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
+                            'first_resp': resp_first, 'final_resp': resp_fin,
+                            'hithistory': hits, 'avtrapz': coh}
+            df_plot = pd.DataFrame(data_to_plot)
+            plot_misc(df_plot)
         p_w_zt_vals.append([conf[0], p_w_zt])
         p_w_stim_vals.append([conf[1], p_w_stim])
         p_e_noise_vals.append([conf[2], p_e_noise])
@@ -674,15 +707,15 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1e5)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     data_augment_factor = 10
     if load_data:
         if new_sample:
-            stim, zt, _ =\
+            stim, zt, coh, _ =\
                 get_data_and_matrix(dfpath=DATA_FOLDER,
                                     num_tr_per_rat=int(1e4), after_correct=True)
-            data = {'stim': stim, 'zt': zt}
+            data = {'stim': stim, 'zt': zt, 'coh': coh}
             np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                      **data)
         else:
@@ -690,6 +723,7 @@ if __name__ == '__main__':
             data = np.load(files[np.random.choice(a=len(files))])
             stim = data['stim']
             zt = data['zt']
+            coh = data['coh']
         stim = data_augmentation(stim=stim, daf=data_augment_factor)
         stim_res = 50/data_augment_factor
     else:
@@ -703,14 +737,14 @@ if __name__ == '__main__':
     if single_run:
         MT_slope = 0.15
         MT_intercep = 110
-        p_t_aff = 16
+        p_t_aff = 8
         p_t_eff = 16
-        p_t_a = -10
-        p_w_zt = 0.2
-        p_w_stim = 0.05
-        p_e_noise = 0.3
-        p_com_bound = 0.3
-        p_w_a = 0.05
+        p_t_a = 0
+        p_w_zt = 0.05
+        p_w_stim = 0.17
+        p_e_noise = 0.1
+        p_com_bound = 0.7
+        p_w_a = 0.005
         p_a_noise = 0.1
         p_w_updt = 3
         compute_trajectories = True
@@ -720,11 +754,12 @@ if __name__ == '__main__':
         jitters = len(configurations[0])*[0]
         stim = stim[:, :int(1e5)]
         zt = zt[:int(1e5)]
+        coh = coh[:int(1e5)]
     else:
         configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = False
         plot = False
 
-    run_model(stim=stim, zt=zt, configurations=configurations, jitters=jitters,
-              compute_trajectories=compute_trajectories, plot=plot,
-              stim_res=stim_res)
+    run_model(stim=stim, zt=zt, coh=coh, configurations=configurations,
+              jitters=jitters, compute_trajectories=compute_trajectories,
+              plot=plot, stim_res=stim_res)
