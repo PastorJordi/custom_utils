@@ -357,7 +357,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=True,
-                        perc_traj_com=1):
+                        perc_traj=1):
     """
     Generate stim and time integration and trajectories
 
@@ -503,55 +503,57 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         total_traj = []
         motor_updt_time = []
         x_val_at_updt = []
+        tr_indx_for_coms = []
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            # if np.random.rand() < perc_traj_com:
-            MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
-            first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
-            # first_resp_len: evidence affectation on MT. The higher the ev,
-            # the lower the MT depending on the parameter p_w_updt
-            initial_mu_side = initial_mu * prechoice[i_t]
-            prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
-                                  resp_len=first_resp_len)
-            init_trajs.append(prior0)
-            # TRAJ. UPDATE
-            velocities = np.gradient(prior0)
-            accelerations = np.gradient(velocities)  # acceleration
-            t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
-            motor_updt_time.append(t_updt)
-            vel = velocities[t_updt]  # velocity at the timepoint
-            acc = accelerations[t_updt]
-            pos = prior0[t_updt]  # position
-            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
-                                  0, 0]).reshape(-1, 1)
-            # new mu, considering new position/speed/acceleration
-            remaining_m_time = first_resp_len-t_updt
-            sign_ = resp_first[i_t]
-            # this sets the maximum updating evidence equal to the ev bound
-            # and avoids having negative second_resp_len (impossibly fast
-            # responses) bc of very strong confirmation evidence. Note that
-            # theoretically this problema does not exists bc CoM_bound will
-            # be less or equal to the bounds.
-            updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
-            # second_response_len: time left affected by the evidence on the
-            second_response_len =\
-                float(remaining_m_time-sign_*p_w_updt*updt_ev)
-            # SECOND readout
-            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
-                                    resp_len=second_response_len)
-            final_trajs.append(traj_fin)
-            # joined trajectories
-            traj_before_uptd = prior0[0:t_updt]
-            traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-            total_traj.append(traj_updt)
-            if com[i_t]:
-                opp_side_values = traj_updt.copy()
-                opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
-                max_val_towards_opposite = np.max(np.abs(opp_side_values))
-                x_val_at_updt.append(max_val_towards_opposite)
-            else:
-                x_val_at_updt.append(0)
+            if np.random.rand() < perc_traj:
+                MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
+                first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
+                # first_resp_len: evidence affectation on MT. The higher the ev,
+                # the lower the MT depending on the parameter p_w_updt
+                initial_mu_side = initial_mu * prechoice[i_t]
+                prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                                      resp_len=first_resp_len)
+                init_trajs.append(prior0)
+                # TRAJ. UPDATE
+                velocities = np.gradient(prior0)
+                accelerations = np.gradient(velocities)  # acceleration
+                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                motor_updt_time.append(t_updt)
+                vel = velocities[t_updt]  # velocity at the timepoint
+                acc = accelerations[t_updt]
+                pos = prior0[t_updt]  # position
+                mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                      0, 0]).reshape(-1, 1)
+                # new mu, considering new position/speed/acceleration
+                remaining_m_time = first_resp_len-t_updt
+                sign_ = resp_first[i_t]
+                # this sets the maximum updating evidence equal to the ev bound
+                # and avoids having negative second_resp_len (impossibly fast
+                # responses) bc of very strong confirmation evidence. Note that
+                # theoretically this problema does not exists bc CoM_bound will
+                # be less or equal to the bounds.
+                updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
+                # second_response_len: time left affected by the evidence on the
+                second_response_len =\
+                    float(remaining_m_time-sign_*p_w_updt*updt_ev)
+                # SECOND readout
+                traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                        resp_len=second_response_len)
+                final_trajs.append(traj_fin)
+                # joined trajectories
+                traj_before_uptd = prior0[0:t_updt]
+                traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+                total_traj.append(traj_updt)
+                if com[i_t]:
+                    opp_side_values = traj_updt.copy()
+                    opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
+                    max_val_towards_opposite = np.max(np.abs(opp_side_values))
+                    x_val_at_updt.append(max_val_towards_opposite)
+                    tr_indx_for_coms.append(i_t)
+                else:
+                    x_val_at_updt.append(0)
                 # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
                 #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
                 #     print(MT)
@@ -565,10 +567,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                 #     asd
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-            x_val_at_updt
+            x_val_at_updt, tr_indx_for_coms
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, None, None, None, None, None
+            matrix, None, None, None, None, None, None
 
 
 def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
@@ -580,7 +582,7 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
-            matrix_list = data.get('matrix')
+            matrix_list = data.get('pcom_matrix')
             for mat in matrix_list:
                 if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
                     mat_norm = mat / np.nanmax(mat)
@@ -604,7 +606,7 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
         for k in data.files:
             optimal_params[k] = data[k][ind_min]
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
-    sns.heatmap(optimal_params['matrix'], ax=ax[0])
+    sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
     ax[0].set_title('Simulation')
     sns.heatmap(data_mat, ax=ax[1])
     ax[1].set_title('Data')
@@ -612,7 +614,7 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
-              compute_trajectories=False, plot=False):
+              compute_trajectories=False, plot=False, existing_data=None):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
@@ -621,8 +623,17 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                       'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
                       'p_a_noise': p_a_noise_vals,
                       'p_w_updt': p_w_updt_vals,
-                      'matrix': all_mats, 'x_val_at_updt_mat': x_val_at_updt_mat}
+                      'pcom_matrix': all_mats,
+                      'x_val_at_updt_mat': x_val_at_updt_mat,
+                      'tr_indx_for_coms_mat': tr_indx_for_coms_mat}
         np.savez(SV_FOLDER+'/results/all_results.npz', **data_final)
+
+    if existing_data is not None:
+        ex_data = np.load(existing_data, allow_pickle=1)
+        done_confs = np.array([v[:, 0] for k, v in ex_data.items()
+                               if k.startswith('p_')])
+    else:
+        done_confs = np.zeros((10))
     num_tr = stim.shape[1]
     MT_slope = 0.15
     MT_intercep = 110
@@ -638,44 +649,91 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
     p_w_updt_vals = []
     all_mats = []
     x_val_at_updt_mat = []
+    tr_indx_for_coms_mat = []
     for i_conf, conf in enumerate(configurations):
-        start = time.time()
-        p_w_zt = conf[0]+jitters[0]*np.random.rand()
-        p_w_stim = conf[1]+jitters[1]*np.random.rand()
-        p_e_noise = conf[2]+jitters[2]*np.random.rand()
-        p_com_bound = conf[3]+jitters[3]*np.random.rand()
-        p_t_aff = round(conf[4]+jitters[4]*np.random.rand())
-        p_t_eff = round(conf[5]++jitters[5]*np.random.rand())
-        p_t_a = round(conf[6]++jitters[6]*np.random.rand())
-        p_w_a = conf[7]+jitters[7]*np.random.rand()
-        p_a_noise = conf[8]+jitters[8]*np.random.rand()
-        p_w_updt = conf[9]+jitters[9]*np.random.rand()
-        stim_temp =\
-            np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
         print('--------------')
-        print('p_w_zt: '+str(p_w_zt))
-        print('p_w_stim: '+str(p_w_stim))
-        print('p_e_noise: '+str(p_e_noise))
-        print('p_com_bound: '+str(p_com_bound))
-        print('p_t_aff: '+str(p_t_aff))
-        print('p_t_eff: '+str(p_t_eff))
-        print('p_t_a: '+str(p_t_a))
-        print('p_w_a: '+str(p_w_a))
-        print('p_a_noise: '+str(p_a_noise))
-        print('p_w_updt: '+str(p_w_updt))
-        E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-            x_val_at_updt =\
-            trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh, MT_slope=MT_slope,
-                                MT_intercep=MT_intercep, p_w_zt=p_w_zt,
-                                p_w_stim=p_w_stim, p_e_noise=p_e_noise,
-                                p_com_bound=p_com_bound, p_t_aff=p_t_aff,
-                                p_t_eff=p_t_eff, p_t_a=p_t_a, num_tr=num_tr,
-                                p_w_a=p_w_a, p_a_noise=p_a_noise,
-                                p_w_updt=p_w_updt,
-                                compute_trajectories=compute_trajectories)
+        print('p_w_zt: '+str(conf[0]))
+        print('p_w_stim: '+str(conf[1]))
+        print('p_e_noise: '+str(conf[2]))
+        print('p_com_bound: '+str(conf[3]))
+        print('p_t_aff: '+str(conf[4]))
+        print('p_t_eff: '+str(conf[5]))
+        print('p_t_a: '+str(conf[6]))
+        print('p_w_a: '+str(conf[7]))
+        print('p_a_noise: '+str(conf[8]))
+        print('p_w_updt: '+str(conf[9]))
+        start = time.time()
+        if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
+            p_w_zt = conf[0]+jitters[0]*np.random.rand()
+            p_w_stim = conf[1]+jitters[1]*np.random.rand()
+            p_e_noise = conf[2]+jitters[2]*np.random.rand()
+            p_com_bound = conf[3]+jitters[3]*np.random.rand()
+            p_t_aff = round(conf[4]+jitters[4]*np.random.rand())
+            p_t_eff = round(conf[5]++jitters[5]*np.random.rand())
+            p_t_a = round(conf[6]++jitters[6]*np.random.rand())
+            p_w_a = conf[7]+jitters[7]*np.random.rand()
+            p_a_noise = conf[8]+jitters[8]*np.random.rand()
+            p_w_updt = conf[9]+jitters[9]*np.random.rand()
+            stim_temp =\
+                np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
+            E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+                matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
+                x_val_at_updt, tr_indx_for_coms =\
+                trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
+                                    MT_slope=MT_slope, MT_intercep=MT_intercep,
+                                    p_w_zt=p_w_zt, p_w_stim=p_w_stim,
+                                    p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                    p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
+                                    num_tr=num_tr, p_w_a=p_w_a,
+                                    p_a_noise=p_a_noise, p_w_updt=p_w_updt,
+                                    compute_trajectories=compute_trajectories)
+
+            print(np.mean(com))
+            if plot:
+                if compute_trajectories:
+                    plotting(com=com, E=E, A=A, second_ind=second_ind,
+                             first_ind=first_ind,
+                             resp_first=resp_first, resp_fin=resp_fin,
+                             pro_vs_re=pro_vs_re,
+                             p_t_aff=p_t_aff, init_trajs=init_trajs,
+                             total_traj=total_traj,
+                             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
+                             stim_res=stim_res)
+                hits = resp_fin == gt
+                detected_com = np.abs(x_val_at_updt) > 5
+                data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
+                                'first_resp': resp_first, 'final_resp': resp_fin,
+                                'hithistory': hits, 'avtrapz': coh,
+                                'detected_com': detected_com}
+                df_plot = pd.DataFrame(data_to_plot)
+                plot_misc(df_plot)
+                fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
+                sns.heatmap(matrix, ax=ax[0])
+                ax[0].set_title('pCoM simulation')
+                detected_mat, _ = com_heatmap_jordi(zt[com], coh[com],
+                                                    detected_com[com],
+                                                    return_mat=True)
+                detected_mat[np.isnan(detected_mat)] = 0
+                sns.heatmap(detected_mat, ax=ax[1])
+                ax[1].set_title('Detected proportion')
+                sns.heatmap(detected_mat*matrix, ax=ax[2])
+                ax[2].set_title('Detected CoMs')
+            p_w_zt_vals.append([conf[0], p_w_zt])
+            p_w_stim_vals.append([conf[1], p_w_stim])
+            p_e_noise_vals.append([conf[2], p_e_noise])
+            p_com_bound_vals.append([conf[3], p_com_bound])
+            p_t_aff_vals.append([conf[4], p_t_aff])
+            p_t_eff_vals.append([conf[5], p_t_eff])
+            p_t_a_vals.append([conf[6], p_t_a])
+            p_w_a_vals.append([conf[7], p_w_a])
+            p_a_noise_vals.append([conf[8], p_a_noise])
+            p_w_updt_vals.append([conf[9], p_w_updt])
+            all_mats.append(matrix)
+            x_val_at_updt_mat.append(x_val_at_updt)
+            tr_indx_for_coms_mat.append(tr_indx_for_coms)
+            if i_conf % 100 == 0:
+                save_data()
         end = time.time()
-        print(np.mean(com))
         print(end-start)
         if plot:
             if compute_trajectories:
@@ -825,7 +883,7 @@ if __name__ == '__main__':
         configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = True
         plot = False
-
+    existing_data = SV_FOLDER+'/results/all_results_1.npz'
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
-              plot=plot, stim_res=stim_res)
+              plot=plot, stim_res=stim_res, existing_data=existing_data)
