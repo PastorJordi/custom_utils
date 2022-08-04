@@ -12,17 +12,17 @@ import itertools
 import glob
 import time
 import sys
-from skimage.metrics import structural_similarity as ssim
+# from skimage.metrics import structural_similarity as ssim
 sys.path.append("/home/jordi/Repos/custom_utils/")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -124,8 +124,9 @@ def plot_misc(df_plot):
     ax = ax.flatten()
     binned_curve(df_plot, 'CoM', 'sound_len', bins=np.linspace(0, 250, 26),
                  ax=ax[0])
-    binned_curve(df_plot, 'detected_com', 'sound_len', bins=np.linspace(0, 250, 26),
-                 ax=ax[0], errorbar_kw={'label': 'detected com'})
+    binned_curve(df_plot, 'detected_com', 'sound_len',
+                 bins=np.linspace(0, 250, 26), ax=ax[0],
+                 errorbar_kw={'label': 'detected com'})
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('PCoM')
@@ -139,6 +140,15 @@ def plot_misc(df_plot):
     psych_curve((df_plot.final_resp+1)/2, df_plot.avtrapz, ret_ax=ax[3])
     ax[3].set_xlabel('Evidence')
     ax[3].set_ylabel('Probability of right')
+    f, ax = plt.subplots()
+    bins = np.linspace(0, 400, 40)
+    hist_pro, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 0],
+                               bins)
+    hist_re, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 1],
+                              bins)
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro, label='Pro')
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re, label='Re')
+    ax.legend()
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -467,6 +477,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         else:
             hit_action = rt_a[i_t]
         hit_dec = min(hit_bound, hit_action)  # reactive or proactive
+        # XXX: reactive trials are defined as EA reaching the bound,
+        # which includes influence of zt
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         first_ind.append(hit_dec)
         first_ev.append(E[hit_dec, i_t])
@@ -614,7 +626,8 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
-              compute_trajectories=False, plot=False, existing_data=None):
+              compute_trajectories=False, plot=False, existing_data=None,
+              detect_CoMs_th=5):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
@@ -700,11 +713,12 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
                              stim_res=stim_res)
                 hits = resp_fin == gt
-                detected_com = np.abs(x_val_at_updt) > 5
-                data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
+                detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+                data_to_plot = {'sound_len': first_ind*stim_res, 'CoM': com,
                                 'first_resp': resp_first, 'final_resp': resp_fin,
                                 'hithistory': hits, 'avtrapz': coh,
-                                'detected_com': detected_com}
+                                'detected_com': detected_com,
+                                'pro_vs_re': pro_vs_re}
                 df_plot = pd.DataFrame(data_to_plot)
                 plot_misc(df_plot)
                 fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
@@ -735,49 +749,6 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 save_data()
         end = time.time()
         print(end-start)
-        if plot:
-            if compute_trajectories:
-                plotting(com=com, E=E, A=A, second_ind=second_ind,
-                         first_ind=first_ind,
-                         resp_first=resp_first, resp_fin=resp_fin,
-                         pro_vs_re=pro_vs_re,
-                         p_t_aff=p_t_aff, init_trajs=init_trajs,
-                         total_traj=total_traj,
-                         p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
-                         stim_res=stim_res)
-            hits = resp_fin == gt
-            detected_com = np.abs(x_val_at_updt) > 5
-            data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
-                            'first_resp': resp_first, 'final_resp': resp_fin,
-                            'hithistory': hits, 'avtrapz': coh,
-                            'detected_com': detected_com}
-            df_plot = pd.DataFrame(data_to_plot)
-            plot_misc(df_plot)
-            fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
-            sns.heatmap(matrix, ax=ax[0])
-            ax[0].set_title('pCoM simulation')
-            detected_mat, _ = com_heatmap_jordi(zt[com], coh[com],
-                                                detected_com[com],
-                                                return_mat=True)
-            detected_mat[np.isnan(detected_mat)] = 0
-            sns.heatmap(detected_mat, ax=ax[1])
-            ax[1].set_title('Detected proportion')
-            sns.heatmap(detected_mat*matrix, ax=ax[2])
-            ax[2].set_title('Detected CoMs')
-        p_w_zt_vals.append([conf[0], p_w_zt])
-        p_w_stim_vals.append([conf[1], p_w_stim])
-        p_e_noise_vals.append([conf[2], p_e_noise])
-        p_com_bound_vals.append([conf[3], p_com_bound])
-        p_t_aff_vals.append([conf[4], p_t_aff])
-        p_t_eff_vals.append([conf[5], p_t_eff])
-        p_t_a_vals.append([conf[6], p_t_a])
-        p_w_a_vals.append([conf[7], p_w_a])
-        p_a_noise_vals.append([conf[8], p_a_noise])
-        p_w_updt_vals.append([conf[9], p_w_updt])
-        all_mats.append(matrix)
-        x_val_at_updt_mat.append(x_val_at_updt)
-        if i_conf % 100 == 0:
-            save_data()
     save_data()
 
 
@@ -857,8 +828,6 @@ if __name__ == '__main__':
         stim_res = 1
 
     if single_run:
-        MT_slope = 0.15
-        MT_intercep = 110
         p_t_aff = 16
         p_t_eff = 9
         p_t_a = 1
@@ -883,7 +852,7 @@ if __name__ == '__main__':
         configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = True
         plot = False
-    existing_data = SV_FOLDER+'/results/all_results_1.npz'
+    existing_data = ''  # SV_FOLDER+'/results/all_results_1.npz'
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
               plot=plot, stim_res=stim_res, existing_data=existing_data)
