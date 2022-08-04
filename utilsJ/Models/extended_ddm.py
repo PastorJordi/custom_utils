@@ -12,17 +12,17 @@ import itertools
 import glob
 import time
 import sys
-# from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import structural_similarity as ssim
 sys.path.append("/home/jordi/Repos/custom_utils/")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
-# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -366,8 +366,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=True,
-                        perc_traj=1):
+                        proactive_integration=True, all_trajs=False,
+                        perc_traj=0.1):
     """
     Generate stim and time integration and trajectories
 
@@ -753,14 +753,14 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
 
 
 def set_parameters(num_vals=4, factor=8):
-    p_w_zt_list = np.linspace(0.005, 0.5, num=num_vals)
-    p_w_stim_list = np.linspace(0.005, 0.5, num=num_vals)
+    p_w_zt_list = np.linspace(0.05, 0.5, num=num_vals)
+    p_w_stim_list = np.linspace(0.05, 0.5, num=num_vals)
     p_e_noise_list = [0.05, 0.1]  # np.linspace(0.005, 10, num=num_vals)
     p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
     p_t_aff_list = np.array([8, 16, 24])
     p_t_eff_list = np.array([8, 16, 24])
     p_t_a_list = np.array([0, 8])
-    p_w_a_list = np.linspace(0.005, 0.5, num=num_vals)
+    p_w_a_list = np.linspace(0.05, 0.5, num=num_vals)
     p_a_noise_list = [0.05, 0.1]  # np.linspace(0.01, 0.1, num=num_vals)
     p_w_updt_list = [1]  # np.linspace(0.1, 2, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
@@ -799,7 +799,7 @@ if __name__ == '__main__':
     num_tr = int(1e6)
     load_data = True
     new_sample = False
-    single_run = True
+    single_run = False
     data_augment_factor = 10
     if load_data:
         if new_sample:
@@ -852,7 +852,7 @@ if __name__ == '__main__':
         configurations, jitters = set_parameters(num_vals=4)
         compute_trajectories = True
         plot = False
-    existing_data = ''  # SV_FOLDER+'/results/all_results_1.npz'
+    existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
               plot=plot, stim_res=stim_res, existing_data=existing_data)
