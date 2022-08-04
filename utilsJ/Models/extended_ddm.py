@@ -12,15 +12,17 @@ import itertools
 import glob
 import time
 import sys
-sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils/")
+from skimage.metrics import structural_similarity as ssim
+sys.path.append("/home/jordi/Repos/custom_utils/")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'
-
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -122,6 +124,9 @@ def plot_misc(df_plot):
     ax = ax.flatten()
     binned_curve(df_plot, 'CoM', 'sound_len', bins=np.linspace(0, 250, 26),
                  ax=ax[0])
+    binned_curve(df_plot, 'detected_com', 'sound_len', bins=np.linspace(0, 250, 26),
+                 ax=ax[0], errorbar_kw={'label': 'detected com'})
+    ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('PCoM')
     tachometric(df_plot, ax=ax[1])
@@ -351,8 +356,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=False,
-                        perc_traj_com=0.1):
+                        proactive_integration=True, all_trajs=True,
+                        perc_traj_com=1):
     """
     Generate stim and time integration and trajectories
 
@@ -501,52 +506,52 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            if np.random.rand() < perc_traj_com:
-                MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
-                first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
-                # first_resp_len: evidence affectation on MT. The higher the ev,
-                # the lower the MT depending on the parameter p_w_updt
-                initial_mu_side = initial_mu * prechoice[i_t]
-                prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
-                                      resp_len=first_resp_len)
-                init_trajs.append(prior0)
-                # TRAJ. UPDATE
-                velocities = np.gradient(prior0)
-                accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
-                motor_updt_time.append(t_updt)
-                vel = velocities[t_updt]  # velocity at the timepoint
-                acc = accelerations[t_updt]
-                pos = prior0[t_updt]  # position
-                mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
-                                      0, 0]).reshape(-1, 1)
-                # new mu, considering new position/speed/acceleration
-                remaining_m_time = first_resp_len-t_updt
-                sign_ = resp_first[i_t]
-                # this sets the maximum updating evidence equal to the ev bound
-                # and avoids having negative second_resp_len (impossibly fast
-                # responses) bc of very strong confirmation evidence. Note that
-                # theoretically this problema does not exists bc CoM_bound will
-                # be less or equal to the bounds.
-                updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
-                # second_response_len: time left affected by the evidence on the
-                second_response_len =\
-                    float(remaining_m_time-sign_*p_w_updt*updt_ev)
-                # SECOND readout
-                traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
-                                        resp_len=second_response_len)
-                final_trajs.append(traj_fin)
-                # joined trajectories
-                traj_before_uptd = prior0[0:t_updt]
-                traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-                total_traj.append(traj_updt)
-                if com[i_t]:
-                    opp_side_values = traj_updt.copy()
-                    opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
-                    max_val_towards_opposite = np.max(np.abs(opp_side_values))
-                    x_val_at_updt.append(max_val_towards_opposite)
-                else:
-                    x_val_at_updt.append(0)
+            # if np.random.rand() < perc_traj_com:
+            MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
+            first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
+            # first_resp_len: evidence affectation on MT. The higher the ev,
+            # the lower the MT depending on the parameter p_w_updt
+            initial_mu_side = initial_mu * prechoice[i_t]
+            prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                                  resp_len=first_resp_len)
+            init_trajs.append(prior0)
+            # TRAJ. UPDATE
+            velocities = np.gradient(prior0)
+            accelerations = np.gradient(velocities)  # acceleration
+            t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+            motor_updt_time.append(t_updt)
+            vel = velocities[t_updt]  # velocity at the timepoint
+            acc = accelerations[t_updt]
+            pos = prior0[t_updt]  # position
+            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                  0, 0]).reshape(-1, 1)
+            # new mu, considering new position/speed/acceleration
+            remaining_m_time = first_resp_len-t_updt
+            sign_ = resp_first[i_t]
+            # this sets the maximum updating evidence equal to the ev bound
+            # and avoids having negative second_resp_len (impossibly fast
+            # responses) bc of very strong confirmation evidence. Note that
+            # theoretically this problema does not exists bc CoM_bound will
+            # be less or equal to the bounds.
+            updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
+            # second_response_len: time left affected by the evidence on the
+            second_response_len =\
+                float(remaining_m_time-sign_*p_w_updt*updt_ev)
+            # SECOND readout
+            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                    resp_len=second_response_len)
+            final_trajs.append(traj_fin)
+            # joined trajectories
+            traj_before_uptd = prior0[0:t_updt]
+            traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+            total_traj.append(traj_updt)
+            if com[i_t]:
+                opp_side_values = traj_updt.copy()
+                opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
+                max_val_towards_opposite = np.max(np.abs(opp_side_values))
+                x_val_at_updt.append(max_val_towards_opposite)
+            else:
+                x_val_at_updt.append(0)
                 # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
                 #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
                 #     print(MT)
@@ -567,31 +572,37 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
 
 def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
-                      mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/'):
-    data_mat = np.load(mat_path + 'CoM_vs_prior_and_stim.npy')
-    data_mat[np.isnan(data_mat)] = 0
+                      mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
+                      metrics='ssim'):
+    data_mat = np.load(mat_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
-    files = glob.glob(res_path+'*all_results.npz')
+    files = glob.glob(res_path+'*all_results_1.npz')
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
             matrix_list = data.get('matrix')
             for mat in matrix_list:
-                # if np.sum(np.isnan(mat)) > 45:
-                #     continue
-                # else:
-                mat[np.isnan(mat)] = 0
-                mat_norm = mat / np.nanmax(mat)
-                diff = np.sqrt(np.nansum(np.subtract(mat_norm,
-                                                     data_mat_norm) ** 2))
-                diff_mn.append(diff)
-    ind_min = np.nanargmin(np.abs(diff_mn))
-    # data_min = files[ind_min]
+                if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
+                    mat_norm = mat / np.nanmax(mat)
+                    diff = np.sqrt(np.nansum(np.subtract(mat_norm,
+                                                         data_mat_norm) ** 2))
+                    diff_mn.append(diff)
+                    max_ssim = False
+                if metrics == 'ssim':
+                    ssim_val = ssim(mat, data_mat) if not \
+                        np.isnan(ssim(mat, data_mat))\
+                        else 0
+                    diff_mn.append(ssim_val)
+                    max_ssim = True
+    if max_ssim:
+        ind_min = np.argmax(diff_mn)
+        # scnd = diff_mn[diff_mn!=diff_mn[ind_min]].argmax()
+    else:
+        ind_min = np.nanargmin(np.abs(diff_mn))
     optimal_params = {}
     with np.load(files[0], allow_pickle=True) as data:
         for k in data.files:
             optimal_params[k] = data[k][ind_min]
-    optimal_params['matrix'][np.isnan(optimal_params['matrix'])] = 0
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
     sns.heatmap(optimal_params['matrix'], ax=ax[0])
     ax[0].set_title('Simulation')
@@ -677,17 +688,28 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                          p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
                          stim_res=stim_res)
             hits = resp_fin == gt
+            detected_com = np.abs(x_val_at_updt) > 5
             data_to_plot = {'sound_len': first_ind*5, 'CoM': com,
                             'first_resp': resp_first, 'final_resp': resp_fin,
-                            'hithistory': hits, 'avtrapz': coh}
+                            'hithistory': hits, 'avtrapz': coh,
+                            'detected_com': detected_com}
             df_plot = pd.DataFrame(data_to_plot)
             plot_misc(df_plot)
-            plt.figure()
-            sns.heatmap(matrix)
+            fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
+            sns.heatmap(matrix, ax=ax[0])
+            ax[0].set_title('pCoM simulation')
+            detected_mat, _ = com_heatmap_jordi(zt[com], coh[com],
+                                                detected_com[com],
+                                                return_mat=True)
+            detected_mat[np.isnan(detected_mat)] = 0
+            sns.heatmap(detected_mat, ax=ax[1])
+            ax[1].set_title('Detected proportion')
+            sns.heatmap(detected_mat*matrix, ax=ax[2])
+            ax[2].set_title('Detected CoMs')
         p_w_zt_vals.append([conf[0], p_w_zt])
         p_w_stim_vals.append([conf[1], p_w_stim])
         p_e_noise_vals.append([conf[2], p_e_noise])
-        p_com_bound_vals.append([conf[3], p_e_noise])
+        p_com_bound_vals.append([conf[3], p_com_bound])
         p_t_aff_vals.append([conf[4], p_t_aff])
         p_t_eff_vals.append([conf[5], p_t_eff])
         p_t_a_vals.append([conf[6], p_t_a])
@@ -745,10 +767,10 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(1e6)
     load_data = True
     new_sample = False
-    single_run = False
+    single_run = True
     data_augment_factor = 10
     if load_data:
         if new_sample:
@@ -779,17 +801,17 @@ if __name__ == '__main__':
     if single_run:
         MT_slope = 0.15
         MT_intercep = 110
-        p_t_aff = 8
-        p_t_eff = 16
-        p_t_a = 0
-        p_w_zt = 0.05
-        p_w_stim = 0.17
-        p_e_noise = 0.1
+        p_t_aff = 16
+        p_t_eff = 9
+        p_t_a = 1
+        p_w_zt = 0.18824
+        p_w_stim = 0.02368495
+        p_e_noise = 0.1092263
         p_com_bound = 0.7
-        p_w_a = 0.005
-        p_a_noise = 0.1
-        p_w_updt = 3
-        compute_trajectories = False
+        p_w_a = 0.01576225
+        p_a_noise = 0.0585686
+        p_w_updt = 1.056665
+        compute_trajectories = True
         plot = True
         configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                           p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
