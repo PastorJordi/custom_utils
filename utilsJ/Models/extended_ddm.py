@@ -13,16 +13,17 @@ import glob
 import time
 import sys
 from skimage.metrics import structural_similarity as ssim
-sys.path.append("/home/jordi/Repos/custom_utils/")
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -585,29 +586,40 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             matrix, None, None, None, None, None, None
 
 
-def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
-                      mat_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
-                      metrics='ssim'):
-    data_mat = np.load(mat_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
-    data_mat_norm = data_mat / np.nanmax(data_mat)
+def fitting(res_path='C:/Users/alexg/Dropbox/results/',
+            data_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
+            metrics='ssim', objective='matrix'):
+    if objective == 'matrix':
+        data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
+        data_mat_norm = data_mat / np.nanmax(data_mat)
+    else:
+        data_curve = np.load(data_path + 'CoM_vs_RT_curve.npy')
     files = glob.glob(res_path+'*all_results_1.npz')
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
-            matrix_list = data.get('pcom_matrix')
-            for mat in matrix_list:
-                if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
-                    mat_norm = mat / np.nanmax(mat)
-                    diff = np.sqrt(np.nansum(np.subtract(mat_norm,
-                                                         data_mat_norm) ** 2))
+            if objective == 'matrix':
+                matrix_list = data.get('pcom_matrix')
+                for mat in matrix_list:
+                    if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
+                        mat_norm = mat / np.nanmax(mat)
+                        diff = np.sqrt(np.nansum(np.subtract(mat_norm,
+                                                             data_mat_norm) ** 2))
+                        diff_mn.append(diff)
+                        max_ssim = False
+                    if metrics == 'ssim':
+                        ssim_val = ssim(mat, data_mat) if not \
+                            np.isnan(ssim(mat, data_mat))\
+                            else 0
+                        diff_mn.append(ssim_val)
+                        max_ssim = True
+            if objective == 'curve':
+                curve_list = data.get('pcom_curve')
+                for curve in curve_list:
+                    diff = np.sqrt(np.nansum(np.subtract(curve,
+                                                         data_curve) ** 2))
                     diff_mn.append(diff)
                     max_ssim = False
-                if metrics == 'ssim':
-                    ssim_val = ssim(mat, data_mat) if not \
-                        np.isnan(ssim(mat, data_mat))\
-                        else 0
-                    diff_mn.append(ssim_val)
-                    max_ssim = True
     if max_ssim:
         ind_min = np.argmax(diff_mn)
         # scnd = diff_mn[diff_mn!=diff_mn[ind_min]].argmax()
@@ -618,7 +630,10 @@ def matrix_comparison(res_path='C:/Users/alexg/Dropbox/results/',
         for k in data.files:
             optimal_params[k] = data[k][ind_min]
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
-    sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
+    if objective == 'matrix':
+        sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
+    else:
+        sns.heatmap(optimal_params['pcom_curve'], ax=ax[0])
     ax[0].set_title('Simulation')
     sns.heatmap(data_mat, ax=ax[1])
     ax[1].set_title('Data')
@@ -799,7 +814,7 @@ if __name__ == '__main__':
     num_tr = int(1e6)
     load_data = True
     new_sample = False
-    single_run = False
+    single_run = True
     data_augment_factor = 10
     if load_data:
         if new_sample:
