@@ -24,6 +24,7 @@ SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+BINS = np.linspace(0, 300, 31)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -123,10 +124,11 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
 def plot_misc(df_plot):
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
-    binned_curve(df_plot, 'CoM', 'sound_len', bins=np.linspace(0, 250, 26),
+    binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
+                 xpos=10,
                  ax=ax[0])
     binned_curve(df_plot, 'detected_com', 'sound_len',
-                 bins=np.linspace(0, 250, 26), ax=ax[0],
+                 bins=BINS, ax=ax[0], xpos=10,
                  errorbar_kw={'label': 'detected com'})
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
@@ -328,6 +330,7 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
     com = np.empty((0, ))
     coh = np.empty((0, ))
     gt = np.empty((0, ))
+    sound_len = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
@@ -345,18 +348,29 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
         stim_tmp = np.array([stim for stim in df.res_sound])
         coh_mat = np.array(df.coh2)
         com_tmp = df.CoM_sugg.values
+        sound_len_tmp = np.array(df.sound_len)
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
         stim = np.concatenate((stim, stim_tmp[indx, :]))
         coh = np.concatenate((coh, coh_mat[indx]))
         com = np.concatenate((com, com_tmp[indx]))
         gt = np.concatenate((gt, gt_tmp[indx]))
+        sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
+    df_curve = {'CoM': com, 'sound_len': sound_len}
+    df_curve = pd.DataFrame(df_curve)
+    xpos = int(np.diff(BINS)[0])
+    xpos_plot, median_pcom, _ =\
+        binned_curve(df_curve, 'CoM', 'sound_len', xpos=xpos,
+                     bins=BINS,
+                     return_data=True)
+    df_pcom_rt = pd.DataFrame({'rt': xpos_plot, 'pcom': median_pcom})
+    df_pcom_rt.to_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
     matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
@@ -365,9 +379,9 @@ def get_data_and_matrix(dfpath='C:/Users/alexg/Desktop/CRM/Alex/paper/',
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
-                        p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
+                        p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=False,
+                        proactive_integration=True, all_trajs=True,
                         num_computed_traj=int(2e3)):
     """
     Generate stim and time integration and trajectories
@@ -502,6 +516,14 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
+    df_curve = {'CoM': com, 'sound_len': (first_ind + p_t_eff)*stim_res}
+    df_curve = pd.DataFrame(df_curve)
+    xpos = int(np.diff(BINS)[0])
+    xpos_plot, median_pcom, _ =\
+        binned_curve(df_curve, 'CoM', 'sound_len', xpos=xpos,
+                     bins=BINS,
+                     return_data=True)
+    df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
     # TODO: put in a different function
     if compute_trajectories:
         # Trajectories
@@ -510,8 +532,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         prechoice = resp_first
         jerk_lock_ms = 0
         initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
-        indx_trajs = np.arange(len(first_ind)) if all_trajs else np.where(com)[0]
-        indx_trajs = indx_trajs[:num_computed_traj]
+        indx_trajs = np.arange(len(first_ind)) if all_trajs\
+            else np.where(com)[0][:num_computed_traj]
         # initial positions, speed and acc; final position, speed and acc
         init_trajs = []
         final_trajs = []
@@ -570,10 +592,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                 x_val_at_updt.append(0)
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-            x_val_at_updt, tr_indx_for_coms
+            x_val_at_updt, tr_indx_for_coms, df_pcom_rt
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, None, None, None, None, None, None
+            matrix, None, None, None, None, None, None, df_pcom_rt
 
 
 def fitting(res_path='C:/Users/alexg/Dropbox/results/',
@@ -583,8 +605,9 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
         data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
         data_mat_norm = data_mat / np.nanmax(data_mat)
     else:
-        data_curve = np.load(data_path + 'CoM_vs_RT_curve.npy')
-    files = glob.glob(res_path+'*all_results_1.npz')
+        data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
+        tmp_data = data_curve['tmp_bin']
+    files = glob.glob(data_path+'*all_results.npz')
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
@@ -603,11 +626,20 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                             else 0
                         diff_mn.append(ssim_val)
                         max_ssim = True
-            if objective == 'curve':
-                curve_list = data.get('pcom_curve')
+            else:
+                curve_list = data.get('df_pcom_rt_mat')
                 for curve in curve_list:
-                    diff = np.sqrt(np.nansum(np.subtract(curve,
-                                                         data_curve) ** 2))
+                    tmp_simul = curve['pcom'].index
+                    curve_tmp = []
+                    for tmp_ind, tmp in enumerate(tmp_data):
+                        if tmp not in tmp_simul:
+                            curve_tmp.append(1)
+                        else:
+                            curve_tmp.append(float(
+                                curve['pcom'].loc[tmp_simul == tmp]))
+                    curve_tmp = np.array(curve_tmp)
+                    diff = np.sqrt(np.nansum(np.subtract(curve_tmp,
+                                                         data_curve['pcom']) ** 2))
                     diff_mn.append(diff)
                     max_ssim = False
     if max_ssim:
@@ -619,15 +651,19 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
     with np.load(files[0], allow_pickle=True) as data:
         for k in data.files:
             optimal_params[k] = data[k][ind_min]
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
     if objective == 'matrix':
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
         sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
+        ax[0].set_title('Simulation')
+        sns.heatmap(data_mat, ax=ax[1])
+        ax[1].set_title('Data')
+        return data_mat, optimal_params
     else:
-        sns.heatmap(optimal_params['pcom_curve'], ax=ax[0])
-    ax[0].set_title('Simulation')
-    sns.heatmap(data_mat, ax=ax[1])
-    ax[1].set_title('Data')
-    return data_mat, optimal_params
+        plt.plot(tmp_data, data_curve['pcom'], label='data')
+        plt.plot(optimal_params['df_pcom_rt_mat']['pcom'].index,
+                 optimal_params['df_pcom_rt_mat']['pcom'].values, label='simul')
+        plt.legend()
+        return data_curve, optimal_params
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
@@ -643,7 +679,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                       'p_w_updt': p_w_updt_vals,
                       'pcom_matrix': all_mats,
                       'x_val_at_updt_mat': x_val_at_updt_mat,
-                      'tr_indx_for_coms_mat': tr_indx_for_coms_mat}
+                      'tr_indx_for_coms_mat': tr_indx_for_coms_mat,
+                      'df_pcom_rt_mat': df_pcom_rt_mat}
         np.savez(SV_FOLDER+'/results/all_results.npz', **data_final)
 
     if existing_data is not None:
@@ -675,6 +712,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
     all_mats = []
     x_val_at_updt_mat = []
     tr_indx_for_coms_mat = []
+    df_pcom_rt_mat = []
     for i_conf, conf in enumerate(configurations):
         print('--------------')
         print('p_w_zt: '+str(conf[0]))
@@ -703,7 +741,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
             E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
                 matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-                x_val_at_updt, tr_indx_for_coms =\
+                x_val_at_updt, tr_indx_for_coms, df_pcom_rt =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
@@ -711,7 +749,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                     num_tr=num_tr, p_w_a=p_w_a,
                                     p_a_noise=p_a_noise, p_w_updt=p_w_updt,
-                                    compute_trajectories=compute_trajectories)
+                                    compute_trajectories=compute_trajectories,
+                                    stim_res=stim_res)
 
             print(np.mean(com))
             if plot:
@@ -757,6 +796,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
             tr_indx_for_coms_mat.append(indx_sh[tr_indx_for_coms])
+            df_pcom_rt_mat.append(df_pcom_rt)
             if i_conf % 100 == 0:
                 save_data()
         end = time.time()
