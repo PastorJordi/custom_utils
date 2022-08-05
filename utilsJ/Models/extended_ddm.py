@@ -368,7 +368,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=False,
-                        perc_traj=0.1):
+                        num_computed_traj=int(2e3)):
     """
     Generate stim and time integration and trajectories
 
@@ -520,64 +520,63 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            if np.random.rand() < perc_traj:
-                MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
-                first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
-                # first_resp_len: evidence affectation on MT. The higher the ev,
-                # the lower the MT depending on the parameter p_w_updt
-                initial_mu_side = initial_mu * prechoice[i_t]
-                prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
-                                      resp_len=first_resp_len)
-                init_trajs.append(prior0)
-                # TRAJ. UPDATE
-                velocities = np.gradient(prior0)
-                accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
-                motor_updt_time.append(t_updt)
-                vel = velocities[t_updt]  # velocity at the timepoint
-                acc = accelerations[t_updt]
-                pos = prior0[t_updt]  # position
-                mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
-                                      0, 0]).reshape(-1, 1)
-                # new mu, considering new position/speed/acceleration
-                remaining_m_time = first_resp_len-t_updt
-                sign_ = resp_first[i_t]
-                # this sets the maximum updating evidence equal to the ev bound
-                # and avoids having negative second_resp_len (impossibly fast
-                # responses) bc of very strong confirmation evidence. Note that
-                # theoretically this problema does not exists bc CoM_bound will
-                # be less or equal to the bounds.
-                updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
-                # second_response_len: time left affected by the evidence on the
-                second_response_len =\
-                    float(remaining_m_time-sign_*p_w_updt*updt_ev)
-                # SECOND readout
-                traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
-                                        resp_len=second_response_len)
-                final_trajs.append(traj_fin)
-                # joined trajectories
-                traj_before_uptd = prior0[0:t_updt]
-                traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-                total_traj.append(traj_updt)
-                if com[i_t]:
-                    opp_side_values = traj_updt.copy()
-                    opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
-                    max_val_towards_opposite = np.max(np.abs(opp_side_values))
-                    x_val_at_updt.append(max_val_towards_opposite)
-                    tr_indx_for_coms.append(i_t)
-                else:
-                    x_val_at_updt.append(0)
-                # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
-                #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
-                #     print(MT)
-                #     print(first_resp_len)
-                #     print(remaining_m_time)
-                #     print(second_response_len)
-                #     print('------------------')
-                #     plt.figure()
-                #     plt.plot(init_trajs[-1])
-                #     plt.plot(total_traj[-1], '--')
-                #     asd
+            MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
+            first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
+            # first_resp_len: evidence affectation on MT. The higher the ev,
+            # the lower the MT depending on the parameter p_w_updt
+            initial_mu_side = initial_mu * prechoice[i_t]
+            prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                                  resp_len=first_resp_len)
+            init_trajs.append(prior0)
+            # TRAJ. UPDATE
+            velocities = np.gradient(prior0)
+            accelerations = np.gradient(velocities)  # acceleration
+            t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+            motor_updt_time.append(t_updt)
+            vel = velocities[t_updt]  # velocity at the timepoint
+            acc = accelerations[t_updt]
+            pos = prior0[t_updt]  # position
+            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                  0, 0]).reshape(-1, 1)
+            # new mu, considering new position/speed/acceleration
+            remaining_m_time = first_resp_len-t_updt
+            sign_ = resp_first[i_t]
+            # this sets the maximum updating evidence equal to the ev bound
+            # and avoids having negative second_resp_len (impossibly fast
+            # responses) bc of very strong confirmation evidence. Note that
+            # theoretically this problema does not exists bc CoM_bound will
+            # be less or equal to the bounds.
+            updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
+            # second_response_len: time left affected by the evidence on the
+            second_response_len =\
+                float(remaining_m_time-sign_*p_w_updt*updt_ev)
+            # SECOND readout
+            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                    resp_len=second_response_len)
+            final_trajs.append(traj_fin)
+            # joined trajectories
+            traj_before_uptd = prior0[0:t_updt]
+            traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+            total_traj.append(traj_updt)
+            if com[i_t]:
+                opp_side_values = traj_updt.copy()
+                opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
+                max_val_towards_opposite = np.max(np.abs(opp_side_values))
+                x_val_at_updt.append(max_val_towards_opposite)
+                tr_indx_for_coms.append(i_t)
+            else:
+                x_val_at_updt.append(0)
+            # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
+            #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
+            #     print(MT)
+            #     print(first_resp_len)
+            #     print(remaining_m_time)
+            #     print(second_response_len)
+            #     print('------------------')
+            #     plt.figure()
+            #     plt.plot(init_trajs[-1])
+            #     plt.plot(total_traj[-1], '--')
+            #     asd
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms
