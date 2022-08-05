@@ -502,6 +502,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
+    # TODO: put in a different function
     if compute_trajectories:
         # Trajectories
         print('Starting with trajectories')
@@ -510,6 +511,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         jerk_lock_ms = 0
         initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
         indx_trajs = np.arange(len(first_ind)) if all_trajs else np.where(com)[0]
+        indx_trajs = indx_trajs[:num_computed_traj]
         # initial positions, speed and acc; final position, speed and acc
         init_trajs = []
         final_trajs = []
@@ -566,17 +568,6 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                 tr_indx_for_coms.append(i_t)
             else:
                 x_val_at_updt.append(0)
-            # if com[i_t] == 0 and pro_vs_re[i_t] == 1 and\
-            #    np.abs(second_ev[i_t]) > 2*np.abs(first_ev[i_t]):
-            #     print(MT)
-            #     print(first_resp_len)
-            #     print(remaining_m_time)
-            #     print(second_response_len)
-            #     print('------------------')
-            #     plt.figure()
-            #     plt.plot(init_trajs[-1])
-            #     plt.plot(total_traj[-1], '--')
-            #     asd
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms
@@ -641,7 +632,7 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
-              detect_CoMs_th=5):
+              detect_CoMs_th=5, shuffle=False):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
@@ -661,6 +652,13 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                if k.startswith('p_')])
     else:
         done_confs = np.zeros((10))
+    if shuffle:
+        indx_sh = np.arange(len(zt))
+        np.random.shuffle(indx_sh)
+        stim = stim[:, indx_sh]
+        zt = zt[indx_sh]
+        coh = coh[indx_sh]
+        gt = gt[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.15
     MT_intercep = 110
@@ -814,6 +812,7 @@ if __name__ == '__main__':
     load_data = True
     new_sample = False
     single_run = True
+    shuffle = True
     data_augment_factor = 10
     if load_data:
         if new_sample:
@@ -869,4 +868,4 @@ if __name__ == '__main__':
     existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
-              plot=plot, stim_res=stim_res, existing_data=existing_data)
+              plot=plot, stim_res=stim_res, existing_data=existing_data, shuffle=shuffle)
