@@ -756,7 +756,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             p_w_updt_vals.append([conf[9], p_w_updt])
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
-            tr_indx_for_coms_mat.append(tr_indx_for_coms)
+            tr_indx_for_coms_mat.append(indx_sh[tr_indx_for_coms])
             if i_conf % 100 == 0:
                 save_data()
         end = time.time()
@@ -868,4 +868,5 @@ if __name__ == '__main__':
     existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
-              plot=plot, stim_res=stim_res, existing_data=existing_data, shuffle=shuffle)
+              plot=plot, stim_res=stim_res, existing_data=existing_data,
+              shuffle=shuffle)
