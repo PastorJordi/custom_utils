@@ -452,8 +452,9 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     print('Starting simulation, PSIAM')
     bound = 1
     bound_a = 1
+    fixation = int(300 / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
-    Ve = np.concatenate((np.zeros((p_t_aff, num_tr)), stim*p_w_stim))
+    Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
     Va = p_w_a
     # trial_dur = 1  # trial duration (s)
@@ -516,7 +517,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
-    df_curve = {'CoM': com, 'sound_len': (first_ind + p_t_eff)*stim_res}
+    df_curve = {'CoM': com, 'sound_len': (first_ind - fixation + p_t_eff)*stim_res}
     df_curve = pd.DataFrame(df_curve)
     xpos = int(np.diff(BINS)[0])
     xpos_plot, median_pcom, _ =\
@@ -524,7 +525,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                      bins=BINS,
                      return_data=True)
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
-    rt_vals, rt_bins = np.histogram(first_ind-p_t_eff, bins=40)
+    rt_vals, rt_bins = np.histogram((first_ind-fixation)*stim_res,
+                                    bins=40, range=(-100, 300))
     # TODO: put in a different function
     if compute_trajectories:
         # Trajectories
@@ -610,7 +612,7 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
     else:
         data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
         tmp_data = data_curve['tmp_bin']
-    files = glob.glob(data_path+'*all_results.npz')
+    files = glob.glob(res_path+'*all_results.npz')
     diff_mn = []
     for f in files:
         with np.load(f, allow_pickle=True) as data:
@@ -632,15 +634,17 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
             else:
                 rt_vals_pcom = data.get('xpos_rt_pcom')
                 median_vals_pcom = data.get('median_pcom_rt')
+                x_val_at_updt = data.get('x_val_at_updt_mat')
                 for curve_ind, _ in enumerate(rt_vals_pcom):
+                    x_perc = np.mean(np.abs(x_val_at_updt[curve_ind]) > 5)
                     tmp_simul = rt_vals_pcom[curve_ind] - 1
                     curve_tmp = np.zeros((len(tmp_data)))
                     for tmp_ind, tmp in enumerate(BINS[:-1]):
                         if tmp not in tmp_simul:
-                            curve_tmp[tmp_ind] = 1
+                            curve_tmp[tmp_ind] = 0
                         else:
                             curve_tmp[tmp_ind] = float(median_vals_pcom[curve_ind]
-                                                       [tmp_simul == tmp])
+                                                       [tmp_simul == tmp])*x_perc
                     curve_tmp = np.array(curve_tmp)
                     diff = np.sqrt(np.nansum(np.subtract(curve_tmp,
                                                          data_curve['pcom']) ** 2))
@@ -651,6 +655,7 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
         # scnd = diff_mn[diff_mn!=diff_mn[ind_min]].argmax()
     else:
         ind_min = np.nanargmin(np.abs(diff_mn))
+        # scnd = diff_mn[diff_mn!=diff_mn[ind_min]].argmin()
     optimal_params = {}
     with np.load(files[0], allow_pickle=True) as data:
         for k in data.files:
@@ -661,13 +666,14 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
         ax[0].set_title('Simulation')
         sns.heatmap(data_mat, ax=ax[1])
         ax[1].set_title('Data')
-        return data_mat, optimal_params
+        # return data_mat, optimal_params
     else:
+        plt.figure()
         plt.plot(tmp_data, data_curve['pcom'], label='data')
-        plt.plot(optimal_params['df_pcom_rt_mat']['pcom'].index,
-                 optimal_params['df_pcom_rt_mat']['pcom'].values, label='simul')
+        plt.plot(optimal_params['median_pcom_rt'].index,
+                 optimal_params['median_pcom_rt'].values*0.8, label='simul')
         plt.legend()
-        return data_curve, optimal_params
+        # return data_curve, optimal_params
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
@@ -823,9 +829,9 @@ def set_parameters(num_vals=4, factor=8):
     p_w_stim_list = np.linspace(0.05, 0.5, num=num_vals)
     p_e_noise_list = [0.05, 0.1]  # np.linspace(0.005, 10, num=num_vals)
     p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
-    p_t_aff_list = np.array([8, 16, 24])
-    p_t_eff_list = np.array([8, 16, 24])
-    p_t_a_list = np.array([0, 8])
+    p_t_aff_list = np.array([10, 15, 20])
+    p_t_eff_list = np.array([10, 15, 20])
+    p_t_a_list = np.array([40, 50, 60])
     p_w_a_list = np.linspace(0.05, 0.5, num=num_vals)
     p_a_noise_list = [0.05, 0.1]  # np.linspace(0.01, 0.1, num=num_vals)
     p_w_updt_list = [1]  # np.linspace(0.1, 2, num=num_vals)
@@ -862,7 +868,7 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e6)
+    num_tr = int(1e5)
     load_data = True
     new_sample = False
     single_run = True
@@ -896,11 +902,11 @@ if __name__ == '__main__':
 
     if single_run:
         p_t_aff = 16
-        p_t_eff = 9
-        p_t_a = 1
+        p_t_eff = 16
+        p_t_a = 16
         p_w_zt = 0.18824
         p_w_stim = 0.02368495
-        p_e_noise = 0.1092263
+        p_e_noise = 0.05092263
         p_com_bound = 0.7
         p_w_a = 0.01576225
         p_a_noise = 0.0585686
