@@ -12,17 +12,17 @@ import itertools
 import glob
 import time
 import sys
-from skimage.metrics import structural_similarity as ssim
+# from skimage.metrics import structural_similarity as ssim
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(0, 300, 31)
 
@@ -381,7 +381,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=True,
+                        proactive_integration=True, all_trajs=False,
                         num_computed_traj=int(2e3)):
     """
     Generate stim and time integration and trajectories
@@ -755,6 +755,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             p_w_updt = conf[9]+jitters[9]*np.random.rand()
             stim_temp =\
                 np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
+            # TODO: get in a dict
             E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
                 matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
                 x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -782,19 +783,26 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-                data_to_plot = {'sound_len': first_ind*stim_res, 'CoM': com,
-                                'first_resp': resp_first, 'final_resp': resp_fin,
-                                'hithistory': hits, 'avtrapz': coh,
+                # TODO: fix to equalize dims
+                data_to_plot = {'sound_len': first_ind[tr_indx_for_coms]*stim_res,
+                                'CoM': com[tr_indx_for_coms],
+                                'first_resp': resp_first[tr_indx_for_coms],
+                                'final_resp': resp_fin[tr_indx_for_coms],
+                                'hithistory': hits[tr_indx_for_coms],
+                                'avtrapz': coh[tr_indx_for_coms],
                                 'detected_com': detected_com,
-                                'pro_vs_re': pro_vs_re}
+                                'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
                 df_plot = pd.DataFrame(data_to_plot)
                 plot_misc(df_plot)
                 fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
                 sns.heatmap(matrix, ax=ax[0])
                 ax[0].set_title('pCoM simulation')
-                detected_mat, _ = com_heatmap_jordi(zt[com], coh[com],
-                                                    detected_com[com],
-                                                    return_mat=True)
+                # TODO: fix issue with detected_mat
+                detected_mat, _ =\
+                    com_heatmap_jordi(zt[tr_indx_for_coms][com[tr_indx_for_coms]],
+                                      coh[tr_indx_for_coms][com[tr_indx_for_coms]],
+                                      detected_com[com[tr_indx_for_coms]],
+                                      return_mat=True)
                 detected_mat[np.isnan(detected_mat)] = 0
                 sns.heatmap(detected_mat, ax=ax[1])
                 ax[1].set_title('Detected proportion')
@@ -824,17 +832,17 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
     save_data()
 
 
-def set_parameters(num_vals=4, factor=8):
+def set_parameters(num_vals=3, factor=8):
     p_w_zt_list = np.linspace(0.05, 0.5, num=num_vals)
     p_w_stim_list = np.linspace(0.05, 0.5, num=num_vals)
-    p_e_noise_list = [0.05, 0.1]  # np.linspace(0.005, 10, num=num_vals)
-    p_com_bound_list = np.linspace(0.1, 1, num=num_vals)
-    p_t_aff_list = np.array([10, 15, 20])
-    p_t_eff_list = np.array([10, 15, 20])
-    p_t_a_list = np.array([40, 50, 60])
+    p_e_noise_list = np.logspace(-2, -1, num=num_vals-1)
+    p_com_bound_list = np.linspace(0.3, 1, num=num_vals)
+    p_t_aff_list = np.linspace(10, 20, num=num_vals, dtype=int)
+    p_t_eff_list = np.linspace(10, 20, num=num_vals, dtype=int)
+    p_t_a_list = np.linspace(40, 60, num=num_vals, dtype=int)
     p_w_a_list = np.linspace(0.05, 0.5, num=num_vals)
-    p_a_noise_list = [0.05, 0.1]  # np.linspace(0.01, 0.1, num=num_vals)
-    p_w_updt_list = [1]  # np.linspace(0.1, 2, num=num_vals)
+    p_a_noise_list = np.logspace(-2, -1, num=num_vals-1)
+    p_w_updt_list = np.linspace(5, 15, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -845,14 +853,14 @@ def set_parameters(num_vals=4, factor=8):
     else:
         jitters = [np.diff(p_w_zt_list)[0]/factor,
                    np.diff(p_w_stim_list)[0]/factor,
-                   0.01,
+                   0.0001,
                    np.diff(p_com_bound_list)[0]/factor,
                    np.diff(p_t_aff_list)[0]/factor,
                    np.diff(p_t_eff_list)[0]/factor,
                    np.diff(p_t_a_list)[0]/factor,
                    np.diff(p_w_a_list)[0]/factor,
-                   0.01,
-                   0.1]
+                   0.0001,
+                   np.diff(p_w_updt_list)[0]/factor]
     return configurations, jitters
 
 
@@ -871,7 +879,7 @@ if __name__ == '__main__':
     num_tr = int(1e5)
     load_data = True
     new_sample = False
-    single_run = True
+    single_run = False
     shuffle = True
     data_augment_factor = 10
     if load_data:
@@ -922,7 +930,7 @@ if __name__ == '__main__':
         com = com[:int(num_tr)]
         gt = gt[:int(num_tr)]
     else:
-        configurations, jitters = set_parameters(num_vals=4)
+        configurations, jitters = set_parameters(num_vals=3)
         compute_trajectories = True
         plot = False
     existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
