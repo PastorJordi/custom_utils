@@ -12,17 +12,17 @@ import itertools
 import glob
 import time
 import sys
-from skimage.metrics import structural_similarity as ssim
+# from skimage.metrics import structural_similarity as ssim
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(0, 300, 31)
 
@@ -614,7 +614,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
 def fitting(res_path='C:/Users/alexg/Dropbox/results/',
             data_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
-            metrics='mse', objective='matrix'):
+            metrics='mse', objective='matrix', bin_size=10, det_th=5):
     if objective == 'matrix':
         data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
         data_mat_norm = data_mat / np.nanmax(data_mat)
@@ -656,10 +656,11 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                 x_val_at_updt = data.get('x_val_at_updt_mat')
                 perc_list = []
                 for curve_ind, _ in enumerate(rt_vals_pcom):
-                    x_perc = np.nanmean(np.abs(x_val_at_updt[curve_ind]) > 5)
+                    x_perc = np.nanmean(np.abs(x_val_at_updt[curve_ind]) > det_th)
                     perc_list.append(x_perc)
-                    tmp_simul = np.array((rt_vals_pcom[curve_ind].values - 1)/10,
-                                         dtype=int)
+                    tmp_simul =\
+                        np.array((rt_vals_pcom[curve_ind].values - 1)/bin_size,
+                                 dtype=int)
                     if len(rt_vals_pcom[curve_ind]) == 0 or np.isnan(x_perc):
                         diff_mn.append(1e3)
                         diff_norm_mat.append(1e3)
@@ -668,12 +669,13 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                         curve_tmp = median_vals_pcom[curve_ind].values*x_perc\
                             + 1e-6
                         curve_norm = curve_tmp / np.nanmax(curve_tmp)
-                        diff_norm = np.subtract(curve_norm,
-                                                np.array(data_curve_norm
-                                                         [tmp_simul])) ** 2
-                        diff_norm_mat.append(np.sqrt(np.nansum(diff_norm)) +
-                                             (len(tmp_data) - len(tmp_simul))
-                                             * nan_penalty)
+                        # diff_norm = np.subtract(curve_norm,
+                        #             np.array(data_curve_norm[tmp_simul])) ** 2
+                        diff_norm = np.corrcoef(curve_norm,
+                                                data_curve_norm[tmp_simul].values)
+                        diff_norm = diff_norm[0, 1]
+                        num_nans = len(tmp_data) - len(tmp_simul)
+                        diff_norm_mat.append(diff_norm+nan_penalty*num_nans)
                         diff_rms = np.subtract(curve_tmp,
                                                np.array(data_curve['pcom']
                                                         [tmp_simul])) ** 2
@@ -692,7 +694,8 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                      label='min rms')
             plt.plot(data['median_pcom_rt'][np.argmin(diff_norm_mat)],
                      label='min norm')
-            plt.plot(data['median_pcom_rt'][np.argmin(diff_mn)], label='min joined')
+            plt.plot(data['median_pcom_rt'][np.argmin(diff_mn)],
+                     label='min joined')
             plt.plot(data_curve_norm, label='norm data')
             plt.plot(data_curve['pcom'], label='data')
             plt.ylabel('pCoM')
@@ -953,64 +956,106 @@ if __name__ == '__main__':
     new_sample = False
     single_run = True
     shuffle = True
+    simulate = False
     data_augment_factor = 10
-    if load_data:
-        if new_sample:
-            stim, zt, coh, gt, com =\
-                get_data_and_matrix(dfpath=DATA_FOLDER,
-                                    num_tr_per_rat=int(1e4), after_correct=True)
-            data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
-            np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
-                     **data)
+    if simulate:
+        if load_data:
+            if new_sample:
+                stim, zt, coh, gt, com =\
+                    get_data_and_matrix(dfpath=DATA_FOLDER,
+                                        num_tr_per_rat=int(1e4),
+                                        after_correct=True)
+                data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
+                np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
+                         **data)
+            else:
+                files = glob.glob(DATA_FOLDER+'/sample_*')
+                data = np.load(files[np.random.choice(a=len(files))])
+                stim = data['stim']
+                zt = data['zt']
+                coh = data['coh']
+                com = data['com']
+                gt = data['gt']
+            stim = data_augmentation(stim=stim, daf=data_augment_factor)
+            stim_res = 50/data_augment_factor
         else:
-            files = glob.glob(DATA_FOLDER+'/sample_*')
-            data = np.load(files[np.random.choice(a=len(files))])
-            stim = data['stim']
-            zt = data['zt']
-            coh = data['coh']
-            com = data['com']
-            gt = data['gt']
-        stim = data_augmentation(stim=stim, daf=data_augment_factor)
-        stim_res = 50/data_augment_factor
-    else:
-        num_timesteps = 1000
-        zt = np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1, size=num_tr)
-        stim = \
-            np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1, size=num_tr) +\
-            np.random.randn(num_timesteps, num_tr)*1e-1
-        stim_res = 1
+            num_timesteps = 1000
+            zt =\
+                np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1,
+                                                                   size=num_tr)
+            stim = \
+                np.random.rand(num_tr)*(-1.0)**np.random.randint(-1, 1,
+                                                                 size=num_tr) +\
+                np.random.randn(num_timesteps, num_tr)*1e-1
+            stim_res = 1
 
-    if single_run:
-        p_t_aff = 10
-        p_t_eff = 6
-        p_t_a = 42
-        p_w_zt = 0.25
-        p_w_stim = 0.15
-        p_e_noise = 0.1
-        p_com_bound = 0.5
-        p_w_a = 0.01
-        p_a_noise = 0.005
-        p_w_updt = 10
-        compute_trajectories = True
-        plot = True
-        configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-                          p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
-        jitters = len(configurations[0])*[0]
-        stim = stim[:, :int(num_tr)]
-        zt = zt[:int(num_tr)]
-        coh = coh[:int(num_tr)]
-        com = com[:int(num_tr)]
-        gt = gt[:int(num_tr)]
-    else:
-        configurations, jitters = set_parameters(num_vals=3)
-        compute_trajectories = True
-        plot = False
-    # existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
-    # run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
-    #           jitters=jitters, compute_trajectories=compute_trajectories,
-    #           plot=plot, stim_res=stim_res, existing_data=existing_data,
-    #           shuffle=shuffle, all_trajs=False)
+        if single_run:
+            p_t_aff = 10
+            p_t_eff = 6
+            p_t_a = 42
+            p_w_zt = 0.25
+            p_w_stim = 0.15
+            p_e_noise = 0.1
+            p_com_bound = 0.5
+            p_w_a = 0.01
+            p_a_noise = 0.005
+            p_w_updt = 10
+            compute_trajectories = True
+            plot = True
+            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
+                              p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
+            jitters = len(configurations[0])*[0]
+            stim = stim[:, :int(num_tr)]
+            zt = zt[:int(num_tr)]
+            coh = coh[:int(num_tr)]
+            com = com[:int(num_tr)]
+            gt = gt[:int(num_tr)]
+        else:
+            configurations, jitters = set_parameters(num_vals=3)
+            compute_trajectories = True
+            plot = False
+        existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
+        run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
+                  jitters=jitters, compute_trajectories=compute_trajectories,
+                  plot=plot, stim_res=stim_res, existing_data=existing_data,
+                  shuffle=shuffle, all_trajs=False)
+    data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
+    res_path = data_path
+    # data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
+    # res_path = 'C:/Users/alexg/Downloads/'
     data_curve, optimal_params = \
-        fitting(res_path='C:/Users/alexg/Downloads/',
-                data_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
-                metrics='ssim', objective='curve')
+        fitting(res_path=res_path, data_path=data_path, metrics='mse',
+                objective='curve')
+
+
+# #!/usr/bin/env python3
+# # -*- coding: utf-8 -*-
+# """
+# Created on Wed Aug 10 15:12:00 2022
+
+# @author: molano
+# """
+# import numpy as np
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# plt.close('all')
+# folder = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
+# results = np.load(folder+'/all_results.npz', allow_pickle=1)
+# exps = pd.read_csv(folder+'/pcom_vs_rt.csv')
+# pcoms = exps.pcom.values
+# pos_rts = results['median_pcom_rt']
+# pos_rts_bins = results['xpos_rt_pcom']
+# # pos_rts_bins += (pos_rts_bins[1]-pos_rts_bins[0])/2
+# corrs = []
+# for conf in range(len(pos_rts)):
+#     corrs.append(np.corrcoef(pcoms, )[0, 1])
+
+
+# plt.figure()
+# plt.hist(corrs, 100)
+# plt.figure()
+# best_indxs = np.where(np.array(corrs) > 0.8)[0]
+# for conf in best_indxs:
+#     norm_hist = pos_rts[conf, :]
+#     plt.plot(pos_rts_bins, norm_hist, lw=0.5, color='k')
+# plt.plot(exps.rt, pcoms, color='r')
