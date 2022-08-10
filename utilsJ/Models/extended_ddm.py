@@ -12,17 +12,17 @@ import itertools
 import glob
 import time
 import sys
-# from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import structural_similarity as ssim
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(0, 300, 31)
 
@@ -61,7 +61,7 @@ def draw_lines(ax, frst, sec, p_t_aff):
 
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time,
+             p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time, tr_index,
              stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
@@ -80,8 +80,14 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     max_xlim = 0
     for i, (a, t, m, l) in enumerate(zip(axes, trials, mat_indx, y_lbls)):
         trials_temp = np.where(m)[0]
-        if len(trials_temp) > 0:
-            trial = trials_temp[t]
+        traj_in = False
+        for tr in trials_temp:
+            if tr in tr_index:
+                trial_total = int(np.where(tr_index == tr)[0])
+                trial = tr
+                traj_in = True
+                break
+        if len(trials_temp) > 0 and traj_in:
             draw_lines(ax[np.array(a)], frst=first_ind[trial],
                        sec=second_ind[trial], p_t_aff=p_t_aff)
             color1 = 'green' if resp_first[trial] < 0 else 'purple'
@@ -101,14 +107,14 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             sec_ev = round(E[second_ind[trial], trial], 2)
             # updt_motor = first_ind[trial]+motor_updt_time[trial]
             init_motor = first_ind[trial]+p_t_eff
-            xs = init_motor+np.arange(0, len(total_traj[trial]))/stim_res
+            xs = init_motor+np.arange(0, len(total_traj[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
-            ax[a[2]].plot(xs, total_traj[trial],
+            ax[a[2]].plot(xs, total_traj[trial_total],
                           label=f'Updated traj., E:{sec_ev}')
             first_ev = round(E[first_ind[trial], trial], 2)
-            xs = init_motor+np.arange(0, len(init_trajs[trial]))/stim_res
+            xs = init_motor+np.arange(0, len(init_trajs[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
-            ax[a[2]].plot(xs, init_trajs[trial],
+            ax[a[2]].plot(xs, init_trajs[trial_total],
                           label=f'Initial traj. E:{first_ev}')
             ax[a[2]].set_ylabel(l+', y(px)')
             ax[a[2]].set_ylabel(l+', y(px)')
@@ -212,6 +218,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                 switch[ind] = 0
         nobs = (switch + tmp.loc[(tmp.com == 0) & (tmp.binned_stim == i)]
                 .groupby("binned_prior")["binned_prior"].count())
+        for i_n, n in enumerate(nobs.isnull()):
+            if n:
+                nobs[i_n] = switch[i_n]
         # fill where there are no CoM (instead it will be nan)
         nobs.loc[nobs.isna()] = (tmp.loc[(tmp.com == 0) &
                                          (tmp.binned_stim == i)]
@@ -381,7 +390,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=False,
+                        proactive_integration=True, all_trajs=True,
                         num_computed_traj=int(2e3)):
     """
     Generate stim and time integration and trajectories
@@ -525,7 +534,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                      bins=BINS,
                      return_data=True)
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
-    rt_vals, rt_bins = np.histogram((first_ind-fixation)*stim_res,
+    rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_aff+p_t_eff)*stim_res,
                                     bins=40, range=(-100, 300))
     # TODO: put in a different function
     if compute_trajectories:
@@ -596,11 +605,11 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
-            rt_vals, rt_bins
+            rt_vals, rt_bins, indx_trajs
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, None, None, None, None, None, None, xpos_plot, median_pcom,\
-            rt_vals, rt_bins
+            rt_vals, rt_bins, None
 
 
 def fitting(res_path='C:/Users/alexg/Dropbox/results/',
@@ -612,6 +621,7 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
     else:
         data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
         tmp_data = data_curve['tmp_bin']
+        data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
     files = glob.glob(res_path+'*all_results.npz')
     diff_mn = []
     for f in files:
@@ -621,8 +631,12 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                 for mat in matrix_list:
                     if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
                         mat_norm = mat / np.nanmax(mat)
-                        diff = np.sqrt(np.nansum(np.subtract(mat_norm,
-                                                             data_mat_norm) ** 2))
+                        diff_norm = np.sqrt(np.nansum(np.subtract(
+                                mat_norm, data_mat_norm) ** 2))
+                        diff_rms = np.sqrt(np.nansum(np.subtract(
+                                mat, data_mat) ** 2))
+                        diff = diff_norm / np.mean(diff_norm) + diff_rms /\
+                            np.mean(diff_rms)
                         diff_mn.append(diff)
                         max_ssim = False
                     if metrics == 'ssim':
@@ -635,20 +649,30 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                 rt_vals_pcom = data.get('xpos_rt_pcom')
                 median_vals_pcom = data.get('median_pcom_rt')
                 x_val_at_updt = data.get('x_val_at_updt_mat')
+                perc_list = []
                 for curve_ind, _ in enumerate(rt_vals_pcom):
                     x_perc = np.mean(np.abs(x_val_at_updt[curve_ind]) > 5)
+                    perc_list.append(x_perc)
                     tmp_simul = rt_vals_pcom[curve_ind] - 1
                     curve_tmp = np.zeros((len(tmp_data)))
                     for tmp_ind, tmp in enumerate(BINS[:-1]):
                         if tmp not in tmp_simul:
-                            curve_tmp[tmp_ind] = 0
+                            curve_tmp[tmp_ind] = 1e-6
                         else:
                             curve_tmp[tmp_ind] = float(median_vals_pcom[curve_ind]
                                                        [tmp_simul == tmp])*x_perc
                     curve_tmp = np.array(curve_tmp)
-                    diff = np.sqrt(np.nansum(np.subtract(curve_tmp,
-                                                         data_curve['pcom']) ** 2))
+                    curve_norm = curve_tmp / np.nanmax(curve_tmp)
+                    diff_norm = np.subtract(curve_norm,
+                                            np.array(data_curve_norm)) ** 2
+                    diff_rms = np.subtract(curve_tmp,
+                                           np.array(data_curve['pcom'])) ** 2
+                    diff = np.sqrt(np.nansum(diff_norm)) / np.mean(diff_norm)\
+                        + np.sqrt(np.nansum(diff_rms)) / np.mean(diff_rms)
                     diff_mn.append(diff)
+                    # diff = np.sqrt(np.nansum(np.subtract(curve_tmp,
+                    #                                      data_curve['pcom']) ** 2))
+                    # diff_mn.append(diff)
                     max_ssim = False
     if max_ssim:
         ind_min = np.argmax(diff_mn)
@@ -671,14 +695,15 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
         plt.figure()
         plt.plot(tmp_data, data_curve['pcom'], label='data')
         plt.plot(optimal_params['median_pcom_rt'].index,
-                 optimal_params['median_pcom_rt'].values*0.8, label='simul')
+                 optimal_params['median_pcom_rt'].values*perc_list[ind_min],
+                 label='simul')
         plt.legend()
         # return data_curve, optimal_params
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
-              detect_CoMs_th=5, shuffle=False):
+              detect_CoMs_th=5, shuffle=False, all_trajs=False):
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
@@ -759,7 +784,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
                 matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
                 x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
-                rt_vals, rt_bins =\
+                rt_vals, rt_bins, tr_index =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
@@ -768,7 +793,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                     num_tr=num_tr, p_w_a=p_w_a,
                                     p_a_noise=p_a_noise, p_w_updt=p_w_updt,
                                     compute_trajectories=compute_trajectories,
-                                    stim_res=stim_res)
+                                    stim_res=stim_res, all_trajs=all_trajs)
 
             print(np.mean(com))
             if plot:
@@ -780,29 +805,53 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              p_t_aff=p_t_aff, init_trajs=init_trajs,
                              total_traj=total_traj,
                              p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
+                             tr_index=tr_index,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-                # TODO: fix to equalize dims
-                data_to_plot = {'sound_len': first_ind[tr_indx_for_coms]*stim_res,
-                                'CoM': com[tr_indx_for_coms],
-                                'first_resp': resp_first[tr_indx_for_coms],
-                                'final_resp': resp_fin[tr_indx_for_coms],
-                                'hithistory': hits[tr_indx_for_coms],
-                                'avtrapz': coh[tr_indx_for_coms],
-                                'detected_com': detected_com,
-                                'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
+                if all_trajs:
+                    data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
+                                                  + p_t_eff + p_t_aff -
+                                                  int(300/stim_res))
+                                    * stim_res,
+                                    'CoM': com[tr_indx_for_coms],
+                                    'first_resp': resp_first[tr_indx_for_coms],
+                                    'final_resp': resp_fin[tr_indx_for_coms],
+                                    'hithistory': hits[tr_indx_for_coms],
+                                    'avtrapz': coh[tr_indx_for_coms],
+                                    'detected_com': detected_com[tr_indx_for_coms],
+                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
+                    detected_mat, _ =\
+                        com_heatmap_jordi(zt[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          coh[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          detected_com[com],
+                                          return_mat=True)
+                else:
+                    data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
+                                                  + p_t_eff + p_t_aff -
+                                                  int(300/stim_res))
+                                    * stim_res,
+                                    'CoM': com[tr_indx_for_coms],
+                                    'first_resp': resp_first[tr_indx_for_coms],
+                                    'final_resp': resp_fin[tr_indx_for_coms],
+                                    'hithistory': hits[tr_indx_for_coms],
+                                    'avtrapz': coh[tr_indx_for_coms],
+                                    'detected_com': detected_com,
+                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
+                    detected_mat, _ =\
+                        com_heatmap_jordi(zt[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          coh[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          detected_com[com[tr_indx_for_coms]],
+                                          return_mat=True)
                 df_plot = pd.DataFrame(data_to_plot)
                 plot_misc(df_plot)
                 fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
                 sns.heatmap(matrix, ax=ax[0])
                 ax[0].set_title('pCoM simulation')
-                # TODO: fix issue with detected_mat
-                detected_mat, _ =\
-                    com_heatmap_jordi(zt[tr_indx_for_coms][com[tr_indx_for_coms]],
-                                      coh[tr_indx_for_coms][com[tr_indx_for_coms]],
-                                      detected_com[com[tr_indx_for_coms]],
-                                      return_mat=True)
                 detected_mat[np.isnan(detected_mat)] = 0
                 sns.heatmap(detected_mat, ax=ax[1])
                 ax[1].set_title('Detected proportion')
@@ -879,7 +928,7 @@ if __name__ == '__main__':
     num_tr = int(1e5)
     load_data = True
     new_sample = False
-    single_run = False
+    single_run = True
     shuffle = True
     data_augment_factor = 10
     if load_data:
@@ -909,16 +958,16 @@ if __name__ == '__main__':
         stim_res = 1
 
     if single_run:
-        p_t_aff = 16
-        p_t_eff = 16
-        p_t_a = 16
-        p_w_zt = 0.18824
-        p_w_stim = 0.02368495
-        p_e_noise = 0.05092263
-        p_com_bound = 0.7
-        p_w_a = 0.01576225
-        p_a_noise = 0.0585686
-        p_w_updt = 1.056665
+        p_t_aff = 10
+        p_t_eff = 6
+        p_t_a = 42
+        p_w_zt = 0.25
+        p_w_stim = 0.15
+        p_e_noise = 0.1
+        p_com_bound = 0.5
+        p_w_a = 0.01
+        p_a_noise = 0.005
+        p_w_updt = 10
         compute_trajectories = True
         plot = True
         configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
@@ -937,4 +986,4 @@ if __name__ == '__main__':
     run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
               jitters=jitters, compute_trajectories=compute_trajectories,
               plot=plot, stim_res=stim_res, existing_data=existing_data,
-              shuffle=shuffle)
+              shuffle=shuffle, all_trajs=False)
