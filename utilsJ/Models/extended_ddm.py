@@ -745,7 +745,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                       'median_pcom_rt': median_pcom_rt,
                       'rt_vals_all': rt_vals_all,
                       'rt_bins_all': rt_bins_all}
-        np.savez(SV_FOLDER+'/results/all_results.npz', **data_final)
+        np.savez(SV_FOLDER+'/results/all_results_'+str(i_conf)+'.npz',
+                 **data_final)
 
     if existing_data is not None:
         ex_data = np.load(existing_data, allow_pickle=1)
@@ -900,7 +901,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             median_pcom_rt.append(median_pcom)
             rt_vals_all.append(rt_vals)
             rt_bins_all.append(rt_bins)
-            if i_conf % 100 == 0:
+            if i_conf % 1000 == 0:
                 save_data()
         end = time.time()
         print(end-start)
