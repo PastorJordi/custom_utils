@@ -18,11 +18,13 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/manuel/Descargas/'  # Manuel laptop
+SV_FOLDER = DATA_FOLDER
+# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(0, 300, 16)
 
@@ -150,7 +152,7 @@ def plot_misc(df_plot):
     ax[3].set_xlabel('Evidence')
     ax[3].set_ylabel('Probability of right')
     f, ax = plt.subplots()
-    bins = np.linspace(0, 400, 40)
+    bins = np.linspace(-300, 400, 40)
     hist_pro, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 0],
                                bins)
     hist_re, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 1],
@@ -526,7 +528,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
-    df_curve = {'CoM': com, 'sound_len': (first_ind - fixation + p_t_eff)*stim_res}
+    df_curve = {'CoM': com, 'sound_len': (first_ind-fixation+p_t_eff)*stim_res}
     df_curve = pd.DataFrame(df_curve)
     xpos = int(np.diff(BINS)[0])
     xpos_plot, median_pcom, _ =\
@@ -534,7 +536,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                      bins=BINS,
                      return_data=True)
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
-    rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_aff+p_t_eff)*stim_res,
+    rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
     # TODO: put in a different function
     if compute_trajectories:
@@ -838,29 +840,22 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-                if all_trajs:
-                    data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
-                                                  + p_t_eff + p_t_aff -
-                                                  int(300/stim_res))
-                                    * stim_res,
-                                    'CoM': com[tr_indx_for_coms],
-                                    'first_resp': resp_first[tr_indx_for_coms],
-                                    'final_resp': resp_fin[tr_indx_for_coms],
-                                    'hithistory': hits[tr_indx_for_coms],
-                                    'avtrapz': coh[tr_indx_for_coms],
-                                    'detected_com': detected_com[tr_indx_for_coms],
-                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
+                if all_trajs:  # TODO: simplify
+                    data_to_plot = {'sound_len': (first_ind+p_t_eff -
+                                                  int(300/stim_res))*stim_res,
+                                    'CoM': com,
+                                    'first_resp': resp_first,
+                                    'final_resp': resp_fin,
+                                    'hithistory': hits,
+                                    'avtrapz': coh,
+                                    'detected_com': detected_com,
+                                    'pro_vs_re': pro_vs_re}
                     detected_mat, _ =\
-                        com_heatmap_jordi(zt[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          coh[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          detected_com[com],
+                        com_heatmap_jordi(zt, coh, detected_com,
                                           return_mat=True)
                 else:
                     data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
-                                                  + p_t_eff + p_t_aff -
-                                                  int(300/stim_res))
+                                                  + p_t_eff - int(300/stim_res))
                                     * stim_res,
                                     'CoM': com[tr_indx_for_coms],
                                     'first_resp': resp_first[tr_indx_for_coms],
@@ -995,8 +990,8 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 10
-            p_t_eff = 6
+            p_t_aff = 20
+            p_t_eff = 8
             p_t_a = 42
             p_w_zt = 0.25
             p_w_stim = 0.15
@@ -1007,6 +1002,7 @@ if __name__ == '__main__':
             p_w_updt = 10
             compute_trajectories = True
             plot = True
+            all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
@@ -1019,15 +1015,16 @@ if __name__ == '__main__':
             configurations, jitters = set_parameters(num_vals=3)
             compute_trajectories = True
             plot = False
+            all_trajs = False
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
         run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
                   jitters=jitters, compute_trajectories=compute_trajectories,
                   plot=plot, stim_res=stim_res, existing_data=existing_data,
-                  shuffle=shuffle, all_trajs=False)
-    # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
-    # res_path = data_path
-    data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
-    res_path = 'C:/Users/alexg/Downloads/'
+                  shuffle=shuffle, all_trajs=all_trajs)
+    data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
+    res_path = data_path
+    # data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
+    # res_path = 'C:/Users/alexg/Downloads/'
     data_curve, optimal_params = \
         fitting(res_path=res_path, data_path=data_path, metrics='mse',
                 objective='curve')
