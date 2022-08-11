@@ -18,15 +18,15 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = '/home/manuel/Descargas/'  # Manuel laptop
-SV_FOLDER = DATA_FOLDER
-# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/manuel/Descargas/'  # Manuel laptop
+# SV_FOLDER = DATA_FOLDER
+DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-BINS = np.linspace(0, 300, 16)
+BINS = np.linspace(1, 300, 16)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -133,10 +133,10 @@ def plot_misc(df_plot):
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
-                 xpos=10,
+                 xpos=20,
                  ax=ax[0])
     binned_curve(df_plot, 'detected_com', 'sound_len',
-                 bins=BINS, ax=ax[0], xpos=10,
+                 bins=BINS, ax=ax[0], xpos=20,
                  errorbar_kw={'label': 'detected com'})
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
@@ -157,8 +157,8 @@ def plot_misc(df_plot):
                                bins)
     hist_re, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 1],
                               bins)
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro, label='Pro')
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re, label='Re')
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro/hist_pro.sum(), label='Pro')
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re/hist_re.sum(), label='Re')
     ax.legend()
 
 
@@ -511,6 +511,9 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         first_ev.append(E[hit_dec, i_t])
         # first response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
+        # p_com_bound = 1 - np.abs(hit_dec + p_t_eff - fixation + 1)**(-4/5)
+        # 1/(0.03127615*np.exp(-(hit_dec + p_t_eff - fixation + 1)*
+        #                                 0.65553348) + 0.01380665)
         com_bound_temp = (-resp_first[i_t])*p_com_bound
         # second response
         indx_fin_ch = hit_dec+p_t_aff+p_t_eff
@@ -951,12 +954,12 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(5e5)
     load_data = True
     new_sample = False
     single_run = True
     shuffle = True
-    simulate = False
+    simulate = True
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -990,16 +993,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 20
-            p_t_eff = 8
+            p_t_aff = 8
+            p_t_eff = 6
             p_t_a = 42
-            p_w_zt = 0.25
-            p_w_stim = 0.15
-            p_e_noise = 0.1
-            p_com_bound = 0.5
-            p_w_a = 0.01
-            p_a_noise = 0.005
-            p_w_updt = 10
+            p_w_zt = 0.15
+            p_w_stim = 0.25
+            p_e_noise = 0.03
+            p_com_bound = 0.1
+            p_w_a = 0.03
+            p_a_noise = 0.04
+            p_w_updt = 5
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -1021,13 +1024,13 @@ if __name__ == '__main__':
                   jitters=jitters, compute_trajectories=compute_trajectories,
                   plot=plot, stim_res=stim_res, existing_data=existing_data,
                   shuffle=shuffle, all_trajs=all_trajs)
-    data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
-    res_path = data_path
+    # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
+    # res_path = data_path
     # data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
     # res_path = 'C:/Users/alexg/Downloads/'
-    data_curve, optimal_params = \
-        fitting(res_path=res_path, data_path=data_path, metrics='mse',
-                objective='curve')
+    # data_curve, optimal_params = \
+    #     fitting(res_path=res_path, data_path=data_path, metrics='mse',
+    #             objective='curve')
 
 
 # #!/usr/bin/env python3
