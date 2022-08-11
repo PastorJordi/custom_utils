@@ -12,19 +12,19 @@ import itertools
 import glob
 import time
 import sys
-# from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import structural_similarity as ssim
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-BINS = np.linspace(0, 300, 31)
+BINS = np.linspace(0, 300, 16)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -535,7 +535,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                      return_data=True)
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_aff+p_t_eff)*stim_res,
-                                    bins=40, range=(-100, 300))
+                                    bins=20, range=(-100, 300))
     # TODO: put in a different function
     if compute_trajectories:
         # Trajectories
@@ -614,7 +614,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
 def fitting(res_path='C:/Users/alexg/Dropbox/results/',
             data_path='C:/Users/alexg/Desktop/CRM/Alex/paper/results/',
-            metrics='mse', objective='matrix', bin_size=10, det_th=5):
+            metrics='mse', objective='curve', bin_size=20, det_th=5):
     if objective == 'matrix':
         data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
         data_mat_norm = data_mat / np.nanmax(data_mat)
@@ -627,7 +627,7 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
     diff_rms_mat = []
     diff_norm_mat = []
     nan_penalty = 0.5
-    w_rms = 0.99995
+    w_rms = 0.5
     max_ssim = metrics == 'ssim'
     for f in files:
         with np.load(f, allow_pickle=True) as data:
@@ -673,9 +673,10 @@ def fitting(res_path='C:/Users/alexg/Dropbox/results/',
                         #             np.array(data_curve_norm[tmp_simul])) ** 2
                         diff_norm = np.corrcoef(curve_norm,
                                                 data_curve_norm[tmp_simul].values)
-                        diff_norm = diff_norm[0, 1]
+                        diff_norm = diff_norm[0, 1] if not np.isnan(
+                            diff_norm[0, 1]) else -1
                         num_nans = len(tmp_data) - len(tmp_simul)
-                        diff_norm_mat.append(diff_norm+nan_penalty*num_nans)
+                        diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
                         diff_rms = np.subtract(curve_tmp,
                                                np.array(data_curve['pcom']
                                                         [tmp_simul])) ** 2
@@ -781,6 +782,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
     median_pcom_rt = []
     rt_vals_all = []
     rt_bins_all = []
+    one_bins = True
     for i_conf, conf in enumerate(configurations):
         print('--------------')
         print('p_w_zt: '+str(conf[0]))
@@ -900,7 +902,9 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             xpos_rt_pcom.append(xpos_plot)
             median_pcom_rt.append(median_pcom)
             rt_vals_all.append(rt_vals)
-            rt_bins_all.append(rt_bins)
+            if one_bins:
+                rt_bins_all.append(rt_bins)
+                one_bins = False
             if i_conf % 1000 == 0:
                 save_data()
         end = time.time()
@@ -1020,10 +1024,10 @@ if __name__ == '__main__':
                   jitters=jitters, compute_trajectories=compute_trajectories,
                   plot=plot, stim_res=stim_res, existing_data=existing_data,
                   shuffle=shuffle, all_trajs=False)
-    data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
-    res_path = data_path
-    # data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
-    # res_path = 'C:/Users/alexg/Downloads/'
+    # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
+    # res_path = data_path
+    data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
+    res_path = 'C:/Users/alexg/Downloads/'
     data_curve, optimal_params = \
         fitting(res_path=res_path, data_path=data_path, metrics='mse',
                 objective='curve')
