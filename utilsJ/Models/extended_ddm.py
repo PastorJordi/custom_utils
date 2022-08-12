@@ -935,16 +935,28 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
 
 
 def set_parameters(num_vals=3, factor=8):
-    p_w_zt_list = np.linspace(0.05, 0.5, num=num_vals)
-    p_w_stim_list = np.linspace(0.05, 0.5, num=num_vals)
-    p_e_noise_list = np.logspace(-2, -1, num=num_vals-1)
-    p_com_bound_list = np.linspace(0.3, 1, num=num_vals)
-    p_t_aff_list = np.linspace(10, 20, num=num_vals, dtype=int)
-    p_t_eff_list = np.linspace(10, 20, num=num_vals, dtype=int)
-    p_t_a_list = np.linspace(40, 60, num=num_vals, dtype=int)
-    p_w_a_list = np.linspace(0.05, 0.5, num=num_vals)
-    p_a_noise_list = np.logspace(-2, -1, num=num_vals-1)
-    p_w_updt_list = np.linspace(5, 15, num=num_vals)
+    """
+    p_t_aff = 8
+    p_t_eff = 6
+    p_t_a = 42
+    p_w_zt = 0.15
+    p_w_stim = 0.2
+    p_e_noise = 0.06
+    p_com_bound = 0.1
+    p_w_a = 0.03
+    p_a_noise = 0.04
+    p_w_updt = 5
+    """
+    p_w_zt_list = np.linspace(0.05, 0.2, num=num_vals-1)
+    p_w_stim_list = np.linspace(0.15, 0.3, num=num_vals-1)
+    p_e_noise_list = np.linspace(0.04, 0.08, num=num_vals-2)
+    p_com_bound_list = np.linspace(0., 0.3, num=num_vals-1)
+    p_t_aff_list = np.linspace(4, 12, num=num_vals-2, dtype=int)
+    p_t_eff_list = np.linspace(6, 12, num=num_vals-2, dtype=int)
+    p_t_a_list = np.linspace(30, 50, num=num_vals-2, dtype=int)
+    p_w_a_list = np.linspace(0.02, 0.05, num=num_vals-1)
+    p_a_noise_list = np.linspace(0.01, 0.09, num=num_vals-2)
+    p_w_updt_list = np.linspace(3, 7, num=num_vals-2)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -1041,7 +1053,7 @@ if __name__ == '__main__':
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
         else:
-            configurations, jitters = set_parameters(num_vals=3)
+            configurations, jitters = set_parameters(num_vals=5)
             compute_trajectories = True
             plot = False
             all_trajs = False
