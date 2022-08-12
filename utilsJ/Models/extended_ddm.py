@@ -20,11 +20,11 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/molano/coms/results/'  # Cluster
+SV_FOLDER = '/archive/molano/CoMs/'  # Cluster
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/molano/coms/data/'  # Cluster
+DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
@@ -997,7 +997,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(5e5)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = False
     shuffle = True
     simulate = True
