@@ -13,6 +13,8 @@ import glob
 import time
 import sys
 from skimage.metrics import structural_similarity as ssim
+# import multiprocessing as mp
+from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
@@ -129,9 +131,15 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
               bbox_inches='tight')
 
 
-def plot_misc(df_plot):
+def plot_misc(data_to_plot, all_trajs=True):
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
+    data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
+                                                     'detected_com',
+                                                     'hithistory',
+                                                     'avtrapz',
+                                                     'final_resp']}
+    df_plot = pd.DataFrame(data_to_df)
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
                  xpos=20,
                  ax=ax[0])
@@ -153,13 +161,33 @@ def plot_misc(df_plot):
     ax[3].set_ylabel('Probability of right')
     f, ax = plt.subplots()
     bins = np.linspace(-300, 400, 40)
-    hist_pro, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 0],
+    hist_pro, _ = np.histogram(data_to_plot['sound_len'][data_to_plot['pro_vs_re']
+                                                         == 0],
                                bins)
-    hist_re, _ = np.histogram(df_plot['sound_len'][df_plot['pro_vs_re'] == 1],
+    hist_re, _ = np.histogram(data_to_plot['sound_len'][data_to_plot['pro_vs_re']
+                                                        == 1],
                               bins)
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro/hist_pro.sum(), label='Pro')
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re/hist_re.sum(), label='Re')
     ax.legend()
+    matrix = data_to_plot['matrix']
+    detected_mat = data_to_plot['detected_mat']
+    if all_trajs:
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+        sns.heatmap(matrix, ax=ax[0])
+        ax[0].set_title('pCoM simulation')
+        detected_mat[np.isnan(detected_mat)] = 0
+        sns.heatmap(detected_mat, ax=ax[1])
+        ax[1].set_title('Detected proportion')
+    else:
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
+        sns.heatmap(matrix, ax=ax[0])
+        ax[0].set_title('pCoM simulation')
+        detected_mat[np.isnan(detected_mat)] = 0
+        sns.heatmap(detected_mat, ax=ax[1])
+        ax[1].set_title('Detected proportion')
+        sns.heatmap(detected_mat*matrix, ax=ax[2])
+        ax[2].set_title('Detected CoMs')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -844,6 +872,9 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
                 if all_trajs:  # TODO: simplify
+                    detected_mat, _ =\
+                        com_heatmap_jordi(zt, coh, detected_com,
+                                          return_mat=True)
                     data_to_plot = {'sound_len': (first_ind+p_t_eff -
                                                   int(300/stim_res))*stim_res,
                                     'CoM': com,
@@ -852,11 +883,17 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                     'hithistory': hits,
                                     'avtrapz': coh,
                                     'detected_com': detected_com,
-                                    'pro_vs_re': pro_vs_re}
-                    detected_mat, _ =\
-                        com_heatmap_jordi(zt, coh, detected_com,
-                                          return_mat=True)
+                                    'pro_vs_re': pro_vs_re,
+                                    'detected_mat': detected_mat,
+                                    'matrix': matrix}
                 else:
+                    detected_mat, _ =\
+                        com_heatmap_jordi(zt[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          coh[tr_indx_for_coms]
+                                          [com[tr_indx_for_coms]],
+                                          detected_com[com[tr_indx_for_coms]],
+                                          return_mat=True)
                     data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
                                                   + p_t_eff - int(300/stim_res))
                                     * stim_res,
@@ -866,24 +903,10 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                     'hithistory': hits[tr_indx_for_coms],
                                     'avtrapz': coh[tr_indx_for_coms],
                                     'detected_com': detected_com,
-                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms]}
-                    detected_mat, _ =\
-                        com_heatmap_jordi(zt[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          coh[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          detected_com[com[tr_indx_for_coms]],
-                                          return_mat=True)
-                df_plot = pd.DataFrame(data_to_plot)
-                plot_misc(df_plot)
-                fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
-                sns.heatmap(matrix, ax=ax[0])
-                ax[0].set_title('pCoM simulation')
-                detected_mat[np.isnan(detected_mat)] = 0
-                sns.heatmap(detected_mat, ax=ax[1])
-                ax[1].set_title('Detected proportion')
-                sns.heatmap(detected_mat*matrix, ax=ax[2])
-                ax[2].set_title('Detected CoMs')
+                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms],
+                                    'detected_mat': detected_mat,
+                                    'matrix': matrix}
+                plot_misc(data_to_plot)
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
             p_e_noise_vals.append([conf[2], p_e_noise])
@@ -960,6 +983,7 @@ if __name__ == '__main__':
     single_run = True
     shuffle = True
     simulate = True
+    parallel = False
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -1020,10 +1044,26 @@ if __name__ == '__main__':
             plot = False
             all_trajs = False
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
-        run_model(stim=stim, zt=zt, coh=coh, gt=gt, configurations=configurations,
-                  jitters=jitters, compute_trajectories=compute_trajectories,
-                  plot=plot, stim_res=stim_res, existing_data=existing_data,
-                  shuffle=shuffle, all_trajs=all_trajs)
+        if parallel:
+            configurations = list(configurations)
+            num_pars = 6
+            step = int(np.ceil(len(configurations)/num_pars))
+            Parallel(n_jobs=num_pars)\
+                (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
+                                    configurations=configurations
+                                    [i_par*step:(i_par+1)*step], jitters=jitters,
+                                    compute_trajectories=compute_trajectories,
+                                    plot=plot, stim_res=stim_res,
+                                    existing_data=existing_data,
+                                    shuffle=shuffle, all_trajs=False)
+                 for i_par in range(num_pars))
+        else:
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt,
+                      configurations=configurations, jitters=jitters,
+                      compute_trajectories=compute_trajectories,
+                      plot=plot, stim_res=stim_res,
+                      existing_data=existing_data,
+                      shuffle=shuffle, all_trajs=all_trajs)
     # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
     # res_path = data_path
     # data_path = 'C:/Users/alexg/Desktop/CRM/Alex/paper/results/'
