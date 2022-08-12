@@ -113,13 +113,14 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             init_motor = first_ind[trial]+p_t_eff
             xs = init_motor+np.arange(0, len(total_traj[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
+            # TODO: fix label
             ax[a[2]].plot(xs, total_traj[trial_total],
-                          label=f'Updated traj., E:{sec_ev}')
+                          label='Updated traj., E:{sec_ev}')
             first_ev = round(E[first_ind[trial], trial], 2)
             xs = init_motor+np.arange(0, len(init_trajs[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
             ax[a[2]].plot(xs, init_trajs[trial_total],
-                          label=f'Initial traj. E:{first_ev}')
+                          label='Initial traj. E:{first_ev}')
             ax[a[2]].set_ylabel(l+', y(px)')
             ax[a[2]].set_ylabel(l+', y(px)')
             ax[a[2]].legend()
