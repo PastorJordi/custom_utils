@@ -13,7 +13,7 @@ import glob
 import time
 import sys
 # from skimage.metrics import structural_similarity as ssim
-# import multiprocessing as mp
+import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
@@ -1065,9 +1065,9 @@ if __name__ == '__main__':
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
         if parallel:
             configurations = list(configurations)
-            num_pars = 6
-            step = int(np.ceil(len(configurations)/num_pars))
-            Parallel(n_jobs=num_pars)\
+            num_cores = mp.cpu_count()
+            step = int(np.ceil(len(configurations)/num_cores))
+            Parallel(n_jobs=num_cores)\
                 (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
                                     configurations=configurations
                                     [i_par*step:(i_par+1)*step], jitters=jitters,
@@ -1075,7 +1075,7 @@ if __name__ == '__main__':
                                     plot=plot, stim_res=stim_res,
                                     existing_data=existing_data,
                                     shuffle=shuffle, all_trajs=False)
-                 for i_par in range(num_pars))
+                 for i_par in range(num_cores))
         else:
             run_model(stim=stim, zt=zt, coh=coh, gt=gt,
                       configurations=configurations, jitters=jitters,
