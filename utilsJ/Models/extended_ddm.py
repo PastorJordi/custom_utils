@@ -20,12 +20,12 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-# SV_FOLDER = '/home/garciaduran/results/'  # Cluster
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+SV_FOLDER = '/home/garciaduran/results/'  # Cluster
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
@@ -50,12 +50,12 @@ def tests_trajectory_update(remaining_time=100, w_updt=10):
     ax.legend()
 
 
-def draw_lines(ax, frst, sec, p_t_aff):
+def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
-    ax[0].axhline(y=0.5, color='purple', linewidth=1, linestyle='--')
-    ax[0].axhline(y=-0.5, color='green', linewidth=1, linestyle='--')
+    ax[0].axhline(y=p_com_bound, color='purple', linewidth=1, linestyle='--')
+    ax[0].axhline(y=-p_com_bound, color='green', linewidth=1, linestyle='--')
     ax[1].axhline(y=1, color='k', linewidth=1, linestyle='--')
     for a in ax:
         a.axvline(x=frst, color='c', linewidth=1, linestyle='--')
@@ -66,11 +66,13 @@ def draw_lines(ax, frst, sec, p_t_aff):
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time, tr_index,
-             stim_res=50, trial=0):
+             p_com_bound, stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
-    ax[6].set_xlabel('Time (ms)')
-    ax[7].set_xlabel('Time (ms)')
+    ax[8].set_xlabel('Time (ms)')
+    ax[9].set_xlabel('Time (ms)')
+    ax[10].set_xlabel('Time (ms)')
+    ax[11].set_xlabel('Time (ms)')
     axes = [np.array([0, 4, 8])+i for i in range(4)]
     trials = [0, 0, 0, 0]
     mat_indx = [np.logical_and(com, pro_vs_re == 0),
@@ -92,17 +94,20 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
                 traj_in = True
                 break
         if len(trials_temp) > 0 and traj_in:
-            draw_lines(ax[np.array(a)], frst=first_ind[trial],
-                       sec=second_ind[trial], p_t_aff=p_t_aff)
+            draw_lines(ax[np.array(a)], frst=first_ind[trial]*stim_res,
+                       sec=second_ind[trial]*stim_res, p_t_aff=p_t_aff*stim_res,
+                       p_com_bound=p_com_bound)
             color1 = 'green' if resp_first[trial] < 0 else 'purple'
             color2 = 'green' if resp_fin[trial] < 0 else 'purple'
 
-            ax[a[0]].plot(E[:second_ind[trial]+1, trial], color=color2,
+            x_2 = np.arange(second_ind[trial]+1)*stim_res
+            x_1 = np.arange(first_ind[trial]+1)*stim_res
+            ax[a[0]].plot(x_2, E[:second_ind[trial]+1, trial], color=color2,
                           alpha=0.7)
-            ax[a[0]].plot(E[:first_ind[trial]+1, trial], color=color1, lw=2)
-            ax[a[1]].plot(A[:second_ind[trial]+1, trial], color=color2,
+            ax[a[0]].plot(x_1, E[:first_ind[trial]+1, trial], color=color1, lw=2)
+            ax[a[1]].plot(x_2, A[:second_ind[trial]+1, trial], color=color2,
                           alpha=0.7)
-            ax[a[1]].plot(A[:first_ind[trial]+1, trial], color=color1, lw=2)
+            ax[a[1]].plot(x_1, A[:first_ind[trial]+1, trial], color=color1, lw=2)
             # ax[a[0]].set_ylim([-1.5, 1.5])
             # ax[a[1]].set_ylim([-0.1, 1.5])
             ax[a[0]].set_ylabel(l+' EA')
@@ -111,12 +116,12 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             sec_ev = round(E[second_ind[trial], trial], 2)
             # updt_motor = first_ind[trial]+motor_updt_time[trial]
             init_motor = first_ind[trial]+p_t_eff
-            xs = init_motor+np.arange(0, len(total_traj[trial_total]))/stim_res
+            xs = init_motor*stim_res+np.arange(0, len(total_traj[trial_total]))
             max_xlim = max(max_xlim, np.max(xs))
             ax[a[2]].plot(xs, total_traj[trial_total],
                           label=f'Updated traj., E:{sec_ev}')
             first_ev = round(E[first_ind[trial], trial], 2)
-            xs = init_motor+np.arange(0, len(init_trajs[trial_total]))/stim_res
+            xs = init_motor*stim_res+np.arange(0, len(init_trajs[trial_total]))
             max_xlim = max(max_xlim, np.max(xs))
             ax[a[2]].plot(xs, init_trajs[trial_total],
                           label=f'Initial traj. E:{first_ev}')
@@ -868,7 +873,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              p_t_aff=p_t_aff, init_trajs=init_trajs,
                              total_traj=total_traj,
                              p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
-                             tr_index=tr_index,
+                             tr_index=tr_index, p_com_bound=p_com_bound,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
@@ -992,11 +997,11 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(5e5)
     load_data = True
-    new_sample = False
-    single_run = True
+    new_sample = True
+    single_run = False
     shuffle = True
     simulate = True
-    parallel = False
+    parallel = True
     data_augment_factor = 10
     if simulate:
         if load_data:
