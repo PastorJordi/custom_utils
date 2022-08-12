@@ -1021,8 +1021,8 @@ if __name__ == '__main__':
             p_t_eff = 6
             p_t_a = 42
             p_w_zt = 0.15
-            p_w_stim = 0.25
-            p_e_noise = 0.03
+            p_w_stim = 0.2
+            p_e_noise = 0.06
             p_com_bound = 0.1
             p_w_a = 0.03
             p_a_noise = 0.04
@@ -1033,6 +1033,7 @@ if __name__ == '__main__':
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
+            print('Number of trials: ' + str(len(stim)))
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
             coh = coh[:int(num_tr)]
