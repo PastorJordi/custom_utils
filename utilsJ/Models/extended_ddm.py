@@ -12,7 +12,7 @@ import itertools
 import glob
 import time
 import sys
-from skimage.metrics import structural_similarity as ssim
+# from skimage.metrics import structural_similarity as ssim
 # import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
@@ -20,13 +20,13 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
+SV_FOLDER = '/home/garciaduran/results/'  # Cluster
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = '/home/manuel/Descargas/'  # Manuel laptop
-# SV_FOLDER = DATA_FOLDER
-DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
 
@@ -779,7 +779,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                       'median_pcom_rt': median_pcom_rt,
                       'rt_vals_all': rt_vals_all,
                       'rt_bins_all': rt_bins_all}
-        np.savez(SV_FOLDER+'/results/all_results_'+str(i_conf)+'.npz',
+        name = '_'.join([str(c) for c in configurations[0]])
+        np.savez(SV_FOLDER+'/results/all_results_'+name+'.npz',
                  **data_final)
 
     if existing_data is not None:
@@ -979,11 +980,11 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(5e5)
     load_data = True
-    new_sample = False
-    single_run = True
+    new_sample = True
+    single_run = False
     shuffle = True
     simulate = True
-    parallel = False
+    parallel = True
     data_augment_factor = 10
     if simulate:
         if load_data:
