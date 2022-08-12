@@ -997,7 +997,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(5e5)
     load_data = True
-    new_sample = True
+    new_sample = False
     single_run = False
     shuffle = True
     simulate = True
