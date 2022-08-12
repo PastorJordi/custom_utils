@@ -20,12 +20,12 @@ sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/home/garciaduran/results/'  # Cluster
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = '/home/garciaduran/results/'  # Cluster
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
@@ -113,14 +113,13 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             init_motor = first_ind[trial]+p_t_eff
             xs = init_motor+np.arange(0, len(total_traj[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
-            # TODO: fix label
             ax[a[2]].plot(xs, total_traj[trial_total],
-                          label='Updated traj., E:{sec_ev}')
+                          label=f'Updated traj., E:{sec_ev}')
             first_ev = round(E[first_ind[trial], trial], 2)
             xs = init_motor+np.arange(0, len(init_trajs[trial_total]))/stim_res
             max_xlim = max(max_xlim, np.max(xs))
             ax[a[2]].plot(xs, init_trajs[trial_total],
-                          label='Initial traj. E:{first_ev}')
+                          label=f'Initial traj. E:{first_ev}')
             ax[a[2]].set_ylabel(l+', y(px)')
             ax[a[2]].set_ylabel(l+', y(px)')
             ax[a[2]].legend()
@@ -993,11 +992,11 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(5e5)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     shuffle = True
     simulate = True
-    parallel = True
+    parallel = False
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -1047,7 +1046,7 @@ if __name__ == '__main__':
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
-            print('Number of trials: ' + str(len(stim)))
+            print('Number of trials: ' + str(stim.shape[1]))
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
             coh = coh[:int(num_tr)]
