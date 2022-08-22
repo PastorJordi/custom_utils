@@ -1103,7 +1103,7 @@ if __name__ == '__main__':
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
         if parallel:
             configurations = list(configurations)
-            num_cores = mp.cpu_count()
+            num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
             Parallel(n_jobs=num_cores)\
                 (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
