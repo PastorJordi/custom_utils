@@ -12,21 +12,24 @@ import itertools
 import glob
 import time
 import sys
-# from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")
+# sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 SV_FOLDER = '/archive/molano/CoMs/'  # Cluster
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
 
@@ -139,15 +142,19 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
 def plot_misc(data_to_plot, all_trajs=True):
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
+    trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
+    data_to_plot['trial_idxs'] = trial_idxs
+    data_to_plot['re_vs_pro'] = (data_to_plot['pro_vs_re'] - 1)*(-1)
     data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
                                                      'detected_com',
                                                      'hithistory',
                                                      'avtrapz',
-                                                     'final_resp']}
+                                                     'final_resp',
+                                                     'MT', 'trial_idxs',
+                                                     're_vs_pro']}
     df_plot = pd.DataFrame(data_to_df)
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
-                 xpos=20,
-                 ax=ax[0])
+                 xpos=20, ax=ax[0], errorbar_kw={'label': 'CoM'})
     binned_curve(df_plot, 'detected_com', 'sound_len',
                  bins=BINS, ax=ax[0], xpos=20,
                  errorbar_kw={'label': 'detected com'})
@@ -172,11 +179,46 @@ def plot_misc(data_to_plot, all_trajs=True):
     hist_re, _ = np.histogram(data_to_plot['sound_len'][data_to_plot['pro_vs_re']
                                                         == 1],
                               bins)
+    hist_total, _ = np.histogram(data_to_plot['sound_len'], bins)
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro/hist_pro.sum(), label='Pro')
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re/hist_re.sum(), label='Re')
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_total/hist_total.sum(),
+            label='All')
     ax.legend()
     matrix = data_to_plot['matrix']
     detected_mat = data_to_plot['detected_mat']
+    fig1, ax1 = plt.subplots(nrows=2, ncols=3, figsize=(12, 12))
+    ax1 = ax1.flatten()
+    binned_curve(df_plot, 'MT', 'sound_len',
+                 bins=BINS, ax=ax1[0], xpos=20,
+                 errorbar_kw={'label': 'MT'})
+    ax1[0].set_xlabel('RT')
+    ax1[0].set_ylabel('MT')
+    ax1[1].set_xlabel('Trial index')
+    ax1[1].set_ylabel('Detected CoM')
+    bins_trial = np.linspace(0, 600, 11, dtype=int)
+    binned_curve(df_plot, 'detected_com', 'trial_idxs',
+                 bins=bins_trial, ax=ax1[1], xpos=60,
+                 errorbar_kw={'label': 'detected_com'})
+    binned_curve(df_plot, 're_vs_pro', 'sound_len',
+                 bins=BINS, ax=ax1[2], xpos=20,
+                 errorbar_kw={'label': 'proac_prop'})
+    ax1[2].set_xlabel('RT')
+    ax1[2].set_ylabel('Proac. proportion')
+    bins_MT = np.linspace(80, 230, num=16, dtype=int)
+    binned_curve(df_plot, 'CoM', 'MT',
+                 bins=bins_MT, ax=ax1[3], xpos=10,
+                 xoffset=120, errorbar_kw={'label': 'CoM'})
+    binned_curve(df_plot, 'detected_com', 'MT',
+                 bins=bins_MT, ax=ax1[3], xpos=10,
+                 xoffset=120, errorbar_kw={'label': 'detected CoM'})
+    ax1[3].legend()
+    ax1[3].set_xlabel('MT')
+    ax1[3].set_ylabel('pCoM')
+    hist_MT, _ = np.histogram(data_to_plot['MT'], bins=bins_MT)
+    ax1[4].plot(bins_MT[:-1]+(bins_MT[1]-bins_MT[0])/2, hist_MT,
+                label='MT dist')
+    ax1[4].set_xlabel('MT (ms)')
     if all_trajs:
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
         sns.heatmap(matrix, ax=ax[0])
@@ -426,7 +468,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=True,
-                        num_computed_traj=int(2e3)):
+                        num_computed_traj=int(4e4)):
     """
     Generate stim and time integration and trajectories
 
@@ -564,13 +606,14 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True)
-    df_curve = {'CoM': com, 'sound_len': (first_ind-fixation+p_t_eff)*stim_res}
-    df_curve = pd.DataFrame(df_curve)
-    xpos = int(np.diff(BINS)[0])
-    xpos_plot, median_pcom, _ =\
-        binned_curve(df_curve, 'CoM', 'sound_len', xpos=xpos,
-                     bins=BINS,
-                     return_data=True)
+    # The pcom_RT curve will be computed considering detection
+    # df_curve = {'CoM': com, 'sound_len': (first_ind-fixation+p_t_eff)*stim_res}
+    # df_curve = pd.DataFrame(df_curve)
+    # xpos = int(np.diff(BINS)[0])
+    # xpos_plot, median_pcom, _ =\
+    #     binned_curve(df_curve, 'CoM', 'sound_len', xpos=xpos,
+    #                  bins=BINS,
+    #                  return_data=True)
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
@@ -583,7 +626,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         jerk_lock_ms = 0
         initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
         indx_trajs = np.arange(len(first_ind)) if all_trajs\
-            else np.where(com)[0][:num_computed_traj]
+            else np.random.choice(len(first_ind), num_computed_traj)
         # initial positions, speed and acc; final position, speed and acc
         init_trajs = []
         final_trajs = []
@@ -591,6 +634,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         motor_updt_time = []
         x_val_at_updt = []
         tr_indx_for_coms = []
+        indx = []
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
@@ -637,9 +681,19 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                 opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
                 max_val_towards_opposite = np.max(np.abs(opp_side_values))
                 x_val_at_updt.append(max_val_towards_opposite)
-                tr_indx_for_coms.append(i_t)
+                indx.append(i_t)
             else:
                 x_val_at_updt.append(0)
+        detect_CoMs_th = 5
+        detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+        df_curve = {'detected_CoM': detected_com,
+                    'sound_len': (first_ind[indx_trajs]-fixation+p_t_eff)*stim_res}
+        df_curve = pd.DataFrame(df_curve)
+        xpos = int(np.diff(BINS)[0])
+        xpos_plot, median_pcom, _ =\
+            binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
+                         bins=BINS,
+                         return_data=True)
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -877,41 +931,22 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-                if all_trajs:  # TODO: simplify
-                    detected_mat, _ =\
-                        com_heatmap_jordi(zt, coh, detected_com,
-                                          return_mat=True)
-                    data_to_plot = {'sound_len': (first_ind+p_t_eff -
-                                                  int(300/stim_res))*stim_res,
-                                    'CoM': com,
-                                    'first_resp': resp_first,
-                                    'final_resp': resp_fin,
-                                    'hithistory': hits,
-                                    'avtrapz': coh,
-                                    'detected_com': detected_com,
-                                    'pro_vs_re': pro_vs_re,
-                                    'detected_mat': detected_mat,
-                                    'matrix': matrix}
-                else:
-                    detected_mat, _ =\
-                        com_heatmap_jordi(zt[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          coh[tr_indx_for_coms]
-                                          [com[tr_indx_for_coms]],
-                                          detected_com[com[tr_indx_for_coms]],
-                                          return_mat=True)
-                    data_to_plot = {'sound_len': (first_ind[tr_indx_for_coms]
-                                                  + p_t_eff - int(300/stim_res))
-                                    * stim_res,
-                                    'CoM': com[tr_indx_for_coms],
-                                    'first_resp': resp_first[tr_indx_for_coms],
-                                    'final_resp': resp_fin[tr_indx_for_coms],
-                                    'hithistory': hits[tr_indx_for_coms],
-                                    'avtrapz': coh[tr_indx_for_coms],
-                                    'detected_com': detected_com,
-                                    'pro_vs_re': pro_vs_re[tr_indx_for_coms],
-                                    'detected_mat': detected_mat,
-                                    'matrix': matrix}
+                detected_mat, _ =\
+                    com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
+                                      return_mat=True)
+                data_to_plot = {'sound_len': (first_ind[tr_index]+p_t_eff -
+                                              int(300/stim_res))*stim_res,
+                                'CoM': com[tr_index],
+                                'first_resp': resp_first[tr_index],
+                                'final_resp': resp_fin[tr_index],
+                                'hithistory': hits[tr_index],
+                                'avtrapz': coh[tr_index],
+                                'detected_com': detected_com,
+                                'pro_vs_re': pro_vs_re[tr_index],
+                                'detected_mat': detected_mat,
+                                'matrix': matrix,
+                                'MT': [len(t) for t in total_traj],
+                                'zt': zt[tr_index]}
                 plot_misc(data_to_plot)
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
@@ -995,7 +1030,7 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(5e5)
+    num_tr = int(1e5)
     load_data = True
     new_sample = True
     single_run = False
