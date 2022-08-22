@@ -18,15 +18,18 @@ from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/alexg/Documents/GitHub/custom_utils")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
-SV_FOLDER = '/archive/molano/CoMs/'  # Cluster
+# SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
+DATA_FOLDER = '/home/garciaduran/results/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster
+# DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/alexg/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
