@@ -897,14 +897,15 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             p_w_stim = conf[1]+jitters[1]*np.random.rand()
             p_e_noise = conf[2]+jitters[2]*np.random.rand()
             p_com_bound = conf[3]+jitters[3]*np.random.rand()
-            p_t_aff = round(conf[4]+jitters[4]*np.random.rand())
-            p_t_eff = round(conf[5]++jitters[5]*np.random.rand())
-            p_t_a = round(conf[6]++jitters[6]*np.random.rand())
+            p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
+            p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
+            p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
             p_w_a = conf[7]+jitters[7]*np.random.rand()
             p_a_noise = conf[8]+jitters[8]*np.random.rand()
             p_w_updt = conf[9]+jitters[9]*np.random.rand()
             stim_temp =\
-                np.concatenate((stim, np.zeros((p_t_aff+p_t_eff, stim.shape[1]))))
+                np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
+                                                stim.shape[1]))))
             # TODO: get in a dict
             E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
                 matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
@@ -1084,8 +1085,8 @@ if __name__ == '__main__':
             p_a_noise = 0.04
             p_w_updt = 5
             compute_trajectories = True
-            plot = True
-            all_trajs = True
+            plot = False
+            all_trajs = False
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
@@ -1108,7 +1109,8 @@ if __name__ == '__main__':
             Parallel(n_jobs=num_cores)\
                 (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
                                     configurations=configurations
-                                    [i_par*step:(i_par+1)*step], jitters=jitters,
+                                    [int(i_par*step):int((i_par+1)*step)],
+                                    jitters=jitters,
                                     compute_trajectories=compute_trajectories,
                                     plot=plot, stim_res=stim_res,
                                     existing_data=existing_data,
