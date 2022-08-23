@@ -471,7 +471,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=True,
-                        num_computed_traj=int(4e4)):
+                        num_computed_traj=int(1e4)):
     """
     Generate stim and time integration and trajectories
 
