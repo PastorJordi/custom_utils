@@ -1047,7 +1047,7 @@ if __name__ == '__main__':
             if new_sample:
                 stim, zt, coh, gt, com =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(1e4),
+                                        num_tr_per_rat=int(6e3),
                                         after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
