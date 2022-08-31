@@ -477,7 +477,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=True,
-                        num_computed_traj=int(3e4)):
+                        num_computed_traj=int(2e4)):
     """
     Generate stim and time integration and trajectories
 
@@ -1101,7 +1101,7 @@ if __name__ == '__main__':
             if new_sample:
                 stim, zt, coh, gt, com =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(8e3),
+                                        num_tr_per_rat=int(7e3),
                                         after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
