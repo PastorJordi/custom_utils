@@ -16,22 +16,22 @@ from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 14)
@@ -156,10 +156,11 @@ def plot_misc(data_to_plot, all_trajs=True):
                                                      'MT', 'trial_idxs',
                                                      're_vs_pro']}
     df_plot = pd.DataFrame(data_to_df)
+    xpos = int(np.diff(BINS)[0])
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
-                 xpos=20, ax=ax[0], errorbar_kw={'label': 'CoM'})
+                 xpos=xpos, ax=ax[0], errorbar_kw={'label': 'CoM'})
     binned_curve(df_plot, 'detected_com', 'sound_len',
-                 bins=BINS, ax=ax[0], xpos=20,
+                 bins=BINS, ax=ax[0], xpos=xpos,
                  errorbar_kw={'label': 'detected com'})
     data_curve = pd.read_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
     ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
@@ -198,7 +199,7 @@ def plot_misc(data_to_plot, all_trajs=True):
     fig1, ax1 = plt.subplots(nrows=2, ncols=3, figsize=(12, 12))
     ax1 = ax1.flatten()
     binned_curve(df_plot, 'MT', 'sound_len',
-                 bins=BINS, ax=ax1[0], xpos=20,
+                 bins=BINS, ax=ax1[0], xpos=xpos,
                  errorbar_kw={'label': 'MT'})
     ax1[0].set_xlabel('RT')
     ax1[0].set_ylabel('MT')
@@ -209,7 +210,7 @@ def plot_misc(data_to_plot, all_trajs=True):
                  bins=bins_trial, ax=ax1[1], xpos=60,
                  errorbar_kw={'label': 'detected_com'})
     binned_curve(df_plot, 're_vs_pro', 'sound_len',
-                 bins=BINS, ax=ax1[2], xpos=20,
+                 bins=BINS, ax=ax1[2], xpos=xpos,
                  errorbar_kw={'label': 'proac_prop'})
     ax1[2].set_xlabel('RT')
     ax1[2].set_ylabel('Proac. proportion')
@@ -476,7 +477,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         proactive_integration=True, all_trajs=True,
-                        num_computed_traj=int(1e4)):
+                        num_computed_traj=int(3e4)):
     """
     Generate stim and time integration and trajectories
 
@@ -830,26 +831,26 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/',
             else:
                 optimal_params[k] = data[k][ind_min - min_num]
     # For the best 10 configurations:
-    plt.figure()
-    plt.plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
-              marker='o')
-    for i in range(10):
-        ind_min = ind_sorted[i]
-        optimal_params = {}
-        file_index = np.array(file_index)
-        min_num = np.where(file_index == file_index[ind_min])[0][0]
-        with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
-            for k in data.files:
-                if k == 'rt_bins_all':
-                    optimal_params[k] = data[k]
-                else:
-                    optimal_params[k] = data[k][ind_min - min_num]
-        plt.plot(optimal_params['xpos_rt_pcom'],
-                  optimal_params['median_pcom_rt'].values,
-                  label=f'simul_{i}')
-        plt.xlabel('RT (ms)')
-        plt.ylabel('pCoM - detected')
-        plt.legend()
+    # plt.figure()
+    # plt.plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
+    #           marker='o')
+    # for i in range(10):
+    #     ind_min = ind_sorted[i]
+    #     optimal_params = {}
+    #     file_index = np.array(file_index)
+    #     min_num = np.where(file_index == file_index[ind_min])[0][0]
+    #     with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
+    #         for k in data.files:
+    #             if k == 'rt_bins_all':
+    #                 optimal_params[k] = data[k]
+    #             else:
+    #                 optimal_params[k] = data[k][ind_min - min_num]
+    #     plt.plot(optimal_params['xpos_rt_pcom'],
+    #               optimal_params['median_pcom_rt'].values,
+    #               label=f'simul_{i}')
+    #     plt.xlabel('RT (ms)')
+    #     plt.ylabel('pCoM - detected')
+    #     plt.legend()
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
     sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
     ax[0].set_title('Simulation')
@@ -1044,14 +1045,14 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_w_updt = 5
     """
-    p_w_zt_list = np.linspace(0.05, 0.2, num=num_vals-1)
-    p_w_stim_list = np.linspace(0.15, 0.3, num=num_vals-1)
-    p_e_noise_list = np.linspace(0.04, 0.08, num=num_vals-2)
-    p_com_bound_list = np.linspace(0., 0.3, num=num_vals-1)
-    p_t_aff_list = np.linspace(4, 12, num=num_vals-2, dtype=int)
-    p_t_eff_list = np.linspace(6, 12, num=num_vals-2, dtype=int)
+    p_w_zt_list = np.linspace(0.15, 0.25, num=num_vals-2)
+    p_w_stim_list = np.linspace(0.1, 0.2, num=num_vals-2)
+    p_e_noise_list = np.linspace(0.04, 0.06, num=num_vals-2)
+    p_com_bound_list = np.linspace(0., 0.2, num=num_vals-2)
+    p_t_aff_list = np.linspace(7, 9, num=num_vals-2, dtype=int)
+    p_t_eff_list = np.linspace(7, 9, num=num_vals-2, dtype=int)
     p_t_a_list = np.linspace(30, 50, num=num_vals-2, dtype=int)
-    p_w_a_list = np.linspace(0.02, 0.05, num=num_vals-1)
+    p_w_a_list = np.linspace(0.02, 0.04, num=num_vals-2)
     p_a_noise_list = np.linspace(0.01, 0.09, num=num_vals-2)
     p_w_updt_list = np.linspace(3, 7, num=num_vals-2)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
@@ -1087,20 +1088,20 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(5e5)
+    num_tr = int(2e6)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
-    parallel = False
+    parallel = True
     data_augment_factor = 10
     if simulate:
         if load_data:
             if new_sample:
                 stim, zt, coh, gt, com =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(6e3),
+                                        num_tr_per_rat=int(8e3),
                                         after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
@@ -1127,16 +1128,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 4
-            p_t_eff = 9
-            p_t_a = 30
+            p_t_aff = 7
+            p_t_eff = 8
+            p_t_a = 35
             p_w_zt = 0.2
             p_w_stim = 0.15
-            p_e_noise = 0.06
-            p_com_bound = 0.01
-            p_w_a = 0.02
-            p_a_noise = 0.05
-            p_w_updt = 5
+            p_e_noise = 0.05
+            p_com_bound = 0.
+            p_w_a = 0.03
+            p_a_noise = 0.06
+            p_w_updt = 0.5
             compute_trajectories = True
             plot = True
             all_trajs = True
