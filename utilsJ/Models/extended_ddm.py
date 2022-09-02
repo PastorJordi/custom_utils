@@ -17,24 +17,24 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-BINS = np.linspace(1, 300, 14)
+BINS = np.linspace(1, 300, 16)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -142,7 +142,7 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
               bbox_inches='tight')
 
 
-def plot_misc(data_to_plot, all_trajs=True):
+def plot_misc(data_to_plot, stim_res, all_trajs=True):
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
     trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
@@ -156,7 +156,7 @@ def plot_misc(data_to_plot, all_trajs=True):
                                                      'MT', 'trial_idxs',
                                                      're_vs_pro']}
     df_plot = pd.DataFrame(data_to_df)
-    xpos = int(np.diff(BINS)[0])
+    xpos = int(np.diff(BINS)[0]+1)
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
                  xpos=xpos, ax=ax[0], errorbar_kw={'label': 'CoM'})
     binned_curve(df_plot, 'detected_com', 'sound_len',
@@ -198,6 +198,7 @@ def plot_misc(data_to_plot, all_trajs=True):
     detected_mat = data_to_plot['detected_mat']
     fig1, ax1 = plt.subplots(nrows=2, ncols=3, figsize=(12, 12))
     ax1 = ax1.flatten()
+    # df_plot['MT'] = df_plot['MT']*stim_res
     binned_curve(df_plot, 'MT', 'sound_len',
                  bins=BINS, ax=ax1[0], xpos=xpos,
                  errorbar_kw={'label': 'MT'})
@@ -228,22 +229,19 @@ def plot_misc(data_to_plot, all_trajs=True):
     ax1[4].plot(bins_MT[:-1]+(bins_MT[1]-bins_MT[0])/2, hist_MT,
                 label='MT dist')
     ax1[4].set_xlabel('MT (ms)')
-    if all_trajs:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
-        sns.heatmap(matrix, ax=ax[0])
-        ax[0].set_title('pCoM simulation')
-        detected_mat[np.isnan(detected_mat)] = 0
-        sns.heatmap(detected_mat, ax=ax[1])
-        ax[1].set_title('Detected proportion')
-    else:
-        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(17, 4))
-        sns.heatmap(matrix, ax=ax[0])
-        ax[0].set_title('pCoM simulation')
-        detected_mat[np.isnan(detected_mat)] = 0
-        sns.heatmap(detected_mat, ax=ax[1])
-        ax[1].set_title('Detected proportion')
-        sns.heatmap(detected_mat*matrix, ax=ax[2])
-        ax[2].set_title('Detected CoMs')
+    zt = data_to_plot['zt'][data_to_plot['pro_vs_re'] == 0]
+    coh = data_to_plot['avtrapz'][data_to_plot['pro_vs_re'] == 0]
+    com = data_to_plot['CoM'][data_to_plot['pro_vs_re'] == 0]
+    mat_proac, _ = com_heatmap_jordi(zt, coh, com, return_mat=True)
+    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
+    ax = ax.flatten()
+    sns.heatmap(matrix, ax=ax[0])
+    ax[0].set_title('pCoM simulation')
+    detected_mat[np.isnan(detected_mat)] = 0
+    sns.heatmap(detected_mat, ax=ax[1])
+    ax[1].set_title('Detected proportion')
+    sns.heatmap(mat_proac, ax=ax[2])
+    ax[2].set_title('pCoM in proac. trials')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -819,7 +817,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/',
         ind_min = np.argmax(diff_mn)
     else:
         ind_sorted = np.argsort(np.abs(diff_rms_mat))
-        ind_min = ind_sorted[1]
+        ind_min = ind_sorted[7]
         # second_in = (diff_mn*(diff_mn!=diff_mn[ind_min])).argmin()
     optimal_params = {}
     file_index = np.array(file_index)
@@ -831,26 +829,26 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/',
             else:
                 optimal_params[k] = data[k][ind_min - min_num]
     # For the best 10 configurations:
-    # plt.figure()
-    # plt.plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
-    #           marker='o')
-    # for i in range(10):
-    #     ind_min = ind_sorted[i]
-    #     optimal_params = {}
-    #     file_index = np.array(file_index)
-    #     min_num = np.where(file_index == file_index[ind_min])[0][0]
-    #     with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
-    #         for k in data.files:
-    #             if k == 'rt_bins_all':
-    #                 optimal_params[k] = data[k]
-    #             else:
-    #                 optimal_params[k] = data[k][ind_min - min_num]
-    #     plt.plot(optimal_params['xpos_rt_pcom'],
-    #               optimal_params['median_pcom_rt'].values,
-    #               label=f'simul_{i}')
-    #     plt.xlabel('RT (ms)')
-    #     plt.ylabel('pCoM - detected')
-    #     plt.legend()
+    plt.figure()
+    plt.plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
+             marker='o')
+    for i in range(10):
+        ind_min = ind_sorted[i+20]
+        optimal_params = {}
+        file_index = np.array(file_index)
+        min_num = np.where(file_index == file_index[ind_min])[0][0]
+        with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
+            for k in data.files:
+                if k == 'rt_bins_all':
+                    optimal_params[k] = data[k]
+                else:
+                    optimal_params[k] = data[k][ind_min - min_num]
+        plt.plot(optimal_params['xpos_rt_pcom'],
+                 optimal_params['median_pcom_rt'].values,
+                 label=f'simul_{i}')
+        plt.xlabel('RT (ms)')
+        plt.ylabel('pCoM - detected')
+        plt.legend()
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
     sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
     ax[0].set_title('Simulation')
@@ -875,6 +873,25 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/',
     ax[1].plot(optimal_params['rt_bins_all'][0][1::], cdf)
     ax[1].set_xlabel('RT (ms)')
     ax[1].set_title('CDF')
+
+
+def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res):
+    a = 1  # bound evidence/action
+    first_ev = [E[first_ind[i_t], i_t] for i_t in range(E.shape[1])]
+    x = np.array(first_ev)
+    s = np.std(first_ev)
+    s0 = np.std(p_w_zt*zt)
+    mu0 = np.mean(p_w_zt*zt)
+    first_ind_llk = first_ind * stim_res
+    M = p_w_stim * first_ind_llk
+    D = 1/(2*s**2*first_ind_llk)
+    sinus = np.sum([np.sin(K*np.pi/a*(mu0-s0**2*M/(2*D))) *
+                    np.sin(K*np.pi*x/a) *
+                    np.exp(-(D+s0**2/2)*(K*np.pi/a)**2)
+                    for K in range(int(1e3))], axis=0)
+    pL = 2 / a * np.exp((2*x - (2*mu0 - s0**2+M/(2*D)) * M/(4*D)) - M**2/(4*D))\
+        * sinus
+    # pS =
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
@@ -1005,7 +1022,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                 'matrix': matrix,
                                 'MT': [len(t) for t in total_traj],
                                 'zt': zt[tr_index]}
-                plot_misc(data_to_plot)
+                plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
             p_e_noise_vals.append([conf[2], p_e_noise])
@@ -1090,11 +1107,11 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(2e6)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     shuffle = True
     simulate = True
-    parallel = True
+    parallel = False
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -1128,16 +1145,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 7
-            p_t_eff = 8
+            p_t_aff = 10
+            p_t_eff = 6
             p_t_a = 35
-            p_w_zt = 0.2
+            p_w_zt = 0.15
             p_w_stim = 0.15
             p_e_noise = 0.05
             p_com_bound = 0.
             p_w_a = 0.03
             p_a_noise = 0.06
-            p_w_updt = 0.5
+            p_w_updt = 0.1  # 65
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -1179,8 +1196,8 @@ if __name__ == '__main__':
                       shuffle=shuffle, all_trajs=all_trajs)
     # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
     # res_path = data_path
-    # data_path = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/results/'
-    # res_path = 'C:/Users/Alexandre/Desktop/CRM/brute_force/'
+    # data_path = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/results/'
+    # res_path = 'C:/Users/agarcia/Desktop/CRM/brute_force/'
     # data_curve, optimal_params = \
     # fitting(res_path=res_path, data_path=data_path, metrics='mse',
     #         objective='curve')
