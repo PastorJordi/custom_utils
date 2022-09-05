@@ -16,22 +16,22 @@ from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
@@ -304,7 +304,7 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                 .groupby("binned_prior")["binned_prior"].count())
         for i_n, n in enumerate(nobs.isnull()):
             if n:
-                nobs[i_n] = switch[i_n]
+                nobs[nobs.index[i_n]] = switch[switch.index[i_n]]
         # fill where there are no CoM (instead it will be nan)
         nobs.loc[nobs.isna()] = (tmp.loc[(tmp.com == 0) &
                                          (tmp.binned_stim == i)]
@@ -875,7 +875,8 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/',
     ax[1].set_title('CDF')
 
 
-def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res):
+def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res, N=int(1e3),
+                  n=int(1e3)):
     a = 1  # bound evidence/action
     first_ev = [E[first_ind[i_t], i_t] for i_t in range(E.shape[1])]
     x = np.array(first_ev)
@@ -888,10 +889,16 @@ def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res):
     sinus = np.sum([np.sin(K*np.pi/a*(mu0-s0**2*M/(2*D))) *
                     np.sin(K*np.pi*x/a) *
                     np.exp(-(D+s0**2/2)*(K*np.pi/a)**2)
-                    for K in range(int(1e3))], axis=0)
+                    for K in range(int(N))], axis=0)
     pL = 2 / a * np.exp((2*x - (2*mu0 - s0**2+M/(2*D)) * M/(4*D)) - M**2/(4*D))\
         * sinus
-    # pS =
+    for k in range(n):
+        mean_1 = mu0 - s0**2*M/(2*D) + 2*k*a
+        std_1_2 = 2*D + s0**2
+        mean_2 = -mu0 + s0**2*M/(2*D) + 2*k*a
+        N1 = std_1_2*np.random.randn() + mean_1
+        N2 = std_1_2*np.random.randn() + mean_2
+        pS = np.exp((2*(x-mu0)+s0**2*M/(2*D)-M)*M/(4*D))*(N1 - N2)
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
