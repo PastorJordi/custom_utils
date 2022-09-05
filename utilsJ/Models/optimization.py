@@ -95,7 +95,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
-    for i in range(num_times_tr):
+    for i in range(num_times_tr):  # TODO: parallelize loop for cluster
         E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -115,12 +115,12 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     llk = []
     for i_com, com_bool in enumerate(com):
         if com_bool:
-            llk.append(prob_detected_com[i_com])
+            llk.append(prob_detected_com[i_com] + 1e-5)
         else:
-            llk.append(1-prob_detected_com[i_com])
+            llk.append(1-prob_detected_com[i_com] + 1e-5)
     llk = np.array(llk)
     llk_val = -np.sum(np.log(llk))
-    print(llk_val)
+    # print(llk_val)
     return llk_val
 
 
@@ -128,7 +128,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
 if __name__ == '__main__':
     optimization = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(1e1), all_trials=False)
+                                      num_tr_per_rat=int(1e3), all_trials=False)
     # p_t_aff = 10
     # p_t_eff = 6
     # p_t_a = 35
@@ -139,17 +139,21 @@ if __name__ == '__main__':
     # p_w_a = 0.03
     # p_a_noise = 0.06
     # p_w_updt = 0.1
-    array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0., 0.03, 0.06, 0.1))
+    array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0.3, 0.03, 0.06, 0.1))
+    scaled_params = np.repeat(0.5, len(array_params))
+    scaled_params[:2] *= 10
+    scaling_value = array_params/scaled_params
     # llk_val = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     #                          p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a,
     #                          p_a_noise, p_w_updt, num_times_tr=int(1e2),
     #                          detect_CoMs_th=5)
     if optimization:
-        optimizer = CMA(mean=array_params, sigma=1)
-        for gen in range(50):
+        optimizer = CMA(mean=scaled_params, sigma=1)
+        for gen in range(5):
             solutions = []
             for _ in range(optimizer.population_size):
                 params = optimizer.ask()
+                params *= scaling_value
                 p_t_aff = int(params[0])
                 p_t_eff = int(params[1])
                 p_t_a = int(params[2])

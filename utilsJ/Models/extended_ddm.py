@@ -657,6 +657,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
             t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+            t_updt = int(np.min((t_updt, len(velocities)-1)))
             motor_updt_time.append(t_updt)
             vel = velocities[t_updt]  # velocity at the timepoint
             acc = accelerations[t_updt]
@@ -1112,13 +1113,13 @@ def data_augmentation(stim, daf, sigma=0):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(2e6)
+    num_tr = int(2e4)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     shuffle = True
     simulate = True
-    parallel = True
+    parallel = False
     data_augment_factor = 10
     if simulate:
         if load_data:
