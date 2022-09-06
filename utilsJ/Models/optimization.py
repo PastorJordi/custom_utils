@@ -126,9 +126,9 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
 
 # --- MAIN
 if __name__ == '__main__':
-    optimization = True
+    optimization = False
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(1e3), all_trials=False)
+                                      num_tr_per_rat=int(1e4), all_trials=False)
     # p_t_aff = 10
     # p_t_eff = 6
     # p_t_a = 35
@@ -143,12 +143,18 @@ if __name__ == '__main__':
     scaled_params = np.repeat(0.5, len(array_params))
     scaled_params[:2] *= 10
     scaling_value = array_params/scaled_params
+    bounds = np.array(((5, 20), (3, 10), (20, 60), (0.05, 0.3), (0.05, 0.3),
+                      (0.005, 0.1), (0., 1), (0.005, 0.1), (0.05, 0.1),
+                      (0.05, 60)))
+    bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
+                              enumerate(bounds)])
     # llk_val = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     #                          p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a,
-    #                          p_a_noise, p_w_updt, num_times_tr=int(1e2),
+    #                          p_a_noise, p_w_updt, num_times_tr=int(1e1),
     #                          detect_CoMs_th=5)
     if optimization:
-        optimizer = CMA(mean=scaled_params, sigma=1)
+        optimizer = CMA(mean=scaled_params, sigma=0.5, bounds=bounds_scaled)
+        all_solutions = []
         for gen in range(5):
             solutions = []
             for _ in range(optimizer.population_size):
@@ -170,4 +176,7 @@ if __name__ == '__main__':
                                          num_times_tr=int(1e1),
                                          detect_CoMs_th=5)
                 solutions.append((params, llk_val))
+            all_solutions.append(solutions)
+            # if optimizer.should_stop():
+            #     break
             optimizer.tell(solutions)
