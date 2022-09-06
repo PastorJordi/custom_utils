@@ -19,6 +19,8 @@ from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -180,3 +182,5 @@ if __name__ == '__main__':
             if optimizer.should_stop():
                 break
             optimizer.tell(solutions)
+        np.savez(SV_FOLDER+'last_solution.npz', solutions)
+        np.savez(SV_FOLDER+'all_solutions.npz', solutions)
