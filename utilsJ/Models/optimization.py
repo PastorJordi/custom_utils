@@ -81,6 +81,12 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5):
     num_tr = stim.shape[1]
+    indx_sh = np.arange(len(zt))
+    np.random.shuffle(indx_sh)
+    stim = stim[:, indx_sh]
+    zt = zt[indx_sh]
+    coh = coh[indx_sh]
+    gt = gt[indx_sh]
     # num_tr = 5
     stim = stim[:, :int(num_tr)]
     zt = zt[:int(num_tr)]
