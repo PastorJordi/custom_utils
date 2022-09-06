@@ -80,6 +80,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
 def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5):
+    start = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
     np.random.shuffle(indx_sh)
@@ -129,6 +130,8 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     llk = np.array(llk)
     llk_val = -np.sum(np.log(llk))
     # print(llk_val)
+    end = time.time()
+    print(end - start)
     return llk_val
 
 
@@ -136,7 +139,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
 if __name__ == '__main__':
     optimization = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(1e4), all_trials=False)
+                                      num_tr_per_rat=int(2e3), all_trials=False)
     # p_t_aff = 10
     # p_t_eff = 6
     # p_t_a = 35
