@@ -8,17 +8,17 @@ Created on Mon Sep  5 11:29:19 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-import itertools
 import glob
 import time
 import sys
 from cmaes import CMA
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -126,7 +126,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
 
 # --- MAIN
 if __name__ == '__main__':
-    optimization = False
+    optimization = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
                                       num_tr_per_rat=int(1e4), all_trials=False)
     # p_t_aff = 10
@@ -153,13 +153,13 @@ if __name__ == '__main__':
     #                          p_a_noise, p_w_updt, num_times_tr=int(1e1),
     #                          detect_CoMs_th=5)
     if optimization:
-        optimizer = CMA(mean=scaled_params, sigma=0.5, bounds=bounds_scaled)
+        optimizer = CMA(mean=scaled_params, sigma=0.1, bounds=bounds_scaled)
         all_solutions = []
-        for gen in range(5):
+        for gen in range(50):
             solutions = []
             for _ in range(optimizer.population_size):
-                params = optimizer.ask()
-                params *= scaling_value
+                params_init = optimizer.ask()
+                params = params_init * scaling_value
                 p_t_aff = int(params[0])
                 p_t_eff = int(params[1])
                 p_t_a = int(params[2])
@@ -173,10 +173,10 @@ if __name__ == '__main__':
                 llk_val = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
                                          p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                                          p_t_a, p_w_a, p_a_noise, p_w_updt,
-                                         num_times_tr=int(1e1),
+                                         num_times_tr=int(1e2),
                                          detect_CoMs_th=5)
-                solutions.append((params, llk_val))
+                solutions.append((params_init, llk_val))
             all_solutions.append(solutions)
-            # if optimizer.should_stop():
-            #     break
+            if optimizer.should_stop():
+                break
             optimizer.tell(solutions)
