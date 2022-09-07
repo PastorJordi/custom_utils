@@ -15,18 +15,18 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import seaborn as sns
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
 
@@ -301,6 +301,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
     for i in range(num_times_tr):  # TODO: parallelize loop for cluster
+        start_simu = time.time()
         E, A, com_model, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -316,6 +317,8 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                 stim_res=stim_res, all_trajs=all_trajs)
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
+        end_simu = time.time()
+        print(end_simu - start_simu)
     if rms_comparison:
         diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                            first_ind=first_ind, data_path=DATA_FOLDER)
@@ -338,7 +341,7 @@ if __name__ == '__main__':
     rms_comparison = True
     plotting = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(2e3), all_trials=False)
+                                      num_tr_per_rat=int(6e3), all_trials=False)
     # p_t_aff = 7
     # p_t_eff = 7
     # p_t_a = 40
@@ -370,7 +373,7 @@ if __name__ == '__main__':
         llk_list = []
         optimizer = CMA(mean=scaled_params, sigma=0.3, bounds=bounds_scaled)
         all_solutions = []
-        for gen in range(5):
+        for gen in range(50):
             solutions = []
             for it in range(optimizer.population_size):
                 print('Generation {}, iteration {}'.format(gen+1, it+1))
@@ -390,9 +393,10 @@ if __name__ == '__main__':
                     run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
                                    p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                                    p_t_a, p_w_a, p_a_noise, p_w_updt,
-                                   num_times_tr=int(5), detect_CoMs_th=5,
+                                   num_times_tr=int(1e2), detect_CoMs_th=5,
                                    rms_comparison=rms_comparison)
                 solutions.append((params_init, llk_val))
+                np.save(SV_FOLDER+'last_solutions.npy', solutions)
                 if rms_comparison:
                     rms_list.append(diff_rms)
                     llk_list.append(llk_val)
@@ -403,7 +407,6 @@ if __name__ == '__main__':
             if optimizer.should_stop():
                 break
             optimizer.tell(solutions)
-            np.save(SV_FOLDER+'last_solution.npy', solutions)
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if rms_comparison and plotting:
