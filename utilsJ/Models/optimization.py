@@ -397,7 +397,7 @@ if __name__ == '__main__':
                     rms_list.append(diff_rms)
                     llk_list.append(llk_val)
             llk_mean_val = np.mean([sol[1] for sol in solutions])
-            print('At generation {}:'.format(gen))
+            print('At generation {}:'.format(gen+1))
             print('mean llk: ' + str(llk_mean_val))
             all_solutions.append(solutions)
             if optimizer.should_stop():
