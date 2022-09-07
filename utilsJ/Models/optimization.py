@@ -12,15 +12,19 @@ import glob
 import time
 import sys
 from cmaes import CMA
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+from skimage.metrics import structural_similarity as ssim
+import seaborn as sns
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
+from utilsJ.Behavior.plotting import binned_curve
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+BINS = np.arange(1, 320, 20)
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -77,10 +81,197 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com
 
 
+def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=False,
+            detected_com=None, first_ind=None, p_t_eff=None,
+            data_path='C:/Users/Alexandre/Desktop/CRM/Alex/paper/results/',
+            metrics='mse', objective='curve', bin_size=20, det_th=5,
+            plot=False):
+    data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
+    data_mat_norm = data_mat / np.nanmax(data_mat)
+    data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
+    tmp_data = data_curve['tmp_bin']
+    data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
+    nan_penalty = 0.3
+    w_rms = 0.5
+    if results:
+        files = glob.glob(res_path+'*.npz')
+        diff_mn = []
+        diff_rms_mat = []
+        diff_norm_mat = []
+        curve_total = []
+        rt_vals = []
+        x_val = []
+        max_ssim = metrics == 'ssim'
+        file_index = []
+        for i_f, f in enumerate(files):
+            with np.load(f, allow_pickle=True) as data:
+                if objective == 'matrix':
+                    matrix_list = data.get('pcom_matrix')
+                    for mat in matrix_list:
+                        if metrics == 'mse' and np.mean(mat) > np.mean(data_mat):
+                            mat_norm = mat / np.nanmax(mat)
+                            diff_norm = np.sqrt(np.nansum(np.subtract(
+                                    mat_norm, data_mat_norm) ** 2))
+                            diff_rms = np.sqrt(np.nansum(np.subtract(
+                                    mat, data_mat) ** 2))
+                            diff = diff_norm / np.mean(diff_norm) + diff_rms /\
+                                np.mean(diff_rms)
+                            diff_mn.append(diff)
+                            max_ssim = False
+                        if metrics == 'ssim':
+                            ssim_val = ssim(mat, data_mat) if not \
+                                np.isnan(ssim(mat, data_mat))\
+                                else 0
+                            diff_mn.append(ssim_val)
+                            max_ssim = True
+                else:
+                    rt_vals_pcom = data.get('xpos_rt_pcom')
+                    rt_vals_pcom = [rt.to_numpy().astype(int) for
+                                    rt in rt_vals_pcom]
+                    median_vals_pcom = data.get('median_pcom_rt')
+                    median_vals_pcom = [pcom_series.to_numpy() for pcom_series
+                                        in median_vals_pcom]
+                    x_val_at_updt = data.get('x_val_at_updt_mat')
+                    perc_list = []
+                    for i_pcom, med_pcom in enumerate(median_vals_pcom):
+                        curve_total.append(med_pcom)
+                        rt_vals.append(rt_vals_pcom[i_pcom])
+                        x_val.append(x_val_at_updt[i_pcom])
+                        file_index.append(i_f)
+        for curve_ind, _ in enumerate(rt_vals):
+            x_perc = np.nanmean(np.abs(x_val[curve_ind]) > det_th)
+            x_perc = 1
+            perc_list.append(x_perc)
+            tmp_simul =\
+                np.array((rt_vals[curve_ind])/bin_size,
+                         dtype=int)
+            if len(rt_vals[curve_ind]) == 0 or np.isnan(x_perc):
+                diff_mn.append(1e3)
+                diff_norm_mat.append(1e3)
+                diff_rms_mat.append(1e3)
+            else:
+                curve_tmp = curve_total[curve_ind]*x_perc + 1e-6
+                curve_norm = curve_tmp / np.nanmax(curve_tmp)
+                # diff_norm = np.subtract(curve_norm,
+                #                         np.array(data_curve_norm[tmp_simul])) ** 2
+                diff_norm = np.corrcoef(curve_norm,
+                                        data_curve_norm[tmp_simul].values)
+                diff_norm = diff_norm[0, 1] if not np.isnan(
+                    diff_norm[0, 1]) else -1
+                num_nans = len(tmp_data) - len(tmp_simul)
+                # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
+                diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
+                window = np.exp(-np.arange(len(tmp_simul))**1/40)
+                window = 1
+                diff_rms = np.subtract(curve_tmp,
+                                       np.array(data_curve['pcom']
+                                                [tmp_simul]) *
+                                       window) ** 2
+                diff_rms_mat.append(np.sqrt(np.nansum(diff_rms)) +
+                                    num_nans * nan_penalty)
+                diff = (1 - w_rms)*(1 - diff_norm) + w_rms*np.sqrt(np.nansum(
+                    diff_rms)) + num_nans * nan_penalty
+                diff_mn.append(diff) if not np.isnan(diff) else diff_mn.append(1e3)
+                max_ssim = False
+        if plot:
+            plt.figure()
+            plt.plot(curve_total[np.argmin(diff_rms_mat)],
+                     label='min rms')
+            plt.plot(curve_total[np.argmin(diff_norm_mat)],
+                     label='min norm')
+            plt.plot(curve_total[np.argmin(diff_mn)],
+                     label='min joined')
+            # plt.plot(data_curve_norm, label='norm data')
+            plt.plot(data_curve['pcom'], label='data')
+            plt.ylabel('pCoM')
+            plt.legend()
+        if max_ssim:
+            ind_min = np.argmax(diff_mn)
+        else:
+            ind_sorted = np.argsort(np.abs(diff_rms_mat))
+            ind_min = ind_sorted[40]
+            # second_in = (diff_mn*(diff_mn!=diff_mn[ind_min])).argmin()
+        optimal_params = {}
+        file_index = np.array(file_index)
+        min_num = np.where(file_index == file_index[ind_min])[0][0]
+        with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
+            for k in data.files:
+                if k == 'rt_bins_all':
+                    optimal_params[k] = data[k]
+                else:
+                    optimal_params[k] = data[k][ind_min - min_num]
+        if plot:
+            # For the best 10 configurations:
+            plt.figure()
+            plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
+                     linestyle='', marker='o')
+            for i in range(10):
+                ind_min = ind_sorted[i]
+                optimal_params = {}
+                file_index = np.array(file_index)
+                min_num = np.where(file_index == file_index[ind_min])[0][0]
+                with np.load(files[file_index[ind_min]], allow_pickle=True) as data:
+                    for k in data.files:
+                        if k == 'rt_bins_all':
+                            optimal_params[k] = data[k]
+                        else:
+                            optimal_params[k] = data[k][ind_min - min_num]
+                plt.plot(optimal_params['xpos_rt_pcom'],
+                         optimal_params['median_pcom_rt'].values,
+                         label=f'simul_{i}')
+                plt.xlabel('RT (ms)')
+                plt.ylabel('pCoM - detected')
+                plt.legend()
+            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
+            sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
+            ax[0].set_title('Simulation')
+            sns.heatmap(data_mat, ax=ax[1])
+            ax[1].set_title('Data')
+            plt.figure()
+            plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
+                     linestyle='', marker='o')
+            plt.plot(optimal_params['xpos_rt_pcom'],
+                     optimal_params['median_pcom_rt'].values,
+                     label='simul')
+            plt.xlabel('RT (ms)')
+            plt.ylabel('pCoM - detected')
+            plt.legend()
+            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
+            ax[0].plot(optimal_params['rt_bins_all'][0][1::],
+                       optimal_params['rt_vals_all'])
+            ax[0].set_title('RT distribution')
+            ax[0].set_xlabel('RT (ms)')
+            cdf = np.cumsum(optimal_params['rt_vals_all']) /\
+                np.sum(optimal_params['rt_vals_all'])
+            ax[1].plot(optimal_params['rt_bins_all'][0][1::], cdf)
+            ax[1].set_xlabel('RT (ms)')
+            ax[1].set_title('CDF')
+    else:
+        sound_len = first_ind-fixation+p_t_eff
+        df_curve = {'detected_pcom': detected_com, 'sound_len': sound_len}
+        df_curve = pd.DataFrame(df_curve)
+        rt_vals, median_pcom, _ =\
+            binned_curve(df_curve, 'detected_pcom', 'sound_len', xpos=20,
+                         bins=BINS,
+                         return_data=True)
+        if len(rt_vals) == 0:
+            diff_rms_mat.append(1e3)
+        else:
+            tmp_simul = np.array((rt_vals)/bin_size, dtype=int)
+            diff_rms = np.subtract(median_pcom,
+                                   np.array(data_curve['pcom']
+                                            [tmp_simul])) ** 2
+            num_nans = len(tmp_data) - len(tmp_simul)
+            diff_rms_mat = np.sqrt(np.nansum(diff_rms))\
+                + num_nans * nan_penalty
+    return diff_rms_mat
+
+
 def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
-                   p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5):
-    start = time.time()
+                   p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
+                   rms_comparison=False):
+    start_llk = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
     np.random.shuffle(indx_sh)
@@ -101,6 +292,8 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     data_augment_factor = 10
     stim = data_augmentation(stim=stim, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
+    global fixation
+    fixation = int(300 / stim_res)
     stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
@@ -120,6 +313,9 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                 stim_res=stim_res, all_trajs=all_trajs)
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
+    if rms_comparison:
+        diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
+                           first_ind=first_ind)
     prob_detected_com = np.mean(detected_com_mat, axis=1)
     llk = []
     for i_com, com_bool in enumerate(com):
@@ -130,43 +326,52 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     llk = np.array(llk)
     llk_val = -np.sum(np.log(llk))
     # print(llk_val)
-    end = time.time()
-    print(end - start)
-    return llk_val
+    end_llk = time.time()
+    print(end_llk - start_llk)
+    if rms_comparison:
+        return llk_val, diff_rms
+    else:
+        return llk_val, None
 
 
 # --- MAIN
 if __name__ == '__main__':
+    plt.close('all')
     optimization = True
+    rms_comparison = True
+    plotting = False
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
                                       num_tr_per_rat=int(2e3), all_trials=False)
-    # p_t_aff = 10
-    # p_t_eff = 6
-    # p_t_a = 35
-    # p_w_zt = 0.15
+    # p_t_aff = 7
+    # p_t_eff = 7
+    # p_t_a = 40
+    # p_w_zt = 0.25
     # p_w_stim = 0.15
-    # p_e_noise = 0.05
+    # p_e_noise = 0.04
     # p_com_bound = 0.
-    # p_w_a = 0.03
-    # p_a_noise = 0.06
-    # p_w_updt = 0.1
+    # p_w_a = 0.02
+    # p_a_noise = 0.09
+    # p_w_updt = 3
     array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0.3, 0.03, 0.06, 0.1))
-    scaled_params = np.repeat(0.5, len(array_params))
-    scaled_params[:2] *= 10
+    scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
     bounds = np.array(((5, 20), (3, 10), (20, 60), (0.05, 0.3), (0.05, 0.3),
                       (0.005, 0.1), (0., 1), (0.005, 0.1), (0.05, 0.1),
                       (0.05, 60)))
     bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
                               enumerate(bounds)])
-    # llk_val = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
-    #                          p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a,
-    #                          p_a_noise, p_w_updt, num_times_tr=int(1e1),
-    #                          detect_CoMs_th=5)
+    # llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+    #                                    p_e_noise, p_com_bound, p_t_aff,
+    #                                    p_t_eff, p_t_a, p_w_a, p_a_noise,
+    #                                    p_w_updt, num_times_tr=int(1e1),
+    #                                    detect_CoMs_th=5)
+    # print(llk_val)
+    rms_list = []
+    llk_list = []
     if optimization:
         optimizer = CMA(mean=scaled_params, sigma=0.1, bounds=bounds_scaled)
         all_solutions = []
-        for gen in range(50):
+        for gen in range(1):
             solutions = []
             for _ in range(optimizer.population_size):
                 params_init = optimizer.ask()
@@ -181,15 +386,25 @@ if __name__ == '__main__':
                 p_w_a = params[7]
                 p_a_noise = params[8]
                 p_w_updt = params[9]
-                llk_val = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
-                                         p_e_noise, p_com_bound, p_t_aff, p_t_eff,
-                                         p_t_a, p_w_a, p_a_noise, p_w_updt,
-                                         num_times_tr=int(1e2),
-                                         detect_CoMs_th=5)
+                llk_val, diff_rms =\
+                    run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+                                   p_e_noise, p_com_bound, p_t_aff, p_t_eff,
+                                   p_t_a, p_w_a, p_a_noise, p_w_updt,
+                                   num_times_tr=int(2e1), detect_CoMs_th=5,
+                                   rms_comparison=rms_comparison)
                 solutions.append((params_init, llk_val))
-            all_solutions.append(solutions)
+                if rms_comparison:
+                    rms_list.append(diff_rms)
+                    llk_list.append(llk_val)
+            # all_solutions.append(solutions)
             if optimizer.should_stop():
                 break
             optimizer.tell(solutions)
         np.savez(SV_FOLDER+'last_solution.npz', solutions)
         np.savez(SV_FOLDER+'all_solutions.npz', solutions)
+        np.savez(SV_FOLDER+'all_rms.npz', rms_list)
+    if rms_comparison and plotting:
+        plt.figure()
+        plt.scatter(rms_list, llk_list)
+        plt.xlabel('RMSE')
+        plt.ylabel('Log-likelihood')
