@@ -962,7 +962,7 @@ if __name__ == '__main__':
             if new_sample:
                 stim, zt, coh, gt, com =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(7e3),
+                                        num_tr_per_rat=int(1e4),
                                         after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
@@ -989,16 +989,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 4
-            p_t_eff = 9
-            p_t_a = 30
-            p_w_zt = 0.2
-            p_w_stim = 0.15
-            p_e_noise = 0.06
-            p_com_bound = 0.01
-            p_w_a = 0.02
-            p_a_noise = 0.05
-            p_w_updt = 5
+            p_t_aff = 7
+            p_t_eff = 4
+            p_t_a = 27
+            p_w_zt = 0.166
+            p_w_stim = 0.08
+            p_e_noise = 0.03477
+            p_com_bound = 0.2822
+            p_w_a = 0.037
+            p_a_noise = 0.0686
+            p_w_updt = 0.08
             compute_trajectories = True
             plot = True
             all_trajs = True

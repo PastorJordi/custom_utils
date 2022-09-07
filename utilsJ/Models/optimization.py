@@ -301,7 +301,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
     for i in range(num_times_tr):  # TODO: parallelize loop for cluster
-        E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+        E, A, com_model, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
             rt_vals, rt_bins, tr_index =\
@@ -365,13 +365,15 @@ if __name__ == '__main__':
     # print(llk_val)
     # TODO: paralelize different initial points
     if optimization:
+        print('Start optimization')
         rms_list = []
         llk_list = []
-        optimizer = CMA(mean=scaled_params, sigma=0.1, bounds=bounds_scaled)
+        optimizer = CMA(mean=scaled_params, sigma=0.3, bounds=bounds_scaled)
         all_solutions = []
-        for gen in range(40):
+        for gen in range(50):
             solutions = []
-            for _ in range(optimizer.population_size):
+            for it in range(optimizer.population_size):
+                print('Generation {}, iteration {}'.format(gen+1, it+1))
                 params_init = optimizer.ask()
                 params = params_init * scaling_value
                 p_t_aff = int(params[0])
@@ -401,9 +403,9 @@ if __name__ == '__main__':
             if optimizer.should_stop():
                 break
             optimizer.tell(solutions)
-            np.savez(SV_FOLDER+'last_solution.npz', solutions)
-            np.savez(SV_FOLDER+'all_solutions.npz', all_solutions)
-            np.savez(SV_FOLDER+'all_rms.npz', rms_list)
+            np.save(SV_FOLDER+'last_solution.npy', solutions)
+            np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
+            np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if rms_comparison and plotting:
         plt.figure()
         plt.scatter(rms_list, llk_list)
