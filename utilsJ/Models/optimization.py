@@ -341,7 +341,7 @@ if __name__ == '__main__':
     rms_comparison = True
     plotting = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(6e3), all_trials=False)
+                                      num_tr_per_rat=int(2e3), all_trials=False)
     # p_t_aff = 7
     # p_t_eff = 7
     # p_t_a = 40
@@ -393,7 +393,7 @@ if __name__ == '__main__':
                     run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
                                    p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                                    p_t_a, p_w_a, p_a_noise, p_w_updt,
-                                   num_times_tr=int(1e2), detect_CoMs_th=5,
+                                   num_times_tr=int(5e1), detect_CoMs_th=5,
                                    rms_comparison=rms_comparison)
                 solutions.append((params_init, llk_val))
                 np.save(SV_FOLDER+'last_solutions.npy', solutions)
