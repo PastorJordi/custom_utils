@@ -338,7 +338,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
 if __name__ == '__main__':
     plt.close('all')
     optimization = True
-    rms_comparison = True
+    rms_comparison = False
     plotting = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
                                       num_tr_per_rat=int(2e3), all_trials=False)
