@@ -14,18 +14,18 @@ import sys
 from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import seaborn as sns
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
@@ -146,7 +146,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
             x_perc = 1
             perc_list.append(x_perc)
             tmp_simul =\
-                np.array((rt_vals[curve_ind])/bin_size,
+                np.array((rt_vals[curve_ind])/(bin_size-1),
                          dtype=int)
             if len(rt_vals[curve_ind]) == 0 or np.isnan(x_perc):
                 diff_mn.append(1e3)
@@ -300,8 +300,9 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
+    diff_rms_list = []
     for i in range(num_times_tr):  # TODO: parallelize loop for cluster
-        start_simu = time.time()
+        # start_simu = time.time()
         E, A, com_model, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -317,11 +318,12 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                 stim_res=stim_res, all_trajs=all_trajs)
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
-        end_simu = time.time()
-        print(end_simu - start_simu)
-    if rms_comparison:
-        diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
-                           first_ind=first_ind, data_path=DATA_FOLDER)
+        # end_simu = time.time()
+        # print(end_simu - start_simu)
+        if rms_comparison:
+            diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
+                               first_ind=first_ind, data_path=DATA_FOLDER)
+            diff_rms_list.append(diff_rms)
     prob_detected_com = np.mean(detected_com_mat, axis=1)
     com = np.array(com, dtype=float)
     llk = com * prob_detected_com + (1 - com) * (1 - prob_detected_com) + 1e-5
@@ -329,17 +331,55 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     end_llk = time.time()
     print(end_llk - start_llk)
     if rms_comparison:
-        return llk_val, diff_rms
+        diff_rms_mean = np.mean(diff_rms_list)
+        return llk_val, diff_rms_mean
     else:
         return llk_val, None
+
+
+def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
+                    n_params=10, save_path=SV_FOLDER):
+    rms_comparison = True
+    rms_list = []
+    llk_list = []
+    for i in range(1, int(iterations)+1):
+        params = (mean + sigma*np.random.randn(n_params)) * scaling_value
+        p_t_aff = int(params[0])
+        p_t_eff = int(params[1])
+        p_t_a = int(params[2])
+        p_w_zt = params[3]
+        p_w_stim = params[4]
+        p_e_noise = params[5]
+        p_com_bound = params[6]
+        p_w_a = params[7]
+        p_a_noise = params[8]
+        p_w_updt = params[9]
+        llk_val, diff_rms =\
+            run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+                           p_e_noise, p_com_bound, p_t_aff, p_t_eff,
+                           p_t_a, p_w_a, p_a_noise, p_w_updt,
+                           num_times_tr=int(1e2), detect_CoMs_th=5,
+                           rms_comparison=rms_comparison)
+        llk_list.append(llk_val)
+        rms_list.append(diff_rms)
+        if i % 3 == 0:
+            plt.figure()
+            plt.title('{} iterations'.format(i))
+            plt.scatter(rms_list, llk_list)
+            plt.xlabel('RMSE')
+            plt.ylabel('Log-likelihood')
+            plt.savefig(SV_FOLDER+'/figures/llk_vs_rms.png', dpi=400,
+                        bbox_inches='tight')
+            plt.close()
 
 
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = True
+    optimization = False
     rms_comparison = False
     plotting = True
+    plot_rms_llk = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
                                       num_tr_per_rat=int(2e3), all_trials=False)
     # p_t_aff = 7
@@ -414,6 +454,12 @@ if __name__ == '__main__':
         plt.scatter(rms_list, llk_list)
         plt.xlabel('RMSE')
         plt.ylabel('Log-likelihood')
+    if plot_rms_llk:
+        mean = 1
+        sigma = 0.3
+        iterations = 40
+        plot_rms_vs_llk(mean=mean, sigma=sigma, zt=zt, stim=stim,
+                        iterations=iterations, scaling_value=scaling_value)
 
 
 # RT < p_t_aff : proactive trials

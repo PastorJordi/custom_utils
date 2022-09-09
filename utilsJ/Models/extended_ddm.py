@@ -15,8 +15,8 @@ import sys
 from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
@@ -25,15 +25,15 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
 
 
@@ -424,16 +424,16 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     coh = np.empty((0, ))
     gt = np.empty((0, ))
     sound_len = np.empty((0, ))
+    decision = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
         end = time.time()
-        # max_num_tr = max(num_tr_per_rat, len(df))
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
-            selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
-                                             size=(num_tr_per_rat), replace=False)
-            indx = indx_prev_error[selected_indx]
+            # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
+            #                                  size=(num_tr_per_rat), replace=False)
+            indx = indx_prev_error  # [selected_indx]
         else:
             indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
                                     replace=False)
@@ -441,6 +441,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         stim_tmp = np.array([stim for stim in df.res_sound])
         coh_mat = np.array(df.coh2)
         com_tmp = df.CoM_sugg.values
+        decision_tmp = np.array(df.R_response) * 2 - 1
         sound_len_tmp = np.array(df.sound_len)
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
@@ -448,6 +449,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         coh = np.concatenate((coh, coh_mat[indx]))
         com = np.concatenate((com, com_tmp[indx]))
         gt = np.concatenate((gt, gt_tmp[indx]))
+        decision = np.concatenate((decision, decision_tmp[indx]))
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
         end = time.time()
         print(f)
@@ -455,6 +457,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
+    energy_vs_time(stim, coh, sound_len, com, decision)
     df_curve = {'CoM': com, 'sound_len': sound_len}
     df_curve = pd.DataFrame(df_curve)
     xpos = int(np.diff(BINS)[0])
@@ -467,7 +470,8 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
-    return stim, prior, coh, gt, com  # , matrix
+    com = com.astype(int)
+    return stim, prior, coh, gt, com, decision  # , matrix
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -736,6 +740,7 @@ def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res, N=int(1e3),
         N1 = std_1_2*np.random.randn() + mean_1
         N2 = std_1_2*np.random.randn() + mean_2
         pS = np.exp((2*(x-mu0)+s0**2*M/(2*D)-M)*M/(4*D))*(N1 - N2)
+    return pL, pS
 
 
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
@@ -945,13 +950,53 @@ def data_augmentation(stim, daf, sigma=0):
     return augm_stim
 
 
+def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
+    # energy = (np.subtract(stim.T, coh))*decision
+    # energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
+    #     *decision[com.astype(bool)]
+    energy = stim.T*decision
+    energy_com = stim[com.astype(bool)].T*decision[com.astype(bool)]
+    normal_sound = np.mean(stim.T*decision, axis=0)
+    normal_sound_com = np.mean(stim[com.astype(bool)].T*
+                               decision[com.astype(bool)], axis=0)
+    mean_energy = np.nanmean(energy, axis=1)
+    mean_energy_com = np.nanmean(energy_com, axis=1)
+    err_energy = np.sqrt(np.nanstd(energy, axis=1)/stim.shape[0])
+    err_energy_com = np.sqrt(np.nanstd(energy_com, axis=1)/stim.shape[0])
+    time_sound_onset = np.arange(0, 50*stim.shape[1], 50)
+    # bins_movement_onset = - sound_len
+    if plot:
+        plt.figure()
+        plt.errorbar(time_sound_onset, mean_energy, err_energy, label='All trials')
+        plt.errorbar(time_sound_onset, mean_energy_com, err_energy_com, label='CoM')
+        plt.legend()
+        plt.xlabel('Time from stimulus onset (ms)')
+        plt.ylabel('Energy (a.u.)')
+        # which part of the mean stimuli is more important:
+        fig, ax = plt.subplots(1)
+        df_curve = {'sound': normal_sound, 'sound_len': sound_len}
+        df_curve = pd.DataFrame(df_curve)
+        df_curve_com = {'sound_com': normal_sound_com, 'sound_len':
+                        sound_len[com.astype(bool)]}
+        df_curve_com = pd.DataFrame(df_curve_com)
+        binned_curve(df_curve, 'sound', 'sound_len', xpos=20,
+                     bins=BINS,
+                     return_data=False, ax=ax)
+        binned_curve(df_curve_com, 'sound_com', 'sound_len', xpos=20,
+                     bins=BINS,
+                     return_data=False, ax=ax)
+        ax.set_xlabel('RT (ms)')
+        ax.set_ylabel('Mean absolute value stimuli (a.u.)')
+        # Resulaj
+
+
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(2e6)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -960,7 +1005,7 @@ if __name__ == '__main__':
     if simulate:
         if load_data:
             if new_sample:
-                stim, zt, coh, gt, com =\
+                stim, zt, coh, gt, com, decision =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True)
@@ -989,16 +1034,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 7
-            p_t_eff = 4
-            p_t_a = 27
-            p_w_zt = 0.166
-            p_w_stim = 0.08
-            p_e_noise = 0.03477
-            p_com_bound = 0.2822
-            p_w_a = 0.037
-            p_a_noise = 0.0686
-            p_w_updt = 0.08
+            p_t_aff = 13
+            p_t_eff = 9
+            p_t_a = 39
+            p_w_zt = 0.25144
+            p_w_stim = 0.2361
+            p_e_noise = 0.04129
+            p_com_bound = 0.3773
+            p_w_a = 0.022
+            p_a_noise = 0.077
+            p_w_updt = 0.25
             compute_trajectories = True
             plot = True
             all_trajs = True
