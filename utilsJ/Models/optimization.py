@@ -14,18 +14,18 @@ import sys
 from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import seaborn as sns
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
@@ -40,6 +40,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     com = np.empty((0, ))
     coh = np.empty((0, ))
     gt = np.empty((0, ))
+    pright = np.empty((0, ))
     sound_len = np.empty((0, ))
     for f in files:
         start_1 = time.time()
@@ -67,11 +68,13 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
         com_tmp = df.CoM_sugg.values
         sound_len_tmp = np.array(df.sound_len)
         gt_tmp = np.array(df.rewside) * 2 - 1
+        pright_tmp = np.array(df.R_response)
         prior = np.concatenate((prior, prior_tmp[indx]))
         stim = np.concatenate((stim, stim_tmp[indx, :]))
         coh = np.concatenate((coh, coh_mat[indx]))
         com = np.concatenate((com, com_tmp[indx]))
         gt = np.concatenate((gt, gt_tmp[indx]))
+        pright = np.concatenate((pright, pright_tmp[indx]))
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
         end = time.time()
         print(f)
@@ -81,7 +84,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     print('Ended loading data')
     stim = stim.T
     zt = prior
-    return stim, zt, coh, gt, com
+    return stim, zt, coh, gt, com, pright
 
 
 def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=False,
@@ -270,7 +273,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
     return diff_rms_mat
 
 
-def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
+def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
                    rms_comparison=False):
@@ -300,6 +303,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
     stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
     detected_com_mat = np.zeros((num_tr, num_times_tr))
+    pright_mat = np.zeros((num_tr, num_times_tr))
     diff_rms_list = []
     for i in range(num_times_tr):  # TODO: parallelize loop for cluster
         # start_simu = time.time()
@@ -318,6 +322,7 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                 stim_res=stim_res, all_trajs=all_trajs)
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
+        pright_mat[:, i] = (resp_fin + 1)/2
         # end_simu = time.time()
         # print(end_simu - start_simu)
         if rms_comparison:
@@ -325,9 +330,12 @@ def run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim, p_e_noise,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     prob_detected_com = np.mean(detected_com_mat, axis=1)
+    prob_right = np.mean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
-    llk = com * prob_detected_com + (1 - com) * (1 - prob_detected_com) + 1e-5
-    llk_val = -np.sum(np.log(llk))
+    llk_com = com * prob_detected_com + (1 - com) * (1 - prob_detected_com)\
+        + 1e-5
+    llk_right = pright * prob_right + (1 - pright) * (1 - prob_right) + 1e-5
+    llk_val = -np.sum(np.log(llk_com) + np.log(llk_right))
     end_llk = time.time()
     print(end_llk - start_llk)
     if rms_comparison:
@@ -376,13 +384,15 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = False
+    optimization = True
     rms_comparison = False
     plotting = True
     plot_rms_llk = False
-    single_run = True
-    stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
-                                      num_tr_per_rat=int(2e3), all_trials=False)
+    single_run = False
+    stim, zt, coh, gt, com, pright = get_data(dfpath=DATA_FOLDER,
+                                              after_correct=True,
+                                              num_tr_per_rat=int(2e3),
+                                              all_trials=False)
     array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0.3, 0.03, 0.06, 0.1))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
@@ -402,10 +412,11 @@ if __name__ == '__main__':
         p_w_a = 0.03
         p_a_noise = 0.06
         p_w_updt = 20
-        llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+        llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, pright,
+                                           p_w_zt, p_w_stim,
                                            p_e_noise, p_com_bound, p_t_aff,
                                            p_t_eff, p_t_a, p_w_a, p_a_noise,
-                                           p_w_updt, num_times_tr=int(1),
+                                           p_w_updt, num_times_tr=int(1e1),
                                            detect_CoMs_th=5, rms_comparison=True)
         print(llk_val)
     # TODO: paralelize different initial points
