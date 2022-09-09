@@ -424,7 +424,7 @@ if __name__ == '__main__':
         print('Start optimization')
         rms_list = []
         llk_list = []
-        optimizer = CMA(mean=scaled_params, sigma=0.3, bounds=bounds_scaled)
+        optimizer = CMA(mean=scaled_params, sigma=0.2, bounds=bounds_scaled)
         all_solutions = []
         for gen in range(50):
             solutions = []
@@ -446,7 +446,7 @@ if __name__ == '__main__':
                     run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
                                    p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                                    p_t_a, p_w_a, p_a_noise, p_w_updt,
-                                   num_times_tr=int(5e1), detect_CoMs_th=5,
+                                   num_times_tr=int(1e2), detect_CoMs_th=5,
                                    rms_comparison=rms_comparison)
                 solutions.append((params_init, llk_val))
                 np.save(SV_FOLDER+'last_solutions.npy', solutions)
