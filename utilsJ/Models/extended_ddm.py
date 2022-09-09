@@ -15,6 +15,7 @@ import sys
 from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
+from scipy.stats import sem
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -951,13 +952,13 @@ def data_augmentation(stim, daf, sigma=0):
 
 
 def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
-    # energy = (np.subtract(stim.T, coh))*decision
-    # energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
-    #     *decision[com.astype(bool)]
-    energy = stim.T*decision
-    energy_com = stim[com.astype(bool)].T*decision[com.astype(bool)]
+    energy = (np.subtract(stim.T, coh))*decision
+    energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
+        * (-1) * decision[com.astype(bool)]
+    # energy = stim.T*decision
+    # energy_com = stim[com.astype(bool)].T*(-1)*decision[com.astype(bool)]
     normal_sound = np.mean(stim.T*decision, axis=0)
-    normal_sound_com = np.mean(stim[com.astype(bool)].T*
+    normal_sound_com = np.mean(stim[com.astype(bool)].T *
                                decision[com.astype(bool)], axis=0)
     mean_energy = np.nanmean(energy, axis=1)
     mean_energy_com = np.nanmean(energy_com, axis=1)
@@ -965,6 +966,40 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     err_energy_com = np.sqrt(np.nanstd(energy_com, axis=1)/stim.shape[0])
     time_sound_onset = np.arange(0, 50*stim.shape[1], 50)
     # bins_movement_onset = - sound_len
+    bins_rt = np.arange(0, 501, 50)
+    df_curve = {'sound_len': sound_len}
+    df_curve = pd.DataFrame(df_curve)
+    binned_rt = pd.cut(df_curve['sound_len'], bins=bins_rt,
+                       labels=False)
+    energy_to_plot = energy[binned_rt[binned_rt >= 0].astype(int),
+                            np.arange(len(binned_rt[binned_rt >= 0]))]
+    fig, ax = plt.subplots(1)
+    df_curve = {'energy': energy_to_plot,
+                'sound_len': -binned_rt[binned_rt >= 0]*50}
+    df_curve = pd.DataFrame(df_curve)
+    df_curve = df_curve.dropna()
+    bins_rt_neg = np.arange(-500, 1, 50)
+    binned_curve(df_curve, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                 bins=bins_rt_neg,
+                 return_data=False, errorbar_kw={'label': 'All trials'},
+                 ax=ax)
+    df_curve_com = {'sound_len': sound_len[com.astype(bool)]}
+    df_curve_com = pd.DataFrame(df_curve_com)
+    df_curve_com = df_curve_com.dropna()
+    binned_com_rt = pd.cut(df_curve_com['sound_len'], bins=bins_rt,
+                           labels=False)
+    energy_to_plot_com = energy_com[binned_com_rt[binned_com_rt >= 0].astype(int),
+                                    np.arange(len(
+                                        binned_com_rt[binned_com_rt >= 0]))]
+    df_curve_com = {'energy': energy_to_plot_com,
+                    'sound_len': -binned_com_rt[binned_com_rt >= 0]*50}
+    df_curve_com = pd.DataFrame(df_curve_com)
+    df_curve_com = df_curve_com.dropna()
+    binned_curve(df_curve_com, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                 bins=bins_rt_neg,
+                 return_data=False, errorbar_kw={'label': 'CoM'}, ax=ax)
+    ax.set_xlabel('Time from movement onset (ms)')
+    ax.set_ylabel('Energy (a.u.)')
     if plot:
         plt.figure()
         plt.errorbar(time_sound_onset, mean_energy, err_energy, label='All trials')
@@ -994,9 +1029,9 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
 if __name__ == '__main__':
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(2e6)
+    num_tr = int(15e4)
     load_data = True
-    new_sample = True
+    new_sample = False
     single_run = True
     shuffle = True
     simulate = True
@@ -1034,16 +1069,16 @@ if __name__ == '__main__':
             stim_res = 1
 
         if single_run:
-            p_t_aff = 13
-            p_t_eff = 9
-            p_t_a = 39
-            p_w_zt = 0.25144
-            p_w_stim = 0.2361
-            p_e_noise = 0.04129
-            p_com_bound = 0.3773
-            p_w_a = 0.022
-            p_a_noise = 0.077
-            p_w_updt = 0.25
+            p_t_aff = 7
+            p_t_eff = 7
+            p_t_a = 40
+            p_w_zt = 0.27
+            p_w_stim = 0.2
+            p_e_noise = 0.04
+            p_com_bound = 0.
+            p_w_a = 0.02
+            p_a_noise = 0.09
+            p_w_updt = 10
             compute_trajectories = True
             plot = True
             all_trajs = True

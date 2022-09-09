@@ -88,7 +88,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/Alex/paper/results/',
             metrics='mse', objective='curve', bin_size=20, det_th=5,
-            plot=False):
+            plot=False, stim_res=5):
     data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
     data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
@@ -250,7 +250,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
             ax[1].set_xlabel('RT (ms)')
             ax[1].set_title('CDF')
     else:
-        sound_len = first_ind-fixation+p_t_eff
+        sound_len = (first_ind-fixation+p_t_eff)*stim_res
         df_curve = {'detected_pcom': detected_com, 'sound_len': sound_len}
         df_curve = pd.DataFrame(df_curve)
         rt_vals, median_pcom, _ =\
@@ -379,19 +379,10 @@ if __name__ == '__main__':
     optimization = False
     rms_comparison = False
     plotting = True
-    plot_rms_llk = True
+    plot_rms_llk = False
+    single_run = True
     stim, zt, coh, gt, com = get_data(dfpath=DATA_FOLDER, after_correct=True,
                                       num_tr_per_rat=int(2e3), all_trials=False)
-    # p_t_aff = 7
-    # p_t_eff = 7
-    # p_t_a = 40
-    # p_w_zt = 0.25
-    # p_w_stim = 0.15
-    # p_e_noise = 0.04
-    # p_com_bound = 0.
-    # p_w_a = 0.02
-    # p_a_noise = 0.09
-    # p_w_updt = 3
     array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0.3, 0.03, 0.06, 0.1))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
@@ -400,12 +391,23 @@ if __name__ == '__main__':
                       (0.05, 60)))
     bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
                               enumerate(bounds)])
-    # llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
-    #                                     p_e_noise, p_com_bound, p_t_aff,
-    #                                     p_t_eff, p_t_a, p_w_a, p_a_noise,
-    #                                     p_w_updt, num_times_tr=int(1e1),
-    #                                     detect_CoMs_th=5)
-    # print(llk_val)
+    if single_run:
+        p_t_aff = 7
+        p_t_eff = 7
+        p_t_a = 35
+        p_w_zt = 0.16
+        p_w_stim = 0.15
+        p_e_noise = 0.05
+        p_com_bound = 0.
+        p_w_a = 0.03
+        p_a_noise = 0.06
+        p_w_updt = 20
+        llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+                                           p_e_noise, p_com_bound, p_t_aff,
+                                           p_t_eff, p_t_a, p_w_a, p_a_noise,
+                                           p_w_updt, num_times_tr=int(1),
+                                           detect_CoMs_th=5, rms_comparison=True)
+        print(llk_val)
     # TODO: paralelize different initial points
     if optimization:
         print('Start optimization')
