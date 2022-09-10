@@ -329,13 +329,13 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
             diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
-    prob_detected_com = np.mean(detected_com_mat, axis=1)
-    prob_right = np.mean(pright_mat, axis=1)
+    prob_detected_com = np.nanmean(detected_com_mat, axis=1)
+    prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
     llk_com = com * prob_detected_com + (1 - com) * (1 - prob_detected_com)\
         + 1e-5
     llk_right = pright * prob_right + (1 - pright) * (1 - prob_right) + 1e-5
-    llk_val = -np.sum(np.log(llk_com) + np.log(llk_right))
+    llk_val = -np.nansum(np.log(llk_com) + np.log(llk_right))
     end_llk = time.time()
     print(end_llk - start_llk)
     if rms_comparison:
