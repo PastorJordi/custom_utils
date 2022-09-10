@@ -363,7 +363,7 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
         p_a_noise = params[8]
         p_w_updt = params[9]
         llk_val, diff_rms =\
-            run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
+            run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim,
                            p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                            p_t_a, p_w_a, p_a_noise, p_w_updt,
                            num_times_tr=int(1e2), detect_CoMs_th=5,
@@ -443,9 +443,12 @@ if __name__ == '__main__':
                 p_a_noise = params[8]
                 p_w_updt = params[9]
                 llk_val, diff_rms =\
-                    run_likelihood(stim, zt, coh, gt, com, p_w_zt, p_w_stim,
-                                   p_e_noise, p_com_bound, p_t_aff, p_t_eff,
-                                   p_t_a, p_w_a, p_a_noise, p_w_updt,
+                    run_likelihood(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
+                                   pright=pright, p_w_zt=p_w_zt, p_w_stim=p_w_stim,
+                                   p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                   p_t_aff=p_t_aff, p_t_eff=p_t_eff,
+                                   p_t_a=p_t_a, p_w_a=p_w_a, p_a_noise=p_a_noise,
+                                   p_w_updt=p_w_updt,
                                    num_times_tr=int(1e2), detect_CoMs_th=5,
                                    rms_comparison=rms_comparison)
                 solutions.append((params_init, llk_val))
