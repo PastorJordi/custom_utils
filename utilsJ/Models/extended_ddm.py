@@ -74,6 +74,7 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time, tr_index,
              p_com_bound, stim_res=50, trial=0):
+    start = time.time()
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[8].set_xlabel('Time (ms)')
@@ -432,9 +433,9 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         end = time.time()
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
-            # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
-            #                                  size=(num_tr_per_rat), replace=False)
-            indx = indx_prev_error  # [selected_indx]
+            selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
+                                             size=(num_tr_per_rat), replace=False)
+            indx = indx_prev_error[selected_indx]
         else:
             indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
                                     replace=False)
@@ -458,6 +459,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
+    # TODO: put this out of get_data
     energy_vs_time(stim, coh, sound_len, com, decision)
     df_curve = {'CoM': com, 'sound_len': sound_len}
     df_curve = pd.DataFrame(df_curve)
@@ -548,6 +550,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
     """
     # print('Starting simulation, PSIAM')
+    start_eddm = time.time()
     bound = 1
     bound_a = 1
     fixation = int(300 / stim_res)  # ms/stim_resolution
@@ -629,8 +632,11 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
+    end_eddm = time.time()
+    print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
     # TODO: put in a different function
     if compute_trajectories:
+        start_traj = time.time()
         # Trajectories
         # print('Starting with trajectories')
         RLresp = resp_fin
@@ -707,6 +713,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
                          bins=BINS,
                          return_data=True)
+        end_traj = time.time()
+        print('Time for trajectories: ' + str(end_traj - start_traj))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
@@ -844,6 +852,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
 
             print(np.mean(com))
             if plot:
+                start_plot = time.time()
                 if compute_trajectories:
                     plotting(com=com, E=E, A=A, second_ind=second_ind,
                              first_ind=first_ind,
@@ -873,6 +882,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                 'MT': [len(t) for t in total_traj],
                                 'zt': zt[tr_index]}
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
+                end_plot = time.time()
+                print('Plotting time: ' + str(end_plot-start_plot))
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
             p_e_noise_vals.append([conf[2], p_e_noise])
@@ -952,55 +963,139 @@ def data_augmentation(stim, daf, sigma=0):
 
 
 def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
-    energy = (np.subtract(stim.T, coh))*decision
-    energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
-        * (-1) * decision[com.astype(bool)]
-    # energy = stim.T*decision
-    # energy_com = stim[com.astype(bool)].T*(-1)*decision[com.astype(bool)]
-    normal_sound = np.mean(stim.T*decision, axis=0)
-    normal_sound_com = np.mean(stim[com.astype(bool)].T *
-                               decision[com.astype(bool)], axis=0)
-    mean_energy = np.nanmean(energy, axis=1)
-    mean_energy_com = np.nanmean(energy_com, axis=1)
-    err_energy = np.sqrt(np.nanstd(energy, axis=1)/stim.shape[0])
-    err_energy_com = np.sqrt(np.nanstd(energy_com, axis=1)/stim.shape[0])
-    time_sound_onset = np.arange(0, 50*stim.shape[1], 50)
-    # bins_movement_onset = - sound_len
-    bins_rt = np.arange(0, 501, 50)
-    df_curve = {'sound_len': sound_len}
-    df_curve = pd.DataFrame(df_curve)
-    binned_rt = pd.cut(df_curve['sound_len'], bins=bins_rt,
-                       labels=False)
-    energy_to_plot = energy[binned_rt[binned_rt >= 0].astype(int),
-                            np.arange(len(binned_rt[binned_rt >= 0]))]
-    fig, ax = plt.subplots(1)
-    df_curve = {'energy': energy_to_plot,
-                'sound_len': -binned_rt[binned_rt >= 0]*50}
-    df_curve = pd.DataFrame(df_curve)
-    df_curve = df_curve.dropna()
-    bins_rt_neg = np.arange(-500, 1, 50)
-    binned_curve(df_curve, 'energy', 'sound_len', xpos=50, xoffset=-450,
-                 bins=bins_rt_neg,
-                 return_data=False, errorbar_kw={'label': 'All trials'},
-                 ax=ax)
-    df_curve_com = {'sound_len': sound_len[com.astype(bool)]}
-    df_curve_com = pd.DataFrame(df_curve_com)
-    df_curve_com = df_curve_com.dropna()
-    binned_com_rt = pd.cut(df_curve_com['sound_len'], bins=bins_rt,
-                           labels=False)
-    energy_to_plot_com = energy_com[binned_com_rt[binned_com_rt >= 0].astype(int),
-                                    np.arange(len(
-                                        binned_com_rt[binned_com_rt >= 0]))]
-    df_curve_com = {'energy': energy_to_plot_com,
-                    'sound_len': -binned_com_rt[binned_com_rt >= 0]*50}
-    df_curve_com = pd.DataFrame(df_curve_com)
-    df_curve_com = df_curve_com.dropna()
-    binned_curve(df_curve_com, 'energy', 'sound_len', xpos=50, xoffset=-450,
-                 bins=bins_rt_neg,
-                 return_data=False, errorbar_kw={'label': 'CoM'}, ax=ax)
-    ax.set_xlabel('Time from movement onset (ms)')
-    ax.set_ylabel('Energy (a.u.)')
+    sound_int = np.array(sound_len).astype(int)
+    array_energy = np.empty((len(sound_int), int(500)))
+    array_energy[:] = np.nan
+    # energy = (np.subtract(stim.T, coh))*decision
+    # energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
+    #     * (-1) * decision[com.astype(bool)]
+    # TODO: tipo I y tipo II, poniendo threshold a p_t_aff
+    sound_int_filt = sound_int[(sound_int >= 0)*(sound_int < 500)]
+    com_array = com[(sound_int >= 0)*(sound_int < 500)].astype(int)
+    array_energy_com = np.empty((sum(com_array == 1), int(500)))
+    array_energy_com[:] = np.nan
+    sound_filt_com = sound_int_filt[com_array == 1]
+    stim_filt = stim[(sound_int >= 0)*(sound_int < 500)]
+    coh_filt = coh[(sound_int >= 0)*(sound_int < 500)]
+    dec_filt = decision[(sound_int >= 0)*(sound_int < 500)]
+    for i, sound in enumerate(sound_int_filt):
+        array_energy[i, :sound] = (stim_filt[i, sound//50] - coh_filt[i])\
+            * dec_filt[i]
+    energy_com_t1 = []
+    energy_com_t2 = []
+    for j, sound_com in enumerate(sound_filt_com):
+        array_energy_com[j, :sound_com] = (stim_filt[com_array == 1]
+                                           [j, sound_com//50] -
+                                           coh_filt[com_array == 1][j]) *\
+            dec_filt[com_array == 1][j]
+        if sound_com > 50:
+            energy_com_t2.append(array_energy_com[j, :])
+        else:
+            energy_com_t1.append(array_energy_com[j, :])
+    dictionary = {}
+    frame_list = np.empty((0, ))
+    stim_dec_list = np.empty((0, ))
+    stim_dec = []
+    for i_s in range(3):
+        index_com_rt = (com_array == 1) * (sound_int_filt > 50) * (coh_filt == 0)
+        stim_dec_tmp = (stim_filt[index_com_rt, i_s])\
+            * dec_filt[index_com_rt]
+        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
+        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
+        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
+        stim_dec.append(stim_dec_tmp.T)
+        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
+        frame_list = np.concatenate((frame_list,
+                                    np.repeat(i_s+1,
+                                              len(stim_dec_tmp)))).astype(int)
+    dictionary['frame'] = frame_list
+    dictionary['stimulus_decision'] = stim_dec_list
+    data_frame = pd.DataFrame(dictionary)
+    plt.figure()
+    sns.violinplot(data=data_frame, x='frame', y='stimulus_decision')
+    plt.title('50 ms < RT')
+    plt.ylabel('stimulus * final decision')
+    stim_dec = np.array(stim_dec)
+    for i in range(len(stim_dec[0, :])):
+        if stim_dec[0, i] < 0 and stim_dec[1, i] > 0:
+            plt.plot([0, 1], stim_dec[:2, i], color='k', alpha=0.1)
+    plt.axhline(y=0, linestyle='--', color='k', lw=1)
+    array_energy_mean = np.nanmean(array_energy, axis=0)
+    values = array_energy.shape[0] - np.sum(np.isnan(array_energy), axis=0)
+    std_energy = np.sqrt(np.nanstd(array_energy, axis=0)/values)
+    array_energy_com_mean = np.nanmean(array_energy_com, axis=0)
+    values_com = array_energy_com.shape[0] - np.sum(np.isnan(array_energy_com),
+                                                    axis=0)
+    std_energy_com = np.sqrt(np.nanstd(array_energy_com, axis=0)/values_com)
+    plt.figure()
+    plt.plot(np.linspace(0, len(std_energy)-1, num=500), array_energy_mean,
+             label='all trials')
+    plt.fill_between(np.linspace(0, len(std_energy)-1, num=500),
+                     array_energy_mean+std_energy,
+                     array_energy_mean-std_energy,
+                     alpha=0.3)
+    plt.plot(np.linspace(0, len(std_energy_com)-1, num=500), array_energy_com_mean,
+             label='CoM')
+    plt.fill_between(np.linspace(0, len(std_energy)-1, num=500),
+                     array_energy_com_mean+std_energy_com,
+                     array_energy_com_mean-std_energy_com,
+                     alpha=0.3)
+    plt.axhline(y=0, linestyle='--', color='k', lw=1)
+    plt.legend()
+    plt.xlim(0, 100)
+    plt.ylim(-0.05, 0.05)
+    plt.xlabel('RT (ms)')
+    plt.ylabel('Energy (a.u.)')
     if plot:
+        energy = (np.subtract(stim.T, coh))*decision
+        energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
+            * (-1) * decision[com.astype(bool)]
+        # energy = stim.T*decision
+        # energy_com = stim[com.astype(bool)].T*(-1)*decision[com.astype(bool)]
+        normal_sound = np.mean(stim.T*decision, axis=0)
+        normal_sound_com = np.mean(stim[com.astype(bool)].T *
+                                   decision[com.astype(bool)], axis=0)
+        mean_energy = np.nanmean(energy, axis=1)
+        mean_energy_com = np.nanmean(energy_com, axis=1)
+        err_energy = np.sqrt(np.nanstd(energy, axis=1)/stim.shape[0])
+        err_energy_com = np.sqrt(np.nanstd(energy_com, axis=1)/stim.shape[0])
+        time_sound_onset = np.arange(0, 50*stim.shape[1], 50)
+        # bins_movement_onset = - sound_len
+        bins_rt = np.arange(0, 501, 50)
+        df_curve = {'sound_len': sound_len}
+        df_curve = pd.DataFrame(df_curve)
+        binned_rt = pd.cut(df_curve['sound_len'], bins=bins_rt,
+                           labels=False)
+        energy_to_plot = energy[binned_rt[binned_rt >= 0].astype(int),
+                                np.arange(len(binned_rt[binned_rt >= 0]))]
+        fig, ax = plt.subplots(1)
+        df_curve = {'energy': energy_to_plot,
+                    'sound_len': -binned_rt[binned_rt >= 0]*50}
+        df_curve = pd.DataFrame(df_curve)
+        df_curve = df_curve.dropna()
+        bins_rt_neg = np.arange(-500, 1, 50)
+        binned_curve(df_curve, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                     bins=bins_rt_neg,
+                     return_data=False, errorbar_kw={'label': 'All trials'},
+                     ax=ax)
+        df_curve_com = {'sound_len': sound_len[com.astype(bool)]}
+        df_curve_com = pd.DataFrame(df_curve_com)
+        df_curve_com = df_curve_com.dropna()
+        binned_com_rt = pd.cut(df_curve_com['sound_len'], bins=bins_rt,
+                               labels=False)
+        energy_to_plot_com = energy_com[binned_com_rt
+                                        [binned_com_rt >= 0].astype(int),
+                                        np.arange(len(
+                                            binned_com_rt[binned_com_rt >= 0]))]
+        df_curve_com = {'energy': energy_to_plot_com,
+                        'sound_len': -binned_com_rt[binned_com_rt >= 0]*50}
+        df_curve_com = pd.DataFrame(df_curve_com)
+        df_curve_com = df_curve_com.dropna()
+        binned_curve(df_curve_com, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                     bins=bins_rt_neg,
+                     return_data=False, errorbar_kw={'label': 'CoM'}, ax=ax)
+        ax.set_xlabel('Time from movement onset (ms)')
+        ax.set_ylabel('Energy (a.u.)')
         plt.figure()
         plt.errorbar(time_sound_onset, mean_energy, err_energy, label='All trials')
         plt.errorbar(time_sound_onset, mean_energy_com, err_energy_com, label='CoM')
@@ -1031,7 +1126,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(15e4)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -1042,7 +1137,7 @@ if __name__ == '__main__':
             if new_sample:
                 stim, zt, coh, gt, com, decision =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(1e4),
+                                        num_tr_per_rat=int(1e3),
                                         after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',

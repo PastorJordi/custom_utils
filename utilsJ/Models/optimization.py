@@ -14,18 +14,18 @@ import sys
 from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import seaborn as sns
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
@@ -329,13 +329,31 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
             diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
-    prob_detected_com = np.nanmean(detected_com_mat, axis=1)
-    prob_right = np.nanmean(pright_mat, axis=1)
+    mat_right_and_com = detected_com_mat*pright_mat
+    mat_right_and_nocom = (1-detected_com_mat)*pright_mat
+    mat_left_and_com = detected_com_mat*(1-pright_mat)
+    mat_left_and_nocom = (1-detected_com_mat)*(1-pright_mat)
+    pright_and_com = np.nanmean(mat_right_and_com, axis=1)
+    pright_and_nocom = np.nanmean(mat_right_and_nocom, axis=1)
+    pleft_and_com = np.nanmean(mat_left_and_com, axis=1)
+    pleft_and_nocom = np.nanmean(mat_left_and_nocom, axis=1)
+    # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
+    # prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
-    llk_com = com * prob_detected_com + (1 - com) * (1 - prob_detected_com)\
-        + 1e-5
-    llk_right = pright * prob_right + (1 - pright) * (1 - prob_right) + 1e-5
-    llk_val = -np.nansum(np.log(llk_com) + np.log(llk_right))
+    lk_list = []
+    for i_p, p in enumerate(pright):
+        if p == 1:
+            if com[i_p] == 1:
+                lk = pright_and_com[i_p] + 1e-6
+            else:
+                lk = pright_and_nocom[i_p] + 1e-6
+        else:
+            if com[i_p] == 1:
+                lk = pleft_and_com[i_p] + 1e-6
+            else:
+                lk = pleft_and_nocom[i_p] + 1e-6
+        lk_list.append(lk)
+    llk_val = -np.nansum(np.log(lk_list))
     end_llk = time.time()
     print(end_llk - start_llk)
     if rms_comparison:
@@ -366,7 +384,7 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
             run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim,
                            p_e_noise, p_com_bound, p_t_aff, p_t_eff,
                            p_t_a, p_w_a, p_a_noise, p_w_updt,
-                           num_times_tr=int(1e2), detect_CoMs_th=5,
+                           num_times_tr=int(1e1), detect_CoMs_th=5,
                            rms_comparison=rms_comparison)
         llk_list.append(llk_val)
         rms_list.append(diff_rms)
@@ -376,6 +394,7 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
             plt.scatter(rms_list, llk_list)
             plt.xlabel('RMSE')
             plt.ylabel('Log-likelihood')
+            plt.xlim(0, 0.15)
             plt.savefig(SV_FOLDER+'/figures/llk_vs_rms.png', dpi=400,
                         bbox_inches='tight')
             plt.close()
@@ -384,10 +403,10 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = True
-    rms_comparison = False
-    plotting = True
-    plot_rms_llk = False
+    optimization = False
+    rms_comparison = True
+    plotting = False
+    plot_rms_llk = True
     single_run = False
     stim, zt, coh, gt, com, pright = get_data(dfpath=DATA_FOLDER,
                                               after_correct=True,
@@ -472,8 +491,8 @@ if __name__ == '__main__':
         plt.ylabel('Log-likelihood')
     if plot_rms_llk:
         mean = 1
-        sigma = 0.3
-        iterations = 40
+        sigma = 0.1
+        iterations = 100
         plot_rms_vs_llk(mean=mean, sigma=sigma, zt=zt, stim=stim,
                         iterations=iterations, scaling_value=scaling_value)
 
