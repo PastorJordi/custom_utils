@@ -305,7 +305,7 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     detected_com_mat = np.zeros((num_tr, num_times_tr))
     pright_mat = np.zeros((num_tr, num_times_tr))
     diff_rms_list = []
-    for i in range(num_times_tr):  # TODO: parallelize loop for cluster
+    for i in range(num_times_tr):
         # start_simu = time.time()
         E, A, com_model, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\

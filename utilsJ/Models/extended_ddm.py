@@ -12,10 +12,8 @@ import itertools
 import glob
 import time
 import sys
-from skimage.metrics import structural_similarity as ssim
 import multiprocessing as mp
 from joblib import Parallel, delayed
-from scipy.stats import sem
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -459,8 +457,6 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
-    # TODO: put this out of get_data
-    energy_vs_time(stim, coh, sound_len, com, decision)
     df_curve = {'CoM': com, 'sound_len': sound_len}
     df_curve = pd.DataFrame(df_curve)
     xpos = int(np.diff(BINS)[0])
@@ -474,7 +470,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
-    return stim, prior, coh, gt, com, decision  # , matrix
+    return stim, prior, coh, gt, com, decision, sound_len  # , matrix
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -969,7 +965,6 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     # energy = (np.subtract(stim.T, coh))*decision
     # energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
     #     * (-1) * decision[com.astype(bool)]
-    # TODO: tipo I y tipo II, poniendo threshold a p_t_aff
     sound_int_filt = sound_int[(sound_int >= 0)*(sound_int < 500)]
     com_array = com[(sound_int >= 0)*(sound_int < 500)].astype(int)
     array_energy_com = np.empty((sum(com_array == 1), int(500)))
@@ -997,7 +992,8 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     stim_dec_list = np.empty((0, ))
     stim_dec = []
     for i_s in range(3):
-        index_com_rt = (com_array == 1) * (sound_int_filt > 50) * (coh_filt == 0)
+        index_com_rt = (com_array == 1) * (sound_int_filt > 50) *\
+            (np.abs(coh_filt) == 0)
         stim_dec_tmp = (stim_filt[index_com_rt, i_s])\
             * dec_filt[index_com_rt]
         stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
@@ -1013,13 +1009,13 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     data_frame = pd.DataFrame(dictionary)
     plt.figure()
     sns.violinplot(data=data_frame, x='frame', y='stimulus_decision')
-    plt.title('50 ms < RT')
+    plt.title('50 ms < RT. coh=0')
     plt.ylabel('stimulus * final decision')
+    plt.axhline(y=0, linestyle='--', color='k', lw=1)
     stim_dec = np.array(stim_dec)
     for i in range(len(stim_dec[0, :])):
         if stim_dec[0, i] < 0 and stim_dec[1, i] > 0:
             plt.plot([0, 1], stim_dec[:2, i], color='k', alpha=0.1)
-    plt.axhline(y=0, linestyle='--', color='k', lw=1)
     array_energy_mean = np.nanmean(array_energy, axis=0)
     values = array_energy.shape[0] - np.sum(np.isnan(array_energy), axis=0)
     std_energy = np.sqrt(np.nanstd(array_energy, axis=0)/values)
@@ -1042,7 +1038,7 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
                      alpha=0.3)
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
     plt.legend()
-    plt.xlim(0, 100)
+    plt.xlim(0, 150)
     plt.ylim(-0.05, 0.05)
     plt.xlabel('RT (ms)')
     plt.ylabel('Energy (a.u.)')
@@ -1135,7 +1131,7 @@ if __name__ == '__main__':
     if simulate:
         if load_data:
             if new_sample:
-                stim, zt, coh, gt, com, decision =\
+                stim, zt, coh, gt, com, decision, sound_len =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
                                         after_correct=True)
@@ -1207,6 +1203,7 @@ if __name__ == '__main__':
                                     shuffle=shuffle, all_trajs=False)
                  for i_par in range(num_cores))
         else:
+            energy_vs_time(stim, coh, sound_len, com, decision)
             run_model(stim=stim, zt=zt, coh=coh, gt=gt,
                       configurations=configurations, jitters=jitters,
                       compute_trajectories=compute_trajectories,
