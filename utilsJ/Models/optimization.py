@@ -403,10 +403,10 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = False
-    rms_comparison = True
+    optimization = True
+    rms_comparison = False
     plotting = False
-    plot_rms_llk = True
+    plot_rms_llk = False
     single_run = False
     stim, zt, coh, gt, com, pright = get_data(dfpath=DATA_FOLDER,
                                               after_correct=True,

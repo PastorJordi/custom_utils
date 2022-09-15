@@ -406,8 +406,8 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
     M = get_Mt0te(jerk_lock_ms, resp_len)
     M_1 = np.linalg.inv(M)
     vt = v_(t_arr)
-    N = vt @ M_1
-    traj = (N @ mu).ravel()
+    N = np.matmul(vt, M_1)
+    traj = np.matmul(N, mu).ravel()
     traj = np.concatenate([[0]*jerk_lock_ms, traj])  # trajectory
     return traj
 
@@ -546,7 +546,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 
     """
     # print('Starting simulation, PSIAM')
-    start_eddm = time.time()
+    # start_eddm = time.time()
     bound = 1
     bound_a = 1
     fixation = int(300 / stim_res)  # ms/stim_resolution
@@ -628,11 +628,11 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
-    end_eddm = time.time()
-    print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
+    # end_eddm = time.time()
+    # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
     # TODO: put in a different function
     if compute_trajectories:
-        start_traj = time.time()
+        # start_traj = time.time()
         # Trajectories
         # print('Starting with trajectories')
         RLresp = resp_fin
@@ -709,8 +709,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
                          bins=BINS,
                          return_data=True)
-        end_traj = time.time()
-        print('Time for trajectories: ' + str(end_traj - start_traj))
+        # end_traj = time.time()
+        # print('Time for trajectories: ' + str(end_traj - start_traj))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
             x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
