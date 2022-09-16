@@ -347,7 +347,7 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     matrix_dirichlet[:, 1] = pright_and_nocom
     matrix_dirichlet[:, 2] = pleft_and_com
     matrix_dirichlet[:, 3] = pleft_and_nocom
-    alpha_vector = dirichlet.mle(matrix_dirichlet)
+    alpha_vector = dirichlet.mle(matrix_dirichlet, tol=1e-4, maxiter=int(1e4))
     alpha_sum = np.sum(alpha_vector)
     # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
     # prob_right = np.nanmean(pright_mat, axis=1)
