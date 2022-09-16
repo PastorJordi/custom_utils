@@ -13,6 +13,7 @@ import time
 import sys
 from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
+import dirichlet
 import seaborn as sns
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
@@ -45,6 +46,10 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
+        df = df.query(
+                "sound_len <= 400 and soundrfail ==\
+                    False and resp_len <=1 and R_response>= 0\
+                        and hithistory >= 0 and special_trial == 0")
         end = time.time()
         # max_num_tr = max(num_tr_per_rat, len(df))
         if all_trials:
@@ -337,6 +342,13 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     pright_and_nocom = np.nanmean(mat_right_and_nocom, axis=1)
     pleft_and_com = np.nanmean(mat_left_and_com, axis=1)
     pleft_and_nocom = np.nanmean(mat_left_and_nocom, axis=1)
+    matrix_dirichlet = np.zeros((len(pright), 4))
+    matrix_dirichlet[:, 0] = pright_and_com
+    matrix_dirichlet[:, 1] = pright_and_nocom
+    matrix_dirichlet[:, 2] = pleft_and_com
+    matrix_dirichlet[:, 3] = pleft_and_nocom
+    alpha_vector = dirichlet.mle(matrix_dirichlet)
+    alpha_sum = np.sum(alpha_vector)
     # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
     # prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
@@ -344,14 +356,18 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     for i_p, p in enumerate(pright):
         if p == 1:
             if com[i_p] == 1:
-                lk = pright_and_com[i_p] + epsilon
+                lk = (np.sum(mat_right_and_com, axis=1)[i_p] + alpha_vector[0])\
+                    / (num_times_tr + alpha_sum)
             else:
-                lk = pright_and_nocom[i_p] + epsilon
+                lk = (np.sum(mat_right_and_nocom, axis=1)[i_p] + alpha_vector[1])\
+                    / (num_times_tr + alpha_sum)
         else:
             if com[i_p] == 1:
-                lk = pleft_and_com[i_p] + epsilon
+                lk = (np.sum(mat_left_and_com, axis=1)[i_p] + alpha_vector[2])\
+                    / (num_times_tr + alpha_sum)
             else:
-                lk = pleft_and_nocom[i_p] + epsilon
+                lk = (np.sum(mat_left_and_nocom, axis=1)[i_p] + alpha_vector[3])\
+                    / (num_times_tr + alpha_sum)
         lk_list.append(lk)
     llk_val = -np.nansum(np.log(lk_list))
     end_llk = time.time()
@@ -435,8 +451,8 @@ if __name__ == '__main__':
                                            p_w_zt, p_w_stim,
                                            p_e_noise, p_com_bound, p_t_aff,
                                            p_t_eff, p_t_a, p_w_a, p_a_noise,
-                                           p_w_updt, num_times_tr=int(1e1),
-                                           detect_CoMs_th=5, rms_comparison=True)
+                                           p_w_updt, num_times_tr=int(5e0),
+                                           detect_CoMs_th=5, rms_comparison=False)
         print(llk_val)
     # TODO: paralelize different initial points
     if optimization:

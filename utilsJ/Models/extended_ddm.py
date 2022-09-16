@@ -429,10 +429,13 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
+        df = df.query(
+                "sound_len <= 400 and soundrfail ==\
+                    False and resp_len <=1 and R_response>= 0\
+                        and hithistory >= 0 and special_trial == 0")
         end = time.time()
         if after_correct:
-            indx_prev_error = np.where((df['aftererror'].values == 0) *
-                                       (df['special_trial'] != 2))[0]
+            indx_prev_error = np.where(df['aftererror'].values == 0)[0]
             # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
             #                                  size=(num_tr_per_rat), replace=False)
             indx = indx_prev_error  # [selected_indx]
@@ -973,7 +976,7 @@ def plot_distributions(dictionary, data_frame):
         ax[i_ax].plot(bins2[:-1], counts2/sum(counts2),
                       label='zt > 2')
         ax[i_ax].plot(bins01[:-1], counts01/sum(counts01),
-                      label='zt < 0.1')
+                      label='zt < 0.3')
         ax[i_ax].fill_between(bins2[:-1], counts2/sum(counts2), alpha=0.3)
         ax[i_ax].fill_between(bins01[:-1], counts01/sum(counts01), alpha=0.3)
         ax[i_ax].set_ylabel('Frame {}'.format(i_ax+1))
@@ -984,10 +987,10 @@ def plot_distributions(dictionary, data_frame):
                              dictionary['stimulus_decision_01']
                              [dictionary['frame01'] == i_ax+1],
                              alternative='two-sided')[1]
-        ax[i_ax].text(-0.6, 0.15, s='pvalue: {}'.format(round(p_val, 5)))
+        ax[i_ax].text(-0.6, 0.1, s='pvalue: {}'.format(round(p_val, 5)))
     ax[-1].set_xlabel('Stimulus * decision')
     plt.figure()
-    sns.violinplot(data=data_frame, x='frame01', y='stimulus_decision_01')
+    sns.violinplot(data=data_frame, x='frame2', y='stimulus_decision_2')
     plt.title('coh==0., zt < 0.1')
     plt.ylabel('stimulus * final decision')
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
@@ -1029,8 +1032,8 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     stim_dec_list = np.empty((0, ))
     stim_dec = []
     for i_s in range(5):
-        index_com_rt = (com_array == 1) * np.abs(coh_filt == 0.) *\
-            (np.abs(zt_filt) < 0.1)
+        index_com_rt = (com_array == 1) *\
+            (np.abs(zt_filt) < 0.3)
         stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
             * dec_filt[index_com_rt]
         # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
@@ -1048,7 +1051,7 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     stim_dec_list = np.empty((0, ))
     stim_dec = []
     for i_s in range(5):
-        index_com_rt = (com_array == 1) * np.abs(coh_filt == 0.) *\
+        index_com_rt = (com_array == 1) *\
             (np.abs(zt_filt) > 2)
         stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
             * dec_filt[index_com_rt]
