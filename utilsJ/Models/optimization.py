@@ -14,18 +14,18 @@ import sys
 from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import seaborn as sns
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
@@ -276,7 +276,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
 def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False):
+                   rms_comparison=False, epsilon=1e-3):
     start_llk = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
@@ -344,14 +344,14 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     for i_p, p in enumerate(pright):
         if p == 1:
             if com[i_p] == 1:
-                lk = pright_and_com[i_p] + 1e-6
+                lk = pright_and_com[i_p] + epsilon
             else:
-                lk = pright_and_nocom[i_p] + 1e-6
+                lk = pright_and_nocom[i_p] + epsilon
         else:
             if com[i_p] == 1:
-                lk = pleft_and_com[i_p] + 1e-6
+                lk = pleft_and_com[i_p] + epsilon
             else:
-                lk = pleft_and_nocom[i_p] + 1e-6
+                lk = pleft_and_nocom[i_p] + epsilon
         lk_list.append(lk)
     llk_val = -np.nansum(np.log(lk_list))
     end_llk = time.time()

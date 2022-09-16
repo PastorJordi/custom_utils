@@ -14,6 +14,7 @@ import time
 import sys
 import multiprocessing as mp
 from joblib import Parallel, delayed
+from scipy.stats import mannwhitneyu
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -430,10 +431,11 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         df = pd.read_pickle(f)
         end = time.time()
         if after_correct:
-            indx_prev_error = np.where(df['aftererror'].values == 0)[0]
-            selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
-                                             size=(num_tr_per_rat), replace=False)
-            indx = indx_prev_error[selected_indx]
+            indx_prev_error = np.where((df['aftererror'].values == 0) *
+                                       (df['special_trial'] != 2))[0]
+            # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
+            #                                  size=(num_tr_per_rat), replace=False)
+            indx = indx_prev_error  # [selected_indx]
         else:
             indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
                                     replace=False)
@@ -958,6 +960,39 @@ def data_augmentation(stim, daf, sigma=0):
     return augm_stim
 
 
+def plot_distributions(dictionary, data_frame):
+    fig, ax = plt.subplots(nrows=5, figsize=(6, 11))
+    ax = ax.flatten()
+    for i_ax in range(ax.shape[0]):
+        counts2, bins2 = np.histogram(dictionary['stimulus_decision_2']
+                                      [dictionary['frame2'] == i_ax+1],
+                                      range=(-0.75, 0.75), bins=25)
+        counts01, bins01 = np.histogram(dictionary['stimulus_decision_01']
+                                        [dictionary['frame01'] == i_ax+1],
+                                        range=(-0.75, 0.75), bins=25)
+        ax[i_ax].plot(bins2[:-1], counts2/sum(counts2),
+                      label='zt > 2')
+        ax[i_ax].plot(bins01[:-1], counts01/sum(counts01),
+                      label='zt < 0.1')
+        ax[i_ax].fill_between(bins2[:-1], counts2/sum(counts2), alpha=0.3)
+        ax[i_ax].fill_between(bins01[:-1], counts01/sum(counts01), alpha=0.3)
+        ax[i_ax].set_ylabel('Frame {}'.format(i_ax+1))
+        if i_ax == 0:
+            ax[i_ax].legend()
+        p_val = mannwhitneyu(dictionary['stimulus_decision_2']
+                             [dictionary['frame2'] == i_ax+1],
+                             dictionary['stimulus_decision_01']
+                             [dictionary['frame01'] == i_ax+1],
+                             alternative='two-sided')[1]
+        ax[i_ax].text(-0.6, 0.15, s='pvalue: {}'.format(round(p_val, 5)))
+    ax[-1].set_xlabel('Stimulus * decision')
+    plt.figure()
+    sns.violinplot(data=data_frame, x='frame01', y='stimulus_decision_01')
+    plt.title('coh==0., zt < 0.1')
+    plt.ylabel('stimulus * final decision')
+    plt.axhline(y=0, linestyle='--', color='k', lw=1)
+
+
 def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     sound_int = np.array(sound_len).astype(int)
     array_energy = np.empty((len(sound_int), int(500)))
@@ -970,9 +1005,11 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     array_energy_com = np.empty((sum(com_array == 1), int(500)))
     array_energy_com[:] = np.nan
     sound_filt_com = sound_int_filt[com_array == 1]
-    stim_filt = stim[(sound_int >= 0)*(sound_int < 500)]
+    stim_filt = stim[:, (sound_int >= 0)*(sound_int < 500)]
     coh_filt = coh[(sound_int >= 0)*(sound_int < 500)]
     dec_filt = decision[(sound_int >= 0)*(sound_int < 500)]
+    zt_filt = zt[(sound_int >= 0)*(sound_int < 500)]
+    # TODO: silent trials out!
     for i, sound in enumerate(sound_int_filt):
         array_energy[i, :sound] = (stim_filt[i, sound//50] - coh_filt[i])\
             * dec_filt[i]
@@ -991,31 +1028,48 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     frame_list = np.empty((0, ))
     stim_dec_list = np.empty((0, ))
     stim_dec = []
-    for i_s in range(3):
-        index_com_rt = (com_array == 1) * (sound_int_filt > 50) *\
-            (np.abs(coh_filt) == 0)
-        stim_dec_tmp = (stim_filt[index_com_rt, i_s])\
+    for i_s in range(5):
+        index_com_rt = (com_array == 1) * np.abs(coh_filt == 0.) *\
+            (np.abs(zt_filt) < 0.1)
+        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
             * dec_filt[index_com_rt]
-        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
-        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
-        stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
         stim_dec.append(stim_dec_tmp.T)
         stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
         frame_list = np.concatenate((frame_list,
                                     np.repeat(i_s+1,
                                               len(stim_dec_tmp)))).astype(int)
-    dictionary['frame'] = frame_list
-    dictionary['stimulus_decision'] = stim_dec_list
+    dictionary['frame01'] = frame_list
+    dictionary['stimulus_decision_01'] = stim_dec_list
     data_frame = pd.DataFrame(dictionary)
-    plt.figure()
-    sns.violinplot(data=data_frame, x='frame', y='stimulus_decision')
-    plt.title('50 ms < RT. coh=0')
-    plt.ylabel('stimulus * final decision')
-    plt.axhline(y=0, linestyle='--', color='k', lw=1)
+    frame_list = np.empty((0, ))
+    stim_dec_list = np.empty((0, ))
+    stim_dec = []
+    for i_s in range(5):
+        index_com_rt = (com_array == 1) * np.abs(coh_filt == 0.) *\
+            (np.abs(zt_filt) > 2)
+        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
+            * dec_filt[index_com_rt]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
+        stim_dec.append(stim_dec_tmp.T)
+        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
+        frame_list = np.concatenate((frame_list,
+                                    np.repeat(i_s+1,
+                                              len(stim_dec_tmp)))).astype(int)
+    dictionary['frame2'] = frame_list
+    dictionary['stimulus_decision_2'] = stim_dec_list
     stim_dec = np.array(stim_dec)
     for i in range(len(stim_dec[0, :])):
-        if stim_dec[0, i] < 0 and stim_dec[1, i] > 0:
-            plt.plot([0, 1], stim_dec[:2, i], color='k', alpha=0.1)
+        if stim_dec[0, i] * stim_dec[1, i] < 0:
+            if np.abs(zt_filt[index_com_rt][i]) < 0.1:
+                plt.plot([0, 1], stim_dec[:2, i], color='r', alpha=0.3)
+            if np.abs(zt_filt[index_com_rt][i]) > 2.5:
+                plt.plot([0, 1], stim_dec[:2, i] + 1, color='b', alpha=0.3)
+    plot_distributions(dictionary, data_frame)
     array_energy_mean = np.nanmean(array_energy, axis=0)
     values = array_energy.shape[0] - np.sum(np.isnan(array_energy), axis=0)
     std_energy = np.sqrt(np.nanstd(array_energy, axis=0)/values)
@@ -1138,6 +1192,7 @@ if __name__ == '__main__':
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
+                energy_vs_time(stim, coh, sound_len, com, decision)
             else:
                 files = glob.glob(DATA_FOLDER+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))])
@@ -1203,7 +1258,6 @@ if __name__ == '__main__':
                                     shuffle=shuffle, all_trajs=False)
                  for i_par in range(num_cores))
         else:
-            energy_vs_time(stim, coh, sound_len, com, decision)
             run_model(stim=stim, zt=zt, coh=coh, gt=gt,
                       configurations=configurations, jitters=jitters,
                       compute_trajectories=compute_trajectories,
