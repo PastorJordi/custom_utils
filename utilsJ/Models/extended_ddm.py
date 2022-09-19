@@ -990,7 +990,7 @@ def plot_distributions(dictionary, data_frame):
         ax[i_ax].text(-0.6, 0.1, s='pvalue: {}'.format(round(p_val, 5)))
     ax[-1].set_xlabel('Stimulus * decision')
     plt.figure()
-    sns.violinplot(data=data_frame, x='frame2', y='stimulus_decision_2')
+    sns.violinplot(data=data_frame, x='frame01', y='stimulus_decision_01')
     plt.title('coh==0., zt < 0.1')
     plt.ylabel('stimulus * final decision')
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
@@ -1100,19 +1100,47 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     plt.xlabel('RT (ms)')
     plt.ylabel('Energy (a.u.)')
     if plot:
-        energy = (np.subtract(stim.T, coh))*decision
-        energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
+        energy = (np.subtract(stim, coh))*decision
+        index_t1 = (com_array.astype(bool)) * (zt_filt > 1) * (coh_filt >= 0.5)
+        index_t2 = (com_array.astype(bool)) * (zt_filt < 0.3) * (coh_filt <= 0.25)
+        energy_com = (stim[:, com.astype(bool)] - coh[com.astype(bool)])\
             * (-1) * decision[com.astype(bool)]
+        energy_com_t1 = (stim[:, index_t1] - coh[index_t1])\
+            * (-1) * decision[index_t1]
+        energy_com_t2 = (stim[:, index_t2] - coh[index_t2])\
+            * (-1) * decision[index_t2]
+        array_energy_t1 = np.empty((sum(index_t1), int(300)))
+        array_energy_t1[:] = np.nan
+        array_energy_t2 = np.empty((sum(index_t2), int(300)))
+        array_energy_t2[:] = np.nan
+        for j, sound_com in enumerate(sound_int_filt[index_t1]):
+            array_energy_t1[j, :sound_com] = (stim_filt[:, index_t1]
+                                              [sound_com//50, j] -
+                                              coh_filt[index_t1][j]) *\
+               (-dec_filt[index_t1][j])
+        for j, sound_com in enumerate(sound_int_filt[index_t2]):
+            array_energy_t2[j, :sound_com] = (stim_filt[:, index_t2]
+                                              [sound_com//50, j] -
+                                              coh_filt[index_t2][j]) *\
+                (-dec_filt[index_t2][j])
+        mean_energy_t1 = np.nanmean(array_energy_t1, axis=0)
+        mean_energy_t2 = np.nanmean(array_energy_t2, axis=0)
+        values_t1 = array_energy_t1.shape[0]\
+            - np.sum(np.isnan(array_energy_t1), axis=0) + 1
+        values_t2 = array_energy_t2.shape[0]\
+            - np.sum(np.isnan(array_energy_t2), axis=0) + 1
+        err_energy_t1 = np.sqrt(np.nanstd(array_energy_t1, axis=0)/values_t1)
+        err_energy_t2 = np.sqrt(np.nanstd(array_energy_t2, axis=0)/values_t2)
         # energy = stim.T*decision
         # energy_com = stim[com.astype(bool)].T*(-1)*decision[com.astype(bool)]
-        normal_sound = np.mean(stim.T*decision, axis=0)
-        normal_sound_com = np.mean(stim[com.astype(bool)].T *
+        normal_sound = np.mean(stim*decision, axis=0)
+        normal_sound_com = np.mean(stim[:, com.astype(bool)] *
                                    decision[com.astype(bool)], axis=0)
         mean_energy = np.nanmean(energy, axis=1)
         mean_energy_com = np.nanmean(energy_com, axis=1)
         err_energy = np.sqrt(np.nanstd(energy, axis=1)/stim.shape[0])
         err_energy_com = np.sqrt(np.nanstd(energy_com, axis=1)/stim.shape[0])
-        time_sound_onset = np.arange(0, 50*stim.shape[1], 50)
+        time_sound_onset = np.arange(0, 50*stim.shape[0], 50)
         # bins_movement_onset = - sound_len
         bins_rt = np.arange(0, 501, 50)
         df_curve = {'sound_len': sound_len}
@@ -1121,12 +1149,62 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
                            labels=False)
         energy_to_plot = energy[binned_rt[binned_rt >= 0].astype(int),
                                 np.arange(len(binned_rt[binned_rt >= 0]))]
+        df_curve_t1 = {'sound_len': sound_len[index_t1]}
+        df_curve_t1 = pd.DataFrame(df_curve_t1)
+        binned_rt_t1 = pd.cut(df_curve_t1['sound_len'], bins=bins_rt,
+                              labels=False)
+        energy_t1_plot = energy_com_t1[binned_rt_t1[binned_rt_t1 >= 0].astype(int),
+                                       np.arange(len(binned_rt_t1
+                                                     [binned_rt_t1 >= 0]))]
+        df_curve_t1 = {'energy': energy_t1_plot,
+                       'sound_len': -binned_rt_t1[binned_rt_t1 >= 0]*50}
+        df_curve_t1 = pd.DataFrame(df_curve_t1)
+        df_curve_t2 = {'sound_len': sound_len[index_t2]}
+        df_curve_t2 = pd.DataFrame(df_curve_t2)
+        binned_rt_t2 = pd.cut(df_curve_t2['sound_len'], bins=bins_rt,
+                              labels=False)
+        energy_t2_plot = energy_com_t2[binned_rt_t2[binned_rt_t2 >= 0].astype(int),
+                                       np.arange(len(binned_rt_t2
+                                                     [binned_rt_t2 >= 0]))]
+        df_curve_t2 = {'energy': energy_t2_plot,
+                       'sound_len': -binned_rt_t2[binned_rt_t2 >= 0]*50}
+        df_curve_t2 = pd.DataFrame(df_curve_t2)
+        fig12, ax12 = plt.subplots(nrows=1, ncols=2)
+        bins_rt_neg = np.arange(-500, 1, 50)
+        binned_curve(df_curve_t1, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                     bins=bins_rt_neg,
+                     return_data=False, errorbar_kw={'label': 'Type 1'},
+                     ax=ax12[0])
+        binned_curve(df_curve_t2, 'energy', 'sound_len', xpos=50, xoffset=-450,
+                     bins=bins_rt_neg,
+                     return_data=False, errorbar_kw={'label': 'Type 2'},
+                     ax=ax12[0])
+        ax12[0].set_xlabel('Time from movement onset')
+        ax12[1].plot(np.linspace(0, len(err_energy_t1)-1, num=300),
+                     mean_energy_t1,
+                     label='T1')
+        ax12[1].fill_between(np.linspace(0, len(err_energy_t1)-1, num=300),
+                             mean_energy_t1+err_energy_t1,
+                             mean_energy_t1-err_energy_t1,
+                             alpha=0.3)
+        ax12[1].plot(np.linspace(0, len(err_energy_t2)-1, num=300),
+                     mean_energy_t2,
+                     label='T2')
+        ax12[1].fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
+                             mean_energy_t2+err_energy_t2,
+                             mean_energy_t2-err_energy_t2,
+                             alpha=0.3)
+        ax12[1].axhline(y=0, linestyle='--', color='k', lw=1)
+        ax12[1].legend()
+        ax12[1].set_xlim(0, 300)
+        ax12[1].set_ylim(-0.05, 0.05)
+        ax12[1].set_xlabel('RT (ms)')
+        ax12[1].set_ylabel('Energy (a.u.)')
         fig, ax = plt.subplots(1)
         df_curve = {'energy': energy_to_plot,
                     'sound_len': -binned_rt[binned_rt >= 0]*50}
         df_curve = pd.DataFrame(df_curve)
         df_curve = df_curve.dropna()
-        bins_rt_neg = np.arange(-500, 1, 50)
         binned_curve(df_curve, 'energy', 'sound_len', xpos=50, xoffset=-450,
                      bins=bins_rt_neg,
                      return_data=False, errorbar_kw={'label': 'All trials'},
