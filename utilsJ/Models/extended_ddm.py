@@ -440,8 +440,9 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
             #                                  size=(num_tr_per_rat), replace=False)
             indx = indx_prev_error  # [selected_indx]
         else:
-            indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
-                                    replace=False)
+            # indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
+            #                         replace=False)
+            indx = np.arange(len(df))
         prior_tmp = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         stim_tmp = np.array([stim for stim in df.res_sound])
         coh_mat = np.array(df.coh2)
@@ -963,7 +964,45 @@ def data_augmentation(stim, daf, sigma=0):
     return augm_stim
 
 
-def plot_distributions(dictionary, data_frame):
+def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
+    dictionary = {}
+    frame_list = np.empty((0, ))
+    stim_dec_list = np.empty((0, ))
+    stim_dec = []
+    for i_s in range(5):
+        index_com_rt = (com_array == 1) *\
+            (np.abs(zt_filt) < 0.3) * (np.abs(coh_filt) == 0.25)
+        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
+            * dec_filt[index_com_rt]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
+        stim_dec.append(stim_dec_tmp.T)
+        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
+        frame_list = np.concatenate((frame_list,
+                                    np.repeat(i_s+1,
+                                              len(stim_dec_tmp)))).astype(int)
+    dictionary['frame01'] = frame_list
+    dictionary['stimulus_decision_01'] = stim_dec_list
+    data_frame = pd.DataFrame(dictionary)
+    frame_list = np.empty((0, ))
+    stim_dec_list = np.empty((0, ))
+    stim_dec = []
+    for i_s in range(5):
+        index_com_rt = (com_array == 1) *\
+            (np.abs(zt_filt) > 2.5) * (np.abs(coh_filt) == 0.25)
+        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
+            * dec_filt[index_com_rt]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
+        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
+        stim_dec.append(stim_dec_tmp.T)
+        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
+        frame_list = np.concatenate((frame_list,
+                                    np.repeat(i_s+1,
+                                              len(stim_dec_tmp)))).astype(int)
+    dictionary['frame2'] = frame_list
+    dictionary['stimulus_decision_2'] = stim_dec_list
     fig, ax = plt.subplots(nrows=5, figsize=(6, 11))
     ax = ax.flatten()
     for i_ax in range(ax.shape[0]):
@@ -996,7 +1035,8 @@ def plot_distributions(dictionary, data_frame):
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
 
 
-def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
+def energy_vs_time(stim, zt, coh, sound_len, com, decision, plot=True,
+                   data_exist=True):
     sound_int = np.array(sound_len).astype(int)
     array_energy = np.empty((len(sound_int), int(500)))
     array_energy[:] = np.nan
@@ -1005,74 +1045,26 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     #     * (-1) * decision[com.astype(bool)]
     sound_int_filt = sound_int[(sound_int >= 0)*(sound_int < 500)]
     com_array = com[(sound_int >= 0)*(sound_int < 500)].astype(int)
-    array_energy_com = np.empty((sum(com_array == 1), int(500)))
-    array_energy_com[:] = np.nan
     sound_filt_com = sound_int_filt[com_array == 1]
     stim_filt = stim[:, (sound_int >= 0)*(sound_int < 500)]
     coh_filt = coh[(sound_int >= 0)*(sound_int < 500)]
     dec_filt = decision[(sound_int >= 0)*(sound_int < 500)]
     zt_filt = zt[(sound_int >= 0)*(sound_int < 500)]
-    # TODO: silent trials out!
-    for i, sound in enumerate(sound_int_filt):
-        array_energy[i, :sound] = (stim_filt[i, sound//50] - coh_filt[i])\
-            * dec_filt[i]
-    energy_com_t1 = []
-    energy_com_t2 = []
-    for j, sound_com in enumerate(sound_filt_com):
-        array_energy_com[j, :sound_com] = (stim_filt[com_array == 1]
-                                           [j, sound_com//50] -
-                                           coh_filt[com_array == 1][j]) *\
-            dec_filt[com_array == 1][j]
-        if sound_com > 50:
-            energy_com_t2.append(array_energy_com[j, :])
-        else:
-            energy_com_t1.append(array_energy_com[j, :])
-    dictionary = {}
-    frame_list = np.empty((0, ))
-    stim_dec_list = np.empty((0, ))
-    stim_dec = []
-    for i_s in range(5):
-        index_com_rt = (com_array == 1) *\
-            (np.abs(zt_filt) < 0.3)
-        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
-            * dec_filt[index_com_rt]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
-        stim_dec.append(stim_dec_tmp.T)
-        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
-        frame_list = np.concatenate((frame_list,
-                                    np.repeat(i_s+1,
-                                              len(stim_dec_tmp)))).astype(int)
-    dictionary['frame01'] = frame_list
-    dictionary['stimulus_decision_01'] = stim_dec_list
-    data_frame = pd.DataFrame(dictionary)
-    frame_list = np.empty((0, ))
-    stim_dec_list = np.empty((0, ))
-    stim_dec = []
-    for i_s in range(5):
-        index_com_rt = (com_array == 1) *\
-            (np.abs(zt_filt) > 2)
-        stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
-            * dec_filt[index_com_rt]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 1]
-        # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != 0]
-        stim_dec.append(stim_dec_tmp.T)
-        stim_dec_list = np.concatenate((stim_dec_list, stim_dec_tmp))
-        frame_list = np.concatenate((frame_list,
-                                    np.repeat(i_s+1,
-                                              len(stim_dec_tmp)))).astype(int)
-    dictionary['frame2'] = frame_list
-    dictionary['stimulus_decision_2'] = stim_dec_list
-    stim_dec = np.array(stim_dec)
-    for i in range(len(stim_dec[0, :])):
-        if stim_dec[0, i] * stim_dec[1, i] < 0:
-            if np.abs(zt_filt[index_com_rt][i]) < 0.1:
-                plt.plot([0, 1], stim_dec[:2, i], color='r', alpha=0.3)
-            if np.abs(zt_filt[index_com_rt][i]) > 2.5:
-                plt.plot([0, 1], stim_dec[:2, i] + 1, color='b', alpha=0.3)
-    plot_distributions(dictionary, data_frame)
+    if data_exist:
+        array_energy = np.load(DATA_FOLDER+'energy_array.npz',
+                               allow_pickle=1)['arr_0']
+        array_energy_com = np.load(DATA_FOLDER+'energy_array_com.npz',
+                                   allow_pickle=1)['arr_0']
+    else:
+        array_energy_com = np.empty((sum(com_array == 1), int(500)))
+        array_energy_com[:] = np.nan
+        for i, sound in enumerate(sound_int_filt):
+            array_energy[i, :sound] = (stim_filt[i, sound//50])\
+                * dec_filt[i]
+        for j, sound_com in enumerate(sound_filt_com):
+            array_energy_com[j, :sound_com] = (stim_filt[com_array == 1]
+                                               [j, sound_com//50]) *\
+                dec_filt[com_array == 1][j]
     array_energy_mean = np.nanmean(array_energy, axis=0)
     values = array_energy.shape[0] - np.sum(np.isnan(array_energy), axis=0)
     std_energy = np.sqrt(np.nanstd(array_energy, axis=0)/values)
@@ -1100,37 +1092,20 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
     plt.xlabel('RT (ms)')
     plt.ylabel('Energy (a.u.)')
     if plot:
-        energy = (np.subtract(stim, coh))*decision
-        index_t1 = (com_array.astype(bool)) * (zt_filt > 1) * (coh_filt >= 0.5)
-        index_t2 = (com_array.astype(bool)) * (zt_filt < 0.3) * (coh_filt <= 0.25)
-        energy_com = (stim[:, com.astype(bool)] - coh[com.astype(bool)])\
-            * (-1) * decision[com.astype(bool)]
+        plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array)
+        plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                           sound_int_filt, num_RT=4)
+        index_t1 = (com_array.astype(bool)) * (np.abs(zt_filt) > 1.5) *\
+                   (np.abs(coh_filt) == 0.25)
+        index_t2 = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.3) *\
+                   (np.abs(coh_filt) == 0.25)
         energy_com_t1 = (stim[:, index_t1] - coh[index_t1])\
             * (-1) * decision[index_t1]
         energy_com_t2 = (stim[:, index_t2] - coh[index_t2])\
             * (-1) * decision[index_t2]
-        array_energy_t1 = np.empty((sum(index_t1), int(300)))
-        array_energy_t1[:] = np.nan
-        array_energy_t2 = np.empty((sum(index_t2), int(300)))
-        array_energy_t2[:] = np.nan
-        for j, sound_com in enumerate(sound_int_filt[index_t1]):
-            array_energy_t1[j, :sound_com] = (stim_filt[:, index_t1]
-                                              [sound_com//50, j] -
-                                              coh_filt[index_t1][j]) *\
-               (-dec_filt[index_t1][j])
-        for j, sound_com in enumerate(sound_int_filt[index_t2]):
-            array_energy_t2[j, :sound_com] = (stim_filt[:, index_t2]
-                                              [sound_com//50, j] -
-                                              coh_filt[index_t2][j]) *\
-                (-dec_filt[index_t2][j])
-        mean_energy_t1 = np.nanmean(array_energy_t1, axis=0)
-        mean_energy_t2 = np.nanmean(array_energy_t2, axis=0)
-        values_t1 = array_energy_t1.shape[0]\
-            - np.sum(np.isnan(array_energy_t1), axis=0) + 1
-        values_t2 = array_energy_t2.shape[0]\
-            - np.sum(np.isnan(array_energy_t2), axis=0) + 1
-        err_energy_t1 = np.sqrt(np.nanstd(array_energy_t1, axis=0)/values_t1)
-        err_energy_t2 = np.sqrt(np.nanstd(array_energy_t2, axis=0)/values_t2)
+        energy = (np.subtract(stim, coh))*decision
+        energy_com = (stim[:, com.astype(bool)] - coh[com.astype(bool)])\
+            * (-1) * decision[com.astype(bool)]
         # energy = stim.T*decision
         # energy_com = stim[com.astype(bool)].T*(-1)*decision[com.astype(bool)]
         normal_sound = np.mean(stim*decision, axis=0)
@@ -1169,37 +1144,17 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
         df_curve_t2 = {'energy': energy_t2_plot,
                        'sound_len': -binned_rt_t2[binned_rt_t2 >= 0]*50}
         df_curve_t2 = pd.DataFrame(df_curve_t2)
-        fig12, ax12 = plt.subplots(nrows=1, ncols=2)
+        # Movement onset:
         bins_rt_neg = np.arange(-500, 1, 50)
-        binned_curve(df_curve_t1, 'energy', 'sound_len', xpos=50, xoffset=-450,
-                     bins=bins_rt_neg,
-                     return_data=False, errorbar_kw={'label': 'Type 1'},
-                     ax=ax12[0])
-        binned_curve(df_curve_t2, 'energy', 'sound_len', xpos=50, xoffset=-450,
-                     bins=bins_rt_neg,
-                     return_data=False, errorbar_kw={'label': 'Type 2'},
-                     ax=ax12[0])
-        ax12[0].set_xlabel('Time from movement onset')
-        ax12[1].plot(np.linspace(0, len(err_energy_t1)-1, num=300),
-                     mean_energy_t1,
-                     label='T1')
-        ax12[1].fill_between(np.linspace(0, len(err_energy_t1)-1, num=300),
-                             mean_energy_t1+err_energy_t1,
-                             mean_energy_t1-err_energy_t1,
-                             alpha=0.3)
-        ax12[1].plot(np.linspace(0, len(err_energy_t2)-1, num=300),
-                     mean_energy_t2,
-                     label='T2')
-        ax12[1].fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
-                             mean_energy_t2+err_energy_t2,
-                             mean_energy_t2-err_energy_t2,
-                             alpha=0.3)
-        ax12[1].axhline(y=0, linestyle='--', color='k', lw=1)
-        ax12[1].legend()
-        ax12[1].set_xlim(0, 300)
-        ax12[1].set_ylim(-0.05, 0.05)
-        ax12[1].set_xlabel('RT (ms)')
-        ax12[1].set_ylabel('Energy (a.u.)')
+        # binned_curve(df_curve_t1, 'energy', 'sound_len', xpos=50, xoffset=-450,
+        #              bins=bins_rt_neg,
+        #              return_data=False, errorbar_kw={'label': 'Type 1'},
+        #              ax=ax12[0])
+        # binned_curve(df_curve_t2, 'energy', 'sound_len', xpos=50, xoffset=-450,
+        #              bins=bins_rt_neg,
+        #              return_data=False, errorbar_kw={'label': 'Type 2'},
+        #              ax=ax12[0])
+        # ax12[0].set_xlabel('Time from movement onset')
         fig, ax = plt.subplots(1)
         df_curve = {'energy': energy_to_plot,
                     'sound_len': -binned_rt[binned_rt >= 0]*50}
@@ -1251,6 +1206,75 @@ def energy_vs_time(stim, coh, sound_len, com, decision, plot=True):
         # Resulaj
 
 
+def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                       sound_int_filt, num_RT=4):
+    fig12, ax12 = plt.subplots(nrows=num_RT, ncols=1)
+    fig12.suptitle('coh = 0.')
+    ax12 = ax12.flatten()
+    fig2, ax2 = plt.subplots(1)
+    ax2.axhline(y=0, linestyle='--', color='k', lw=1)
+    ax2.xlabel('RT (ms)')
+    ax2.ylabel('Stim*final_decsion')
+    ax2.title('coh=0.')
+    for i in range(num_RT):
+        RT = 30*(i)
+        index_t1 = (com_array.astype(bool)) * (np.abs(zt_filt) > 2) *\
+                   (np.abs(coh_filt) == 0.) * (sound_int_filt > RT) *\
+                   (sound_int_filt < 30*(i+1))
+        index_t2 = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
+                   (np.abs(coh_filt) == 0.) * (sound_int_filt < 30*(i+1)) *\
+                   (sound_int_filt > RT)
+        array_energy_t1 = np.empty((sum(index_t1), int(300)))
+        array_energy_t1[:] = np.nan
+        array_energy_t2 = np.empty((sum(index_t2), int(300)))
+        array_energy_t2[:] = np.nan
+        for j, sound_com in enumerate(sound_int_filt[index_t1]):
+            array_energy_t1[j, :sound_com] = (stim_filt[:, index_t1]
+                                              [sound_com//50, j]) *\
+               dec_filt[index_t1][j]
+        for j, sound_com in enumerate(sound_int_filt[index_t2]):
+            array_energy_t2[j, :sound_com] = (stim_filt[:, index_t2]
+                                              [sound_com//50, j]) *\
+                dec_filt[index_t2][j]
+        mean_energy_t1 = np.nanmean(array_energy_t1, axis=0)
+        mean_energy_t2 = np.nanmean(array_energy_t2, axis=0)
+        values_t1 = array_energy_t1.shape[0]\
+            - np.sum(np.isnan(array_energy_t1), axis=0) + 1
+        values_t2 = array_energy_t2.shape[0]\
+            - np.sum(np.isnan(array_energy_t2), axis=0) + 1
+        err_energy_t1 = np.sqrt(np.nanstd(array_energy_t1, axis=0)/values_t1)
+        err_energy_t2 = np.sqrt(np.nanstd(array_energy_t2, axis=0)/values_t2)
+        ax12[i].plot(np.linspace(0, len(err_energy_t1)-1, num=300),
+                     mean_energy_t1,
+                     label='T1 (zt > 2')
+        ax12[i].fill_between(np.linspace(0, len(err_energy_t1)-1, num=300),
+                             mean_energy_t1+err_energy_t1,
+                             mean_energy_t1-err_energy_t1,
+                             alpha=0.3)
+        ax12[i].plot(np.linspace(0, len(err_energy_t2)-1, num=300),
+                     mean_energy_t2,
+                     label='T2 (zt < 0.1)')
+        ax12[i].fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
+                             mean_energy_t2+err_energy_t2,
+                             mean_energy_t2-err_energy_t2,
+                             alpha=0.3)
+        ax2.plot(np.linspace(0, len(err_energy_t2)-1, num=300),
+                 mean_energy_t2,
+                 label='T2: {} < RT < {}'.format(RT, (i+1)*30))
+        ax2.fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
+                         mean_energy_t2+err_energy_t2,
+                         mean_energy_t2-err_energy_t2,
+                         alpha=0.3)
+        ax12[i].axhline(y=0, linestyle='--', color='k', lw=1)
+        ax12[i].set_xlim(0, 120)
+        ax12[i].set_ylim(-0.25, 0.25)
+        ax12[i].set_xlabel('RT (ms)')
+        ax12[i].set_ylabel('{} < RT < {}'.format(RT, (i+1)*30))
+        if i == 0:
+            ax12[i].legend()
+    ax2.legend()
+
+
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -1262,6 +1286,7 @@ if __name__ == '__main__':
     shuffle = True
     simulate = True
     parallel = False
+    plot_t12 = True
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -1269,11 +1294,11 @@ if __name__ == '__main__':
                 stim, zt, coh, gt, com, decision, sound_len =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
-                                        after_correct=True)
-                data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com}
+                                        after_correct=False)
+                data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
+                        'sound_len': sound_len, 'decision': decision}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
-                energy_vs_time(stim, coh, sound_len, com, decision)
             else:
                 files = glob.glob(DATA_FOLDER+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))])
@@ -1282,6 +1307,10 @@ if __name__ == '__main__':
                 coh = data['coh']
                 com = data['com']
                 gt = data['gt']
+                sound_len = data['sound_len']
+                decision = data['decision']
+            if plot_t12:
+                energy_vs_time(stim, zt, coh, sound_len, com, decision)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
             stim_res = 50/data_augment_factor
         else:

@@ -281,7 +281,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
 def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False, epsilon=1e-3):
+                   rms_comparison=False, epsilon=1e-6):
     start_llk = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
@@ -329,7 +329,7 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
         detected_com_mat[:, i] = detected_com
         pright_mat[:, i] = (resp_fin + 1)/2
         # end_simu = time.time()
-        # print(end_simu - start_simu)
+        # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
         if rms_comparison:
             diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                                first_ind=first_ind, data_path=DATA_FOLDER)
@@ -343,12 +343,15 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     pleft_and_com = np.nanmean(mat_left_and_com, axis=1)
     pleft_and_nocom = np.nanmean(mat_left_and_nocom, axis=1)
     matrix_dirichlet = np.zeros((len(pright), 4))
-    matrix_dirichlet[:, 0] = pright_and_com
-    matrix_dirichlet[:, 1] = pright_and_nocom
-    matrix_dirichlet[:, 2] = pleft_and_com
-    matrix_dirichlet[:, 3] = pleft_and_nocom
-    alpha_vector = dirichlet.mle(matrix_dirichlet, tol=1e-3, maxiter=int(1e5),
+    matrix_dirichlet[:, 0] = pright_and_com*(1-4*epsilon) + epsilon
+    matrix_dirichlet[:, 1] = pright_and_nocom*(1-4*epsilon) + epsilon
+    matrix_dirichlet[:, 2] = pleft_and_com*(1-4*epsilon) + epsilon
+    matrix_dirichlet[:, 3] = pleft_and_nocom*(1-4*epsilon) + epsilon
+    # start_dirichlet = time.time()
+    alpha_vector = dirichlet.mle(matrix_dirichlet, tol=1e-4, maxiter=int(1e5),
                                  method='fixedpoint')
+    # end_dirichlet = time.time()
+    # print('End Dirichlet: ' + str(end_dirichlet - start_dirichlet))
     alpha_sum = np.sum(alpha_vector)
     # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
     # prob_right = np.nanmean(pright_mat, axis=1)
