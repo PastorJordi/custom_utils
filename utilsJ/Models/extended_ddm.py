@@ -73,7 +73,6 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time, tr_index,
              p_com_bound, stim_res=50, trial=0):
-    start = time.time()
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[8].set_xlabel('Time (ms)')
@@ -1038,8 +1037,6 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
 def energy_vs_time(stim, zt, coh, sound_len, com, decision, plot=True,
                    data_exist=True):
     sound_int = np.array(sound_len).astype(int)
-    array_energy = np.empty((len(sound_int), int(500)))
-    array_energy[:] = np.nan
     # energy = (np.subtract(stim.T, coh))*decision
     # energy_com = (stim[com.astype(bool)].T - coh[com.astype(bool)])\
     #     * (-1) * decision[com.astype(bool)]
@@ -1056,6 +1053,8 @@ def energy_vs_time(stim, zt, coh, sound_len, com, decision, plot=True,
         array_energy_com = np.load(DATA_FOLDER+'energy_array_com.npz',
                                    allow_pickle=1)['arr_0']
     else:
+        array_energy = np.empty((len(sound_int), int(500)))
+        array_energy[:] = np.nan
         array_energy_com = np.empty((sum(com_array == 1), int(500)))
         array_energy_com[:] = np.nan
         for i, sound in enumerate(sound_int_filt):
@@ -1207,23 +1206,24 @@ def energy_vs_time(stim, zt, coh, sound_len, com, decision, plot=True,
 
 
 def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                       sound_int_filt, num_RT=4):
+                       sound_int_filt, num_RT=4, different_frames=False):
     fig12, ax12 = plt.subplots(nrows=num_RT, ncols=1)
     fig12.suptitle('coh = 0.')
     ax12 = ax12.flatten()
     fig2, ax2 = plt.subplots(1)
     ax2.axhline(y=0, linestyle='--', color='k', lw=1)
-    ax2.xlabel('RT (ms)')
-    ax2.ylabel('Stim*final_decsion')
-    ax2.title('coh=0.')
+    ax2.set_xlabel('RT (ms)')
+    ax2.set_ylabel('Stim*final_decsion')
+    ax2.set_title('coh=0.')
+    ax2.set_xlim(0, 120)
     for i in range(num_RT):
         RT = 30*(i)
         index_t1 = (com_array.astype(bool)) * (np.abs(zt_filt) > 2) *\
-                   (np.abs(coh_filt) == 0.) * (sound_int_filt > RT) *\
-                   (sound_int_filt < 30*(i+1))
+                   (np.abs(coh_filt) == 0.) * (sound_int_filt > RT)   # *\
+        # (sound_int_filt < 30*(i+1))
         index_t2 = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
-                   (np.abs(coh_filt) == 0.) * (sound_int_filt < 30*(i+1)) *\
-                   (sound_int_filt > RT)
+                   (np.abs(coh_filt) == 0.) * (sound_int_filt > RT)  # *\
+        # (sound_int_filt < 30*(i+1))
         array_energy_t1 = np.empty((sum(index_t1), int(300)))
         array_energy_t1[:] = np.nan
         array_energy_t2 = np.empty((sum(index_t2), int(300)))
@@ -1260,19 +1260,122 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                              alpha=0.3)
         ax2.plot(np.linspace(0, len(err_energy_t2)-1, num=300),
                  mean_energy_t2,
-                 label='T2: {} < RT < {}'.format(RT, (i+1)*30))
+                 label='T2: {} < RT'.format(RT))
         ax2.fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
                          mean_energy_t2+err_energy_t2,
                          mean_energy_t2-err_energy_t2,
                          alpha=0.3)
         ax12[i].axhline(y=0, linestyle='--', color='k', lw=1)
         ax12[i].set_xlim(0, 120)
-        ax12[i].set_ylim(-0.25, 0.25)
+        ax12[i].set_ylim(-0.15, 0.15)
         ax12[i].set_xlabel('RT (ms)')
-        ax12[i].set_ylabel('{} < RT < {}'.format(RT, (i+1)*30))
+        ax12[i].set_ylabel('{} < RT'.format(RT))
         if i == 0:
             ax12[i].legend()
+            plt.figure()
+            plt.plot(np.linspace(0, len(err_energy_t2)-1, num=300),
+                     mean_energy_t2,
+                     label='T2: {} < RT'.format(RT))
+            plt.fill_between(np.linspace(0, len(err_energy_t2)-1, num=300),
+                             mean_energy_t2+err_energy_t2,
+                             mean_energy_t2-err_energy_t2,
+                             alpha=0.3)
+            plt.title('all RT, type 2')
+            plt.axhline(y=0, linestyle='--', color='k', lw=1)
     ax2.legend()
+    precision = 20
+    RT_step = 5
+    RT_all = 0
+    max_RT = 120
+    coh_unq = 0.25
+    if different_frames:
+        RT_threshold_list = [50, 100]
+        fig_ths, ax_ths = plt.subplots(1)
+        colors = ['orange', 'blue']
+        for irt_th, RT_threshold in enumerate(RT_threshold_list):
+            list_for_df = np.empty((0))
+            list_of_rts = np.empty((0))
+            RT_all = RT_threshold-RT_threshold_list[0]
+            list_for_df, list_of_rts, _ =\
+                get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                                sound_int_filt, RT_all, RT_step, precision,
+                                RT_threshold, coh_unq, max_RT)
+            dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
+            df_to_plot = pd.DataFrame(dict_values)
+            sns.pointplot(data=df_to_plot, x="rt_vals", y="stim_vals",
+                          linewidth=0.5, label='stim: {}-{}'.format(
+                              RT_threshold-RT_threshold_list[0], RT_threshold),
+                          color=colors[irt_th], ax=ax_ths)
+            ax_ths.axhline(0, linestyle='--', color='k', lw=0.5)
+            ax_ths.set_title('coh = 0.25')
+    else:
+        RT_all = 55
+        RT_threshold = 50
+        list_for_df, list_of_rts, _ =\
+            get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                            sound_int_filt, RT_all, RT_step, precision,
+                            RT_threshold, coh_unq, max_RT)
+        dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
+        df_to_plot = pd.DataFrame(dict_values)
+        plt.figure()
+        sns.kdeplot(data=df_to_plot, x='stim_vals', hue='rt_vals',
+                    shade=False, linewidth=2, palette="dark:salmon_r",
+                    common_norm=False)
+        plt.axvline(0, linestyle='--', color='k', lw=0.5)
+        plt.title('Stim period: {}-{} ms. coh = {}'.format(
+            RT_threshold-RT_threshold_list[0], RT_threshold, coh_unq))
+        plt.figure()
+        sns.boxplot(data=df_to_plot, y='stim_vals', x='rt_vals',
+                    palette="dark:salmon_r", showmeans=True)
+        plt.axhline(0, linestyle='--', color='k', lw=0.5)
+        plt.title('Stim period: {}-{} ms. coh = {}'.format(
+            RT_threshold-RT_threshold_list[0], RT_threshold, coh_unq))
+        plt.figure()
+        sns.pointplot(data=df_to_plot, x="rt_vals", y="stim_vals",
+                      linewidth=0.5, label='stim: {}-{}'.format(
+                          RT_threshold-RT_threshold_list[0], RT_threshold))
+        plt.axhline(0, linestyle='--', color='k', lw=0.5)
+        plt.title('Stim period: {}. coh = {}'.format(RT_threshold,
+                                                     coh_unq))
+
+
+def get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                    sound_int_filt, RT_all, RT_step, precision, RT_threshold,
+                    coh_unq, max_RT, matrix=False, n_bins=None):
+    list_for_df = np.empty((0))
+    list_of_rts = np.empty((0))
+    if matrix:
+        matrix_stim = np.zeros((len(np.arange(0, max_RT, RT_step)-1),
+                                n_bins))
+    for j in range(RT_all, max_RT-precision, RT_step):
+        RT_all = j
+        index_t2_all = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
+                       (np.abs(coh_filt) == coh_unq) *\
+                       (sound_int_filt > RT_all) * (sound_int_filt
+                                                    < RT_all + precision)
+        if sum(index_t2_all) > 0:
+            array_energy_t2_all = np.empty((sum(index_t2_all), int(120)))
+            array_energy_t2_all[:] = np.nan
+            for s, sound_com in enumerate(sound_int_filt[index_t2_all]):
+                array_energy_t2_all[s, :sound_com] = (stim_filt[:, index_t2_all]
+                                                      [sound_com//50, s]) *\
+                    dec_filt[index_t2_all][s]
+            list_for_df = np.concatenate((list_for_df, np.nanmean(
+                array_energy_t2_all[:, :RT_threshold], axis=1)))
+            list_of_rts = np.concatenate((
+                list_of_rts, np.repeat(
+                        "{}-{}".format(RT_all, RT_all+precision),
+                        len(np.nanmean(
+                            array_energy_t2_all[:, :RT_threshold], axis=1)))))
+            if matrix:
+                hist_stim, bins_stim = np.histogram(np.nanmean(
+                    array_energy_t2_all[:, :RT_threshold], axis=1), bins=n_bins)
+                hist_stim = hist_stim/np.nansum(hist_stim)
+                matrix_stim[j//RT_step, :] = hist_stim
+    if matrix:
+        return list_for_df, list_of_rts, matrix_stim
+    else:
+        return list_for_df, list_of_rts, None
 
 
 # --- MAIN
@@ -1281,7 +1384,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(15e4)
     load_data = True
-    new_sample = True
+    new_sample = False
     single_run = True
     shuffle = True
     simulate = True
@@ -1337,7 +1440,7 @@ if __name__ == '__main__':
             p_w_updt = 10
             compute_trajectories = True
             plot = True
-            all_trajs = True
+            all_trajs = False
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]

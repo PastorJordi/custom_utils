@@ -281,7 +281,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
 def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False, epsilon=1e-6):
+                   rms_comparison=False, epsilon=1e-3):
     start_llk = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
@@ -342,36 +342,20 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     pright_and_nocom = np.nanmean(mat_right_and_nocom, axis=1)
     pleft_and_com = np.nanmean(mat_left_and_com, axis=1)
     pleft_and_nocom = np.nanmean(mat_left_and_nocom, axis=1)
-    matrix_dirichlet = np.zeros((len(pright), 4))
-    matrix_dirichlet[:, 0] = pright_and_com*(1-4*epsilon) + epsilon
-    matrix_dirichlet[:, 1] = pright_and_nocom*(1-4*epsilon) + epsilon
-    matrix_dirichlet[:, 2] = pleft_and_com*(1-4*epsilon) + epsilon
-    matrix_dirichlet[:, 3] = pleft_and_nocom*(1-4*epsilon) + epsilon
     # start_dirichlet = time.time()
-    alpha_vector = dirichlet.mle(matrix_dirichlet, tol=1e-4, maxiter=int(1e5),
-                                 method='fixedpoint')
-    # end_dirichlet = time.time()
-    # print('End Dirichlet: ' + str(end_dirichlet - start_dirichlet))
-    alpha_sum = np.sum(alpha_vector)
-    # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
-    # prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
     lk_list = []
     for i_p, p in enumerate(pright):
         if p == 1:
             if com[i_p] == 1:
-                lk = (np.sum(mat_right_and_com, axis=1)[i_p] + alpha_vector[0])\
-                    / (num_times_tr + alpha_sum)
+                lk = pright_and_com[i_p] + epsilon
             else:
-                lk = (np.sum(mat_right_and_nocom, axis=1)[i_p] + alpha_vector[1])\
-                    / (num_times_tr + alpha_sum)
+                lk = pright_and_nocom[i_p] + epsilon
         else:
             if com[i_p] == 1:
-                lk = (np.sum(mat_left_and_com, axis=1)[i_p] + alpha_vector[2])\
-                    / (num_times_tr + alpha_sum)
+                lk = pleft_and_com[i_p] + epsilon
             else:
-                lk = (np.sum(mat_left_and_nocom, axis=1)[i_p] + alpha_vector[3])\
-                    / (num_times_tr + alpha_sum)
+                lk = pleft_and_nocom[i_p] + epsilon
         lk_list.append(lk)
     llk_val = -np.nansum(np.log(lk_list))
     end_llk = time.time()
@@ -381,6 +365,24 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
         return llk_val, diff_rms_mean
     else:
         return llk_val, None
+
+
+def dirichlet_init(M, K, weight):
+    U = []
+    V = []
+    for k in range(0, K):
+        U.append([])
+    for row in M:
+        for k in range(0, K):
+            for j in range(0, row[k]):
+                if (len(U[k]) == j):
+                    U[k].append(0)
+                U[k][j] += weight
+        for j in range(0, sum(row)):
+            if (len(V) == j):
+                V.append(0)
+            V[j] += weight
+    return U, V
 
 
 def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
