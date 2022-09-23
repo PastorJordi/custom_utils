@@ -15,12 +15,12 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-import utilsJ
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
+from BayesPy.DirichletEstimation import dirichletMultinomialEstimation as dme
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
@@ -281,7 +281,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
 def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
                    p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
                    p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False, epsilon=1e-3):
+                   rms_comparison=False, epsilon=1e-6):
     start_llk = time.time()
     num_tr = stim.shape[1]
     indx_sh = np.arange(len(zt))
@@ -338,24 +338,44 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
     mat_left_and_com = detected_com_mat*(1-pright_mat)
     mat_left_and_nocom = (1-detected_com_mat)*(1-pright_mat)
-    pright_and_com = np.nanmean(mat_right_and_com, axis=1)
-    pright_and_nocom = np.nanmean(mat_right_and_nocom, axis=1)
-    pleft_and_com = np.nanmean(mat_left_and_com, axis=1)
-    pleft_and_nocom = np.nanmean(mat_left_and_nocom, axis=1)
+    pright_and_com = np.nansum(mat_right_and_com, axis=1).astype(int)
+    pright_and_nocom = np.nansum(mat_right_and_nocom, axis=1).astype(int)
+    pleft_and_com = np.nansum(mat_left_and_com, axis=1).astype(int)
+    pleft_and_nocom = np.nansum(mat_left_and_nocom, axis=1).astype(int)
+    matrix_dirichlet = np.zeros((len(pright), 4)).astype(int)
+    matrix_dirichlet[:, 0] = pright_and_com
+    matrix_dirichlet[:, 1] = pright_and_nocom
+    matrix_dirichlet[:, 2] = pleft_and_com
+    matrix_dirichlet[:, 3] = pleft_and_nocom
     # start_dirichlet = time.time()
+    data = dme.CompressedRowData(matrix_dirichlet.shape[1])
+    for row_ind in range(matrix_dirichlet.shape[1]):
+        data.appendRow(matrix_dirichlet[row_ind, :], weight=1)
+    alpha_vector = dme.findDirichletPriors(data=data,
+                                           initAlphas=[1, 1, 1, 1],
+                                           iterations=1000)
+    # end_dirichlet = time.time()
+    # print('End Dirichlet: ' + str(end_dirichlet - start_dirichlet))
+    alpha_sum = np.sum(alpha_vector)
+    # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
+    # prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
     lk_list = []
     for i_p, p in enumerate(pright):
         if p == 1:
             if com[i_p] == 1:
-                lk = pright_and_com[i_p] + epsilon
+                lk = (np.sum(mat_right_and_com, axis=1)[i_p] + alpha_vector[0])\
+                    / (num_times_tr + alpha_sum)
             else:
-                lk = pright_and_nocom[i_p] + epsilon
+                lk = (np.sum(mat_right_and_nocom, axis=1)[i_p] + alpha_vector[1])\
+                    / (num_times_tr + alpha_sum)
         else:
             if com[i_p] == 1:
-                lk = pleft_and_com[i_p] + epsilon
+                lk = (np.sum(mat_left_and_com, axis=1)[i_p] + alpha_vector[2])\
+                    / (num_times_tr + alpha_sum)
             else:
-                lk = pleft_and_nocom[i_p] + epsilon
+                lk = (np.sum(mat_left_and_nocom, axis=1)[i_p] + alpha_vector[3])\
+                    / (num_times_tr + alpha_sum)
         lk_list.append(lk)
     llk_val = -np.nansum(np.log(lk_list))
     end_llk = time.time()
@@ -365,24 +385,6 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
         return llk_val, diff_rms_mean
     else:
         return llk_val, None
-
-
-def dirichlet_init(M, K, weight):
-    U = []
-    V = []
-    for k in range(0, K):
-        U.append([])
-    for row in M:
-        for k in range(0, K):
-            for j in range(0, row[k]):
-                if (len(U[k]) == j):
-                    U[k].append(0)
-                U[k][j] += weight
-        for j in range(0, sum(row)):
-            if (len(V) == j):
-                V.append(0)
-            V[j] += weight
-    return U, V
 
 
 def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
@@ -425,11 +427,11 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = True
+    optimization = False
     rms_comparison = False
     plotting = False
     plot_rms_llk = False
-    single_run = False
+    single_run = True
     stim, zt, coh, gt, com, pright = get_data(dfpath=DATA_FOLDER,
                                               after_correct=True,
                                               num_tr_per_rat=int(2e3),

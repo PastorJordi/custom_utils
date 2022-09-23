@@ -1286,35 +1286,36 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
     precision = 20
     RT_step = 5
     RT_all = 0
-    max_RT = 120
+    max_RT = 200
     coh_unq = 0.25
     if different_frames:
-        RT_threshold_list = [50, 100]
+        stim_period_th_list = [50, 100, 150]
         fig_ths, ax_ths = plt.subplots(1)
-        colors = ['orange', 'blue']
-        for irt_th, RT_threshold in enumerate(RT_threshold_list):
+        colors = ['blue', 'orange', 'red']
+        for irt_th, stim_period_th in enumerate(stim_period_th_list):
             list_for_df = np.empty((0))
             list_of_rts = np.empty((0))
-            RT_all = RT_threshold-RT_threshold_list[0]
-            list_for_df, list_of_rts, _ =\
-                get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                                sound_int_filt, RT_all, RT_step, precision,
-                                RT_threshold, coh_unq, max_RT)
+            RT_all = stim_period_th-stim_period_th_list[0]
+            list_for_df, list_of_rts, bins_RT, _ =\
+                get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                           sound_int_filt, RT_all, RT_step, precision,
+                           stim_period_th, coh_unq, max_RT, frame=irt_th)
             dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
             df_to_plot = pd.DataFrame(dict_values)
-            sns.pointplot(data=df_to_plot, x="rt_vals", y="stim_vals",
-                          linewidth=0.5, label='stim: {}-{}'.format(
-                              RT_threshold-RT_threshold_list[0], RT_threshold),
-                          color=colors[irt_th], ax=ax_ths)
+            sns.lineplot(data=df_to_plot, x="rt_vals", y="stim_vals",
+                         linewidth=1.5, label='stim: {}-{}'.format(
+                                 stim_period_th-stim_period_th_list[0],
+                                 stim_period_th), color=colors[irt_th],
+                         ax=ax_ths, err_style='bars')
             ax_ths.axhline(0, linestyle='--', color='k', lw=0.5)
-            ax_ths.set_title('coh = 0.25')
+            ax_ths.set_title('coh = {}'.format(coh_unq))
     else:
         RT_all = 55
-        RT_threshold = 50
-        list_for_df, list_of_rts, _ =\
-            get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                            sound_int_filt, RT_all, RT_step, precision,
-                            RT_threshold, coh_unq, max_RT)
+        stim_period_th = 100
+        list_for_df, list_of_rts, bins_RT, _ =\
+            get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                       sound_int_filt, RT_all, RT_step, precision,
+                       stim_period_th, coh_unq, max_RT)
         dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
         df_to_plot = pd.DataFrame(dict_values)
         plt.figure()
@@ -1323,59 +1324,69 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                     common_norm=False)
         plt.axvline(0, linestyle='--', color='k', lw=0.5)
         plt.title('Stim period: {}-{} ms. coh = {}'.format(
-            RT_threshold-RT_threshold_list[0], RT_threshold, coh_unq))
+            stim_period_th-stim_period_th_list[0], stim_period_th, coh_unq))
         plt.figure()
         sns.boxplot(data=df_to_plot, y='stim_vals', x='rt_vals',
                     palette="dark:salmon_r", showmeans=True)
         plt.axhline(0, linestyle='--', color='k', lw=0.5)
         plt.title('Stim period: {}-{} ms. coh = {}'.format(
-            RT_threshold-RT_threshold_list[0], RT_threshold, coh_unq))
+            stim_period_th-stim_period_th_list[0], stim_period_th, coh_unq))
         plt.figure()
         sns.pointplot(data=df_to_plot, x="rt_vals", y="stim_vals",
                       linewidth=0.5, label='stim: {}-{}'.format(
-                          RT_threshold-RT_threshold_list[0], RT_threshold))
+                          stim_period_th-stim_period_th_list[0], stim_period_th))
         plt.axhline(0, linestyle='--', color='k', lw=0.5)
-        plt.title('Stim period: {}. coh = {}'.format(RT_threshold,
-                                                     coh_unq))
+        plt.title('Stim period: {}-{} ms. coh = {}'.format(
+            stim_period_th-stim_period_th_list[0], stim_period_th, coh_unq))
 
 
-def get_stim_and_rt(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                    sound_int_filt, RT_all, RT_step, precision, RT_threshold,
-                    coh_unq, max_RT, matrix=False, n_bins=None):
+def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+               sound_int_filt, RT_init, RT_step, precision, stim_period_th,
+               coh_unq, max_RT, matrix=False, n_bins=None, frame=0):
     list_for_df = np.empty((0))
     list_of_rts = np.empty((0))
+    bins_RT = np.empty((0))
     if matrix:
         matrix_stim = np.zeros((len(np.arange(0, max_RT, RT_step)-1),
                                 n_bins))
-    for j in range(RT_all, max_RT-precision, RT_step):
+    for j in range(RT_init, max_RT-precision, RT_step):
         RT_all = j
         index_t2_all = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
                        (np.abs(coh_filt) == coh_unq) *\
                        (sound_int_filt > RT_all) * (sound_int_filt
                                                     < RT_all + precision)
         if sum(index_t2_all) > 0:
-            array_energy_t2_all = np.empty((sum(index_t2_all), int(120)))
+            array_energy_t2_all = np.empty((sum(index_t2_all), int(200)))
             array_energy_t2_all[:] = np.nan
             for s, sound_com in enumerate(sound_int_filt[index_t2_all]):
                 array_energy_t2_all[s, :sound_com] = (stim_filt[:, index_t2_all]
-                                                      [sound_com//50, s]) *\
+                                                      [frame, s]) *\
                     dec_filt[index_t2_all][s]
             list_for_df = np.concatenate((list_for_df, np.nanmean(
-                array_energy_t2_all[:, :RT_threshold], axis=1)))
+                array_energy_t2_all[:, stim_period_th-49:stim_period_th], axis=1)))
             list_of_rts = np.concatenate((
                 list_of_rts, np.repeat(
                         "{}-{}".format(RT_all, RT_all+precision),
                         len(np.nanmean(
-                            array_energy_t2_all[:, :RT_threshold], axis=1)))))
+                            array_energy_t2_all[:, stim_period_th-49:
+                                                stim_period_th], axis=1)))))
+            bins_RT =\
+                np.concatenate((
+                    bins_RT,
+                    np.repeat(RT_all//RT_step,
+                              len(np.nanmean(array_energy_t2_all
+                                             [:, stim_period_th-49:stim_period_th],
+                                             axis=1)))))
             if matrix:
                 hist_stim, bins_stim = np.histogram(np.nanmean(
-                    array_energy_t2_all[:, :RT_threshold], axis=1), bins=n_bins)
+                    array_energy_t2_all[:, stim_period_th-49:stim_period_th],
+                    axis=1), bins=n_bins)
                 hist_stim = hist_stim/np.nansum(hist_stim)
                 matrix_stim[j//RT_step, :] = hist_stim
     if matrix:
-        return list_for_df, list_of_rts, matrix_stim
+        return list_for_df, list_of_rts, bins_RT, matrix_stim
     else:
-        return list_for_df, list_of_rts, None
+        return list_for_df, list_of_rts, bins_RT, None
 
 
 # --- MAIN
