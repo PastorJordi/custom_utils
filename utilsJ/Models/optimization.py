@@ -20,7 +20,7 @@ sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
-from BayesPy.DirichletEstimation import dirichletMultinomialEstimation as dme
+import utilsJ.Models.dirichletMultinomialEstimation as dme
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
@@ -348,8 +348,9 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     matrix_dirichlet[:, 2] = pleft_and_com
     matrix_dirichlet[:, 3] = pleft_and_nocom
     # start_dirichlet = time.time()
-    data = dme.CompressedRowData(matrix_dirichlet.shape[1])
-    for row_ind in range(matrix_dirichlet.shape[1]):
+    K = matrix_dirichlet.shape[1]
+    data = dme.CompressedRowData(K)
+    for row_ind in range(K):
         data.appendRow(matrix_dirichlet[row_ind, :], weight=1)
     alpha_vector = dme.findDirichletPriors(data=data,
                                            initAlphas=[1, 1, 1, 1],

@@ -1285,8 +1285,8 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
     ax2.legend()
     precision = 20
     RT_step = 5
-    RT_all = 0
-    max_RT = 200
+    RT_init = 0
+    max_RT = 120
     coh_unq = 0.25
     if different_frames:
         stim_period_th_list = [50, 100, 150]
@@ -1295,10 +1295,10 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
         for irt_th, stim_period_th in enumerate(stim_period_th_list):
             list_for_df = np.empty((0))
             list_of_rts = np.empty((0))
-            RT_all = stim_period_th-stim_period_th_list[0]
+            RT_init = stim_period_th-stim_period_th_list[0]
             list_for_df, list_of_rts, bins_RT, _ =\
                 get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                           sound_int_filt, RT_all, RT_step, precision,
+                           sound_int_filt, RT_init, RT_step, precision,
                            stim_period_th, coh_unq, max_RT, frame=irt_th)
             dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
             df_to_plot = pd.DataFrame(dict_values)
@@ -1310,11 +1310,11 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
             ax_ths.axhline(0, linestyle='--', color='k', lw=0.5)
             ax_ths.set_title('coh = {}'.format(coh_unq))
     else:
-        RT_all = 55
-        stim_period_th = 100
+        RT_init = 0
+        stim_period_th = 50
         list_for_df, list_of_rts, bins_RT, _ =\
             get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                       sound_int_filt, RT_all, RT_step, precision,
+                       sound_int_filt, RT_init, RT_step, precision,
                        stim_period_th, coh_unq, max_RT)
         dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
         df_to_plot = pd.DataFrame(dict_values)
