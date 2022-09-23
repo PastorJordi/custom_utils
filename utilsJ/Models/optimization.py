@@ -15,8 +15,8 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
