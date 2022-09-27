@@ -358,8 +358,6 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     # end_dirichlet = time.time()
     # print('End Dirichlet: ' + str(end_dirichlet - start_dirichlet))
     alpha_sum = np.sum(alpha_vector)
-    # prob_detected_com = np.nanmean(detected_com_mat, axis=1)
-    # prob_right = np.nanmean(pright_mat, axis=1)
     com = np.array(com, dtype=float)
     lk_list = []
     for i_p, p in enumerate(pright):

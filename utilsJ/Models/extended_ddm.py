@@ -970,7 +970,7 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
     stim_dec = []
     for i_s in range(5):
         index_com_rt = (com_array == 1) *\
-            (np.abs(zt_filt) < 0.3) * (np.abs(coh_filt) == 0.25)
+            (np.abs(zt_filt) < 0.1) * (np.abs(coh_filt) == 0.25)
         stim_dec_tmp = (stim_filt[i_s, index_com_rt])\
             * dec_filt[index_com_rt]
         # stim_dec_tmp = stim_dec_tmp[stim_dec_tmp != -1]
@@ -1012,9 +1012,9 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
                                         [dictionary['frame01'] == i_ax+1],
                                         range=(-0.75, 0.75), bins=25)
         ax[i_ax].plot(bins2[:-1], counts2/sum(counts2),
-                      label='zt > 2')
+                      label='zt > 2.5')
         ax[i_ax].plot(bins01[:-1], counts01/sum(counts01),
-                      label='zt < 0.3')
+                      label='zt < 0.1')
         ax[i_ax].fill_between(bins2[:-1], counts2/sum(counts2), alpha=0.3)
         ax[i_ax].fill_between(bins01[:-1], counts01/sum(counts01), alpha=0.3)
         ax[i_ax].set_ylabel('Frame {}'.format(i_ax+1))
@@ -1286,7 +1286,7 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
     precision = 20
     RT_step = 5
     RT_init = 0
-    max_RT = 120
+    max_RT = 150
     coh_unq = 0.25
     if different_frames:
         stim_period_th_list = [50, 100, 150]
@@ -1299,7 +1299,7 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
             list_for_df, list_of_rts, bins_RT, _ =\
                 get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                            sound_int_filt, RT_init, RT_step, precision,
-                           stim_period_th, coh_unq, max_RT, frame=irt_th)
+                           coh_unq, max_RT, frame=irt_th)
             dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
             df_to_plot = pd.DataFrame(dict_values)
             sns.lineplot(data=df_to_plot, x="rt_vals", y="stim_vals",
@@ -1310,12 +1310,12 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
             ax_ths.axhline(0, linestyle='--', color='k', lw=0.5)
             ax_ths.set_title('coh = {}'.format(coh_unq))
     else:
-        RT_init = 0
-        stim_period_th = 50
+        RT_init = 50
+        stim_period_th = 100
         list_for_df, list_of_rts, bins_RT, _ =\
             get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                        sound_int_filt, RT_init, RT_step, precision,
-                       stim_period_th, coh_unq, max_RT)
+                       coh_unq, max_RT, frame=1)
         dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
         df_to_plot = pd.DataFrame(dict_values)
         plt.figure()
@@ -1341,7 +1341,7 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
 
 
 def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-               sound_int_filt, RT_init, RT_step, precision, stim_period_th,
+               sound_int_filt, RT_init, RT_step, precision,
                coh_unq, max_RT, matrix=False, n_bins=None, frame=0):
     list_for_df = np.empty((0))
     list_of_rts = np.empty((0))
@@ -1356,30 +1356,32 @@ def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                        (sound_int_filt > RT_all) * (sound_int_filt
                                                     < RT_all + precision)
         if sum(index_t2_all) > 0:
-            array_energy_t2_all = np.empty((sum(index_t2_all), int(200)))
+            array_energy_t2_all = np.empty((sum(index_t2_all), int(
+                max(sound_int_filt[index_t2_all]+1))))
             array_energy_t2_all[:] = np.nan
             for s, sound_com in enumerate(sound_int_filt[index_t2_all]):
                 array_energy_t2_all[s, :sound_com] = (stim_filt[:, index_t2_all]
                                                       [frame, s]) *\
                     dec_filt[index_t2_all][s]
             list_for_df = np.concatenate((list_for_df, np.nanmean(
-                array_energy_t2_all[:, stim_period_th-49:stim_period_th], axis=1)))
+                array_energy_t2_all[:, int(50*frame):int(50*(frame+1))], axis=1)))
             list_of_rts = np.concatenate((
                 list_of_rts, np.repeat(
                         "{}-{}".format(RT_all, RT_all+precision),
                         len(np.nanmean(
-                            array_energy_t2_all[:, stim_period_th-49:
-                                                stim_period_th], axis=1)))))
+                            array_energy_t2_all[:,
+                                                int(50*frame):int(50*(frame+1))],
+                            axis=1)))))
             bins_RT =\
                 np.concatenate((
                     bins_RT,
                     np.repeat(RT_all//RT_step,
                               len(np.nanmean(array_energy_t2_all
-                                             [:, stim_period_th-49:stim_period_th],
+                                             [:, int(50*frame):int(50*(frame+1))],
                                              axis=1)))))
             if matrix:
                 hist_stim, bins_stim = np.histogram(np.nanmean(
-                    array_energy_t2_all[:, stim_period_th-49:stim_period_th],
+                    array_energy_t2_all[:, int(50*frame):int(50*(frame+1))],
                     axis=1), bins=n_bins)
                 hist_stim = hist_stim/np.nansum(hist_stim)
                 matrix_stim[j//RT_step, :] = hist_stim
@@ -1387,6 +1389,25 @@ def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
         return list_for_df, list_of_rts, bins_RT, matrix_stim
     else:
         return list_for_df, list_of_rts, bins_RT, None
+
+
+def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
+                                com_array, sound_int_filt, RT_init, RT_step,
+                                precision, coh_unq, max_RT):
+    stim_decision_f1_all = (stim_filt[0, :])*dec_filt
+    stim_decision_f2_all = (stim_filt[1, :])*dec_filt
+    index_t2_all = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
+        (np.abs(coh_filt) == coh_unq) *\
+        (sound_int_filt >= 80) * (sound_int_filt <= 99)
+    stim_decision_f1 = stim_decision_f1_all[index_t2_all]
+    stim_decision_f2 = stim_decision_f2_all[index_t2_all]
+    plt.figure()
+    plt.boxplot([stim_decision_f1, stim_decision_f2])
+    plt.axhline(0, linestyle='--', color='k', lw=0.5)
+    for line_ind in range(sum(index_t2_all)):
+        plt.plot([1, 2], [stim_decision_f1[line_ind], stim_decision_f2[line_ind]],
+                 alpha=0.3, color='k')
+    return
 
 
 # --- MAIN
