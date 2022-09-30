@@ -425,6 +425,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     gt = np.empty((0, ))
     sound_len = np.empty((0, ))
     decision = np.empty((0, ))
+    hit = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
@@ -448,6 +449,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         com_tmp = df.CoM_sugg.values
         decision_tmp = np.array(df.R_response) * 2 - 1
         sound_len_tmp = np.array(df.sound_len)
+        hit_tmp = np.array(df['hithistory'])
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
         stim = np.concatenate((stim, stim_tmp[indx, :]))
@@ -456,6 +458,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         gt = np.concatenate((gt, gt_tmp[indx]))
         decision = np.concatenate((decision, decision_tmp[indx]))
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
+        hit = np.concatenate((hit, hit_tmp))
         end = time.time()
         print(f)
         print(end - start_1)
@@ -475,7 +478,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
-    return stim, prior, coh, gt, com, decision, sound_len  # , matrix
+    return stim, prior, coh, gt, com, decision, sound_len, hit  # , matrix
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -1034,7 +1037,7 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
 
 
-def energy_vs_time(stim, zt, coh, sound_len, com, decision, plot=True,
+def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=True,
                    data_exist=True):
     sound_int = np.array(sound_len).astype(int)
     # energy = (np.subtract(stim.T, coh))*decision
@@ -1284,40 +1287,52 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
             plt.axhline(y=0, linestyle='--', color='k', lw=1)
     ax2.legend()
     precision = 20
-    RT_step = 5
+    RT_step = 10
     RT_init = 0
     max_RT = 150
     coh_unq = 0.25
     if different_frames:
-        stim_period_th_list = [50, 100, 150]
-        fig_ths, ax_ths = plt.subplots(1)
-        colors = ['blue', 'orange', 'red']
-        for irt_th, stim_period_th in enumerate(stim_period_th_list):
-            list_for_df = np.empty((0))
-            list_of_rts = np.empty((0))
-            RT_init = stim_period_th-stim_period_th_list[0]
-            list_for_df, list_of_rts, bins_RT, _ =\
-                get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-                           sound_int_filt, RT_init, RT_step, precision,
-                           coh_unq, max_RT, frame=irt_th)
-            dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
-            df_to_plot = pd.DataFrame(dict_values)
-            sns.lineplot(data=df_to_plot, x="rt_vals", y="stim_vals",
-                         linewidth=1.5, label='stim: {}-{}'.format(
-                                 stim_period_th-stim_period_th_list[0],
-                                 stim_period_th), color=colors[irt_th],
-                         ax=ax_ths, err_style='bars')
-            ax_ths.axhline(0, linestyle='--', color='k', lw=0.5)
-            ax_ths.set_title('coh = {}'.format(coh_unq))
+        fig_ths, ax_ths = plt.subplots(nrows=2, ncols=1)
+        fig_dis, ax_dis = plt.subplots(nrows=3, ncols=2)
+        for ind_com in range(2):
+            stim_period_th_list = [50, 100, 150]
+            colors = ['blue', 'orange', 'red']
+            for irt_th, stim_period_th in enumerate(stim_period_th_list):
+                RT_init = stim_period_th-stim_period_th_list[0]
+                list_for_df, list_of_rts, bins_RT, _ =\
+                    get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                               sound_int_filt, RT_init, RT_step, precision,
+                               coh_unq, max_RT, frame=irt_th, is_com=ind_com)
+                dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
+                df_to_plot = pd.DataFrame(dict_values)
+                sns.lineplot(data=df_to_plot, x="rt_vals", y="stim_vals",
+                             linewidth=1.5, label='stim: {}-{}'.format(
+                                     stim_period_th-stim_period_th_list[0],
+                                     stim_period_th), color=colors[irt_th],
+                             ax=ax_ths[ind_com], err_style='bars')
+                ax_ths[ind_com].axhline(0, linestyle='--', color='k', lw=0.5)
+                ax_ths[ind_com].set_title('coh = {}'.format(coh_unq))
+                sns.kdeplot(data=df_to_plot, x='stim_vals', hue='rt_vals',
+                            shade=False, linewidth=2, palette="dark:salmon_r",
+                            common_norm=False, ax=ax_dis[irt_th, ind_com])
     else:
-        RT_init = 50
+        RT_init = 0
         stim_period_th = 100
         list_for_df, list_of_rts, bins_RT, _ =\
             get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                        sound_int_filt, RT_init, RT_step, precision,
-                       coh_unq, max_RT, frame=1)
-        dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
+                       coh_unq, max_RT, frame=0)
+        # dict_values = {'stim_vals': list_for_df, 'rt_vals': list_of_rts}
+        dict_values['stim_vals_f2'] = list_for_df
+        dict_values['rt_vals_f2'] = list_of_rts
         df_to_plot = pd.DataFrame(dict_values)
+        g = sns.FacetGrid(df_to_plot, row="rt_vals", aspect=5, height=1)
+        g.map(sns.kdeplot, "stim_vals", bw_adjust=.5, clip_on=True,
+              fill=False, alpha=1, linewidth=2)
+        g.fig.subplots_adjust(hspace=-.25)
+        # g.set_titles("")
+        # g.set(yticks=[], ylabel="")
+        # g.despine(bottom=True, left=True)
         plt.figure()
         sns.kdeplot(data=df_to_plot, x='stim_vals', hue='rt_vals',
                     shade=False, linewidth=2, palette="dark:salmon_r",
@@ -1342,7 +1357,7 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
 
 def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                sound_int_filt, RT_init, RT_step, precision,
-               coh_unq, max_RT, matrix=False, n_bins=None, frame=0):
+               coh_unq, max_RT, matrix=False, n_bins=None, frame=0, is_com=True):
     list_for_df = np.empty((0))
     list_of_rts = np.empty((0))
     bins_RT = np.empty((0))
@@ -1351,38 +1366,29 @@ def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                                 n_bins))
     for j in range(RT_init, max_RT-precision, RT_step):
         RT_all = j
-        index_t2_all = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
-                       (np.abs(coh_filt) == coh_unq) *\
-                       (sound_int_filt > RT_all) * (sound_int_filt
-                                                    < RT_all + precision)
+        index_t2_all = (np.abs(zt_filt) < 0.1) *\
+            (np.abs(coh_filt) == coh_unq) *\
+            (sound_int_filt > RT_all) * (sound_int_filt
+                                         < RT_all + precision)
+        if is_com:
+            index_t2_all *= (com_array.astype(bool))
+        else:
+            index_t2_all *= (~com_array.astype(bool))
         if sum(index_t2_all) > 0:
-            array_energy_t2_all = np.empty((sum(index_t2_all), int(
-                max(sound_int_filt[index_t2_all]+1))))
-            array_energy_t2_all[:] = np.nan
-            for s, sound_com in enumerate(sound_int_filt[index_t2_all]):
-                array_energy_t2_all[s, :sound_com] = (stim_filt[:, index_t2_all]
-                                                      [frame, s]) *\
-                    dec_filt[index_t2_all][s]
-            list_for_df = np.concatenate((list_for_df, np.nanmean(
-                array_energy_t2_all[:, int(50*frame):int(50*(frame+1))], axis=1)))
+            array_energy_t2_all = stim_filt[frame, index_t2_all] *\
+                dec_filt[index_t2_all]
+            list_for_df = np.concatenate((list_for_df, array_energy_t2_all))
             list_of_rts = np.concatenate((
                 list_of_rts, np.repeat(
                         "{}-{}".format(RT_all, RT_all+precision),
-                        len(np.nanmean(
-                            array_energy_t2_all[:,
-                                                int(50*frame):int(50*(frame+1))],
-                            axis=1)))))
+                        len(array_energy_t2_all))))
             bins_RT =\
                 np.concatenate((
                     bins_RT,
-                    np.repeat(RT_all//RT_step,
-                              len(np.nanmean(array_energy_t2_all
-                                             [:, int(50*frame):int(50*(frame+1))],
-                                             axis=1)))))
+                    np.repeat(RT_all//RT_step, len(array_energy_t2_all))))
             if matrix:
-                hist_stim, bins_stim = np.histogram(np.nanmean(
-                    array_energy_t2_all[:, int(50*frame):int(50*(frame+1))],
-                    axis=1), bins=n_bins)
+                hist_stim, bins_stim = np.histogram(array_energy_t2_all,
+                                                    bins=n_bins)
                 hist_stim = hist_stim/np.nansum(hist_stim)
                 matrix_stim[j//RT_step, :] = hist_stim
     if matrix:
@@ -1394,19 +1400,31 @@ def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
 def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
                                 com_array, sound_int_filt, RT_init, RT_step,
                                 precision, coh_unq, max_RT):
+    RT_1 = 60
+    RT_2 = 90
     stim_decision_f1_all = (stim_filt[0, :])*dec_filt
     stim_decision_f2_all = (stim_filt[1, :])*dec_filt
     index_t2_all = (com_array.astype(bool)) * (np.abs(zt_filt) < 0.1) *\
-        (np.abs(coh_filt) == coh_unq) *\
-        (sound_int_filt >= 80) * (sound_int_filt <= 99)
+        (np.abs(coh_filt) == 0) *\
+        (sound_int_filt >= RT_1) * (sound_int_filt <= RT_2)
     stim_decision_f1 = stim_decision_f1_all[index_t2_all]
     stim_decision_f2 = stim_decision_f2_all[index_t2_all]
     plt.figure()
     plt.boxplot([stim_decision_f1, stim_decision_f2])
     plt.axhline(0, linestyle='--', color='k', lw=0.5)
+    index_t2 = ((stim_decision_f2*stim_decision_f1) < 0)*(stim_decision_f1 < 0)
+    print('Total T2 in this range: ' + str(sum(index_t2)))
+    print('Total num of trials in this range: ' + str(len(stim_decision_f1)))
     for line_ind in range(sum(index_t2_all)):
-        plt.plot([1, 2], [stim_decision_f1[line_ind], stim_decision_f2[line_ind]],
-                 alpha=0.3, color='k')
+        if index_t2[line_ind]:
+            plt.plot([1, 2], [stim_decision_f1[line_ind],
+                              stim_decision_f2[line_ind]],
+                     alpha=0.7, color='r')
+        else:
+            plt.plot([1, 2], [stim_decision_f1[line_ind],
+                              stim_decision_f2[line_ind]],
+                     alpha=0.3, color='k')
+    plt.show()
     return
 
 
@@ -1416,7 +1434,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(15e4)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -1426,12 +1444,12 @@ if __name__ == '__main__':
     if simulate:
         if load_data:
             if new_sample:
-                stim, zt, coh, gt, com, decision, sound_len =\
+                stim, zt, coh, gt, com, decision, sound_len, hit =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
                                         after_correct=False)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
-                        'sound_len': sound_len, 'decision': decision}
+                        'sound_len': sound_len, 'decision': decision, 'hit': hit}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
             else:
@@ -1444,8 +1462,9 @@ if __name__ == '__main__':
                 gt = data['gt']
                 sound_len = data['sound_len']
                 decision = data['decision']
+                hit = data['hit']
             if plot_t12:
-                energy_vs_time(stim, zt, coh, sound_len, com, decision)
+                energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
             stim_res = 50/data_augment_factor
         else:
@@ -1549,3 +1568,39 @@ if __name__ == '__main__':
 #     norm_hist = pos_rts[conf, :]
 #     plt.plot(pos_rts_bins, norm_hist, lw=0.5, color='k')
 # plt.plot(exps.rt, pcoms, color='r')
+precision = 20
+RT_step = 10
+RT_init = 0
+max_RT = 130
+coh_unq = 0.25
+for c in range(2):
+    for coh_unq in [0, 0.25]:
+        fig, ax = plt.subplots(nrows=11, ncols=1)
+        ax = ax.flatten()
+        for f in range(2):
+            list_for_df, list_of_rts, bins_RT, _ =\
+                get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
+                           sound_int_filt, RT_init, RT_step, precision,
+                           coh_unq, max_RT, frame=f, is_com=c)
+            dict_values = {'stim_vals_{}'.format(f+1): list_for_df,
+                           'rt_vals_{}'.format(f+1): list_of_rts}
+            df_to_plot = pd.DataFrame(dict_values)
+            plt.figure(25)
+            arr_1x = []
+            arr_1y = []
+            for i in range(11):
+                arr_fin = sns.kdeplot(data=df_to_plot,
+                                      x='stim_vals_{}'.format(f+1),
+                                      hue='rt_vals_{}'.format(f+1))\
+                    .get_lines()[i].get_data()
+                arr_1x.append(arr_fin[0])
+                arr_1y.append(arr_fin[1])
+                ax[i].plot(arr_1x[i], arr_1y[i], label='F{}'.format(f+1))
+                ax[i].set_xlim(-0.75, 0.75)
+                ax[i].set_ylabel(np.unique(list_of_rts)[i])
+                ax[i].axvline(x=0, linewidth=0.4, linestyle='--', color='k')
+            plt.close(25)
+            ax[0].legend()
+            ax[-1].set_xlabel('Stim*final_decision')
+            ax[0].set_title('CoM = {}, coh = {}'.format(bool(c), coh_unq))
+            
