@@ -232,7 +232,7 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
     zt = data_to_plot['zt'][data_to_plot['pro_vs_re'] == 0]
     coh = data_to_plot['avtrapz'][data_to_plot['pro_vs_re'] == 0]
     com = data_to_plot['CoM'][data_to_plot['pro_vs_re'] == 0]
-    mat_proac, _ = com_heatmap_jordi(zt, coh, com, return_mat=True)
+    mat_proac, _ = com_heatmap_jordi(zt, coh, com, return_mat=True, flip=True)
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
     ax = ax.flatten()
     sns.heatmap(matrix, ax=ax[0])
@@ -330,6 +330,7 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
         matrix = np.fliplr(matrix)
 
     if return_mat:
+        matrix = np.flipud(matrix)
         # matrix is com/obs, nmat is number of observations
         return matrix, nmat
 
@@ -474,7 +475,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                      return_data=True)
     df_pcom_rt = pd.DataFrame({'rt': xpos_plot, 'pcom': median_pcom})
     df_pcom_rt.to_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
-    matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True)
+    matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True, flip=True)
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
@@ -624,7 +625,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
     matrix, _ = com_heatmap_jordi(zt, coh, com,
-                                  return_mat=True)
+                                  return_mat=True, flip=True)
     # The pcom_RT curve will be computed considering detection
     # df_curve = {'CoM': com, 'sound_len': (first_ind-fixation+p_t_eff)*stim_res}
     # df_curve = pd.DataFrame(df_curve)
@@ -871,7 +872,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
                 detected_mat, _ =\
                     com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
-                                      return_mat=True)
+                                      return_mat=True, flip=True)
                 data_to_plot = {'sound_len': (first_ind[tr_index]+p_t_eff -
                                               int(300/stim_res))*stim_res,
                                 'CoM': com[tr_index],
@@ -1037,7 +1038,7 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
 
 
-def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=True,
+def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=False,
                    data_exist=True, compute_array=False):
     sound_int = np.array(sound_len).astype(int)
     sound_int_filt = sound_int[(sound_int >= 0)*(sound_int < 500)]
@@ -1438,7 +1439,7 @@ if __name__ == '__main__':
     shuffle = True
     simulate = True
     parallel = False
-    plot_t12 = True
+    plot_t12 = False
     data_augment_factor = 10
     if simulate:
         if load_data:
@@ -1490,7 +1491,7 @@ if __name__ == '__main__':
             p_w_updt = 0.5
             compute_trajectories = True
             plot = True
-            all_trajs = False
+            all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
