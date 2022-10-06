@@ -568,7 +568,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     # Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
     #       % num_trials_per_session)*(-2.5)*1e-6 + 5.2*1e-3
-    if proactive_integration:
+    if proactive_integration:  # XXX: remove this if?
         dA = np.random.randn(N, num_tr)*p_a_noise+Va
         dA[:p_t_a, :] = 0
         A = np.cumsum(dA, axis=0)
@@ -588,7 +588,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     resp_fin = np.ones(E.shape[1])
     for i_t in range(E.shape[1]):
         indx_hit_bound = np.abs(E[:, i_t]) >= bound
-        hit_bound = max_integration_time  # -p_t_aff-p_t_eff
+        hit_bound = max_integration_time
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
         if proactive_integration:
@@ -602,21 +602,26 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         # XXX: reactive trials are defined as EA reaching the bound,
         # which includes influence of zt
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
+        # store first readout index
         first_ind.append(hit_dec)
+        # store first readout evidence
         first_ev.append(E[hit_dec, i_t])
         # first response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
-        # p_com_bound = 1 - np.abs(hit_dec + p_t_eff - fixation + 1)**(-4/5)
-        # 1/(0.03127615*np.exp(-(hit_dec + p_t_eff - fixation + 1)*
-        #                                 0.65553348) + 0.01380665)
+        # XXX: what is this?
         com_bound_temp = (-resp_first[i_t])*p_com_bound
         # second response
-        indx_fin_ch = hit_dec+p_t_aff+p_t_eff
-        indx_fin_ch = min(indx_fin_ch, max_integration_time)
-        post_dec_integration = E[hit_dec:indx_fin_ch, i_t]-com_bound_temp
+        indx_final_ch = hit_dec+p_t_eff+p_t_aff
+        indx_final_ch = min(indx_final_ch, max_integration_time)
+        # get post decision accumulated evidence with respect to CoM bound
+        post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_temp
+        # XXX: why are we comparing two quantities that are not in the same
+        # coordinates? post_dec_integration is set with respect
+        # to com_bound_temp... I guess it does not matter because 
+        # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
-        indx_update_ch = indx_fin_ch if len(indx_com) == 0\
+        indx_update_ch = indx_final_ch if len(indx_com) == 0\
             else indx_com[0] + hit_dec
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)
@@ -639,7 +644,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                                     bins=20, range=(-100, 300))
     # end_eddm = time.time()
     # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
-    # TODO: put in a different function
+    # XXX: put in a different function
     if compute_trajectories:
         # start_traj = time.time()
         # Trajectories
@@ -663,8 +668,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # growing indefinitely
             MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
             first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
-            # first_resp_len: evidence affectation on MT. The higher the ev,
-            # the lower the MT depending on the parameter p_w_updt
+            # first_resp_len: evidence influence on MT. The larger the ev,
+            # the smaller the motor time
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
@@ -685,11 +690,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             sign_ = resp_first[i_t]
             # this sets the maximum updating evidence equal to the ev bound
             # and avoids having negative second_resp_len (impossibly fast
-            # responses) bc of very strong confirmation evidence. Note that
-            # theoretically this problema does not exists bc CoM_bound will
-            # be less or equal to the bounds.
+            # responses) bc of very strong confirmation evidence.
             updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
-            # second_response_len: time left affected by the evidence on the
+            # second_response_len: motor time update influenced by the evidence
+            # at second readout
             second_response_len =\
                 float(remaining_m_time-sign_*p_w_updt*updt_ev)
             # SECOND readout
@@ -1430,6 +1434,7 @@ def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
 
 # --- MAIN
 if __name__ == '__main__':
+    # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(15e4)
@@ -1442,8 +1447,9 @@ if __name__ == '__main__':
     plot_t12 = False
     data_augment_factor = 10
     if simulate:
-        if load_data:
-            if new_sample:
+        # GET DATA
+        if load_data:  # experimental data
+            if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, hit =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
@@ -1452,7 +1458,7 @@ if __name__ == '__main__':
                         'sound_len': sound_len, 'decision': decision, 'hit': hit}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
-            else:
+            else:  # use existing sample
                 files = glob.glob(DATA_FOLDER+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))])
                 stim = data['stim']
@@ -1467,7 +1473,7 @@ if __name__ == '__main__':
                 energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
             stim_res = 50/data_augment_factor
-        else:
+        else:  # simulated data
             num_timesteps = 1000
             zt =\
                 np.random.rand(num_tr)*2*(-1.0)**np.random.randint(-1, 1,
@@ -1477,8 +1483,8 @@ if __name__ == '__main__':
                                                                  size=num_tr) +\
                 np.random.randn(num_timesteps, num_tr)*1e-1
             stim_res = 1
-
-        if single_run:
+        # RUN MODEL
+        if single_run:  # single run with specific parameters
             p_t_aff = 7
             p_t_eff = 8
             p_t_a = 35
@@ -1501,13 +1507,13 @@ if __name__ == '__main__':
             coh = coh[:int(num_tr)]
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
-        else:
+        else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=5)
             compute_trajectories = True
             plot = False
             all_trajs = False
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
-        if parallel:
+        if parallel:  # run simulatings using joblib toolbox
             configurations = list(configurations)
             num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
@@ -1521,7 +1527,7 @@ if __name__ == '__main__':
                                     existing_data=existing_data,
                                     shuffle=shuffle, all_trajs=False)
                  for i_par in range(num_cores))
-        else:
+        else:  # sequential runs
             run_model(stim=stim, zt=zt, coh=coh, gt=gt,
                       configurations=configurations, jitters=jitters,
                       compute_trajectories=compute_trajectories,
