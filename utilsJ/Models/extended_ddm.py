@@ -24,20 +24,35 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 300, 16)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
+    """
+    Evaluate options for trajectory update
+
+    Parameters
+    ----------
+    remaining_time : int, optional
+        DESCRIPTION. The default is 100.
+    w_updt : int, optional
+        DESCRIPTION. The default is 10.
+
+    Returns
+    -------
+    None.
+
+    """
     f, ax = plt.subplots()
     leg = ['1st response = -1', '1st response = 1']
     for i_s1r, s1r in enumerate([-1, 1]):
@@ -54,6 +69,11 @@ def tests_trajectory_update(remaining_time=100, w_updt=10):
     ax.set_xlabel('Update evidence')
     ax.set_ylabel('2nd response time')
     ax.legend()
+
+
+def rm_top_right_lines(ax):
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
 
 
 def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
@@ -143,6 +163,23 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
 
 
 def plot_misc(data_to_plot, stim_res, all_trajs=True):
+    """
+    
+
+    Parameters
+    ----------
+    data_to_plot : TYPE
+        DESCRIPTION.
+    stim_res : TYPE
+        DESCRIPTION.
+    all_trajs : TYPE, optional
+        DESCRIPTION. The default is True.
+
+    Returns
+    -------
+    None.
+
+    """
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     ax = ax.flatten()
     trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
@@ -389,6 +426,21 @@ def v_(t):
 
 
 def get_Mt0te(t0, te):
+    """
+
+    Parameters
+    ----------
+    t0 : TYPE
+        DESCRIPTION.
+    te : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    Mt0te : TYPE
+        DESCRIPTION.
+
+    """
     Mt0te = np.array(
         [
             [1, t0, t0 ** 2, t0 ** 3, t0 ** 4, t0 ** 5],
@@ -403,6 +455,23 @@ def get_Mt0te(t0, te):
 
 
 def compute_traj(jerk_lock_ms, mu, resp_len):
+    """
+
+    Parameters
+    ----------
+    jerk_lock_ms : TYPE
+        DESCRIPTION.
+    mu : TYPE
+        DESCRIPTION.
+    resp_len : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    traj : TYPE
+        DESCRIPTION.
+
+    """
     t_arr = np.arange(jerk_lock_ms, resp_len)
     M = get_Mt0te(jerk_lock_ms, resp_len)
     M_1 = np.linalg.inv(M)
@@ -438,7 +507,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
             # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
-            #                                  size=(num_tr_per_rat), replace=False)
+            #                                 size=(num_tr_per_rat), replace=False)
             indx = indx_prev_error  # [selected_indx]
         else:
             # indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
@@ -486,8 +555,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
-                        proactive_integration=True, all_trajs=True,
-                        num_computed_traj=int(2e4)):
+                        all_trajs=True, num_computed_traj=int(2e4),
+                        fixation_ms=300):
     """
     Generate stim and time integration and trajectories
 
@@ -556,90 +625,82 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     """
     # print('Starting simulation, PSIAM')
     # start_eddm = time.time()
+    # TODO: COMMENT EVERY FORKING LINE
     bound = 1
     bound_a = 1
-    fixation = int(300 / stim_res)  # ms/stim_resolution
+    fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
+    # instantaneous evidence
     Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
-    Va = p_w_a
-    # trial_dur = 1  # trial duration (s)
-    N = Ve.shape[0]  # int(trial_dur/dt)  # number of timesteps
+    N = Ve.shape[0]
+    # add noise
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
-    # Va = (np.linspace(0, Ve.shape[1], num=Ve.shape[1], dtype=int)
-    #       % num_trials_per_session)*(-2.5)*1e-6 + 5.2*1e-3
-    if proactive_integration:  # XXX: remove this if?
-        dA = np.random.randn(N, num_tr)*p_a_noise+Va
-        dA[:p_t_a, :] = 0
-        A = np.cumsum(dA, axis=0)
-    else:
-        rt_a = [np.random.wald(mean=bound_a/va, scale=bound_a**2) + p_t_a
-                for va in Va]
-        A = rt_a
-    dW[0, :] = prior  # +np.random.randn(p_t_aff, num_tr)*p_e_noise
+    dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a
+    # zeros before p_t_a
+    dA[:p_t_a, :] = 0
+    # accumulate
+    A = np.cumsum(dA, axis=0)
+    dW[0, :] = prior
     E = np.cumsum(dW, axis=0)
     com = False
+    # check docstring for definitions
     first_ind = []
     second_ind = []
     pro_vs_re = []
-    first_ev = []
-    second_ev = []
     resp_first = np.ones(E.shape[1])
     resp_fin = np.ones(E.shape[1])
+    # evidences at 1st/2nd readout
+    first_ev = []
+    second_ev = []
+    # start DDM
     for i_t in range(E.shape[1]):
+        # search where evidence bound is reached
         indx_hit_bound = np.abs(E[:, i_t]) >= bound
         hit_bound = max_integration_time
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
-        if proactive_integration:
-            indx_hit_action = np.abs(A[:, i_t]) >= bound_a
-            hit_action = max_integration_time  # -p_t_eff-p_t_a
-            if (indx_hit_action).any():
-                hit_action = np.where(indx_hit_action)[0][0]
-        else:
-            hit_action = rt_a[i_t]
-        hit_dec = min(hit_bound, hit_action)  # reactive or proactive
-        # XXX: reactive trials are defined as EA reaching the bound,
-        # which includes influence of zt
+        # search where action bound is reached
+        indx_hit_action = np.abs(A[:, i_t]) >= bound_a
+        hit_action = max_integration_time
+        if (indx_hit_action).any():
+            hit_action = np.where(indx_hit_action)[0][0]
+        # set first readout as the minimum
+        hit_dec = min(hit_bound, hit_action)
+        # XXX: this is not accurate because reactive trials are defined as
+        # EA reaching the bound, which includes influence of zt
         pro_vs_re.append(np.argmin([hit_action, hit_bound]))
         # store first readout index
         first_ind.append(hit_dec)
         # store first readout evidence
         first_ev.append(E[hit_dec, i_t])
-        # first response
+        # first categorical response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
-        # XXX: what is this?
+        # CoM bound with sign depending on first response
         com_bound_temp = (-resp_first[i_t])*p_com_bound
         # second response
         indx_final_ch = hit_dec+p_t_eff+p_t_aff
         indx_final_ch = min(indx_final_ch, max_integration_time)
         # get post decision accumulated evidence with respect to CoM bound
         post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_temp
-        # XXX: why are we comparing two quantities that are not in the same
-        # coordinates? post_dec_integration is set with respect
-        # to com_bound_temp... I guess it does not matter because 
+        # get CoMs indexes
+        # in this comparison, post_dec_integration is set with respect
+        # to com_bound_temp but E[hit_dec, i_t] isn't. However, it does not matter
+        # because:
         # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_temp
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
+        # get CoM effective index
         indx_update_ch = indx_final_ch if len(indx_com) == 0\
             else indx_com[0] + hit_dec
+        # get final decision
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)
         second_ev.append(E[indx_update_ch, i_t])
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    matrix, _ = com_heatmap_jordi(zt, coh, com,
-                                  return_mat=True, flip=True)
-    # The pcom_RT curve will be computed considering detection
-    # df_curve = {'CoM': com, 'sound_len': (first_ind-fixation+p_t_eff)*stim_res}
-    # df_curve = pd.DataFrame(df_curve)
-    # xpos = int(np.diff(BINS)[0])
-    # xpos_plot, median_pcom, _ =\
-    #     binned_curve(df_curve, 'CoM', 'sound_len', xpos=xpos,
-    #                  bins=BINS,
-    #                  return_data=True)
-    # df_pcom_rt = {'rt': xpos_plot, 'pcom': median_pcom}
+    matrix, _ = com_heatmap_jordi(zt, coh, com, return_mat=True, flip=True)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
     # end_eddm = time.time()
@@ -734,36 +795,45 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, None
 
 
-def loglikelihood(first_ind, E, zt, p_w_zt, p_w_stim, stim_res, N=int(1e3),
-                  n=int(1e3)):
-    a = 1  # bound evidence/action
-    first_ev = [E[first_ind[i_t], i_t] for i_t in range(E.shape[1])]
-    x = np.array(first_ev)
-    s = np.std(first_ev)
-    s0 = np.std(p_w_zt*zt)
-    mu0 = np.mean(p_w_zt*zt)
-    first_ind_llk = first_ind * stim_res
-    M = p_w_stim * first_ind_llk
-    D = 1/(2*s**2*first_ind_llk)
-    sinus = np.sum([np.sin(K*np.pi/a*(mu0-s0**2*M/(2*D))) *
-                    np.sin(K*np.pi*x/a) *
-                    np.exp(-(D+s0**2/2)*(K*np.pi/a)**2)
-                    for K in range(int(N))], axis=0)
-    pL = 2 / a * np.exp((2*x - (2*mu0 - s0**2+M/(2*D)) * M/(4*D)) - M**2/(4*D))\
-        * sinus
-    for k in range(n):
-        mean_1 = mu0 - s0**2*M/(2*D) + 2*k*a
-        std_1_2 = 2*D + s0**2
-        mean_2 = -mu0 + s0**2*M/(2*D) + 2*k*a
-        N1 = std_1_2*np.random.randn() + mean_1
-        N2 = std_1_2*np.random.randn() + mean_2
-        pS = np.exp((2*(x-mu0)+s0**2*M/(2*D)-M)*M/(4*D))*(N1 - N2)
-    return pL, pS
-
-
 def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
               detect_CoMs_th=5, shuffle=False, all_trajs=False):
+    """
+
+    Parameters
+    ----------
+    stim : TYPE
+        DESCRIPTION.
+    zt : TYPE
+        DESCRIPTION.
+    coh : TYPE
+        DESCRIPTION.
+    gt : TYPE
+        DESCRIPTION.
+    configurations : TYPE
+        DESCRIPTION.
+    jitters : TYPE
+        DESCRIPTION.
+    stim_res : TYPE
+        DESCRIPTION.
+    compute_trajectories : TYPE, optional
+        DESCRIPTION. The default is False.
+    plot : TYPE, optional
+        DESCRIPTION. The default is False.
+    existing_data : TYPE, optional
+        DESCRIPTION. The default is None.
+    detect_CoMs_th : TYPE, optional
+        DESCRIPTION. The default is 5.
+    shuffle : TYPE, optional
+        DESCRIPTION. The default is False.
+    all_trajs : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
@@ -964,6 +1034,23 @@ def set_parameters(num_vals=3, factor=8):
 
 
 def data_augmentation(stim, daf, sigma=0):
+    """
+
+    Parameters
+    ----------
+    stim : TYPE
+        DESCRIPTION.
+    daf : TYPE
+        DESCRIPTION.
+    sigma : TYPE, optional
+        DESCRIPTION. The default is 0.
+
+    Returns
+    -------
+    augm_stim : TYPE
+        DESCRIPTION.
+
+    """
     augm_stim = np.zeros((daf*stim.shape[0], stim.shape[1]))
     for tmstp in range(stim.shape[0]):
         augm_stim[daf*tmstp:daf*(tmstp+1), :] =\
@@ -972,6 +1059,26 @@ def data_augmentation(stim, daf, sigma=0):
 
 
 def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
+    """
+
+    Parameters
+    ----------
+    zt_filt : TYPE
+        DESCRIPTION.
+    coh_filt : TYPE
+        DESCRIPTION.
+    stim_filt : TYPE
+        DESCRIPTION.
+    dec_filt : TYPE
+        DESCRIPTION.
+    com_array : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     dictionary = {}
     frame_list = np.empty((0, ))
     stim_dec_list = np.empty((0, ))
@@ -1044,6 +1151,36 @@ def plot_distributions(zt_filt, coh_filt, stim_filt, dec_filt, com_array):
 
 def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=False,
                    data_exist=True, compute_array=False):
+    """
+
+    Parameters
+    ----------
+    stim : TYPE
+        DESCRIPTION.
+    zt : TYPE
+        DESCRIPTION.
+    coh : TYPE
+        DESCRIPTION.
+    sound_len : TYPE
+        DESCRIPTION.
+    com : TYPE
+        DESCRIPTION.
+    decision : TYPE
+        DESCRIPTION.
+    hit : TYPE
+        DESCRIPTION.
+    plot : TYPE, optional
+        DESCRIPTION. The default is False.
+    data_exist : TYPE, optional
+        DESCRIPTION. The default is True.
+    compute_array : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     sound_int = np.array(sound_len).astype(int)
     sound_int_filt = sound_int[(sound_int >= 0)*(sound_int < 500)]
     com_array = com[(sound_int >= 0)*(sound_int < 500)].astype(int)
@@ -1190,7 +1327,8 @@ def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=False,
         ax.axhline(y=0, color='k', linewidth=1, linestyle='--')
         plt.figure()
         plt.errorbar(time_sound_onset, mean_energy, err_energy, label='All trials')
-        plt.errorbar(time_sound_onset, mean_energy_com, err_energy_com, label='CoM')
+        plt.errorbar(time_sound_onset, mean_energy_com, err_energy_com,
+                     label='CoM')
         plt.legend()
         plt.xlabel('Time from stimulus onset (ms)')
         plt.ylabel('Energy (a.u.)')
@@ -1214,6 +1352,32 @@ def energy_vs_time(stim, zt, coh, sound_len, com, decision, hit, plot=False,
 
 def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                        sound_int_filt, num_RT=4, different_frames=False):
+    """
+
+    Parameters
+    ----------
+    stim_filt : TYPE
+        DESCRIPTION.
+    zt_filt : TYPE
+        DESCRIPTION.
+    coh_filt : TYPE
+        DESCRIPTION.
+    dec_filt : TYPE
+        DESCRIPTION.
+    com_array : TYPE
+        DESCRIPTION.
+    sound_int_filt : TYPE
+        DESCRIPTION.
+    num_RT : TYPE, optional
+        DESCRIPTION. The default is 4.
+    different_frames : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     fig12, ax12 = plt.subplots(nrows=num_RT, ncols=1)
     fig12.suptitle('coh = 0.')
     ax12 = ax12.flatten()
@@ -1362,6 +1526,53 @@ def plot_kernels_vs_RT(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
 def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
                sound_int_filt, RT_init, RT_step, precision,
                coh_unq, max_RT, matrix=False, n_bins=None, frame=0, is_com=True):
+    """
+
+    Parameters
+    ----------
+    stim_filt : TYPE
+        DESCRIPTION.
+    zt_filt : TYPE
+        DESCRIPTION.
+    coh_filt : TYPE
+        DESCRIPTION.
+    dec_filt : TYPE
+        DESCRIPTION.
+    com_array : TYPE
+        DESCRIPTION.
+    sound_int_filt : TYPE
+        DESCRIPTION.
+    RT_init : TYPE
+        DESCRIPTION.
+    RT_step : TYPE
+        DESCRIPTION.
+    precision : TYPE
+        DESCRIPTION.
+    coh_unq : TYPE
+        DESCRIPTION.
+    max_RT : TYPE
+        DESCRIPTION.
+    matrix : TYPE, optional
+        DESCRIPTION. The default is False.
+    n_bins : TYPE, optional
+        DESCRIPTION. The default is None.
+    frame : TYPE, optional
+        DESCRIPTION. The default is 0.
+    is_com : TYPE, optional
+        DESCRIPTION. The default is True.
+
+    Returns
+    -------
+    list_for_df : TYPE
+        DESCRIPTION.
+    list_of_rts : TYPE
+        DESCRIPTION.
+    bins_RT : TYPE
+        DESCRIPTION.
+    TYPE
+        DESCRIPTION.
+
+    """
     list_for_df = np.empty((0))
     list_of_rts = np.empty((0))
     bins_RT = np.empty((0))
@@ -1404,6 +1615,38 @@ def get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
 def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
                                 com_array, sound_int_filt, RT_init, RT_step,
                                 precision, coh_unq, max_RT):
+    """
+
+    Parameters
+    ----------
+    stim_filt : TYPE
+        DESCRIPTION.
+    zt_filt : TYPE
+        DESCRIPTION.
+    coh_filt : TYPE
+        DESCRIPTION.
+    dec_filt : TYPE
+        DESCRIPTION.
+    com_array : TYPE
+        DESCRIPTION.
+    sound_int_filt : TYPE
+        DESCRIPTION.
+    RT_init : TYPE
+        DESCRIPTION.
+    RT_step : TYPE
+        DESCRIPTION.
+    precision : TYPE
+        DESCRIPTION.
+    coh_unq : TYPE
+        DESCRIPTION.
+    max_RT : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     RT_1 = 150
     RT_2 = 400
     stim_decision_f1_all = (stim_filt[0, :])*dec_filt
@@ -1437,7 +1680,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(2e6)
+    num_tr = int(2e5)
     load_data = True
     new_sample = False
     single_run = True
@@ -1609,7 +1852,7 @@ if __name__ == '__main__':
 #             ax[0].legend()
 #             ax[-1].set_xlabel('Stim*final_decision')
 #             ax[0].set_title('CoM = {}, coh = {}'.format(bool(c), coh_unq))
-            
+
 # index_coh = (sound_len > 170)*(np.abs(coh) == 0.25)
 # array_energy = np.empty((len(zt[index_coh]), 400))
 # array_energy[:] = np.nan
