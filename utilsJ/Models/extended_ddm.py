@@ -1437,7 +1437,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(15e4)
+    num_tr = int(2e6)
     load_data = True
     new_sample = False
     single_run = True
@@ -1453,7 +1453,7 @@ if __name__ == '__main__':
                 stim, zt, coh, gt, com, decision, sound_len, hit =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
-                                        after_correct=False)
+                                        after_correct=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                         'sound_len': sound_len, 'decision': decision, 'hit': hit}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
@@ -1610,3 +1610,56 @@ if __name__ == '__main__':
 #             ax[-1].set_xlabel('Stim*final_decision')
 #             ax[0].set_title('CoM = {}, coh = {}'.format(bool(c), coh_unq))
             
+# index_coh = (sound_len > 170)*(np.abs(coh) == 0.25)
+# array_energy = np.empty((len(zt[index_coh]), 400))
+# array_energy[:] = np.nan
+# array_com_energy = np.empty((sum(com[index_coh]), 400))
+# array_com_energy[:] = np.nan
+# sound_int = sound_len.astype(int)[index_coh]
+# decision_coh = decision[index_coh]
+# sound_com_int = sound_int[com.astype(bool)[index_coh]]
+# stim_com = stim[:, com.astype(bool)*index_coh]
+# stim_coh_nocom = stim[:, index_coh]
+# dec_vocom_coh = decision_coh[com.astype(bool)[index_coh]]
+# array_mov_onset = np.copy(array_energy)
+# array_com_mov_onset = np.copy(array_com_energy)
+# coh_indexed = coh[index_coh]
+# coh_com_indexed = coh_indexed[com.astype(bool)[index_coh]]
+# for j, sound_com in enumerate(sound_int):
+#     for s in range(sound_com):
+#         array_energy[j, s] = (stim_coh_nocom[s//50, j] - coh_indexed[j])*decision_coh[j]
+# for j, sound_com in enumerate(sound_com_int):
+#     for s in range(sound_com):
+#         array_com_energy[j, s] = (stim_com[s//50, j] - coh_com_indexed[j])\
+#             * dec_vocom_coh[j]
+# for j, sound_com in enumerate(sound_int):
+#     array_mov_onset[j, 400-sound_com-1:-1] = array_energy[j, :sound_com]
+# for j, sound_com in enumerate(sound_com_int):
+#     array_com_mov_onset[j, 400-sound_com-1:-1] = array_com_energy[j, :sound_com]
+
+# array_energy_mean = np.nanmean(array_mov_onset, axis=0)
+# values = array_mov_onset.shape[0] - np.sum(np.isnan(array_mov_onset), axis=0)
+# std_energy = np.sqrt(np.nanstd(array_mov_onset, axis=0)/values)
+# array_energy_com_mean = np.nanmean(array_com_mov_onset, axis=0)
+# values_com = array_com_mov_onset.shape[0] - np.sum(np.isnan(array_com_mov_onset),
+#                                                 axis=0)
+# std_energy_com = np.sqrt(np.nanstd(array_com_mov_onset, axis=0)/values_com)
+
+# plt.figure()
+# plt.plot(np.linspace(-400, 0, 400), array_energy_mean,
+#           label='all trials: N = {}'.format(array_energy.shape[0]))
+# plt.fill_between(np.linspace(-400, 0, 400),
+#                   array_energy_mean+std_energy,
+#                   array_energy_mean-std_energy,
+#                   alpha=0.3)
+# plt.plot(np.linspace(-400, 0, 400),
+#           array_energy_com_mean,
+#           label='CoM: N = {}'.format(array_com_energy.shape[0]))
+# plt.fill_between(np.linspace(-400, 0, 400),
+#                   array_energy_com_mean+std_energy_com,
+#                   array_energy_com_mean-std_energy_com,
+#                   alpha=0.3)
+# plt.axhline(y=0, linestyle='--', color='k', lw=1)
+# plt.xlabel('Movement onset (ms)')
+# plt.ylabel('Decision*stimulus')
+# plt.legend()
