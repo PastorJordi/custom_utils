@@ -91,7 +91,7 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
 
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_aff, init_trajs, total_traj, p_t_eff, motor_updt_time, tr_index,
+             p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time, tr_index,
              p_com_bound, stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
@@ -140,7 +140,7 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
             ax[a[1]].set_ylabel(l+' AI')
             # trajectories
             sec_ev = round(E[second_ind[trial], trial], 2)
-            # updt_motor = first_ind[trial]+motor_updt_time[trial]
+            # updt_motor = first_ind[trial]+frst_traj_motor_time[trial]
             init_motor = first_ind[trial]+p_t_eff
             xs = init_motor*stim_res+np.arange(0, len(total_traj[trial_total]))
             max_xlim = max(max_xlim, np.max(xs))
@@ -713,17 +713,18 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         RLresp = resp_fin
         prechoice = resp_first
         jerk_lock_ms = 0
+        # initial positions, speed and acc; final position, speed and acc
         initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
         indx_trajs = np.arange(len(first_ind)) if all_trajs\
             else np.random.choice(len(first_ind), num_computed_traj)
-        # initial positions, speed and acc; final position, speed and acc
+        # check docstring for definitions
         init_trajs = []
         final_trajs = []
         total_traj = []
-        motor_updt_time = []
+        # first trajectory motor time w.r.t. first readout
+        frst_traj_motor_time = []
+        # x value of trajectory at second readout update time
         x_val_at_updt = []
-        tr_indx_for_coms = []
-        indx = []
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
@@ -740,7 +741,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             accelerations = np.gradient(velocities)  # acceleration
             t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
             t_updt = int(np.min((t_updt, len(velocities)-1)))
-            motor_updt_time.append(t_updt)
+            frst_traj_motor_time.append(t_updt)
             vel = velocities[t_updt]  # velocity at the timepoint
             acc = accelerations[t_updt]
             pos = prior0[t_updt]  # position
@@ -770,7 +771,6 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                 opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
                 max_val_towards_opposite = np.max(np.abs(opp_side_values))
                 x_val_at_updt.append(max_val_towards_opposite)
-                indx.append(i_t)
             else:
                 x_val_at_updt.append(0)
         detect_CoMs_th = 5
@@ -786,8 +786,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         # end_traj = time.time()
         # print('Time for trajectories: ' + str(end_traj - start_traj))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-            x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
+            matrix, total_traj, init_trajs, final_trajs, frst_traj_motor_time,\
+            x_val_at_updt, xpos_plot, median_pcom,\
             rt_vals, rt_bins, indx_trajs
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
@@ -844,7 +844,6 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                       'p_w_updt': p_w_updt_vals,
                       'pcom_matrix': all_mats,
                       'x_val_at_updt_mat': x_val_at_updt_mat,
-                      'tr_indx_for_coms_mat': tr_indx_for_coms_mat,
                       'xpos_rt_pcom': xpos_rt_pcom,
                       'median_pcom_rt': median_pcom_rt,
                       'rt_vals_all': rt_vals_all,
@@ -881,7 +880,6 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
     p_w_updt_vals = []
     all_mats = []
     x_val_at_updt_mat = []
-    tr_indx_for_coms_mat = []
     xpos_rt_pcom = []
     median_pcom_rt = []
     rt_vals_all = []
@@ -916,8 +914,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                                 stim.shape[1]))))
             # TODO: get in a dict
             E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-                matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-                x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
+                matrix, total_traj, init_trajs, final_trajs, frst_traj_motor_time,\
+                x_val_at_updt, xpos_plot, median_pcom,\
                 rt_vals, rt_bins, tr_index =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
@@ -939,7 +937,7 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                              pro_vs_re=pro_vs_re,
                              p_t_aff=p_t_aff, init_trajs=init_trajs,
                              total_traj=total_traj,
-                             p_t_eff=p_t_eff, motor_updt_time=motor_updt_time,
+                             p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
                              tr_index=tr_index, p_com_bound=p_com_bound,
                              stim_res=stim_res)
                 hits = resp_fin == gt
@@ -975,7 +973,6 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
             p_w_updt_vals.append([conf[9], p_w_updt])
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
-            tr_indx_for_coms_mat.append(indx_sh[tr_indx_for_coms])
             xpos_rt_pcom.append(xpos_plot)
             median_pcom_rt.append(median_pcom)
             rt_vals_all.append(rt_vals)
