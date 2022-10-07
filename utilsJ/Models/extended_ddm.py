@@ -224,11 +224,11 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
                                                         == 1],
                               bins)
     hist_total, _ = np.histogram(data_to_plot['sound_len'], bins)
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro/hist_pro.sum(), label='Pro',
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro, label='Pro',
             linestyle='--')
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re/hist_re.sum(), label='Re',
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re, label='Re',
             linestyle='--')
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_total/hist_total.sum(),
+    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_total,
             label='All')
     ax.legend()
     matrix = data_to_plot['matrix']
