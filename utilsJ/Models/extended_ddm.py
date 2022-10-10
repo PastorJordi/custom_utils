@@ -556,7 +556,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(2e4),
-                        fixation_ms=300, kernels_model=True):
+                        fixation_ms=300, kernels_model=False):
     """
     Generate stim and time integration and trajectories
 
@@ -1677,7 +1677,7 @@ def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
 
 
 def kernels(coh, zt, sound_len, decision, stim):
-    index_coh = (np.abs(coh) <= 0.25)*(np.abs(zt) <= 0.1)
+    index_coh = (np.abs(coh) <= 0.25)*(sound_len > 160)*(np.abs(zt) <= 0.1)
     array_energy = np.empty((len(zt[index_coh]), 400))
     array_energy[:] = np.nan
     array_com_energy = np.empty((sum(com[index_coh]), 400))
@@ -1694,11 +1694,11 @@ def kernels(coh, zt, sound_len, decision, stim):
     coh_com_indexed = coh_indexed[com.astype(bool)[index_coh]]
     for j, sound_com in enumerate(sound_int):
         for s in range(sound_com):
-            array_energy[j, s] = (stim_coh_nocom[s//5, j] - coh_indexed[j]) *\
+            array_energy[j, s] = (stim_coh_nocom[s//50, j] - coh_indexed[j]) *\
                 decision_coh[j]
     for j, sound_com in enumerate(sound_com_int):
         for s in range(sound_com):
-            array_com_energy[j, s] = (stim_com[s//5, j] - coh_com_indexed[j])\
+            array_com_energy[j, s] = (stim_com[s//50, j] - coh_com_indexed[j])\
                 * dec_vocom_coh[j]
     for j, sound_com in enumerate(sound_int):
         array_mov_onset[j, 400-sound_com-1:-1] = array_energy[j, :sound_com]
@@ -1782,7 +1782,7 @@ if __name__ == '__main__':
                 decision = data['decision']
                 hit = data['hit']
             if plot_t12:
-                energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)            
+                energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
             stim_res = 50/data_augment_factor
         else:  # simulated data
@@ -1806,10 +1806,10 @@ if __name__ == '__main__':
             p_com_bound = 0.
             p_w_a = 0.03
             p_a_noise = 0.06
-            p_w_updt = 0.5
+            p_w_updt = 50
             compute_trajectories = True
             plot = True
-            all_trajs = False
+            all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
@@ -1887,39 +1887,3 @@ if __name__ == '__main__':
 #     norm_hist = pos_rts[conf, :]
 #     plt.plot(pos_rts_bins, norm_hist, lw=0.5, color='k')
 # plt.plot(exps.rt, pcoms, color='r')
-# precision = 20
-# RT_step = 10
-# RT_init = 0
-# max_RT = 130
-# coh_unq = 0.25
-# for c in range(2):
-#     for coh_unq in [0, 0.25]:
-#         fig, ax = plt.subplots(nrows=11, ncols=1)
-#         ax = ax.flatten()
-#         for f in range(2):
-#             list_for_df, list_of_rts, bins_RT, _ =\
-#                 get_type_2(stim_filt, zt_filt, coh_filt, dec_filt, com_array,
-#                            sound_int_filt, RT_init, RT_step, precision,
-#                            coh_unq, max_RT, frame=f, is_com=c)
-#             dict_values = {'stim_vals_{}'.format(f+1): list_for_df,
-#                            'rt_vals_{}'.format(f+1): list_of_rts}
-#             df_to_plot = pd.DataFrame(dict_values)
-#             plt.figure(25)
-#             arr_1x = []
-#             arr_1y = []
-#             for i in range(11):
-#                 arr_fin = sns.kdeplot(data=df_to_plot,
-#                                       x='stim_vals_{}'.format(f+1),
-#                                       hue='rt_vals_{}'.format(f+1))\
-#                     .get_lines()[i].get_data()
-#                 arr_1x.append(arr_fin[0])
-#                 arr_1y.append(arr_fin[1])
-#                 ax[i].plot(arr_1x[i], arr_1y[i], label='F{}'.format(f+1))
-#                 ax[i].set_xlim(-0.75, 0.75)
-#                 ax[i].set_ylabel(np.unique(list_of_rts)[i])
-#                 ax[i].axvline(x=0, linewidth=0.4, linestyle='--', color='k')
-#             plt.close(25)
-#             ax[0].legend()
-#             ax[-1].set_xlabel('Stim*final_decision')
-#             ax[0].set_title('CoM = {}, coh = {}'.format(bool(c), coh_unq))
-
