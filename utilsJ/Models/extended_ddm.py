@@ -805,32 +805,33 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
 
     Parameters
     ----------
-    stim : TYPE
+    stim : array
+        stim sequence for each trial 20xnum-trials.
+    zt : array
+        priors for each trial (transition bias + lateral (CWJ) 1xnum-trials).
+    coh : array
+        Putative coherence (0, +-0.25, +-0.5 or +-1), 1 x num_trials.
+    gt : array
+        Ground truth for each trial (1 if right and -1 if left).
+    configurations : list
         DESCRIPTION.
-    zt : TYPE
-        DESCRIPTION.
-    coh : TYPE
-        DESCRIPTION.
-    gt : TYPE
-        DESCRIPTION.
-    configurations : TYPE
-        DESCRIPTION.
-    jitters : TYPE
-        DESCRIPTION.
-    stim_res : TYPE
-        DESCRIPTION.
-    compute_trajectories : TYPE, optional
-        DESCRIPTION. The default is False.
-    plot : TYPE, optional
-        DESCRIPTION. The default is False.
-    existing_data : TYPE, optional
-        DESCRIPTION. The default is None.
-    detect_CoMs_th : TYPE, optional
-        DESCRIPTION. The default is 5.
-    shuffle : TYPE, optional
-        DESCRIPTION. The default is False.
-    all_trajs : TYPE, optional
-        DESCRIPTION. The default is False.
+    jitters : list
+        jitter (noise) for each parameter of the configurations.
+    stim_res : float
+        stimulus resolution (50/data_augmenting_factor) ms, normally 5 ms.
+    compute_trajectories : boolean, optional
+        If the trajectories have to be computed or not (DDM only).
+        The default is False.
+    plot : boolean, optional
+        If plots are displayed or not. The default is False.
+    existing_data : string (path), optional
+        Path of the configurations already run. The default is None.
+    detect_CoMs_th : float, optional
+        Threshold for CoM detection. The default is 5.
+    shuffle : boolean, optional
+         if inputs have to be shuffled (zt, stim...). The default is False.
+    all_trajs : bool, optional
+        If all trajectories are computed or not (else 20000). The default is False.
 
     Returns
     -------
@@ -1039,17 +1040,17 @@ def data_augmentation(stim, daf, sigma=0):
 
     Parameters
     ----------
-    stim : TYPE
-        DESCRIPTION.
-    daf : TYPE
-        DESCRIPTION.
-    sigma : TYPE, optional
-        DESCRIPTION. The default is 0.
+    stim : array
+        stim sequence for each trial 20xnum-trials.
+    daf : float
+        data augmentation factor (quantity of precision augmentation)
+    sigma : float, optional
+        Weight of the random part of the augmented stimulus. The default is 0.
 
     Returns
     -------
-    augm_stim : TYPE
-        DESCRIPTION.
+    augm_stim : array
+        Augmented stimulus, from precision of 50ms to precision of 50/daf ms.
 
     """
     augm_stim = np.zeros((daf*stim.shape[0], stim.shape[1]))
@@ -1677,6 +1678,27 @@ def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
 
 
 def kernels(coh, zt, sound_len, decision, stim):
+    """
+
+
+    Parameters
+    ----------
+    coh : array
+        Putative coherence (0, +-0.25, +-0.5 or +-1), 1 x num_trials.
+    zt : array
+        priors for each trial (transition bias + lateral (CWJ) 1xnum-trials).
+    sound_len : array
+        Time of stimulus exposure (Reaction Time), 1 x num_trials.
+    decision : array
+        decision taken at each trial (1 x num_trials), 1 if right and -1 if left.
+    stim : array
+        stim sequence for each trial 20xnum-trials.
+
+    Returns
+    -------
+    None.
+
+    """
     index_coh = (np.abs(coh) <= 0.25)*(sound_len > 160)*(np.abs(zt) <= 0.1)
     array_energy = np.empty((len(zt[index_coh]), 400))
     array_energy[:] = np.nan
