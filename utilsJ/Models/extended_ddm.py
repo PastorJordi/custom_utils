@@ -91,8 +91,8 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
 
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time, tr_index,
-             p_com_bound, stim_res=50, trial=0):
+             p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time,
+             tr_index, p_com_bound, stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[8].set_xlabel('Time (ms)')
@@ -162,9 +162,9 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
               bbox_inches='tight')
 
 
-def plot_misc(data_to_plot, stim_res, all_trajs=True):
+def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     """
-    
+
 
     Parameters
     ----------
@@ -180,28 +180,40 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
     None.
 
     """
-    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
-    ax = ax.flatten()
-    trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
-    data_to_plot['trial_idxs'] = trial_idxs
-    data_to_plot['re_vs_pro'] = (data_to_plot['pro_vs_re'] - 1)*(-1)
-    data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
-                                                     'detected_com',
-                                                     'hithistory',
-                                                     'avtrapz',
-                                                     'final_resp',
-                                                     'MT', 'trial_idxs',
-                                                     're_vs_pro']}
+    if data:
+        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+        ax = ax.flatten()
+        trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
+        data_to_plot['trial_idxs'] = trial_idxs
+        data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
+                                                         'hithistory',
+                                                         'avtrapz',
+                                                         'final_resp',
+                                                         'MT', 'trial_idxs']}
+    else:
+        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+        ax = ax.flatten()
+        trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
+        data_to_plot['trial_idxs'] = trial_idxs
+        data_to_plot['re_vs_pro'] = (data_to_plot['pro_vs_re'] - 1)*(-1)
+        data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
+                                                         'detected_com',
+                                                         'hithistory',
+                                                         'avtrapz',
+                                                         'final_resp',
+                                                         'MT', 'trial_idxs',
+                                                         're_vs_pro']}
     df_plot = pd.DataFrame(data_to_df)
     xpos = int(np.diff(BINS)[0]+1)
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
                  xpos=xpos, ax=ax[0], errorbar_kw={'label': 'CoM'})
-    binned_curve(df_plot, 'detected_com', 'sound_len',
-                 bins=BINS, ax=ax[0], xpos=xpos,
-                 errorbar_kw={'label': 'detected com'})
-    data_curve = pd.read_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
-    ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
-               marker='o')
+    if not data:
+        binned_curve(df_plot, 'detected_com', 'sound_len',
+                     bins=BINS, ax=ax[0], xpos=xpos,
+                     errorbar_kw={'label': 'detected com'})
+        data_curve = pd.read_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
+        ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
+                   marker='o')
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('PCoM')
@@ -217,22 +229,22 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
     ax[3].set_ylabel('Probability of right')
     f, ax = plt.subplots()
     bins = np.linspace(-300, 400, 40)
-    hist_pro, _ = np.histogram(data_to_plot['sound_len'][data_to_plot['pro_vs_re']
-                                                         == 0],
-                               bins)
-    hist_re, _ = np.histogram(data_to_plot['sound_len'][data_to_plot['pro_vs_re']
-                                                        == 1],
-                              bins)
+    if not data:
+        hist_pro, _ = np.histogram(data_to_plot['sound_len']
+                                   [data_to_plot['pro_vs_re'] == 0], bins)
+        hist_re, _ = np.histogram(data_to_plot['sound_len']
+                                  [data_to_plot['pro_vs_re'] == 1], bins)
+        ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro, label='Pro',
+                linestyle='--')
+        ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re, label='Re',
+                linestyle='--')
     hist_total, _ = np.histogram(data_to_plot['sound_len'], bins)
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_pro, label='Pro',
-            linestyle='--')
-    ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_re, label='Re',
-            linestyle='--')
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_total,
             label='All')
     ax.legend()
-    matrix = data_to_plot['matrix']
-    detected_mat = data_to_plot['detected_mat']
+    if not data:
+        matrix = data_to_plot['matrix']
+        detected_mat = data_to_plot['detected_mat']
     fig1, ax1 = plt.subplots(nrows=2, ncols=3, figsize=(12, 12))
     ax1 = ax1.flatten()
     # df_plot['MT'] = df_plot['MT']*stim_res
@@ -241,24 +253,31 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
                  errorbar_kw={'label': 'MT'})
     ax1[0].set_xlabel('RT')
     ax1[0].set_ylabel('MT')
-    ax1[1].set_xlabel('Trial index')
-    ax1[1].set_ylabel('Detected CoM')
     bins_trial = np.linspace(0, 600, 11, dtype=int)
-    binned_curve(df_plot, 'detected_com', 'trial_idxs',
-                 bins=bins_trial, ax=ax1[1], xpos=60,
-                 errorbar_kw={'label': 'detected_com'})
-    binned_curve(df_plot, 're_vs_pro', 'sound_len',
-                 bins=BINS, ax=ax1[2], xpos=xpos,
-                 errorbar_kw={'label': 'proac_prop'})
-    ax1[2].set_xlabel('RT')
-    ax1[2].set_ylabel('Proac. proportion')
-    bins_MT = np.linspace(80, 230, num=16, dtype=int)
+    if not data:
+        ax1[1].set_ylabel('Detected CoM')
+        binned_curve(df_plot, 'detected_com', 'trial_idxs',
+                     bins=bins_trial, ax=ax1[1], xpos=60,
+                     errorbar_kw={'label': 'detected_com'})
+        binned_curve(df_plot, 're_vs_pro', 'sound_len',
+                     bins=BINS, ax=ax1[2], xpos=xpos,
+                     errorbar_kw={'label': 'proac_prop'})
+        ax1[2].set_xlabel('RT')
+        ax1[2].set_ylabel('Proac. proportion')
+    if data:
+        ax1[1].set_ylabel('CoM')
+        binned_curve(df_plot, 'CoM', 'trial_idxs',
+                     bins=bins_trial, ax=ax1[1], xpos=60,
+                     errorbar_kw={'label': 'CoM'})
+    ax1[1].set_xlabel('Trial index')
+    bins_MT = np.linspace(80, 480, num=17, dtype=int)
     binned_curve(df_plot, 'CoM', 'MT',
-                 bins=bins_MT, ax=ax1[3], xpos=10,
-                 xoffset=120, errorbar_kw={'label': 'CoM'})
-    binned_curve(df_plot, 'detected_com', 'MT',
-                 bins=bins_MT, ax=ax1[3], xpos=10,
-                 xoffset=120, errorbar_kw={'label': 'detected CoM'})
+                 bins=bins_MT, ax=ax1[3], xpos=15,
+                 xoffset=80, errorbar_kw={'label': 'CoM'})
+    if not data:
+        binned_curve(df_plot, 'detected_com', 'MT',
+                     bins=bins_MT, ax=ax1[3], xpos=15,
+                     xoffset=80, errorbar_kw={'label': 'detected CoM'})
     ax1[3].legend()
     ax1[3].set_xlabel('MT')
     ax1[3].set_ylabel('pCoM')
@@ -266,19 +285,21 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True):
     ax1[4].plot(bins_MT[:-1]+(bins_MT[1]-bins_MT[0])/2, hist_MT,
                 label='MT dist')
     ax1[4].set_xlabel('MT (ms)')
-    zt = data_to_plot['zt'][data_to_plot['pro_vs_re'] == 0]
-    coh = data_to_plot['avtrapz'][data_to_plot['pro_vs_re'] == 0]
-    com = data_to_plot['CoM'][data_to_plot['pro_vs_re'] == 0]
-    mat_proac, _ = com_heatmap_jordi(zt, coh, com, return_mat=True, flip=True)
-    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
-    ax = ax.flatten()
-    sns.heatmap(matrix, ax=ax[0])
-    ax[0].set_title('pCoM simulation')
-    detected_mat[np.isnan(detected_mat)] = 0
-    sns.heatmap(detected_mat, ax=ax[1])
-    ax[1].set_title('Detected proportion')
-    sns.heatmap(mat_proac, ax=ax[2])
-    ax[2].set_title('pCoM in proac. trials')
+    if not data:
+        zt = data_to_plot['zt'][data_to_plot['pro_vs_re'] == 0]
+        coh = data_to_plot['avtrapz'][data_to_plot['pro_vs_re'] == 0]
+        com = data_to_plot['CoM'][data_to_plot['pro_vs_re'] == 0]
+        mat_proac, _ = com_heatmap_jordi(zt, coh, com, return_mat=True, flip=True)
+    if not data:
+        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
+        ax = ax.flatten()
+        sns.heatmap(matrix, ax=ax[0])
+        ax[0].set_title('pCoM simulation')
+        detected_mat[np.isnan(detected_mat)] = 0
+        sns.heatmap(detected_mat, ax=ax[1])
+        ax[1].set_title('Detected proportion')
+        sns.heatmap(mat_proac, ax=ax[2])
+        ax[2].set_title('pCoM in proac. trials')
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -494,6 +515,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     coh = np.empty((0, ))
     gt = np.empty((0, ))
     sound_len = np.empty((0, ))
+    resp_len = np.empty((0, ))
     decision = np.empty((0, ))
     hit = np.empty((0, ))
     for f in files:
@@ -519,6 +541,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         com_tmp = df.CoM_sugg.values
         decision_tmp = np.array(df.R_response) * 2 - 1
         sound_len_tmp = np.array(df.sound_len)
+        resp_len_tmp = np.array(df.resp_len)
         hit_tmp = np.array(df['hithistory'])
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
@@ -528,6 +551,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         gt = np.concatenate((gt, gt_tmp[indx]))
         decision = np.concatenate((decision, decision_tmp[indx]))
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
+        resp_len = np.concatenate((resp_len, resp_len_tmp[indx]))
         hit = np.concatenate((hit, hit_tmp[indx]))
         end = time.time()
         print(f)
@@ -548,7 +572,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
-    return stim, prior, coh, gt, com, decision, sound_len, hit  # , matrix
+    return stim, prior, coh, gt, com, decision, sound_len, resp_len, hit
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -1773,7 +1797,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(15e4)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -1784,12 +1808,13 @@ if __name__ == '__main__':
         # GET DATA
         if load_data:  # experimental data
             if new_sample:  # get a new sample
-                stim, zt, coh, gt, com, decision, sound_len, hit =\
+                stim, zt, coh, gt, com, decision, sound_len, resp_len, hit =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
-                                        after_correct=True)
+                                        after_correct=False)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
-                        'sound_len': sound_len, 'decision': decision, 'hit': hit}
+                        'sound_len': sound_len, 'decision': decision,
+                        'resp_len': resp_len, 'hit': hit}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
             else:  # use existing sample
@@ -1801,6 +1826,7 @@ if __name__ == '__main__':
                 com = data['com']
                 gt = data['gt']
                 sound_len = data['sound_len']
+                resp_len = data['resp_len']
                 decision = data['decision']
                 hit = data['hit']
             if plot_t12:
@@ -1831,17 +1857,32 @@ if __name__ == '__main__':
             p_w_updt = 50
             compute_trajectories = True
             plot = True
-            all_trajs = True
+            all_trajs = False
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
+            if plot:
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+                # CoM vs trial index
+            decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
             sound_len = sound_len[:int(num_tr)]
+            resp_len = resp_len[:int(num_tr)]
             coh = coh[:int(num_tr)]
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
+            hit = hit[:int(num_tr)]
         else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=5)
             compute_trajectories = True
