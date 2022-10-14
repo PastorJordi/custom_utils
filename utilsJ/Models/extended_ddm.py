@@ -20,7 +20,8 @@ sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
-from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve
+from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
+    com_heatmap_paper_marginal_pcom_side
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
@@ -34,7 +35,7 @@ SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-BINS = np.linspace(1, 300, 20)
+BINS = np.linspace(1, 301, 21)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -504,7 +505,7 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
-                        num_tr_per_rat=int(1e4), after_correct=True):
+                        num_tr_per_rat=int(1e4), after_correct=True, silent=False):
     # import data for 1 rat
     print('Loading data')
     files = glob.glob(dfpath+'*.pkl')
@@ -518,13 +519,22 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     resp_len = np.empty((0, ))
     decision = np.empty((0, ))
     hit = np.empty((0, ))
+    trial_index = np.empty((0, ))
+    if silent:
+        special_trial = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
-        df = df.query(
-                "sound_len <= 400 and soundrfail ==\
-                    False and resp_len <=1 and R_response>= 0\
-                        and hithistory >= 0 and special_trial == 0")
+        if not silent:
+            df = df.query(
+                    "sound_len <= 400 and soundrfail ==\
+                        False and resp_len <=1 and R_response>= 0\
+                            and hithistory >= 0 and special_trial == 0")
+        if silent:
+            df = df.query(
+                    "sound_len <= 400 and soundrfail ==\
+                        False and resp_len <=1 and R_response>= 0\
+                            and hithistory >= 0")
         end = time.time()
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
@@ -541,7 +551,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         com_tmp = df.CoM_sugg.values
         decision_tmp = np.array(df.R_response) * 2 - 1
         sound_len_tmp = np.array(df.sound_len)
+        trial_index_tmp = np.array(df.origidx)
         resp_len_tmp = np.array(df.resp_len)
+        if silent:
+            special_trial_tmp = np.array(df.special_trial)
         hit_tmp = np.array(df['hithistory'])
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
@@ -553,6 +566,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
         resp_len = np.concatenate((resp_len, resp_len_tmp[indx]))
         hit = np.concatenate((hit, hit_tmp[indx]))
+        trial_index = np.concatenate((trial_index, trial_index_tmp[indx]))
+        if silent:
+            special_trial = np.concatenate((special_trial,
+                                            special_trial_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
@@ -572,7 +589,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
-    return stim, prior, coh, gt, com, decision, sound_len, resp_len, hit
+    if not silent:
+        special_trial = None
+    return stim, prior, coh, gt, com, decision, sound_len, resp_len, hit,\
+        trial_index, special_trial
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -822,7 +842,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, None
 
 
-def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
+def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
               detect_CoMs_th=5, shuffle=False, all_trajs=False):
     """
@@ -893,6 +913,8 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
         zt = zt[indx_sh]
         coh = coh[indx_sh]
         gt = gt[indx_sh]
+        com = com[indx_sh]
+        sound_len = sound_len[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.15
     MT_intercep = 110
@@ -941,9 +963,9 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
             # TODO: get in a dict
-            E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-                matrix, total_traj, init_trajs, final_trajs, frst_traj_motor_time,\
-                x_val_at_updt, xpos_plot, median_pcom,\
+            E, A, com_model, first_ind, second_ind, resp_first, resp_fin,\
+                pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
+                frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
                 rt_vals, rt_bins, tr_index =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
@@ -955,11 +977,11 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                     compute_trajectories=compute_trajectories,
                                     stim_res=stim_res, all_trajs=all_trajs)
 
-            print(np.mean(com))
+            print(np.mean(com_model))
             if plot:
                 start_plot = time.time()
                 if compute_trajectories:
-                    plotting(com=com, E=E, A=A, second_ind=second_ind,
+                    plotting(com=com_model, E=E, A=A, second_ind=second_ind,
                              first_ind=first_ind,
                              resp_first=resp_first, resp_fin=resp_fin,
                              pro_vs_re=pro_vs_re,
@@ -974,9 +996,10 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                 detected_mat, _ =\
                     com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
                                       return_mat=True, flip=True)
-                data_to_plot = {'sound_len': (first_ind[tr_index]+p_t_eff -
-                                              int(300/stim_res))*stim_res,
-                                'CoM': com[tr_index],
+                reaction_time = (first_ind[tr_index]+p_t_eff -
+                                 int(300/stim_res))*stim_res
+                data_to_plot = {'sound_len': reaction_time,
+                                'CoM': com_model[tr_index],
                                 'first_resp': resp_first[tr_index],
                                 'final_resp': resp_fin[tr_index],
                                 'hithistory': hits[tr_index],
@@ -987,6 +1010,9 @@ def run_model(stim, zt, coh, gt, configurations, jitters, stim_res,
                                 'matrix': matrix,
                                 'MT': [len(t) for t in total_traj],
                                 'zt': zt[tr_index]}
+                left_right_matrix(zt[tr_index], coh[tr_index],
+                                  detected_com, resp_fin[tr_index])
+                pcom_model_vs_data(detected_com, com, sound_len, reaction_time)
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
                 end_plot = time.time()
                 print('Plotting time: ' + str(end_plot-start_plot))
@@ -1701,7 +1727,26 @@ def plot_kernels_start_negative(stim_filt, zt_filt, coh_filt, dec_filt,
     return
 
 
-def kernels(coh, zt, sound_len, decision, stim):
+def left_right_matrix(zt, coh, com, decision):
+    """
+    Plot pCoM matrix according to L->R and R->L
+    """
+    df = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                       'norm_allpriors': zt/max(abs(zt)),
+                       'R_response': (decision+1)/2})
+    for i in range(2):
+        com_heatmap_paper_marginal_pcom_side(df, side=i)
+
+
+def pcom_model_vs_data(detected_com, com, sound_len, reaction_time):
+    fig, ax = plt.subplots(1)
+    df = pd.DataFrame({'com_model': detected_com, 'CoM_sugg': com,
+                       'sound_len': sound_len, 'reaction_time': reaction_time})
+    binned_curve(df, 'CoM_sugg', 'sound_len', bins=BINS, xpos=15, ax=ax)
+    binned_curve(df, 'com_model', 'reaction_time', bins=BINS, xpos=15, ax=ax)
+
+
+def kernels(coh, zt, sound_len, decision, stim, stim_res=5):
     """
 
 
@@ -1723,29 +1768,31 @@ def kernels(coh, zt, sound_len, decision, stim):
     None.
 
     """
-    index_coh = (np.abs(coh) <= 0.25)*(sound_len > 160)*(np.abs(zt) <= 0.1)
+    stim_res = int(stim_res)
+    percentile_zt = np.percentile(np.abs(zt), 20)
+    index_coh = (np.abs(coh) <= 0.5)*(sound_len > 100)*(np.abs(zt) < percentile_zt)
     array_energy = np.empty((len(zt[index_coh]), 400))
     array_energy[:] = np.nan
     array_com_energy = np.empty((sum(com[index_coh]), 400))
     array_com_energy[:] = np.nan
     sound_int = sound_len.astype(int)[index_coh]
     decision_coh = decision[index_coh]
-    sound_com_int = sound_int[com.astype(bool)[index_coh]]
-    stim_com = stim[:, com.astype(bool)*index_coh]
+    sound_com_int = sound_len.astype(int)[(com*index_coh).astype(bool)]
+    stim_com = stim[:, (com*index_coh).astype(bool)]
     stim_coh_nocom = stim[:, index_coh]
-    dec_vocom_coh = decision_coh[com.astype(bool)[index_coh]]
+    dec_vocom_coh = decision[(com*index_coh).astype(bool)]
     array_mov_onset = np.copy(array_energy)
     array_com_mov_onset = np.copy(array_com_energy)
     coh_indexed = coh[index_coh]
-    coh_com_indexed = coh_indexed[com.astype(bool)[index_coh]]
+    coh_com_indexed = coh[(com*index_coh).astype(bool)]
     for j, sound_com in enumerate(sound_int):
         for s in range(sound_com):
-            array_energy[j, s] = (stim_coh_nocom[s//50, j] - coh_indexed[j]) *\
-                decision_coh[j]
+            array_energy[j, s] = (stim_coh_nocom[s//stim_res, j]
+                                  - coh_indexed[j]) * decision_coh[j]
     for j, sound_com in enumerate(sound_com_int):
         for s in range(sound_com):
-            array_com_energy[j, s] = (stim_com[s//50, j] - coh_com_indexed[j])\
-                * dec_vocom_coh[j]
+            array_com_energy[j, s] = (stim_com[s//stim_res, j]
+                                      - coh_com_indexed[j]) * dec_vocom_coh[j]
     for j, sound_com in enumerate(sound_int):
         array_mov_onset[j, 400-sound_com-1:-1] = array_energy[j, :sound_com]
     for j, sound_com in enumerate(sound_com_int):
@@ -1779,6 +1826,19 @@ def kernels(coh, zt, sound_len, decision, stim):
     plt.xlabel('Movement onset (ms)')
     plt.ylabel('Decision*stimulus')
     plt.legend()
+    plt.figure()
+    color = ['b', 'orange']
+    col = color[1]
+    for trial in array_com_mov_onset:
+        time_mov_onset = np.linspace(-(400 - np.sum(np.isnan(trial))), 0,
+                                     num=(400 - np.sum(np.isnan(trial))))
+        # if trial[-2] < 0:
+        #     col = color[1]
+        # else:
+        #     col = color[0]
+        plt.plot(time_mov_onset, trial[~np.isnan(trial)], color=col)
+    plt.xlabel('Movement onset (ms)')
+    plt.ylabel('Decision*stimulus')
     com_arr = array_energy_com_mean[~np.isnan(array_energy_com_mean)]
     nocom_arr = array_energy_mean[~np.isnan(array_energy_mean)]
     for i in range(300):
@@ -1788,6 +1848,97 @@ def kernels(coh, zt, sound_len, decision, stim):
             print(res[1])
             print(i + 5)
             break
+    trial_list_pos_neg = []
+    prior_list_pos_neg = []
+    trial_list_neg_pos = []
+    prior_list_neg_pos = []
+    trial_list_neg_neg = []
+    prior_list_neg_neg = []
+    trial_list_pos_pos = []
+    prior_list_pos_pos = []
+    for i, trial in enumerate(array_com_mov_onset):
+        s0 = np.sign(trial[-2])
+        if s0 > 0:
+            if np.sum(np.sign(trial[~np.isnan(trial)]) == -1) == 0:
+                trial_list_pos_pos.append(trial)
+                prior_list_pos_pos.append(zt[(com*index_coh).astype(bool)][i])
+            else:
+                for val in trial[~np.isnan(trial)]:
+                    if np.sign(val) < 0:
+                        trial_list_pos_neg.append(trial)
+                        prior_list_pos_neg.append(zt[(com*index_coh).
+                                                     astype(bool)][i])
+                        break
+        if s0 < 0:
+            if np.sum(np.sign(trial[~np.isnan(trial)]) == 1) == 0:
+                trial_list_neg_neg.append(trial)
+                prior_list_neg_neg.append(zt[(com*index_coh).astype(bool)][i])
+            for val in trial[~np.isnan(trial)]:
+                if np.sign(val) > 0:
+                    trial_list_neg_pos.append(trial)
+                    prior_list_neg_pos.append(zt[(com*index_coh).astype(bool)][i])
+                    break
+    array_energy_pos_neg = np.array(trial_list_pos_neg)
+    array_energy_mean_pos_neg = np.nanmean(array_energy_pos_neg, axis=0)
+    values_pos_neg = array_energy_pos_neg.shape[0] -\
+        np.sum(np.isnan(array_energy_pos_neg), axis=0)
+    std_energy_pos_neg = np.sqrt(
+        np.nanstd(array_energy_pos_neg, axis=0)/values_pos_neg)
+    array_energy_neg_pos = np.array(trial_list_neg_pos)
+    array_energy_mean_neg_pos = np.nanmean(array_energy_neg_pos, axis=0)
+    values_neg_pos = array_energy_neg_pos.shape[0] -\
+        np.sum(np.isnan(array_energy_neg_pos), axis=0)
+    std_energy_neg_pos = np.sqrt(
+        np.nanstd(array_energy_neg_pos, axis=0)/values_neg_pos)
+    array_energy_neg_neg = np.array(trial_list_neg_neg)
+    array_energy_mean_neg_neg = np.nanmean(array_energy_neg_neg, axis=0)
+    values_neg_neg = array_energy_neg_neg.shape[0] -\
+        np.sum(np.isnan(array_energy_neg_neg), axis=0)
+    std_energy_neg_neg = np.sqrt(
+        np.nanstd(array_energy_neg_neg, axis=0)/values_neg_neg)
+    array_energy_pos_pos = np.array(trial_list_pos_pos)
+    array_energy_mean_pos_pos = np.nanmean(array_energy_pos_pos, axis=0)
+    values_pos_pos = array_energy_pos_pos.shape[0] -\
+        np.sum(np.isnan(array_energy_pos_pos), axis=0)
+    std_energy_pos_pos = np.sqrt(
+        np.nanstd(array_energy_pos_pos, axis=0)/values_pos_pos)
+    plt.figure()
+    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_neg,
+             label='type 2 (neg-pos): N = {}'.format(array_energy_pos_neg.shape[0]))
+    plt.fill_between(np.linspace(-400, 0, 400),
+                     array_energy_mean_pos_neg+std_energy_pos_neg,
+                     array_energy_mean_pos_neg-std_energy_pos_neg,
+                     alpha=0.3)
+    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_pos,
+             label='type 2 (pos-neg): N = {}'.format(array_energy_neg_pos.shape[0]))
+    plt.fill_between(np.linspace(-400, 0, 400),
+                     array_energy_mean_neg_pos+std_energy_neg_pos,
+                     array_energy_mean_neg_pos-std_energy_neg_pos,
+                     alpha=0.3)
+    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_neg,
+             label='type 1 (neg-neg): N = {}'.format(array_energy_neg_neg.shape[0]))
+    plt.fill_between(np.linspace(-400, 0, 400),
+                     array_energy_mean_neg_neg+std_energy_neg_neg,
+                     array_energy_mean_neg_neg-std_energy_neg_neg,
+                     alpha=0.3)
+    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_pos,
+             label='type 1 (pos-pos): N = {}'.format(array_energy_pos_pos.shape[0]))
+    plt.fill_between(np.linspace(-400, 0, 400),
+                     array_energy_mean_pos_pos+std_energy_pos_pos,
+                     array_energy_mean_pos_pos-std_energy_pos_pos,
+                     alpha=0.3)
+    plt.axhline(0, linestyle='--', color='k', alpha=0.3)
+    plt.xlim(-400, 0)
+    plt.ylim(-0.3, 0.3)
+    plt.xlabel('Movement onset (ms)')
+    plt.ylabel('Decision*stimulus')
+    plt.legend()
+    plt.suptitle('Imposing positive to negative N_total = {}'.
+                 format(array_com_mov_onset.shape[0]))
+    plt.title('coh = {}, RT > {} ms, zt < {}'.
+              format(np.unique(np.abs(coh_indexed)),
+                     int(np.min(sound_len[index_coh])),
+                     np.max(np.abs(zt[index_coh]))))
 
 
 # --- MAIN
@@ -1795,9 +1946,9 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(15e4)
+    num_tr = int(5e5)
     load_data = True
-    new_sample = True
+    new_sample = False
     single_run = True
     shuffle = True
     simulate = True
@@ -1808,13 +1959,15 @@ if __name__ == '__main__':
         # GET DATA
         if load_data:  # experimental data
             if new_sample:  # get a new sample
-                stim, zt, coh, gt, com, decision, sound_len, resp_len, hit =\
+                stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
+                    trial_index, special_trial =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e3),
                                         after_correct=False)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                         'sound_len': sound_len, 'decision': decision,
-                        'resp_len': resp_len, 'hit': hit}
+                        'resp_len': resp_len, 'hit': hit,
+                        'trial_index': trial_index, 'special_trial': special_trial}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
             else:  # use existing sample
@@ -1829,6 +1982,8 @@ if __name__ == '__main__':
                 resp_len = data['resp_len']
                 decision = data['decision']
                 hit = data['hit']
+                trial_index = data['trial_index']
+                special_trial = data['special_trial']
             if plot_t12:
                 energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
@@ -1854,15 +2009,16 @@ if __name__ == '__main__':
             p_com_bound = 0.
             p_w_a = 0.03
             p_a_noise = 0.06
-            p_w_updt = 50
+            p_w_updt = 0.5
             compute_trajectories = True
             plot = True
-            all_trajs = False
+            all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
             if plot:
+                left_right_matrix(zt, coh, com, decision)
                 data_to_plot = {'sound_len': sound_len,
                                 'CoM': com,
                                 'first_resp': decision*[~com*(-1)],
@@ -1904,7 +2060,8 @@ if __name__ == '__main__':
                                     shuffle=shuffle, all_trajs=False)
                  for i_par in range(num_cores))
         else:  # sequential runs
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt,
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
+                      sound_len=sound_len,
                       configurations=configurations, jitters=jitters,
                       compute_trajectories=compute_trajectories,
                       plot=plot, stim_res=stim_res,
