@@ -2,6 +2,12 @@
 """
 Created on Sat Jul 16 12:17:47 2022
 @author: Alex Garcia-Duran
+
+2 Readout model:
+Version 2 of extended_ddm in which we updated:
+    - Default MT fit parameters (slope/intercept)
+    - Change of mind readout
+    - AI parameters
 """
 
 import numpy as np
@@ -671,7 +677,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     # start_eddm = time.time()
     # TODO: COMMENT EVERY FORKING LINE
     bound = 1
-    bound_a = 1
+    bound_a = 2.2
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -914,8 +920,8 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         com = com[indx_sh]
         sound_len = sound_len[indx_sh]
     num_tr = stim.shape[1]
-    MT_slope = 0.15
-    MT_intercep = 110
+    MT_slope = 0.13
+    MT_intercep = 245.6
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_noise_vals = []
@@ -1015,7 +1021,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
                 if kernels_model:
                     kernels(coh=coh[tr_index], zt=zt[tr_index],
                             sound_len=sound_len[tr_index],
-                            decision=resp_fin[tr_index], stim=stim[:, tr_index],
+                            decision=resp_fin[tr_index], stim=stim[:, [tr_index]],
                             com=detected_com, stim_res=stim_res)
                 end_plot = time.time()
                 print('Plotting time: ' + str(end_plot-start_plot))
@@ -1950,7 +1956,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(5e5)
+    num_tr = int(15e4)
     load_data = True
     new_sample = False
     single_run = True
@@ -2006,33 +2012,33 @@ if __name__ == '__main__':
         if single_run:  # single run with specific parameters
             p_t_aff = 7
             p_t_eff = 8
-            p_t_a = 35
+            p_t_a = 18
             p_w_zt = 0.2
             p_w_stim = 0.15
             p_e_noise = 0.05
             p_com_bound = 0.
-            p_w_a = 0.03
-            p_a_noise = 0.06
+            p_w_a = 0.028
+            p_a_noise = 5e-3
             p_w_updt = 0.5
             compute_trajectories = True
             plot = True
-            all_trajs = True
+            all_trajs = False
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            # if plot:
-            #     left_right_matrix(zt, coh, com, decision)
-            #     data_to_plot = {'sound_len': sound_len,
-            #                     'CoM': com,
-            #                     'first_resp': decision*[~com*(-1)],
-            #                     'final_resp': decision,
-            #                     'hithistory': hit,
-            #                     'avtrapz': coh,
-            #                     'detected_com': com,
-            #                     'MT': resp_len*1e3,
-            #                     'zt': zt}
-            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            if plot:
+                left_right_matrix(zt, coh, com, decision)
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
