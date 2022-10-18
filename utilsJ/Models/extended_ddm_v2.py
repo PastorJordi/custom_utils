@@ -727,17 +727,17 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         # first categorical response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
         # CoM bound with sign depending on first response
-        com_bound_temp = (-resp_first[i_t])*p_com_bound
+        com_bound_signed = (-resp_first[i_t])*p_com_bound
         # second response
         indx_final_ch = hit_dec+p_t_eff+p_t_aff
         indx_final_ch = min(indx_final_ch, max_integration_time)
         # get post decision accumulated evidence with respect to CoM bound
-        post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_temp
+        post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_signed
         # get CoMs indexes
         # in this comparison, post_dec_integration is set with respect
-        # to com_bound_temp but E[hit_dec, i_t] isn't. However, it does not matter
+        # to com_bound_signed but E[hit_dec, i_t] isn't. However, it does not matter
         # because:
-        # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_temp
+        # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_signed
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
@@ -803,11 +803,13 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # this sets the maximum updating evidence equal to the ev bound
             # and avoids having negative second_resp_len (impossibly fast
             # responses) bc of very strong confirmation evidence.
-            updt_ev = np.sign(second_ev[i_t])*min(1, np.abs(second_ev[i_t]))
-            # second_response_len: motor time update influenced by the evidence
-            # at second readout
+            updt_ev = np.clip(second_ev[i_t], a_min=-1, a_max=1)
+            # second_response_len: motor time update influenced by difference
+            # between the evidence at second readout and the signed p_com_bound
+            com_bound_signed = (-resp_first[i_t])*p_com_bound
             second_response_len =\
-                float(remaining_m_time-sign_*p_w_updt*updt_ev)
+                float(remaining_m_time -
+                      sign_*p_w_updt*np.abs(updt_ev-com_bound_signed))
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
