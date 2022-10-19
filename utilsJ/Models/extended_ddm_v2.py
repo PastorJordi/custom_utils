@@ -83,12 +83,12 @@ def rm_top_right_lines(ax):
     ax.spines['top'].set_visible(False)
 
 
-def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
+def draw_lines(ax, frst, sec, p_t_aff, p_com_th):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
-    ax[0].axhline(y=p_com_bound, color='purple', linewidth=1, linestyle='--')
-    ax[0].axhline(y=-p_com_bound, color='green', linewidth=1, linestyle='--')
+    ax[0].axhline(y=p_com_th, color='purple', linewidth=1, linestyle='--')
+    ax[0].axhline(y=-p_com_th, color='green', linewidth=1, linestyle='--')
     ax[1].axhline(y=1, color='k', linewidth=1, linestyle='--')
     for a in ax:
         a.axvline(x=frst, color='c', linewidth=1, linestyle='--')
@@ -99,7 +99,7 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time,
-             tr_index, p_com_bound, stim_res=50, trial=0):
+             tr_index, p_com_th, stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[8].set_xlabel('Time (ms)')
@@ -129,7 +129,7 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         if len(trials_temp) > 0 and traj_in:
             draw_lines(ax[np.array(a)], frst=first_ind[trial]*stim_res,
                        sec=second_ind[trial]*stim_res, p_t_aff=p_t_aff*stim_res,
-                       p_com_bound=p_com_bound)
+                       p_com_th=p_com_th)
             color1 = 'green' if resp_first[trial] < 0 else 'purple'
             color2 = 'green' if resp_fin[trial] < 0 else 'purple'
 
@@ -602,8 +602,9 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
-                        p_e_noise, p_com_bound, p_t_eff, p_t_aff,
-                        p_t_a, p_w_a, p_a_noise, p_w_updt, num_tr, stim_res,
+                        p_e_noise, p_com_th, p_t_eff, p_t_aff,
+                        p_t_a, p_w_a, p_a_noise, p_1st_readout,
+                        p_2nd_readout, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(2e4),
                         fixation_ms=300):
@@ -626,7 +627,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         fitting parameter: gain for stim (stim).
     p_e_noise : float
         fitting parameter: standard deviation of evidence noise (gaussian).
-    p_com_bound : float
+    p_com_th : float
         fitting parameter: change-of-mind bound (will have opposite sign of
         first choice).
     p_t_eff : float
@@ -639,7 +640,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         fitting parameter: drift of action noise.
     p_a_noise : float
         fitting parameter: standard deviation of action noise (gaussian).
-    p_w_updt : float
+    p_1st_readout : float
         fitting parameter: slope of the linear realtion with time and evidence
         for trajectory update.
     num_tr : int
@@ -727,7 +728,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         # first categorical response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
         # CoM bound with sign depending on first response
-        com_bound_signed = (-resp_first[i_t])*p_com_bound
+        com_bound_signed = (-resp_first[i_t])*p_com_th
         # second response
         indx_final_ch = hit_dec+p_t_eff+p_t_aff
         indx_final_ch = min(indx_final_ch, max_integration_time)
@@ -741,8 +742,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
-        indx_update_ch = indx_final_ch if len(indx_com) == 0\
-            else indx_com[0] + hit_dec
+        indx_update_ch = indx_final_ch
         # get final decision
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)
@@ -779,7 +779,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
             MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
-            first_resp_len = float(MT-p_w_updt*np.abs(first_ev[i_t]))
+            first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
             initial_mu_side = initial_mu * prechoice[i_t]
@@ -805,11 +805,13 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # responses) bc of very strong confirmation evidence.
             updt_ev = np.clip(second_ev[i_t], a_min=-1, a_max=1)
             # second_response_len: motor time update influenced by difference
-            # between the evidence at second readout and the signed p_com_bound
-            com_bound_signed = (-resp_first[i_t])*p_com_bound
+            # between the evidence at second readout and the signed p_com_th
+            com_bound_signed = (-sign_)*p_com_th
             second_response_len =\
                 float(remaining_m_time -
-                      sign_*p_w_updt*np.abs(updt_ev-com_bound_signed))
+                      p_2nd_readout*np.abs(updt_ev - com_bound_signed))
+            #           float(remaining_m_time +
+            # p_2nd_readout*np.abs(1 - np.abs(updt_ev) - com_bound_signed))
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
@@ -891,11 +893,11 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
-                      'p_com_bound': p_com_bound_vals,
+                      'p_com_th': p_com_th_vals,
                       'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
                       'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
                       'p_a_noise': p_a_noise_vals,
-                      'p_w_updt': p_w_updt_vals,
+                      'p_1st_readout': p_1st_readout_vals,
                       'pcom_matrix': all_mats,
                       'x_val_at_updt_mat': x_val_at_updt_mat,
                       'xpos_rt_pcom': xpos_rt_pcom,
@@ -923,17 +925,17 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         sound_len = sound_len[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.13
-    MT_intercep = 245.6
+    MT_intercep = 245
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_noise_vals = []
-    p_com_bound_vals = []
+    p_com_th_vals = []
     p_t_aff_vals = []
     p_t_eff_vals = []
     p_t_a_vals = []
     p_w_a_vals = []
     p_a_noise_vals = []
-    p_w_updt_vals = []
+    p_1st_readout_vals = []
     all_mats = []
     x_val_at_updt_mat = []
     xpos_rt_pcom = []
@@ -946,25 +948,27 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         print('p_w_zt: '+str(conf[0]))
         print('p_w_stim: '+str(conf[1]))
         print('p_e_noise: '+str(conf[2]))
-        print('p_com_bound: '+str(conf[3]))
+        print('p_com_th: '+str(conf[3]))
         print('p_t_aff: '+str(conf[4]))
         print('p_t_eff: '+str(conf[5]))
         print('p_t_a: '+str(conf[6]))
         print('p_w_a: '+str(conf[7]))
         print('p_a_noise: '+str(conf[8]))
-        print('p_w_updt: '+str(conf[9]))
+        print('p_1st_readout: '+str(conf[9]))
+        print('p_2nd_readout: '+str(conf[10]))
         start = time.time()
         if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
             p_w_stim = conf[1]+jitters[1]*np.random.rand()
             p_e_noise = conf[2]+jitters[2]*np.random.rand()
-            p_com_bound = conf[3]+jitters[3]*np.random.rand()
+            p_com_th = conf[3]+jitters[3]*np.random.rand()
             p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
             p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
             p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
             p_w_a = conf[7]+jitters[7]*np.random.rand()
             p_a_noise = conf[8]+jitters[8]*np.random.rand()
-            p_w_updt = conf[9]+jitters[9]*np.random.rand()
+            p_1st_readout = conf[9]+jitters[9]*np.random.rand()
+            p_2nd_readout = conf[10]+jitters[10]*np.random.rand()
             stim_temp =\
                 np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
@@ -976,10 +980,12 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                    p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                    p_e_noise=p_e_noise, p_com_th=p_com_th,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                     num_tr=num_tr, p_w_a=p_w_a,
-                                    p_a_noise=p_a_noise, p_w_updt=p_w_updt,
+                                    p_a_noise=p_a_noise,
+                                    p_1st_readout=p_1st_readout,
+                                    p_2nd_readout=p_2nd_readout,
                                     compute_trajectories=compute_trajectories,
                                     stim_res=stim_res, all_trajs=all_trajs)
 
@@ -995,9 +1001,10 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
                              total_traj=total_traj,
                              p_t_eff=p_t_eff,
                              frst_traj_motor_time=frst_traj_motor_time,
-                             tr_index=tr_index, p_com_bound=p_com_bound,
+                             tr_index=tr_index, p_com_th=p_com_th,
                              stim_res=stim_res)
                 hits = resp_fin == gt
+                MT = [len(t) for t in total_traj]
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
                 detected_mat, _ =\
                     com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
@@ -1014,29 +1021,33 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
                                 'pro_vs_re': pro_vs_re[tr_index],
                                 'detected_mat': detected_mat,
                                 'matrix': matrix,
-                                'MT': [len(t) for t in total_traj],
+                                'MT': MT,
                                 'zt': zt[tr_index]}
                 left_right_matrix(zt[tr_index], coh[tr_index],
                                   detected_com, resp_fin[tr_index])
-                pcom_model_vs_data(detected_com, com, sound_len, reaction_time)
+                pcom_model_vs_data(detected_com, com[tr_index],
+                                   sound_len[tr_index], reaction_time)
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
+                MT = np.array(MT)*1e-3
+                MT_vs_ev(resp_len=MT, coh=coh[tr_index],
+                         com=detected_com)
                 if kernels_model:
                     kernels(coh=coh[tr_index], zt=zt[tr_index],
                             sound_len=sound_len[tr_index],
-                            decision=resp_fin[tr_index], stim=stim[:, [tr_index]],
+                            decision=resp_fin[tr_index], stim=stim[:, tr_index],
                             com=detected_com, stim_res=stim_res)
                 end_plot = time.time()
                 print('Plotting time: ' + str(end_plot-start_plot))
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
             p_e_noise_vals.append([conf[2], p_e_noise])
-            p_com_bound_vals.append([conf[3], p_com_bound])
+            p_com_th_vals.append([conf[3], p_com_th])
             p_t_aff_vals.append([conf[4], p_t_aff])
             p_t_eff_vals.append([conf[5], p_t_eff])
             p_t_a_vals.append([conf[6], p_t_a])
             p_w_a_vals.append([conf[7], p_w_a])
             p_a_noise_vals.append([conf[8], p_a_noise])
-            p_w_updt_vals.append([conf[9], p_w_updt])
+            p_1st_readout_vals.append([conf[9], p_1st_readout])
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
             xpos_rt_pcom.append(xpos_plot)
@@ -1060,39 +1071,39 @@ def set_parameters(num_vals=3, factor=8):
     p_w_zt = 0.15
     p_w_stim = 0.2
     p_e_noise = 0.06
-    p_com_bound = 0.1
+    p_com_th = 0.1
     p_w_a = 0.03
     p_a_noise = 0.04
-    p_w_updt = 5
+    p_1st_readout = 5
     """
     p_w_zt_list = np.linspace(0.15, 0.25, num=num_vals-2)
     p_w_stim_list = np.linspace(0.1, 0.2, num=num_vals-2)
     p_e_noise_list = np.linspace(0.04, 0.06, num=num_vals-2)
-    p_com_bound_list = np.linspace(0., 0.2, num=num_vals-2)
+    p_com_th_list = np.linspace(0., 0.2, num=num_vals-2)
     p_t_aff_list = np.linspace(7, 9, num=num_vals-2, dtype=int)
     p_t_eff_list = np.linspace(7, 9, num=num_vals-2, dtype=int)
     p_t_a_list = np.linspace(30, 50, num=num_vals-2, dtype=int)
     p_w_a_list = np.linspace(0.02, 0.04, num=num_vals-2)
     p_a_noise_list = np.linspace(0.01, 0.09, num=num_vals-2)
-    p_w_updt_list = np.linspace(3, 7, num=num_vals-2)
+    p_1st_readout_list = np.linspace(3, 7, num=num_vals-2)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
-                                            p_e_noise_list, p_com_bound_list,
+                                            p_e_noise_list, p_com_th_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
                                             p_w_a_list, p_a_noise_list,
-                                            p_w_updt_list))
+                                            p_1st_readout_list))
     if num_vals == 1:
         jitters = np.repeat(0.01, 10)
     else:
         jitters = [np.diff(p_w_zt_list)[0]/factor,
                    np.diff(p_w_stim_list)[0]/factor,
                    0.0001,
-                   np.diff(p_com_bound_list)[0]/factor,
+                   np.diff(p_com_th_list)[0]/factor,
                    np.diff(p_t_aff_list)[0]/factor,
                    np.diff(p_t_eff_list)[0]/factor,
                    np.diff(p_t_a_list)[0]/factor,
                    np.diff(p_w_a_list)[0]/factor,
                    0.0001,
-                   np.diff(p_w_updt_list)[0]/factor]
+                   np.diff(p_1st_readout_list)[0]/factor]
     return configurations, jitters
 
 
@@ -1837,28 +1848,28 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
     plt.xlabel('Movement onset (ms)')
     plt.ylabel('Decision*stimulus')
     plt.legend()
-    plt.figure()
-    color = ['b', 'orange']
-    col = color[1]
-    for trial in array_com_mov_onset:
-        time_mov_onset = np.linspace(-(400 - np.sum(np.isnan(trial))), 0,
-                                     num=(400 - np.sum(np.isnan(trial))))
-        # if trial[-2] < 0:
-        #     col = color[1]
-        # else:
-        #     col = color[0]
-        plt.plot(time_mov_onset, trial[~np.isnan(trial)], color=col)
-    plt.xlabel('Movement onset (ms)')
-    plt.ylabel('Decision*stimulus')
-    com_arr = array_energy_com_mean[~np.isnan(array_energy_com_mean)]
-    nocom_arr = array_energy_mean[~np.isnan(array_energy_mean)]
-    for i in range(300):
-        res = wilcoxon(com_arr[-(5+i): -1], nocom_arr[-(5+i):-1],
-                       alternative='less')
-        if res[1] < 0.01:
-            print(res[1])
-            print(i + 5)
-            break
+    # plt.figure()
+    # color = ['b', 'orange']
+    # col = color[1]
+    # for trial in array_com_mov_onset:
+    #     time_mov_onset = np.linspace(-(400 - np.sum(np.isnan(trial))), 0,
+    #                                  num=(400 - np.sum(np.isnan(trial))))
+    #     if trial[-2] < 0:
+    #         col = color[1]
+    #     else:
+    #         col = color[0]
+    #     plt.plot(time_mov_onset, trial[~np.isnan(trial)], color=col)
+    # plt.xlabel('Movement onset (ms)')
+    # plt.ylabel('Decision*stimulus')
+    # com_arr = array_energy_com_mean[~np.isnan(array_energy_com_mean)]
+    # nocom_arr = array_energy_mean[~np.isnan(array_energy_mean)]
+    # for i in range(300):
+    #     res = wilcoxon(com_arr[-(5+i): -1], nocom_arr[-(5+i):-1],
+    #                    alternative='less')
+    #     if res[1] < 0.01:
+    #         print(res[1])
+    #         print(i + 5)
+    #         break
     trial_list_pos_neg = []
     prior_list_pos_neg = []
     trial_list_neg_pos = []
@@ -1953,6 +1964,35 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
                      np.max(np.abs(zt[index_coh]))))
 
 
+def MT_vs_ev(resp_len, coh, com):
+    MT = np.array(resp_len)*1e3
+    data_frame_MT_coh = pd.DataFrame({'MT': MT, 'coh': np.abs(coh),
+                                      'com': com})
+    plt.figure()
+    sns.pointplot(data=data_frame_MT_coh, x="coh", y="MT", hue="com",
+                  linestyles='')
+    slope, intercept = np.polyfit(np.abs(coh), MT, 1)
+    slope_com, intercept_com = np.polyfit(np.abs(coh)[com.astype(bool)],
+                                          MT[com.astype(bool)], 1)
+    plt.plot([0, 0.75, 1.5, 3], slope*np.array((0, 0.25, 0.5, 1)) + intercept,
+             label='{}*coh + {}'.format(round(slope, 3), round(intercept, 3)))
+    plt.plot([0, 0.75, 1.5, 3],
+             slope_com*np.array((0, 0.25, 0.5, 1)) + intercept_com,
+             label='{}*coh + {}'.format(round(slope_com, 3),
+                                        round(intercept_com, 3)))
+    plt.legend()
+
+
+def MT_vs_trial_index_silent(resp_len, trial_index):
+    MT = np.array(resp_len)*1e3
+    plt.figure()
+    plt.scatter(trial_index, MT)
+    slope, intercept = np.polyfit(trial_index, MT, 1)
+    plt.plot(trial_index, slope*trial_index + intercept)
+    plt.xlabel('Trial index')
+    plt.ylabel('MT (ms)')
+
+
 # --- MAIN
 if __name__ == '__main__':
     # TODO: organize script
@@ -2012,35 +2052,37 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 7
-            p_t_eff = 8
-            p_t_a = 18
+            p_t_aff = 8
+            p_t_eff = 9
+            p_t_a = 14
             p_w_zt = 0.2
             p_w_stim = 0.15
             p_e_noise = 0.05
-            p_com_bound = 0.
-            p_w_a = 0.028
-            p_a_noise = 5e-3
-            p_w_updt = 0.5
+            p_com_th = 0.5
+            p_w_a = 0.03
+            p_a_noise = np.sqrt(5e-3)
+            p_1st_readout = 100
+            p_2nd_readout = 0.1
             compute_trajectories = True
             plot = True
-            all_trajs = False
-            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-                              p_t_eff, p_t_a, p_w_a, p_a_noise, p_w_updt)]
+            all_trajs = True
+            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_th, p_t_aff,
+                              p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
+                              p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            if plot:
-                left_right_matrix(zt, coh, com, decision)
-                data_to_plot = {'sound_len': sound_len,
-                                'CoM': com,
-                                'first_resp': decision*[~com*(-1)],
-                                'final_resp': decision,
-                                'hithistory': hit,
-                                'avtrapz': coh,
-                                'detected_com': com,
-                                'MT': resp_len*1e3,
-                                'zt': zt}
-                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            # if plot:
+            #     left_right_matrix(zt, coh, com, decision)
+            #     data_to_plot = {'sound_len': sound_len,
+            #                     'CoM': com,
+            #                     'first_resp': decision*[~com*(-1)],
+            #                     'final_resp': decision,
+            #                     'hithistory': hit,
+            #                     'avtrapz': coh,
+            #                     'detected_com': com,
+            #                     'MT': resp_len*1e3,
+            #                     'zt': zt}
+            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]

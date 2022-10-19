@@ -2011,8 +2011,8 @@ if __name__ == '__main__':
             p_w_stim = 0.15
             p_e_noise = 0.05
             p_com_bound = 0.
-            p_w_a = 0.03
-            p_a_noise = 0.06
+            p_w_a = 0.028
+            p_a_noise = 0.07
             p_w_updt = 0.5
             compute_trajectories = True
             plot = True
