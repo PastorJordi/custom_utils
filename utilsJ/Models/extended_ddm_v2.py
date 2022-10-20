@@ -22,8 +22,8 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -32,14 +32,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
 
@@ -808,8 +808,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # between the evidence at second readout and the signed p_com_th
             com_bound_signed = (-sign_)*p_com_th
             second_response_len =\
-                float(remaining_m_time -
-                      p_2nd_readout*np.abs(updt_ev - com_bound_signed))
+                float(remaining_m_time +
+                      p_2nd_readout*(1-np.abs(updt_ev - com_bound_signed)))
             #           float(remaining_m_time +
             # p_2nd_readout*np.abs(1 - np.abs(updt_ev) - com_bound_signed))
             # SECOND readout
@@ -1998,7 +1998,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(15e4)
+    num_tr = int(2e5)
     load_data = True
     new_sample = False
     single_run = True
@@ -2055,14 +2055,14 @@ if __name__ == '__main__':
             p_t_aff = 8
             p_t_eff = 9
             p_t_a = 14
-            p_w_zt = 0.2
-            p_w_stim = 0.15
+            p_w_zt = 0.22
+            p_w_stim = 0.17
             p_e_noise = 0.05
             p_com_th = 0.5
             p_w_a = 0.03
             p_a_noise = np.sqrt(5e-3)
-            p_1st_readout = 100
-            p_2nd_readout = 0.1
+            p_1st_readout = 10
+            p_2nd_readout = 150
             compute_trajectories = True
             plot = True
             all_trajs = True
