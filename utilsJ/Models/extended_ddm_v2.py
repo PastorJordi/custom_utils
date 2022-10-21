@@ -606,7 +606,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
                         p_t_a, p_w_a, p_a_noise, p_1st_readout,
                         p_2nd_readout, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
-                        all_trajs=True, num_computed_traj=int(2e4),
+                        all_trajs=True, num_computed_traj=int(3e4),
                         fixation_ms=300):
     """
     Generate stim and time integration and trajectories
@@ -2005,7 +2005,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(5e4)
+    num_tr = int(25e3)
     load_data = True
     new_sample = False
     single_run = False
@@ -2106,6 +2106,15 @@ if __name__ == '__main__':
             all_trajs = True
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
         if parallel:  # run simulatings using joblib toolbox
+            decision = decision[:int(num_tr)]
+            stim = stim[:, :int(num_tr)]
+            zt = zt[:int(num_tr)]
+            sound_len = sound_len[:int(num_tr)]
+            resp_len = resp_len[:int(num_tr)]
+            coh = coh[:int(num_tr)]
+            com = com[:int(num_tr)]
+            gt = gt[:int(num_tr)]
+            hit = hit[:int(num_tr)]
             configurations = list(configurations)
             num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
