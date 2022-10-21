@@ -947,18 +947,18 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
     rt_bins_all = []
     one_bins = True
     for i_conf, conf in enumerate(configurations):
-        print('--------------')
-        print('p_w_zt: '+str(conf[0]))
-        print('p_w_stim: '+str(conf[1]))
-        print('p_e_noise: '+str(conf[2]))
-        print('p_com_th: '+str(conf[3]))
-        print('p_t_aff: '+str(conf[4]))
-        print('p_t_eff: '+str(conf[5]))
-        print('p_t_a: '+str(conf[6]))
-        print('p_w_a: '+str(conf[7]))
-        print('p_a_noise: '+str(conf[8]))
-        print('p_1st_readout: '+str(conf[9]))
-        print('p_2nd_readout: '+str(conf[10]))
+        # print('--------------')
+        # print('p_w_zt: '+str(conf[0]))
+        # print('p_w_stim: '+str(conf[1]))
+        # print('p_e_noise: '+str(conf[2]))
+        # print('p_com_th: '+str(conf[3]))
+        # print('p_t_aff: '+str(conf[4]))
+        # print('p_t_eff: '+str(conf[5]))
+        # print('p_t_a: '+str(conf[6]))
+        # print('p_w_a: '+str(conf[7]))
+        # print('p_a_noise: '+str(conf[8]))
+        # print('p_1st_readout: '+str(conf[9]))
+        # print('p_2nd_readout: '+str(conf[10]))
         start = time.time()
         if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -2109,7 +2109,8 @@ if __name__ == '__main__':
             num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
             Parallel(n_jobs=num_cores)\
-                (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
+                (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt, com=None,
+                                    sound_len=None,
                                     configurations=configurations
                                     [int(i_par*step):int((i_par+1)*step)],
                                     jitters=jitters,
