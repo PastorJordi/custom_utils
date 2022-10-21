@@ -21,9 +21,9 @@ import sys
 import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -33,14 +33,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
 
 
@@ -807,9 +807,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_th
             com_bound_signed = (-sign_)*p_com_th
+            offset = 120
             second_response_len =\
-                float(remaining_m_time +
-                      p_2nd_readout*(1-np.abs(updt_ev - com_bound_signed)))
+                float(remaining_m_time + offset -
+                      p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
             #           float(remaining_m_time +
             # p_2nd_readout*np.abs(1 - np.abs(updt_ev) - com_bound_signed))
             # SECOND readout
@@ -852,7 +853,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
 def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
               detect_CoMs_th=5, shuffle=False, all_trajs=False,
-              kernels_model=True):
+              kernels_model=False):
     """
 
     Parameters
@@ -1998,7 +1999,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(2e5)
+    num_tr = int(1e5)
     load_data = True
     new_sample = False
     single_run = True
@@ -2052,17 +2053,17 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 7
-            p_t_eff = 10
-            p_t_a = 14
-            p_w_zt = 0.15
-            p_w_stim = 0.2
-            p_e_noise = 0.045
-            p_com_th = 0.
-            p_w_a = 0.032
-            p_a_noise = np.sqrt(5e-3)
-            p_1st_readout = 30
-            p_2nd_readout = 80
+            p_t_aff = 4  # fixed
+            p_t_eff = 12  # fixed
+            p_t_a = 14  # fixed
+            p_w_zt = 0.15  # 0.15
+            p_w_stim = 0.15  # 0.2
+            p_e_noise = 0.05  # 0.045
+            p_com_th = 0.4  # 0.0
+            p_w_a = 0.026  # fixed
+            p_a_noise = np.sqrt(5e-3)  # fixed
+            p_1st_readout = 140  #
+            p_2nd_readout = 40  #
             compute_trajectories = True
             plot = True
             all_trajs = True
