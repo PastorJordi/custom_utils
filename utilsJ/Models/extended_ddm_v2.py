@@ -923,6 +923,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         zt = zt[indx_sh]
         coh = coh[indx_sh]
         gt = gt[indx_sh]
+    if com is not None and sound_len is not None:
         com = com[indx_sh]
         sound_len = sound_len[indx_sh]
     num_tr = stim.shape[1]
