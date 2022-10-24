@@ -15,18 +15,18 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
-SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
 
@@ -92,9 +92,9 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com, pright
 
 
-def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=False,
+def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/', results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
-            data_path='C:/Users/Alexandre/Desktop/CRM/Alex/paper/results/',
+            data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
             metrics='mse', objective='curve', bin_size=20, det_th=5,
             plot=False, stim_res=5):
     data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
@@ -137,11 +137,9 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
                             max_ssim = True
                 else:
                     rt_vals_pcom = data.get('xpos_rt_pcom')
-                    rt_vals_pcom = [rt.to_numpy().astype(int) for
+                    rt_vals_pcom = [rt.astype(int) for
                                     rt in rt_vals_pcom]
                     median_vals_pcom = data.get('median_pcom_rt')
-                    median_vals_pcom = [pcom_series.to_numpy() for pcom_series
-                                        in median_vals_pcom]
                     x_val_at_updt = data.get('x_val_at_updt_mat')
                     perc_list = []
                     for i_pcom, med_pcom in enumerate(median_vals_pcom):
@@ -173,7 +171,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
                 # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
                 diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
                 window = np.exp(-np.arange(len(tmp_simul))**1/40)
-                window = 1
+                # window = 1
                 diff_rms = np.subtract(curve_tmp,
                                        np.array(data_curve['pcom']
                                                 [tmp_simul]) *
@@ -200,7 +198,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
             ind_min = np.argmax(diff_mn)
         else:
             ind_sorted = np.argsort(np.abs(diff_rms_mat))
-            ind_min = ind_sorted[40]
+            ind_min = ind_sorted[0]
             # second_in = (diff_mn*(diff_mn!=diff_mn[ind_min])).argmin()
         optimal_params = {}
         file_index = np.array(file_index)
@@ -216,7 +214,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
             plt.figure()
             plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                      linestyle='', marker='o')
-            for i in range(10):
+            for i in range(10, 20):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
@@ -228,11 +226,12 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/brute_force/', results=Fals
                         else:
                             optimal_params[k] = data[k][ind_min - min_num]
                 plt.plot(optimal_params['xpos_rt_pcom'],
-                         optimal_params['median_pcom_rt'].values,
+                         optimal_params['median_pcom_rt'],
                          label=f'simul_{i}')
-                plt.xlabel('RT (ms)')
-                plt.ylabel('pCoM - detected')
-                plt.legend()
+            plt.xlabel('RT (ms)')
+            plt.ylabel('pCoM - detected')
+            plt.legend()
+            # let's see the matrices
             fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
             sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
             ax[0].set_title('Simulation')

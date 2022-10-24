@@ -22,23 +22,23 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
@@ -742,7 +742,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
-        indx_update_ch = indx_final_ch
+        indx_update_ch = indx_final_ch if len(indx_com) == 0\
+            else indx_com[0] + hit_dec
         # get final decision
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)
@@ -750,9 +751,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     com = resp_first != resp_fin
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
-    matrix, _ = com_heatmap_jordi(zt, coh, com, return_mat=True, flip=True)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=20, range=(-100, 300))
+    matrix, _ = com_heatmap_jordi(zt, coh, com,
+                                  return_mat=True, flip=True)
     # end_eddm = time.time()
     # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
     # XXX: put in a different function
@@ -846,7 +848,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, indx_trajs
     else:
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, None, None, None, None, None, None, xpos_plot, median_pcom,\
+            matrix, None, None, None, None, None, None, None,\
             rt_vals, rt_bins, None
 
 
@@ -927,8 +929,8 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         com = com[indx_sh]
         sound_len = sound_len[indx_sh]
     num_tr = stim.shape[1]
-    MT_slope = 0.13
-    MT_intercep = 245
+    MT_slope = 0.123
+    MT_intercep = 254
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_noise_vals = []
@@ -1991,13 +1993,20 @@ def MT_vs_ev(resp_len, coh, com):
 
 
 def MT_vs_trial_index_silent(resp_len, trial_index):
-    MT = np.array(resp_len)*1e3
+    MT_1 = np.array(resp_len)*1e3
+    MT = MT_1[(special_trial == 2)*(zt < 0.1)*(MT_1 < 600)]
     plt.figure()
-    plt.scatter(trial_index, MT)
-    slope, intercept = np.polyfit(trial_index, MT, 1)
-    plt.plot(trial_index, slope*trial_index + intercept)
+    t_i_filt = np.array(trial_index[(special_trial == 2)*(zt < 0.1)*(MT_1 < 600)],
+                        dtype=int)
+    plt.scatter(t_i_filt, MT, s=10)
+    slope, intercept = np.polyfit(t_i_filt, MT, 1)
+    plt.plot(t_i_filt, slope*t_i_filt + intercept, color='red',
+             label='MT = {}·t_index + {}'.format(round(slope, 3),
+                                                 round(intercept, 3)))
     plt.xlabel('Trial index')
     plt.ylabel('MT (ms)')
+    plt.legend()
+    plt.title('MT fit for silent trials with zt < 0.1 (MT < 600)')
 
 
 # --- MAIN
@@ -2005,13 +2014,13 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(25e3)
+    num_tr = int(1e5)
     load_data = True
     new_sample = False
-    single_run = False
+    single_run = True
     shuffle = True
     simulate = True
-    parallel = True
+    parallel = False
     plot_t12 = False
     data_augment_factor = 10
     if simulate:
@@ -2031,7 +2040,8 @@ if __name__ == '__main__':
                          **data)
             else:  # use existing sample
                 files = glob.glob(DATA_FOLDER+'/sample_*')
-                data = np.load(files[np.random.choice(a=len(files))])
+                data = np.load(files[np.random.choice(a=len(files))],
+                               allow_pickle=True)
                 stim = data['stim']
                 zt = data['zt']
                 coh = data['coh']
@@ -2060,16 +2070,16 @@ if __name__ == '__main__':
         # RUN MODEL
         if single_run:  # single run with specific parameters
             p_t_aff = 4  # fixed
-            p_t_eff = 12  # fixed
+            p_t_eff = 10  # fixed
             p_t_a = 14  # fixed
-            p_w_zt = 0.15  # 0.15
+            p_w_zt = 0.2  # 0.15
             p_w_stim = 0.15  # 0.2
-            p_e_noise = 0.05  # 0.045
-            p_com_th = 0.4  # 0.0
-            p_w_a = 0.026  # fixed
+            p_e_noise = 0.04  # 0.045
+            p_com_th = 0.  # 0.0
+            p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 140  #
-            p_2nd_readout = 40  #
+            p_1st_readout = 100  #
+            p_2nd_readout = 160  #
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2078,18 +2088,18 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            if plot:
-                left_right_matrix(zt, coh, com, decision)
-                data_to_plot = {'sound_len': sound_len,
-                                'CoM': com,
-                                'first_resp': decision*[~com*(-1)],
-                                'final_resp': decision,
-                                'hithistory': hit,
-                                'avtrapz': coh,
-                                'detected_com': com,
-                                'MT': resp_len*1e3,
-                                'zt': zt}
-                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            # if plot:
+            #     left_right_matrix(zt, coh, com, decision)
+            #     data_to_plot = {'sound_len': sound_len,
+            #                     'CoM': com,
+            #                     'first_resp': decision*[~com*(-1)],
+            #                     'final_resp': decision,
+            #                     'hithistory': hit,
+            #                     'avtrapz': coh,
+            #                     'detected_com': com,
+            #                     'MT': resp_len*1e3,
+            #                     'zt': zt}
+            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
