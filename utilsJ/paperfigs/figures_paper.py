@@ -82,5 +82,3 @@ def tachometrics(coh, hit_history_model, hit_history_data, RT_data, RT_model):
     ax[1].set_xlabel('RT (ms)')
     ax[1].set_ylabel('Accuracy')
     ax[1].set_title('Model')
-
-

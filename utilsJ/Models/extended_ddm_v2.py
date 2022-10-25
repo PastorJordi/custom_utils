@@ -22,23 +22,24 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
+from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
@@ -511,7 +512,8 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
-                        num_tr_per_rat=int(1e4), after_correct=True, silent=False):
+                        num_tr_per_rat=int(1e4), after_correct=True, silent=False,
+                        splitting=False, all_trials=False):
     # import data for 1 rat
     print('Loading data')
     files = glob.glob(dfpath+'*.pkl')
@@ -526,6 +528,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     decision = np.empty((0, ))
     hit = np.empty((0, ))
     trial_index = np.empty((0, ))
+    if splitting:
+        traj_y = np.empty((0, ))
+        traj_stamps = np.empty((0, ))
+        fix_onset = np.empty((0, ), dtype=np.datetime64)
     if silent:
         special_trial = np.empty((0, ))
     for f in files:
@@ -544,13 +550,19 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         end = time.time()
         if after_correct:
             indx_prev_error = np.where(df['aftererror'].values == 0)[0]
-            # selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
-            #                                 size=(num_tr_per_rat), replace=False)
-            indx = indx_prev_error  # [selected_indx]
+            if not all_trials:
+                selected_indx = np.random.choice(np.arange(len(indx_prev_error)),
+                                                 size=(num_tr_per_rat),
+                                                 replace=False)
+                indx = indx_prev_error[selected_indx]
+            if all_trials:
+                indx = indx_prev_error
         else:
-            # indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
-            #                         replace=False)
-            indx = np.arange(len(df))
+            if all_trials:
+                indx = np.arange(len(df))
+            if not all_trials:
+                indx = np.random.choice(np.arange(len(df)), size=(num_tr_per_rat),
+                                        replace=False)
         prior_tmp = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         stim_tmp = np.array([stim for stim in df.res_sound])
         coh_mat = np.array(df.coh2)
@@ -561,6 +573,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         resp_len_tmp = np.array(df.resp_len)
         if silent:
             special_trial_tmp = np.array(df.special_trial)
+        if splitting:
+            traj_y_tmp = np.array(df.trajectory_y)
+            traj_stamps_tmp = np.array(df.trajectory_stamps)
+            fix_onset_tmp = np.array(df.fix_onset_dt)
         hit_tmp = np.array(df['hithistory'])
         gt_tmp = np.array(df.rewside) * 2 - 1
         prior = np.concatenate((prior, prior_tmp[indx]))
@@ -576,6 +592,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         if silent:
             special_trial = np.concatenate((special_trial,
                                             special_trial_tmp[indx]))
+        if splitting:
+            traj_y = np.concatenate((traj_y, traj_y_tmp[indx]))
+            traj_stamps = np.concatenate((traj_stamps, traj_stamps_tmp[indx]))
+            fix_onset = np.concatenate((fix_onset, fix_onset_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
@@ -597,8 +617,12 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     com = com.astype(int)
     if not silent:
         special_trial = None
+    if not splitting:
+        traj_y = None
+        fix_onset = None
+        traj_stamps = None
     return stim, prior, coh, gt, com, decision, sound_len, resp_len, hit,\
-        trial_index, special_trial
+        trial_index, special_trial, traj_y, fix_onset, traj_stamps
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -852,10 +876,10 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, None
 
 
-def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_res,
-              compute_trajectories=False, plot=False, existing_data=None,
-              detect_CoMs_th=5, shuffle=False, all_trajs=False,
-              kernels_model=False):
+def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset, 
+              configurations, jitters, stim_res, compute_trajectories=False,
+              plot=False, existing_data=None, detect_CoMs_th=5, shuffle=False,
+              all_trajs=False, kernels_model=False):
     """
 
     Parameters
@@ -925,9 +949,14 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
         zt = zt[indx_sh]
         coh = coh[indx_sh]
         gt = gt[indx_sh]
-    if com is not None and sound_len is not None:
+    if com is not None:
         com = com[indx_sh]
+    if sound_len is not None:
         sound_len = sound_len[indx_sh]
+    if traj_y is not None and traj_stamps is not None and fix_onset is not None:
+        traj_y = traj_y[indx_sh]
+        fix_onset = fix_onset[indx_sh]
+        traj_stamps = traj_stamps[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.123
     MT_intercep = 254
@@ -998,6 +1027,26 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
             print(np.mean(com_model))
             if plot:
                 start_plot = time.time()
+                reaction_time = (first_ind[tr_index]+p_t_eff -
+                                 int(300/stim_res))*stim_res
+                detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+                ind_com_model = detected_com.astype(int)
+                final_trajs = np.array(final_trajs)
+                out = pd.DataFrame({'trajectory_y': final_trajs[ind_com_model],
+                                    'sound_len': reaction_time[ind_com_model],
+                                    'coh2': coh[ind_com_model],
+                                    'rewside': (gt[ind_com_model]+1)/2})
+                ind_com_data = com.astype(bool)
+                df = pd.DataFrame({'trajectory_y': traj_y[ind_com_data],
+                                   'sound_len': sound_len[ind_com_data],
+                                   'coh2': coh[ind_com_data],
+                                   'rewside': (gt[ind_com_data]+1)/2,
+                                   'trajectory_stamps': traj_stamps[ind_com_data],
+                                   'fix_onset_dt': fix_onset[ind_com_data]})
+                fig, ax = plt.subplots(1)
+                fig, ax1 = plt.subplots(1)
+                fig, ax2 = plt.subplots(1)
+                splitplot(df, out, ax, ax1, ax2)
                 if compute_trajectories:
                     plotting(com=com_model, E=E, A=A, second_ind=second_ind,
                              first_ind=first_ind,
@@ -1011,12 +1060,9 @@ def run_model(stim, zt, coh, gt, com, sound_len, configurations, jitters, stim_r
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 MT = [len(t) for t in total_traj]
-                detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
                 detected_mat, _ =\
                     com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
                                       return_mat=True, flip=True)
-                reaction_time = (first_ind[tr_index]+p_t_eff -
-                                 int(300/stim_res))*stim_res
                 data_to_plot = {'sound_len': reaction_time,
                                 'CoM': com_model[tr_index],
                                 'first_resp': resp_first[tr_index],
@@ -2017,29 +2063,40 @@ if __name__ == '__main__':
     num_tr = int(25e3)
     load_data = True
     new_sample = False
-    single_run = False
+    single_run = True
     shuffle = True
     simulate = True
-    parallel = True
+    parallel = False
     plot_t12 = False
     data_augment_factor = 10
+    splitting = True
+    silent = False
     if simulate:
         # GET DATA
         if load_data:  # experimental data
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
-                    trial_index, special_trial =\
+                    trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
                     get_data_and_matrix(dfpath=DATA_FOLDER,
-                                        num_tr_per_rat=int(4e3),
-                                        after_correct=False)
+                                        num_tr_per_rat=int(1e4),
+                                        after_correct=False, splitting=splitting,
+                                        silent=silent)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                         'sound_len': sound_len, 'decision': decision,
                         'resp_len': resp_len, 'hit': hit,
-                        'trial_index': trial_index, 'special_trial': special_trial}
+                        'trial_index': trial_index, 'special_trial': special_trial,
+                        'trajectory_y': traj_y, 'trajectory_stamps': traj_stamps,
+                        'fix_onset_dt': fix_onset}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
             else:  # use existing sample
-                files = glob.glob(DATA_FOLDER+'/sample_*')
+                if silent:
+                    subfolder = '/silent'
+                if splitting:
+                    subfolder = '/splitting'
+                else:
+                    subfolder = ''
+                files = glob.glob(DATA_FOLDER+subfolder+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))],
                                allow_pickle=True)
                 stim = data['stim']
@@ -2051,8 +2108,13 @@ if __name__ == '__main__':
                 resp_len = data['resp_len']
                 decision = data['decision']
                 hit = data['hit']
+                if silent:
+                    special_trial = data['special_trial']
                 # trial_index = data['trial_index']
-                # special_trial = data['special_trial']
+                if splitting:
+                    traj_y = data['trajectory_y']
+                    fix_onset = data['fix_onset_dt']
+                    traj_stamps = data['trajectory_stamps']
             if plot_t12:
                 energy_vs_time(stim, zt, coh, sound_len, com, decision, hit)
             stim = data_augmentation(stim=stim, daf=data_augment_factor)
@@ -2109,6 +2171,10 @@ if __name__ == '__main__':
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
             hit = hit[:int(num_tr)]
+            if splitting:
+                traj_y = traj_y[:int(num_tr)]
+                fix_onset = fix_onset[:int(num_tr)]
+                traj_stamps = traj_stamps[:int(num_tr)]
         else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=5)
             compute_trajectories = True
@@ -2130,7 +2196,7 @@ if __name__ == '__main__':
             step = int(np.ceil(len(configurations)/num_cores))
             Parallel(n_jobs=num_cores)\
                 (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt, com=None,
-                                    sound_len=None,
+                                    sound_len=None, traj_y=None,
                                     configurations=configurations
                                     [int(i_par*step):int((i_par+1)*step)],
                                     jitters=jitters,
@@ -2141,7 +2207,8 @@ if __name__ == '__main__':
                  for i_par in range(num_cores))
         else:  # sequential runs
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
-                      sound_len=sound_len,
+                      sound_len=sound_len, traj_y=traj_y,
+                      traj_stamps=traj_stamps, fix_onset=fix_onset,
                       configurations=configurations, jitters=jitters,
                       compute_trajectories=compute_trajectories,
                       plot=plot, stim_res=stim_res,
