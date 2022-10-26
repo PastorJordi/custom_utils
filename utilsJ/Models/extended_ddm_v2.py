@@ -249,6 +249,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     hist_total, _ = np.histogram(data_to_plot['sound_len'], bins)
     ax.plot(bins[:-1]+(bins[1]-bins[0])/2, hist_total,
             label='All')
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Counts')
     ax.legend()
     if not data:
         matrix = data_to_plot['matrix']
@@ -876,7 +878,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, None
 
 
-def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset, 
+def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
               configurations, jitters, stim_res, compute_trajectories=False,
               plot=False, existing_data=None, detect_CoMs_th=5, shuffle=False,
               all_trajs=False, kernels_model=False):
@@ -1030,23 +1032,29 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                 reaction_time = (first_ind[tr_index]+p_t_eff -
                                  int(300/stim_res))*stim_res
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-                ind_com_model = detected_com.astype(int)
-                final_trajs = np.array(final_trajs)
-                out = pd.DataFrame({'trajectory_y': final_trajs[ind_com_model],
-                                    'sound_len': reaction_time[ind_com_model],
-                                    'coh2': coh[ind_com_model],
-                                    'rewside': (gt[ind_com_model]+1)/2})
-                ind_com_data = com.astype(bool)
-                df = pd.DataFrame({'trajectory_y': traj_y[ind_com_data],
-                                   'sound_len': sound_len[ind_com_data],
-                                   'coh2': coh[ind_com_data],
-                                   'rewside': (gt[ind_com_data]+1)/2,
-                                   'trajectory_stamps': traj_stamps[ind_com_data],
-                                   'fix_onset_dt': fix_onset[ind_com_data]})
-                fig, ax = plt.subplots(1)
-                fig, ax1 = plt.subplots(1)
-                fig, ax2 = plt.subplots(1)
-                splitplot(df, out, ax, ax1, ax2)
+                MT = [len(t) for t in total_traj]
+                # ind_com_model = detected_com.astype(int)
+                # final_trajs = np.array(final_trajs)
+                # out = pd.DataFrame({'trajectory_y': final_trajs[ind_com_model],
+                #                     'sound_len': reaction_time[ind_com_model],
+                #                     'coh2': coh[ind_com_model],
+                #                     'rewside': (gt[ind_com_model]+1)/2})
+                # ind_com_data = com.astype(bool)
+                # df = pd.DataFrame({'trajectory_y': traj_y[ind_com_data],
+                #                    'sound_len': sound_len[ind_com_data],
+                #                    'coh2': coh[ind_com_data],
+                #                    'rewside': (gt[ind_com_data]+1)/2,
+                #                    'trajectory_stamps': traj_stamps[ind_com_data],
+                #                    'fix_onset_dt': fix_onset[ind_com_data]})
+                # fig, ax = plt.subplots(1)
+                # fig, ax1 = plt.subplots(1)
+                # fig, ax2 = plt.subplots(1)
+                # splitplot(df, out, ax, ax1, ax2)
+                if kernels_model:
+                    for margin in [5, 15, 30, 50]:
+                        coms_tII_tI(first_ind, tr_index, p_t_eff, p_t_aff,
+                                    stim_res, com_model, detected_com, zt, MT,
+                                    resp_fin, stim, margin=margin)
                 if compute_trajectories:
                     plotting(com=com_model, E=E, A=A, second_ind=second_ind,
                              first_ind=first_ind,
@@ -1059,7 +1067,6 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                              tr_index=tr_index, p_com_th=p_com_th,
                              stim_res=stim_res)
                 hits = resp_fin == gt
-                MT = [len(t) for t in total_traj]
                 detected_mat, _ =\
                     com_heatmap_jordi(zt[tr_index], coh[tr_index], detected_com,
                                       return_mat=True, flip=True)
@@ -1085,7 +1092,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                          com=detected_com)
                 if kernels_model:
                     kernels(coh=coh[tr_index], zt=zt[tr_index],
-                            sound_len=sound_len[tr_index],
+                            sound_len=reaction_time,
                             decision=resp_fin[tr_index], stim=stim[:, tr_index],
                             com=detected_com, stim_res=stim_res)
                 end_plot = time.time()
@@ -1823,7 +1830,8 @@ def pcom_model_vs_data(detected_com, com, sound_len, reaction_time):
     binned_curve(df, 'com_model', 'reaction_time', bins=BINS, xpos=15, ax=ax)
 
 
-def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
+def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5, neg_pos=False,
+            indexing=True, type_1_or_2=None, margin=5):
     """
 
 
@@ -1846,12 +1854,21 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
 
     """
     stim_res = int(stim_res)
-    percentile_zt = np.percentile(np.abs(zt), 20)
-    index_coh = (np.abs(coh) <= 0.5)*(sound_len > 100)*(np.abs(zt) < percentile_zt)
-    array_energy = np.empty((len(zt[index_coh]), 400))
-    array_energy[:] = np.nan
-    array_com_energy = np.empty((sum(com[index_coh]), 400))
-    array_com_energy[:] = np.nan
+    max_RT = (max(sound_len) + 1).astype(int)
+    if indexing:
+        percentile_zt = np.percentile(np.abs(zt), 20)
+        index_coh = (np.abs(coh) <= 0.5)*(sound_len > 100) *\
+            (np.abs(zt) < percentile_zt)
+        array_energy = np.empty((len(zt[index_coh]), max_RT))
+        array_energy[:] = np.nan
+        array_com_energy = np.empty((sum(com[index_coh]), max_RT))
+        array_com_energy[:] = np.nan
+    else:
+        index_coh = (sound_len > 0)*(np.abs(coh) <= 0.5)
+        array_energy = np.empty((len(zt[index_coh]), max_RT))
+        array_energy[:] = np.nan
+        array_com_energy = np.empty((sum(com[index_coh]), max_RT))
+        array_com_energy[:] = np.nan
     sound_int = sound_len.astype(int)[index_coh]
     decision_coh = decision[index_coh]
     sound_com_int = sound_len.astype(int)[(com*index_coh).astype(bool)]
@@ -1871,9 +1888,10 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
             array_com_energy[j, s] = (stim_com[s//stim_res, j]
                                       - coh_com_indexed[j]) * dec_com_coh[j]
     for j, sound_com in enumerate(sound_int):
-        array_mov_onset[j, 400-sound_com-1:-1] = array_energy[j, :sound_com]
+        array_mov_onset[j, max_RT-sound_com-1:-1] = array_energy[j, :sound_com]
     for j, sound_com in enumerate(sound_com_int):
-        array_com_mov_onset[j, 400-sound_com-1:-1] = array_com_energy[j, :sound_com]
+        array_com_mov_onset[j, max_RT-sound_com-1:-1] =\
+            array_com_energy[j, :sound_com]
     array_energy_mean = np.nanmean(array_mov_onset, axis=0)
     values = array_mov_onset.shape[0] - np.sum(np.isnan(array_mov_onset), axis=0)
     std_energy = np.sqrt(np.nanstd(array_mov_onset, axis=0)/values)
@@ -1882,24 +1900,29 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
         np.sum(np.isnan(array_com_mov_onset), axis=0)
     std_energy_com = np.sqrt(np.nanstd(array_com_mov_onset, axis=0)/values_com)
     plt.figure()
-    plt.plot(np.linspace(-400, 0, 400), array_energy_mean,
+    plt.plot(np.linspace(-max_RT, 0, max_RT), array_energy_mean,
              label='all trials: N = {}'.format(array_energy.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
+    plt.fill_between(np.linspace(-max_RT, 0, max_RT),
                      array_energy_mean+std_energy,
                      array_energy_mean-std_energy,
                      alpha=0.3)
-    plt.plot(np.linspace(-400, 0, 400),
+    plt.plot(np.linspace(-max_RT, 0, max_RT),
              array_energy_com_mean,
              label='CoM: N = {}'.format(array_com_energy.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
+    plt.fill_between(np.linspace(-max_RT, 0, max_RT),
                      array_energy_com_mean+std_energy_com,
                      array_energy_com_mean-std_energy_com,
                      alpha=0.3)
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
-    plt.title('coh = {}, RT > {} ms, zt < {}'.
-              format(np.unique(np.abs(coh_indexed)),
-                     int(np.min(sound_len[index_coh])),
-                     np.max(np.abs(zt[index_coh]))))
+    if type_1_or_2 is None:
+        plt.title('coh = {}, RT > {} ms, zt < {}'.
+                  format(np.unique(np.abs(coh_indexed)),
+                         int(np.min(sound_len[index_coh])),
+                         np.max(np.abs(zt[index_coh]))))
+    else:
+        plt.title('CoM Type {}. coh = {}. margin = {}'.
+                  format(type_1_or_2, np.unique(np.abs(coh_indexed)),
+                         margin))
     plt.xlabel('Movement onset (ms)')
     plt.ylabel('Decision*stimulus')
     plt.legend()
@@ -1925,98 +1948,104 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
     #         print(res[1])
     #         print(i + 5)
     #         break
-    trial_list_pos_neg = []
-    prior_list_pos_neg = []
-    trial_list_neg_pos = []
-    prior_list_neg_pos = []
-    trial_list_neg_neg = []
-    prior_list_neg_neg = []
-    trial_list_pos_pos = []
-    prior_list_pos_pos = []
-    for i, trial in enumerate(array_com_mov_onset):
-        trial = trial[::-1]
-        s0 = np.sign(trial[1])
-        if s0 > 0:
-            if np.sum(np.sign(trial[~np.isnan(trial)]) == -1) == 0:
-                trial_list_pos_pos.append(trial[::-1])
-                prior_list_pos_pos.append(zt[(com*index_coh).astype(bool)][i])
-            else:
+    if neg_pos:
+        trial_list_pos_neg = []
+        prior_list_pos_neg = []
+        trial_list_neg_pos = []
+        prior_list_neg_pos = []
+        trial_list_neg_neg = []
+        prior_list_neg_neg = []
+        trial_list_pos_pos = []
+        prior_list_pos_pos = []
+        for i, trial in enumerate(array_com_mov_onset):
+            trial = trial[::-1]
+            s0 = np.sign(trial[1])
+            if s0 > 0:
+                if np.sum(np.sign(trial[~np.isnan(trial)]) == -1) == 0:
+                    trial_list_pos_pos.append(trial[::-1])
+                    prior_list_pos_pos.append(zt[(com*index_coh).astype(bool)][i])
+                else:
+                    for val in trial[~np.isnan(trial)]:
+                        if np.sign(val) < 0:
+                            trial_list_pos_neg.append(trial[::-1])
+                            prior_list_pos_neg.append(zt[(com*index_coh).
+                                                         astype(bool)][i])
+                            break
+            if s0 < 0:
+                if np.sum(np.sign(trial[~np.isnan(trial)]) == 1) == 0:
+                    trial_list_neg_neg.append(trial[::-1])
+                    prior_list_neg_neg.append(zt[(com*index_coh).astype(bool)][i])
                 for val in trial[~np.isnan(trial)]:
-                    if np.sign(val) < 0:
-                        trial_list_pos_neg.append(trial[::-1])
-                        prior_list_pos_neg.append(zt[(com*index_coh).
+                    if np.sign(val) > 0:
+                        trial_list_neg_pos.append(trial[::-1])
+                        prior_list_neg_pos.append(zt[(com*index_coh).
                                                      astype(bool)][i])
                         break
-        if s0 < 0:
-            if np.sum(np.sign(trial[~np.isnan(trial)]) == 1) == 0:
-                trial_list_neg_neg.append(trial[::-1])
-                prior_list_neg_neg.append(zt[(com*index_coh).astype(bool)][i])
-            for val in trial[~np.isnan(trial)]:
-                if np.sign(val) > 0:
-                    trial_list_neg_pos.append(trial[::-1])
-                    prior_list_neg_pos.append(zt[(com*index_coh).astype(bool)][i])
-                    break
-    array_energy_pos_neg = np.array(trial_list_pos_neg)
-    array_energy_mean_pos_neg = np.nanmean(array_energy_pos_neg, axis=0)
-    values_pos_neg = array_energy_pos_neg.shape[0] -\
-        np.sum(np.isnan(array_energy_pos_neg), axis=0)
-    std_energy_pos_neg = np.sqrt(
-        np.nanstd(array_energy_pos_neg, axis=0)/values_pos_neg)
-    array_energy_neg_pos = np.array(trial_list_neg_pos)
-    array_energy_mean_neg_pos = np.nanmean(array_energy_neg_pos, axis=0)
-    values_neg_pos = array_energy_neg_pos.shape[0] -\
-        np.sum(np.isnan(array_energy_neg_pos), axis=0)
-    std_energy_neg_pos = np.sqrt(
-        np.nanstd(array_energy_neg_pos, axis=0)/values_neg_pos)
-    array_energy_neg_neg = np.array(trial_list_neg_neg)
-    array_energy_mean_neg_neg = np.nanmean(array_energy_neg_neg, axis=0)
-    values_neg_neg = array_energy_neg_neg.shape[0] -\
-        np.sum(np.isnan(array_energy_neg_neg), axis=0)
-    std_energy_neg_neg = np.sqrt(
-        np.nanstd(array_energy_neg_neg, axis=0)/values_neg_neg)
-    array_energy_pos_pos = np.array(trial_list_pos_pos)
-    array_energy_mean_pos_pos = np.nanmean(array_energy_pos_pos, axis=0)
-    values_pos_pos = array_energy_pos_pos.shape[0] -\
-        np.sum(np.isnan(array_energy_pos_pos), axis=0)
-    std_energy_pos_pos = np.sqrt(
-        np.nanstd(array_energy_pos_pos, axis=0)/values_pos_pos)
-    plt.figure()
-    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_neg,
-             label='type 2 (neg-pos): N = {}'.format(array_energy_pos_neg.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
-                     array_energy_mean_pos_neg+std_energy_pos_neg,
-                     array_energy_mean_pos_neg-std_energy_pos_neg,
-                     alpha=0.3)
-    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_pos,
-             label='type 2 (pos-neg): N = {}'.format(array_energy_neg_pos.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
-                     array_energy_mean_neg_pos+std_energy_neg_pos,
-                     array_energy_mean_neg_pos-std_energy_neg_pos,
-                     alpha=0.3)
-    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_neg,
-             label='type 1 (neg-neg): N = {}'.format(array_energy_neg_neg.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
-                     array_energy_mean_neg_neg+std_energy_neg_neg,
-                     array_energy_mean_neg_neg-std_energy_neg_neg,
-                     alpha=0.3)
-    plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_pos,
-             label='type 1 (pos-pos): N = {}'.format(array_energy_pos_pos.shape[0]))
-    plt.fill_between(np.linspace(-400, 0, 400),
-                     array_energy_mean_pos_pos+std_energy_pos_pos,
-                     array_energy_mean_pos_pos-std_energy_pos_pos,
-                     alpha=0.3)
-    plt.axhline(0, linestyle='--', color='k', alpha=0.3)
-    plt.xlim(-400, 0)
-    plt.ylim(-0.3, 0.3)
-    plt.xlabel('Movement onset (ms)')
-    plt.ylabel('Decision*stimulus')
-    plt.legend()
-    plt.suptitle('Imposing positive to negative N_total = {}'.
-                 format(array_com_mov_onset.shape[0]))
-    plt.title('coh = {}, RT > {} ms, zt < {}'.
-              format(np.unique(np.abs(coh_indexed)),
-                     int(np.min(sound_len[index_coh])),
-                     np.max(np.abs(zt[index_coh]))))
+        array_energy_pos_neg = np.array(trial_list_pos_neg)
+        array_energy_mean_pos_neg = np.nanmean(array_energy_pos_neg, axis=0)
+        values_pos_neg = array_energy_pos_neg.shape[0] -\
+            np.sum(np.isnan(array_energy_pos_neg), axis=0)
+        std_energy_pos_neg = np.sqrt(
+            np.nanstd(array_energy_pos_neg, axis=0)/values_pos_neg)
+        array_energy_neg_pos = np.array(trial_list_neg_pos)
+        array_energy_mean_neg_pos = np.nanmean(array_energy_neg_pos, axis=0)
+        values_neg_pos = array_energy_neg_pos.shape[0] -\
+            np.sum(np.isnan(array_energy_neg_pos), axis=0)
+        std_energy_neg_pos = np.sqrt(
+            np.nanstd(array_energy_neg_pos, axis=0)/values_neg_pos)
+        array_energy_neg_neg = np.array(trial_list_neg_neg)
+        array_energy_mean_neg_neg = np.nanmean(array_energy_neg_neg, axis=0)
+        values_neg_neg = array_energy_neg_neg.shape[0] -\
+            np.sum(np.isnan(array_energy_neg_neg), axis=0)
+        std_energy_neg_neg = np.sqrt(
+            np.nanstd(array_energy_neg_neg, axis=0)/values_neg_neg)
+        array_energy_pos_pos = np.array(trial_list_pos_pos)
+        array_energy_mean_pos_pos = np.nanmean(array_energy_pos_pos, axis=0)
+        values_pos_pos = array_energy_pos_pos.shape[0] -\
+            np.sum(np.isnan(array_energy_pos_pos), axis=0)
+        std_energy_pos_pos = np.sqrt(
+            np.nanstd(array_energy_pos_pos, axis=0)/values_pos_pos)
+        plt.figure()
+        plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_neg,
+                 label='type 2 (neg-pos): N = {}'.format(array_energy_pos_neg.
+                                                         shape[0]))
+        plt.fill_between(np.linspace(-400, 0, 400),
+                         array_energy_mean_pos_neg+std_energy_pos_neg,
+                         array_energy_mean_pos_neg-std_energy_pos_neg,
+                         alpha=0.3)
+        plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_pos,
+                 label='type 2 (pos-neg): N = {}'.format(array_energy_neg_pos.
+                                                         shape[0]))
+        plt.fill_between(np.linspace(-400, 0, 400),
+                         array_energy_mean_neg_pos+std_energy_neg_pos,
+                         array_energy_mean_neg_pos-std_energy_neg_pos,
+                         alpha=0.3)
+        plt.plot(np.linspace(-400, 0, 400), array_energy_mean_neg_neg,
+                 label='type 1 (neg-neg): N = {}'.format(array_energy_neg_neg.
+                                                         shape[0]))
+        plt.fill_between(np.linspace(-400, 0, 400),
+                         array_energy_mean_neg_neg+std_energy_neg_neg,
+                         array_energy_mean_neg_neg-std_energy_neg_neg,
+                         alpha=0.3)
+        plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_pos,
+                 label='type 1 (pos-pos): N = {}'.format(array_energy_pos_pos.
+                                                         shape[0]))
+        plt.fill_between(np.linspace(-400, 0, 400),
+                         array_energy_mean_pos_pos+std_energy_pos_pos,
+                         array_energy_mean_pos_pos-std_energy_pos_pos,
+                         alpha=0.3)
+        plt.axhline(0, linestyle='--', color='k', alpha=0.3)
+        plt.xlim(-400, 0)
+        plt.ylim(-0.3, 0.3)
+        plt.xlabel('Movement onset (ms)')
+        plt.ylabel('Decision*stimulus')
+        plt.legend()
+        plt.suptitle('Imposing positive to negative N_total = {}'.
+                     format(array_com_mov_onset.shape[0]))
+        plt.title('coh = {}, RT > {} ms, zt < {}'.
+                  format(np.unique(np.abs(coh_indexed)),
+                         int(np.min(sound_len[index_coh])),
+                         np.max(np.abs(zt[index_coh]))))
 
 
 def MT_vs_ev(resp_len, coh, com):
@@ -2055,12 +2084,100 @@ def MT_vs_trial_index_silent(resp_len, trial_index):
     plt.title('MT fit for silent trials with zt < 0.1 (MT < 600)')
 
 
+def coms_tII_tI(first_ind, tr_index, p_t_eff, p_t_aff, stim_res, com,
+                detected_com, zt, MT, resp_fin, stim, margin=5,
+                pcom_vs_prior_mt=False):
+    reaction_time = (first_ind[tr_index]+p_t_eff -
+                     int(300/stim_res))*stim_res
+    t_2_detected = detected_com*(reaction_time > p_t_aff*stim_res + margin)
+    t_1_detected = detected_com*(reaction_time <= p_t_aff*stim_res + margin)
+    t_2_all = com*(reaction_time > p_t_aff*stim_res + margin)
+    t_1_all = com*(reaction_time <= p_t_aff*stim_res + margin)
+    df = pd.DataFrame({'T1_all': t_1_all, 'T2_all': t_2_all, 'T2_detected':
+                       t_2_detected, 'T1_detected': t_1_detected,
+                       'sound_len': reaction_time, 'prior': zt, 'MT': MT})
+    kernels(coh=coh[tr_index], zt=zt[tr_index],
+            sound_len=reaction_time, decision=resp_fin[tr_index],
+            stim=stim[:, tr_index], com=t_2_detected, stim_res=stim_res,
+            indexing=False, type_1_or_2=2, margin=margin)
+    kernels(coh=coh[tr_index], zt=zt[tr_index],
+            sound_len=reaction_time, decision=resp_fin[tr_index],
+            stim=stim[:, tr_index], com=t_1_detected, stim_res=stim_res,
+            indexing=False, type_1_or_2=1, margin=margin)
+    if pcom_vs_prior_mt:
+        margin_list = np.linspace(5, 80, num=16)
+        fig, ax = plt.subplots(1)
+        t_1_det_list = []
+        t_2_det_list = []
+        for margin_1 in margin_list:
+            t_2_detected = detected_com*(reaction_time >
+                                         p_t_aff*stim_res + margin_1)
+            t_1_detected = detected_com*(reaction_time <=
+                                         p_t_aff*stim_res + margin_1)
+            # t_2_all = com*(reaction_time > p_t_aff*stim_res + margin_1)
+            # t_1_all = com*(reaction_time <= p_t_aff*stim_res + margin_1)
+            t_1_det_list.append(np.mean(t_1_detected))
+            t_2_det_list.append(np.mean(t_2_detected))
+        plt.axvline(x=50, linestyle='--', color='k', alpha=0.5)
+        plt.plot(margin_list, t_1_det_list, label='Mean pcom t1')
+        plt.plot(margin_list, t_2_det_list, label='Mean pcom t2')
+        plt.legend()
+        plt.xlabel('Margin (ms)')
+        plt.ylabel('pCoM')
+        fig, ax = plt.subplots(1)
+        ax.set_title('CoMs vs prior')
+        bins_zt = np.linspace(min(zt), max(zt), num=80)
+        binned_curve(df, 'T1_all', 'prior', bins=bins_zt, ax=ax, xoffset=min(zt),
+                     xpos=np.diff(bins_zt)[0], errorbar_kw={'label': 'T1_all'})
+        binned_curve(df, 'T2_all', 'prior', bins=bins_zt, ax=ax, xoffset=min(zt),
+                     xpos=np.diff(bins_zt)[0], errorbar_kw={'label': 'T2_all'})
+        binned_curve(df, 'T1_detected', 'prior', bins=bins_zt, ax=ax,
+                     xoffset=min(zt), xpos=np.diff(bins_zt)[0],
+                     errorbar_kw={'label': 'T1_detected'})
+        binned_curve(df, 'T2_detected', 'prior', bins=bins_zt, ax=ax,
+                     xoffset=min(zt), xpos=np.diff(bins_zt)[0],
+                     errorbar_kw={'label': 'T2_detected'})
+        ax.set_xlabel('Prior)')
+        ax.set_ylabel('pCoM')
+        fig, ax = plt.subplots(1)
+        ax.set_title('CoMs vs MT')
+        bins_zt = np.linspace(min(MT), max(MT), num=30)
+        binned_curve(df, 'T1_all', 'MT', bins=bins_zt, ax=ax, xoffset=min(MT),
+                     xpos=np.diff(bins_zt)[0], errorbar_kw={'label': 'T1_all'})
+        binned_curve(df, 'T2_all', 'MT', bins=bins_zt, ax=ax, xoffset=min(MT),
+                     xpos=np.diff(bins_zt)[0], errorbar_kw={'label': 'T2_all'})
+        binned_curve(df, 'T1_detected', 'MT', bins=bins_zt, ax=ax,
+                     xoffset=min(MT), xpos=np.diff(bins_zt)[0],
+                     errorbar_kw={'label': 'T1_detected'})
+        binned_curve(df, 'T2_detected', 'MT', bins=bins_zt, ax=ax,
+                     xoffset=min(MT), xpos=np.diff(bins_zt)[0],
+                     errorbar_kw={'label': 'T2_detected'})
+        ax.set_xlabel('MT (ms)')
+        ax.set_ylabel('pCoM')
+
+
+def cdfs(coh, sound_len, title=''):
+    plt.figure()
+    colors = ['k', 'darkred', 'darkorange', 'gold']
+    ev_vals = np.unique(np.abs(coh))
+    for i, ev in enumerate(ev_vals):
+        index = ev == np.abs(coh)
+        hist_data, bins = np.histogram(sound_len[index], bins=200)
+        plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
+                 np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
+                 color=colors[i])
+    plt.xlabel('RT (ms)')
+    plt.ylabel('CDF')
+    plt.legend()
+    plt.title(str(title))
+
+
 # --- MAIN
 if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(25e3)
+    num_tr = int(1e5)
     load_data = True
     new_sample = False
     single_run = True
@@ -2069,7 +2186,7 @@ if __name__ == '__main__':
     parallel = False
     plot_t12 = False
     data_augment_factor = 10
-    splitting = True
+    splitting = False
     silent = False
     if simulate:
         # GET DATA
@@ -2080,7 +2197,7 @@ if __name__ == '__main__':
                     get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e4),
                                         after_correct=False, splitting=splitting,
-                                        silent=silent)
+                                        silent=silent, all_trials=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                         'sound_len': sound_len, 'decision': decision,
                         'resp_len': resp_len, 'hit': hit,
@@ -2140,8 +2257,8 @@ if __name__ == '__main__':
             p_com_th = 0.  # 0.0
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 100  #
-            p_2nd_readout = 160  #
+            p_1st_readout = 120  #
+            p_2nd_readout = 200  #
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2175,6 +2292,10 @@ if __name__ == '__main__':
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]
                 traj_stamps = traj_stamps[:int(num_tr)]
+            else:
+                traj_y = None
+                fix_onset = None
+                traj_stamps = None
         else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=5)
             compute_trajectories = True
@@ -2213,7 +2334,7 @@ if __name__ == '__main__':
                       compute_trajectories=compute_trajectories,
                       plot=plot, stim_res=stim_res,
                       existing_data=existing_data,
-                      shuffle=shuffle, all_trajs=all_trajs)
+                      shuffle=shuffle, all_trajs=all_trajs, kernels_model=False)
     # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
     # res_path = data_path
     # data_path = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/results/'

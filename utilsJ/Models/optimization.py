@@ -92,7 +92,8 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com, pright
 
 
-def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/', results=False,
+def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/2610.2022/',
+            results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
             metrics='mse', objective='curve', bin_size=20, det_th=5,
@@ -214,7 +215,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/', results=False
             plt.figure()
             plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                      linestyle='', marker='o')
-            for i in range(10, 20):
+            for i in range(20, 30):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
@@ -241,7 +242,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/', results=False
             plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                      linestyle='', marker='o')
             plt.plot(optimal_params['xpos_rt_pcom'],
-                     optimal_params['median_pcom_rt'].values,
+                     optimal_params['median_pcom_rt'],
                      label='simul')
             plt.xlabel('RT (ms)')
             plt.ylabel('pCoM - detected')

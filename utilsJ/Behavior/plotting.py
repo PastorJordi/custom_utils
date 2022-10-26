@@ -632,7 +632,7 @@ def interpolapply(
     interpolatespace=np.linspace(-700000, 1000000, 1701),
     fixation_us=300000,  # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
     align="action",
-    interp_extend=True,
+    interp_extend=False,
     discarded_tstamp=0,
 ):  # we can speed up below funcction for trajectories
     # for ii,i in enumerate(idx_dic[b]):
