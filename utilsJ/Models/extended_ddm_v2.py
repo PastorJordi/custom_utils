@@ -2324,7 +2324,8 @@ if __name__ == '__main__':
                                     compute_trajectories=compute_trajectories,
                                     plot=plot, stim_res=stim_res,
                                     existing_data=existing_data,
-                                    shuffle=shuffle, all_trajs=True)
+                                    shuffle=shuffle, all_trajs=True,
+                                    traj_stamps=None, fix_onset=None)
                  for i_par in range(num_cores))
         else:  # sequential runs
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
@@ -2334,7 +2335,7 @@ if __name__ == '__main__':
                       compute_trajectories=compute_trajectories,
                       plot=plot, stim_res=stim_res,
                       existing_data=existing_data,
-                      shuffle=shuffle, all_trajs=all_trajs, kernels_model=False)
+                      shuffle=shuffle, all_trajs=all_trajs, kernels_model=False,)
     # data_path = '/home/molano/Dropbox/project_Barna/ChangesOfMind/results/'
     # res_path = data_path
     # data_path = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/results/'
