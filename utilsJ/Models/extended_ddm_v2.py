@@ -28,7 +28,7 @@ sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
-from simul import splitplot
+# from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
