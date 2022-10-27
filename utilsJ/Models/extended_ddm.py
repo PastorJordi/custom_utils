@@ -213,8 +213,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                      bins=BINS, ax=ax[0], xpos=xpos,
                      errorbar_kw={'label': 'detected com'})
         data_curve = pd.read_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
-        ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
-                   marker='o')
+        ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data',
+                   linestyle='', marker='o')
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('PCoM')
@@ -1804,7 +1804,8 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
     for j, sound_com in enumerate(sound_int):
         array_mov_onset[j, 400-sound_com-1:-1] = array_energy[j, :sound_com]
     for j, sound_com in enumerate(sound_com_int):
-        array_com_mov_onset[j, 400-sound_com-1:-1] = array_com_energy[j, :sound_com]
+        array_com_mov_onset[j, 400-sound_com-1:-1] =\
+            array_com_energy[j, :sound_com]
     array_energy_mean = np.nanmean(array_mov_onset, axis=0)
     values = array_mov_onset.shape[0] - np.sum(np.isnan(array_mov_onset), axis=0)
     std_energy = np.sqrt(np.nanstd(array_mov_onset, axis=0)/values)
@@ -1912,6 +1913,7 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5):
     std_energy_pos_pos = np.sqrt(
         np.nanstd(array_energy_pos_pos, axis=0)/values_pos_pos)
     plt.figure()
+    # XXX: array_energy_pos_neg is a very long name!
     plt.plot(np.linspace(-400, 0, 400), array_energy_mean_pos_neg,
              label='type 2 (neg-pos): N = {}'.format(array_energy_pos_neg.shape[0]))
     plt.fill_between(np.linspace(-400, 0, 400),
