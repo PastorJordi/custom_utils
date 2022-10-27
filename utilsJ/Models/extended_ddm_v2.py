@@ -220,8 +220,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                      bins=BINS, ax=ax[0], xpos=xpos,
                      errorbar_kw={'label': 'detected com'})
         data_curve = pd.read_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
-        ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data', linestyle='',
-                   marker='o')
+        ax[0].plot(data_curve['rt'], data_curve['pcom'], label='data',
+                   linestyle='', marker='o')
     ax[0].legend()
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('PCoM')
@@ -762,7 +762,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_signed
         # get CoMs indexes
         # in this comparison, post_dec_integration is set with respect
-        # to com_bound_signed but E[hit_dec, i_t] isn't. However, it does not matter
+        # to com_bound_signed but E[hit_dec, i_t] isn't. However,
+        # it does not matter
         # because:
         # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_signed
         indx_com =\
@@ -1044,7 +1045,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                 #                    'sound_len': sound_len[ind_com_data],
                 #                    'coh2': coh[ind_com_data],
                 #                    'rewside': (gt[ind_com_data]+1)/2,
-                #                    'trajectory_stamps': traj_stamps[ind_com_data],
+                #                   'trajectory_stamps': traj_stamps[ind_com_data],
                 #                    'fix_onset_dt': fix_onset[ind_com_data]})
                 # fig, ax = plt.subplots(1)
                 # fig, ax1 = plt.subplots(1)
@@ -1151,7 +1152,8 @@ def set_parameters(num_vals=3, factor=8):
                                             p_e_noise_list, p_com_th_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
                                             p_w_a_list, p_a_noise_list,
-                                            p_1st_readout_list, p_2nd_readout_list))
+                                            p_1st_readout_list,
+                                            p_2nd_readout_list))
     if num_vals == 1:
         jitters = np.repeat(0.01, 10)
     else:
