@@ -128,6 +128,7 @@ def tachometric_data(coh, hit, sound_len, ax):
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title('Data')
+    return ax.get_position()
 
 
 def reaction_time_histogram(sound_len, ax, bins=BINS_RT):
@@ -138,8 +139,9 @@ def reaction_time_histogram(sound_len, ax, bins=BINS_RT):
     ax.set_xlim(0, max(BINS_RT))
 
 
-def express_performance(hit, coh, sound_len, ax):
+def express_performance(hit, coh, sound_len, pos_tach_ax, ax):
     " all rats..? "
+    pos = pos_tach_ax
     rm_top_right_lines(ax)
     ev_vals = np.unique(np.abs(coh))
     accuracy = []
@@ -148,7 +150,7 @@ def express_performance(hit, coh, sound_len, ax):
         index = (coh == ev)*(sound_len < 90)
         accuracy.append(np.mean(hit[index]))
         error.append(np.sqrt(np.std(hit[index])/np.sum(index)))
-    # pos = ax.get_position()
+    ax.set_position([pos.x0, pos.y0, pos.width/3, pos.height/6])
     ax.errorbar(x=ev_vals, y=accuracy, yerr=error, color='k', fmt='-o', capsize=3,
                 capthick=2, elinewidth=2)
     ax.set_xlabel('Coherence')
@@ -163,6 +165,7 @@ def fig_1(coh, hit, sound_len, decision):
     psych_curve((decision+1)/2, coh, ret_ax=ax[0])
     ax[0].set_xlabel('Coherence')
     ax[0].set_ylabel('Probability of right')
-    tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
     reaction_time_histogram(sound_len=sound_len, ax=ax[2])
-    express_performance(hit=hit, coh=coh, sound_len=sound_len, ax=ax[3])
+    express_performance(hit=hit, coh=coh, sound_len=sound_len,
+                        pos_tach_ax=pos_tach_ax, ax=ax[3])
