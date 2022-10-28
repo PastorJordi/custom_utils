@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import sys
+from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -82,3 +83,34 @@ def tachometrics(coh, hit_history_model, hit_history_data, RT_data, RT_model):
     ax[1].set_xlabel('RT (ms)')
     ax[1].set_ylabel('Accuracy')
     ax[1].set_title('Model')
+
+
+def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
+           fix_onset, fixation_us=300000):
+    'mean velocity and position for all trials'
+    interpolatespace = np.linspace(-700000, 1000000, 1701)
+    ind_nocom = (~com.astype(bool))
+    # *(motor_time < 400)*(np.abs(coh) == 1) *\
+    #     (motor_time > 300)
+    mean_position_array = np.empty((len(motor_time[ind_nocom]),
+                                    max(motor_time)))
+    mean_position_array[:] = np.nan
+    mean_velocity_array = np.empty((len(motor_time[ind_nocom]), max(motor_time)))
+    mean_velocity_array[:] = np.nan
+    for i, traj in enumerate(trajectories[ind_nocom]):
+        xvec = traj_stamps[i] - np.datetime64(fix_onset[i])
+        xvec = (xvec -
+                np.timedelta64(int(fixation_us + (sound_len[i]*1e3)),
+                               "us")).astype(float)
+        yvec = traj
+        f = interpolate.interp1d(xvec, yvec, bounds_error=False)
+        out = f(interpolatespace)
+        vel = np.diff(traj)
+        mean_position_array[i, :len(traj)] = -traj*decision[i]
+        mean_velocity_array[i, :len(vel)] = -vel*decision[i]
+    mean_pos = np.nanmean(mean_position_array, axis=0)
+    mean_vel = np.nanmean(mean_velocity_array, axis=0)
+    fig, ax = plt.subplots(nrows=2)
+    ax = ax.flatten()
+    ax[0].plot(mean_pos)
+    ax[1].plot(mean_vel)

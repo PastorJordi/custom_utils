@@ -646,7 +646,10 @@ def interpolapply(
         )  # .astype(float) # aligned to fixation onset (0) using timestamps
         # by def 0 aligned to fixation
         if align == "sound":
-            x_vec = (x_vec - np.timedelta64(fixation_us, "us")).astype(float)
+            x_vec = (x_vec -
+                     np.timedelta64(int(fixation_us +
+                                        (row["sound_len"] * 10 ** 3)),
+                                    "us")).astype(float)
             # x_vec = x_vec.astype(float)
         elif align == "action":
             # next line crashes when there's a (accidental)silent trial and sound_len is np.nan
