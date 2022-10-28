@@ -2190,9 +2190,10 @@ def cdfs(coh, sound_len, title=''):
     for i, ev in enumerate(ev_vals):
         index = ev == np.abs(coh)
         hist_data, bins = np.histogram(sound_len[index], bins=200)
+        plt.figure(18)
         plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
                  np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
-                 color=colors[i])
+                 color=colors[i], linewidth=3)
     plt.xlabel('RT (ms)')
     plt.ylabel('CDF')
     plt.legend()
@@ -2221,7 +2222,7 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER,
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=False, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2285,7 +2286,7 @@ if __name__ == '__main__':
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
             p_1st_readout = 100  #
-            p_2nd_readout = 150  #
+            p_2nd_readout = 180  #
             compute_trajectories = True
             plot = True
             all_trajs = True

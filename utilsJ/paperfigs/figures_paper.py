@@ -103,14 +103,17 @@ def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
                 np.timedelta64(int(fixation_us + (sound_len[i]*1e3)),
                                "us")).astype(float)
         yvec = traj
-        f = interpolate.interp1d(xvec, yvec, bounds_error=False)
-        out = f(interpolatespace)
+        # f = interpolate.interp1d(xvec, yvec, bounds_error=False)
+        # out = f(interpolatespace)
         vel = np.diff(traj)
         mean_position_array[i, :len(traj)] = -traj*decision[i]
         mean_velocity_array[i, :len(vel)] = -vel*decision[i]
     mean_pos = np.nanmean(mean_position_array, axis=0)
     mean_vel = np.nanmean(mean_velocity_array, axis=0)
+    std_pos = np.nanstd(mean_position_array, axis=0)
     fig, ax = plt.subplots(nrows=2)
     ax = ax.flatten()
     ax[0].plot(mean_pos)
+    ax[0].fill_between(np.arange(len(mean_pos)), mean_pos + std_pos,
+                       mean_pos - std_pos, alpha=0.4)
     ax[1].plot(mean_vel)

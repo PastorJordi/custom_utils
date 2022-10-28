@@ -228,6 +228,7 @@ def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None, alig
     return tdf
 
 
+# XXX: divergence plot
 def splitplot(df, out, ax, ax1, ax2):
     """plots trajectory split time (coh1 vs 0) per RT-bin"""
     tdf = whole_splitting(df, rtbins=np.arange(0, 151, 10), ax=ax1)
