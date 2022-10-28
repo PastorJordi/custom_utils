@@ -67,7 +67,8 @@ def plot_RT_distributions(sound_len, RT_model, pro_vs_re):
     ax.legend()
 
 
-def tachometrics(coh, hit_history_model, hit_history_data, RT_data, RT_model):
+def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
+                                RT_data, RT_model):
     fig, ax = plt.subplots(ncols=2)
     rm_top_right_lines(ax[0])
     rm_top_right_lines(ax[1])
@@ -76,7 +77,7 @@ def tachometrics(coh, hit_history_model, hit_history_data, RT_data, RT_model):
     tachometric(df_plot_data, ax=ax[0])
     ax[0].set_xlabel('RT (ms)')
     ax[0].set_ylabel('Accuracy')
-    ax[0].set_title('Model')
+    ax[0].set_title('Data')
     df_plot_model = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_history_model,
                                  'sound_len': RT_model})
     tachometric(df_plot_model, ax=ax[1])
@@ -117,3 +118,51 @@ def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
     ax[0].fill_between(np.arange(len(mean_pos)), mean_pos + std_pos,
                        mean_pos - std_pos, alpha=0.4)
     ax[1].plot(mean_vel)
+
+
+def tachometric_data(coh, hit, sound_len, ax):
+    rm_top_right_lines(ax)
+    df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
+                                 'sound_len': sound_len})
+    tachometric(df_plot_data, ax=ax, fill_error=True)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Accuracy')
+    ax.set_title('Data')
+
+
+def reaction_time_histogram(sound_len, ax, bins=BINS_RT):
+    rm_top_right_lines(ax)
+    ax.hist(sound_len, bins=bins, alpha=0.5, density=True, linewidth=0.)
+    ax.set_xlabel("RT (ms)", fontsize=14)
+    ax.set_ylabel('Density', fontsize=14)
+    ax.set_xlim(0, max(BINS_RT))
+
+
+def express_performance(hit, coh, sound_len, ax):
+    " all rats..? "
+    rm_top_right_lines(ax)
+    ev_vals = np.unique(np.abs(coh))
+    accuracy = []
+    error = []
+    for ev in ev_vals:
+        index = (coh == ev)*(sound_len < 90)
+        accuracy.append(np.mean(hit[index]))
+        error.append(np.sqrt(np.std(hit[index])/np.sum(index)))
+    # pos = ax.get_position()
+    ax.errorbar(x=ev_vals, y=accuracy, yerr=error, color='k', fmt='-o', capsize=3,
+                capthick=2, elinewidth=2)
+    ax.set_xlabel('Coherence')
+    ax.set_ylabel('Performance')
+    ax.set_title('Express performance')
+    ax.set_ylim(0.5, 1)
+
+
+def fig_1(coh, hit, sound_len, decision):
+    fig, ax = plt.subplots(ncols=2, nrows=2)
+    ax = ax.flatten()
+    psych_curve((decision+1)/2, coh, ret_ax=ax[0])
+    ax[0].set_xlabel('Coherence')
+    ax[0].set_ylabel('Probability of right')
+    tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
+    reaction_time_histogram(sound_len=sound_len, ax=ax[2])
+    express_performance(hit=hit, coh=coh, sound_len=sound_len, ax=ax[3])
