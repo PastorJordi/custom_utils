@@ -6,9 +6,10 @@ Created on Mon Oct 24 10:24:12 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+import extended_ddm_v2
+# import seaborn as sns
 import sys
-from scipy import interpolate
+# from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -89,7 +90,7 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
 def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
            fix_onset, fixation_us=300000):
     'mean velocity and position for all trials'
-    interpolatespace = np.linspace(-700000, 1000000, 1701)
+    # interpolatespace = np.linspace(-700000, 1000000, 1701)
     ind_nocom = (~com.astype(bool))
     # *(motor_time < 400)*(np.abs(coh) == 1) *\
     #     (motor_time > 300)
@@ -103,7 +104,7 @@ def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
         xvec = (xvec -
                 np.timedelta64(int(fixation_us + (sound_len[i]*1e3)),
                                "us")).astype(float)
-        yvec = traj
+        # yvec = traj
         # f = interpolate.interp1d(xvec, yvec, bounds_error=False)
         # out = f(interpolatespace)
         vel = np.diff(traj)
@@ -169,3 +170,8 @@ def fig_1(coh, hit, sound_len, decision):
     reaction_time_histogram(sound_len=sound_len, ax=ax[2])
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
+
+
+if __name__ == '__main__':
+    data = extended_ddm_v2.get_data_and_matrix()
+    fig3_b()
