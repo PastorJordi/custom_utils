@@ -6,7 +6,6 @@ Created on Mon Oct 24 10:24:12 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import extended_ddm_v2
 # import seaborn as sns
 import sys
 # from scipy import interpolate
@@ -14,9 +13,13 @@ import sys
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-import utilsJ
+from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
+from utilsJ.paperfigs import fig1, fig3, fig2
+
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 BINS_RT = np.linspace(1, 301, 21)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -129,6 +132,7 @@ def tachometric_data(coh, hit, sound_len, ax):
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title('Data')
+    ax.set_ylim(0, 1.1)
     return ax.get_position()
 
 
@@ -161,7 +165,7 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax):
     ax.set_ylim(0.5, 1)
 
 
-def fig_1(coh, hit, sound_len, decision):
+def fig_1(coh, hit, sound_len, decision, supt=''):
     fig, ax = plt.subplots(ncols=2, nrows=2)
     ax = ax.flatten()
     psych_curve((decision+1)/2, coh, ret_ax=ax[0])
@@ -171,8 +175,103 @@ def fig_1(coh, hit, sound_len, decision):
     reaction_time_histogram(sound_len=sound_len, ax=ax[2])
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
+    fig.suptitle('')
+
+
+def run_model(stim, zt, coh):
+    num_tr = int(len(zt))
+    data_augment_factor = 10
+    MT_slope = 0.123
+    MT_intercep = 254
+    detect_CoMs_th = 5
+    p_t_aff = 8  # fixed
+    p_t_eff = 8  # fixed
+    p_t_a = 14  # fixed
+    p_w_zt = 0.08  # 0.15
+    p_w_stim = 0.1  # 0.2
+    p_e_noise = 0.04  # 0.045
+    p_com_th = 0.  # 0.0
+    p_w_a = 0.03  # fixed
+    p_a_noise = np.sqrt(5e-3)  # fixed
+    p_1st_readout = 100  #
+    p_2nd_readout = 180  #
+    stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
+    stim_res = 50/data_augment_factor
+    compute_trajectories = True
+    all_trajs = True
+    conf = [p_w_zt, p_w_stim, p_e_noise, p_com_th, p_t_aff,
+            p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
+            p_2nd_readout]
+    jitters = len(conf)*[0]
+    print('Number of trials: ' + str(stim.shape[1]))
+    p_w_zt = conf[0]+jitters[0]*np.random.rand()
+    p_w_stim = conf[1]+jitters[1]*np.random.rand()
+    p_e_noise = conf[2]+jitters[2]*np.random.rand()
+    p_com_th = conf[3]+jitters[3]*np.random.rand()
+    p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
+    p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
+    p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
+    p_w_a = conf[7]+jitters[7]*np.random.rand()
+    p_a_noise = conf[8]+jitters[8]*np.random.rand()
+    p_1st_readout = conf[9]+jitters[9]*np.random.rand()
+    p_2nd_readout = conf[10]+jitters[10]*np.random.rand()
+    stim_temp =\
+        np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
+                                        stim.shape[1]))))
+    # TODO: get in a dict
+    E, A, com_model, first_ind, second_ind, resp_first, resp_fin,\
+        pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
+        frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
+        rt_vals, rt_bins, tr_index =\
+        edd2.trial_ev_vectorized(zt=prior, stim=stim_temp, coh=coh,
+                                 MT_slope=MT_slope, MT_intercep=MT_intercep,
+                                 p_w_zt=p_w_zt, p_w_stim=p_w_stim,
+                                 p_e_noise=p_e_noise, p_com_th=p_com_th,
+                                 p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
+                                 num_tr=num_tr, p_w_a=p_w_a,
+                                 p_a_noise=p_a_noise,
+                                 p_1st_readout=p_1st_readout,
+                                 p_2nd_readout=p_2nd_readout,
+                                 compute_trajectories=compute_trajectories,
+                                 stim_res=stim_res, all_trajs=all_trajs)
+    hit_model = resp_fin == gt
+    reaction_time = (first_ind[tr_index]+p_t_eff -
+                     int(300/stim_res))*stim_res
+    detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+    return hit_model, reaction_time, detected_com, resp_fin
 
 
 if __name__ == '__main__':
-    data = extended_ddm_v2.get_data_and_matrix()
-    fig3_b()
+    plt.close('all')
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+                                  return_df=True)
+    # if we want to use data from all rats, we must use dani_clean.pkl (joined data)
+    # fig 1
+    fig1.d(df, savpath=SV_FOLDER, average=True)
+    prior = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    hit = np.array(df['hithistory'])
+    stim = np.array([stim for stim in df.res_sound])
+    coh = np.array(df.coh2)
+    com = df.CoM_sugg.values
+    decision = np.array(df.R_response) * 2 - 1
+    sound_len = np.array(df.sound_len)
+    gt = np.array(df.rewside) * 2 - 1
+    fig_1(coh, hit, sound_len, decision, supt='data')
+
+    # fig 2
+    fig3.a(df, savpath=SV_FOLDER)
+    fig3.b(df, savpath=SV_FOLDER)
+    fig3.c(df, savpath=SV_FOLDER)
+    fig3.d(df, savpath=SV_FOLDER)
+
+    # fig 3
+    # fig2.bcd(df)
+    fig2.e(df, savepath=SV_FOLDER)
+    fig2.f(df, savepath=SV_FOLDER)
+    fig2.g(df, savepath=SV_FOLDER)
+
+    # fig 5 (model)
+    hit_model, reaction_time, detected_com, resp_fin =\
+        run_model(stim=stim, zt=prior, coh=coh)
+    fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
+          supt='model')

@@ -22,24 +22,24 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
@@ -547,7 +547,7 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                         num_tr_per_rat=int(1e4), after_correct=True, silent=False,
-                        splitting=False, all_trials=False):
+                        splitting=False, all_trials=False, return_df=False):
     # import data for 1 rat
     print('Loading data')
     files = glob.glob(dfpath+'*.pkl')
@@ -655,8 +655,11 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         traj_y = None
         fix_onset = None
         traj_stamps = None
-    return stim, prior, coh, gt, com, decision, sound_len, resp_len, hit,\
-        trial_index, special_trial, traj_y, fix_onset, traj_stamps
+    if return_df:
+        return df
+    else:
+        return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
+            hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
@@ -2212,10 +2215,10 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(0.8e5)
+    num_tr = int(1.6e5)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     shuffle = True
     simulate = True
     parallel = False
@@ -2247,7 +2250,7 @@ if __name__ == '__main__':
                 if splitting:
                     subfolder = '/splitting'
                 else:
-                    subfolder = ''
+                    subfolder = 'SampleLE43'
                 files = glob.glob(DATA_FOLDER+subfolder+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))],
                                allow_pickle=True)
@@ -2283,17 +2286,17 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 8  # fixed
-            p_t_eff = 8  # fixed
+            p_t_aff = 10  # fixed
+            p_t_eff = 7  # fixed
             p_t_a = 14  # fixed
-            p_w_zt = 0.07  # 0.15
-            p_w_stim = 0.08  # 0.2
+            p_w_zt = 0.1  # 0.15
+            p_w_stim = 0.1  # 0.2
             p_e_noise = 0.03  # 0.045
-            p_com_th = 0.  # 0.0
+            p_com_th = 0.2  # 0.0
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 100  #
-            p_2nd_readout = 180  #
+            p_1st_readout = 120  #
+            p_2nd_readout = 140  #
             compute_trajectories = True
             plot = True
             all_trajs = True
