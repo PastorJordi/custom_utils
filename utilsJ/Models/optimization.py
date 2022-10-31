@@ -25,7 +25,7 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/opt_results/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 BINS = np.arange(1, 320, 20)
@@ -92,7 +92,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com, pright
 
 
-def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/2610.2022/',
+def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
@@ -104,7 +104,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/2610.2022/',
     tmp_data = data_curve['tmp_bin']
     data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
     nan_penalty = 0.3
-    w_rms = 0.5
+    w_rms = 0.2
     if results:
         files = glob.glob(res_path+'*.npz')
         diff_mn = []
@@ -171,7 +171,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/2610.2022/',
                 num_nans = len(tmp_data) - len(tmp_simul)
                 # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
                 diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
-                window = np.exp(-np.arange(len(tmp_simul))**1/40)
+                window = np.exp(-np.arange(len(tmp_simul))**1/10)
                 # window = 1
                 diff_rms = np.subtract(curve_tmp,
                                        np.array(data_curve['pcom']
@@ -215,7 +215,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/results_v2/2610.2022/',
             plt.figure()
             plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                      linestyle='', marker='o')
-            for i in range(20, 30):
+            for i in range(10, 30):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)

@@ -151,7 +151,8 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax):
         index = (coh == ev)*(sound_len < 90)
         accuracy.append(np.mean(hit[index]))
         error.append(np.sqrt(np.std(hit[index])/np.sum(index)))
-    ax.set_position([pos.x0, pos.y0, pos.width/3, pos.height/6])
+    ax.set_position([pos.x0+2*pos.width/3, pos.y0+pos.height/9,
+                     pos.width/3, pos.height/6])
     ax.errorbar(x=ev_vals, y=accuracy, yerr=error, color='k', fmt='-o', capsize=3,
                 capthick=2, elinewidth=2)
     ax.set_xlabel('Coherence')

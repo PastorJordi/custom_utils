@@ -1149,7 +1149,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
             if one_bins:
                 rt_bins_all.append(rt_bins)
                 one_bins = False
-            if i_conf % 1000 == 0:
+            if i_conf % 100 == 0:
                 save_data()
         end = time.time()
         print(end-start)
@@ -2212,7 +2212,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(0.8e5)
     load_data = True
     new_sample = True
     single_run = False
@@ -2283,12 +2283,12 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 6  # fixed
-            p_t_eff = 9  # fixed
+            p_t_aff = 8  # fixed
+            p_t_eff = 8  # fixed
             p_t_a = 14  # fixed
-            p_w_zt = 0.2  # 0.15
-            p_w_stim = 0.1  # 0.2
-            p_e_noise = 0.025  # 0.045
+            p_w_zt = 0.07  # 0.15
+            p_w_stim = 0.08  # 0.2
+            p_e_noise = 0.03  # 0.045
             p_com_th = 0.  # 0.0
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
@@ -2332,7 +2332,7 @@ if __name__ == '__main__':
                 fix_onset = None
                 traj_stamps = None
         else:  # set grid search of parameters
-            configurations, jitters = set_parameters(num_vals=5)
+            configurations, jitters = set_parameters(num_vals=4)
             compute_trajectories = True
             plot = False
             all_trajs = True
