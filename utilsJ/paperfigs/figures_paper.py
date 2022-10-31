@@ -247,7 +247,7 @@ if __name__ == '__main__':
                                   return_df=True)
     # if we want to use data from all rats, we must use dani_clean.pkl (joined data)
     # fig 1
-    fig1.d(df, savpath=SV_FOLDER, average=True)
+    fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
     prior = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     hit = np.array(df['hithistory'])
     stim = np.array([stim for stim in df.res_sound])
@@ -256,6 +256,7 @@ if __name__ == '__main__':
     decision = np.array(df.R_response) * 2 - 1
     sound_len = np.array(df.sound_len)
     gt = np.array(df.rewside) * 2 - 1
+    # tachometrics, rt distribution, express performance
     fig_1(coh, hit, sound_len, decision, supt='data')
 
     # fig 2

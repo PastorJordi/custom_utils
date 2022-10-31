@@ -106,7 +106,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
     nan_penalty = 0.3
     w_rms = 0.2
     if results:
-        files = glob.glob(res_path+'*.npz')
+        files = glob.glob(res_path+'*22.npz')
         diff_mn = []
         diff_rms_mat = []
         diff_norm_mat = []
@@ -215,7 +215,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             plt.figure()
             plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                      linestyle='', marker='o')
-            for i in range(10, 30):
+            for i in range(20):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)

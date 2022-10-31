@@ -2286,17 +2286,17 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 8  # fixed
-            p_t_eff = 8  # fixed
+            p_t_aff = 15  # fixed
+            p_t_eff = 5  # fixed
             p_t_a = 14  # fixed
-            p_w_zt = 0.1  # 0.15
-            p_w_stim = 0.1  # 0.2
+            p_w_zt = 0.15  # 0.15
+            p_w_stim = 0.15  # 0.2
             p_e_noise = 0.03  # 0.045
             p_com_th = 0.  # 0.0
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 120  #
-            p_2nd_readout = 140  #
+            p_1st_readout = 80  #
+            p_2nd_readout = 180  #
             compute_trajectories = True
             plot = True
             all_trajs = True
