@@ -276,38 +276,46 @@ def run_model(stim, zt, coh, gt):
 if __name__ == '__main__':
     plt.close('all')
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
-                                  return_df=True)
+                                  return_df=True, sv_folder=SV_FOLDER)
     # if we want to use data from all rats, we must use dani_clean.pkl
+    f1 = False
+    f2 = True
+    f3 = False
+    f5 = False
 
     # fig 1
-    fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    hit = np.array(df['hithistory'])
-    stim = np.array([stim for stim in df.res_sound])
-    coh = np.array(df.coh2)
-    com = df.CoM_sugg.values
-    decision = np.array(df.R_response) * 2 - 1
-    sound_len = np.array(df.sound_len)
-    gt = np.array(df.rewside) * 2 - 1
+    if f1:
+        fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        hit = np.array(df['hithistory'])
+        stim = np.array([stim for stim in df.res_sound])
+        coh = np.array(df.coh2)
+        com = df.CoM_sugg.values
+        decision = np.array(df.R_response) * 2 - 1
+        sound_len = np.array(df.sound_len)
+        gt = np.array(df.rewside) * 2 - 1
 
-    # tachometrics, rt distribution, express performance
-    fig_1(coh, hit, sound_len, decision, supt='data')
+        # tachometrics, rt distribution, express performance
+        fig_1(coh, hit, sound_len, decision, supt='data')
 
     # fig 2
-    fig3.a(df, savpath=SV_FOLDER)
-    fig3.b(df, savpath=SV_FOLDER)
-    fig3.c(df, savpath=SV_FOLDER)
-    fig3.d(df, savpath=SV_FOLDER)
+    if f2:
+        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+        # fig3.b(df, savpath=SV_FOLDER)
+        fig3.c(df, savpath=SV_FOLDER)
+        # fig3.d(df, savpath=SV_FOLDER)
 
     # fig 3
-    fig2.bcd(df)
-    fig2.e(df, savepath=SV_FOLDER)
-    fig2.f(df, savepath=SV_FOLDER)
-    fig2.g(df, savepath=SV_FOLDER)
+    if f3:
+        fig2.bcd(df)
+        fig2.e(df, savepath=SV_FOLDER)
+        fig2.f(df, savepath=SV_FOLDER)
+        fig2.g(df, savepath=SV_FOLDER)
 
     # fig 5 (model)
-    hit_model, reaction_time, detected_com, resp_fin =\
-        run_model(stim=stim, zt=zt, coh=coh, gt=gt)
-    fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
-          hit_model=hit_model, sound_len_model=reaction_time,
-          decision_model=resp_fin, supt='')
+    if f5:
+        hit_model, reaction_time, detected_com, resp_fin =\
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt)
+        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
+              hit_model=hit_model, sound_len_model=reaction_time,
+              decision_model=resp_fin, supt='')
