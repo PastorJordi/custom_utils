@@ -84,12 +84,12 @@ def rm_top_right_lines(ax):
     ax.spines['top'].set_visible(False)
 
 
-def draw_lines(ax, frst, sec, p_t_aff, p_com_th):
+def draw_lines(ax, frst, sec, p_t_aff, p_com_bound):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
-    ax[0].axhline(y=p_com_th, color='purple', linewidth=1, linestyle='--')
-    ax[0].axhline(y=-p_com_th, color='green', linewidth=1, linestyle='--')
+    ax[0].axhline(y=p_com_bound, color='purple', linewidth=1, linestyle='--')
+    ax[0].axhline(y=-p_com_bound, color='green', linewidth=1, linestyle='--')
     ax[1].axhline(y=1, color='k', linewidth=1, linestyle='--')
     for a in ax:
         a.axvline(x=frst, color='c', linewidth=1, linestyle='--')
@@ -100,7 +100,7 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_th):
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time,
-             tr_index, p_com_th, stim_res=50, trial=0):
+             tr_index, p_com_bound, stim_res=50, trial=0):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(18, 12))
     ax = ax.flatten()
     ax[8].set_xlabel('Time (ms)')
@@ -130,7 +130,7 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
         if len(trials_temp) > 0 and traj_in:
             draw_lines(ax[np.array(a)], frst=first_ind[trial]*stim_res,
                        sec=second_ind[trial]*stim_res, p_t_aff=p_t_aff*stim_res,
-                       p_com_th=p_com_th)
+                       p_com_bound=p_com_bound)
             color1 = 'green' if resp_first[trial] < 0 else 'purple'
             color2 = 'green' if resp_fin[trial] < 0 else 'purple'
 
@@ -236,7 +236,7 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     ax[3].set_xlabel('Evidence')
     ax[3].set_ylabel('Probability of right')
     f, ax = plt.subplots()
-    bins = np.linspace(-300, 400, 40)
+    bins = np.linspace(-300, 400, 70)
     if not data:
         hist_pro, _ = np.histogram(data_to_plot['sound_len']
                                    [data_to_plot['pro_vs_re'] == 0], bins)
@@ -663,7 +663,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
 
 
 def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
-                        p_e_noise, p_com_th, p_t_eff, p_t_aff,
+                        p_e_noise, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a, p_a_noise, p_1st_readout,
                         p_2nd_readout, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
@@ -688,7 +688,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         fitting parameter: gain for stim (stim).
     p_e_noise : float
         fitting parameter: standard deviation of evidence noise (gaussian).
-    p_com_th : float
+    p_com_bound : float
         fitting parameter: change-of-mind bound (will have opposite sign of
         first choice).
     p_t_eff : float
@@ -789,7 +789,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         # first categorical response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
         # CoM bound with sign depending on first response
-        com_bound_signed = (-resp_first[i_t])*p_com_th
+        com_bound_signed = (-resp_first[i_t])*p_com_bound
         # second response
         indx_final_ch = hit_dec+p_t_eff+p_t_aff
         indx_final_ch = min(indx_final_ch, max_integration_time)
@@ -814,7 +814,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
-                                    bins=20, range=(-100, 300))
+                                    bins=50, range=(-100, 300))
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     # end_eddm = time.time()
@@ -869,8 +869,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             # responses) bc of very strong confirmation evidence.
             updt_ev = np.clip(second_ev[i_t], a_min=-1, a_max=1)
             # second_response_len: motor time update influenced by difference
-            # between the evidence at second readout and the signed p_com_th
-            com_bound_signed = (-sign_)*p_com_th
+            # between the evidence at second readout and the signed p_com_bound
+            com_bound_signed = (-sign_)*p_com_bound
             offset = 140
             second_response_len =\
                 float(remaining_m_time + offset -
@@ -958,7 +958,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
                       'p_e_noise': p_e_noise_vals,
-                      'p_com_th': p_com_th_vals,
+                      'p_com_bound': p_com_bound_vals,
                       'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
                       'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
                       'p_a_noise': p_a_noise_vals,
@@ -1001,7 +1001,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_noise_vals = []
-    p_com_th_vals = []
+    p_com_bound_vals = []
     p_t_aff_vals = []
     p_t_eff_vals = []
     p_t_a_vals = []
@@ -1021,7 +1021,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
         print('p_w_zt: '+str(conf[0]))
         print('p_w_stim: '+str(conf[1]))
         print('p_e_noise: '+str(conf[2]))
-        print('p_com_th: '+str(conf[3]))
+        print('p_com_bound: '+str(conf[3]))
         print('p_t_aff: '+str(conf[4]))
         print('p_t_eff: '+str(conf[5]))
         print('p_t_a: '+str(conf[6]))
@@ -1034,7 +1034,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
             p_w_stim = conf[1]+jitters[1]*np.random.rand()
             p_e_noise = conf[2]+jitters[2]*np.random.rand()
-            p_com_th = conf[3]+jitters[3]*np.random.rand()
+            p_com_bound = conf[3]+jitters[3]*np.random.rand()
             p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
             p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
             p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
@@ -1053,7 +1053,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                    p_e_noise=p_e_noise, p_com_th=p_com_th,
+                                    p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                     num_tr=num_tr, p_w_a=p_w_a,
                                     p_a_noise=p_a_noise,
@@ -1100,7 +1100,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                              total_traj=total_traj,
                              p_t_eff=p_t_eff,
                              frst_traj_motor_time=frst_traj_motor_time,
-                             tr_index=tr_index, p_com_th=p_com_th,
+                             tr_index=tr_index, p_com_bound=p_com_bound,
                              stim_res=stim_res)
                 hits = resp_fin == gt
                 detected_mat, _ =\
@@ -1136,7 +1136,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
             p_e_noise_vals.append([conf[2], p_e_noise])
-            p_com_th_vals.append([conf[3], p_com_th])
+            p_com_bound_vals.append([conf[3], p_com_bound])
             p_t_aff_vals.append([conf[4], p_t_aff])
             p_t_eff_vals.append([conf[5], p_t_eff])
             p_t_a_vals.append([conf[6], p_t_a])
@@ -1167,7 +1167,7 @@ def set_parameters(num_vals=3, factor=8):
     p_w_zt = 0.15
     p_w_stim = 0.2
     p_e_noise = 0.06
-    p_com_th = 0.1
+    p_com_bound = 0.1
     p_w_a = 0.03
     p_a_noise = 0.04
     p_1st_readout = 5
@@ -1175,7 +1175,7 @@ def set_parameters(num_vals=3, factor=8):
     p_w_zt_list = np.linspace(0.15, 0.25, num=num_vals-1)
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
-    p_com_th_list = np.linspace(0, 0.2, num=num_vals-2)
+    p_com_bound_list = np.linspace(0, 0.2, num=num_vals-2)
     p_t_aff_list = np.linspace(4, 8, num=num_vals-1, dtype=int)
     p_t_eff_list = np.linspace(8, 14, num=num_vals, dtype=int)
     p_t_a_list = [14]
@@ -1184,7 +1184,7 @@ def set_parameters(num_vals=3, factor=8):
     p_1st_readout_list = np.linspace(80, 140, num=num_vals)
     p_2nd_readout_list = np.linspace(100, 175, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
-                                            p_e_noise_list, p_com_th_list,
+                                            p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
                                             p_w_a_list, p_a_noise_list,
                                             p_1st_readout_list,
@@ -1195,7 +1195,7 @@ def set_parameters(num_vals=3, factor=8):
         jitters = [np.diff(p_w_zt_list)[0]/factor,
                    np.diff(p_w_stim_list)[0]/factor,
                    0.0001,
-                   np.diff(p_com_th_list)[0]/factor,
+                   np.diff(p_com_bound_list)[0]/factor,
                    np.diff(p_t_aff_list)[0]/factor,
                    np.diff(p_t_eff_list)[0]/factor,
                    0.5,
@@ -2292,7 +2292,7 @@ if __name__ == '__main__':
             p_w_zt = 0.15  # 0.15
             p_w_stim = 0.15  # 0.2
             p_e_noise = 0.03  # 0.045
-            p_com_th = 0.  # 0.0
+            p_com_bound = 0.  # 0.0
             p_w_a = 0.03  # fixed
             p_a_noise = np.sqrt(5e-3)  # fixed
             p_1st_readout = 80  #
@@ -2300,7 +2300,7 @@ if __name__ == '__main__':
             compute_trajectories = True
             plot = True
             all_trajs = True
-            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_th, p_t_aff,
+            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]

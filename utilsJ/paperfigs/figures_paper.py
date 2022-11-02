@@ -178,6 +178,34 @@ def fig_1(coh, hit, sound_len, decision, supt=''):
     fig.suptitle('')
 
 
+def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
+          decision_model, supt=''):
+    fig, ax = plt.subplots(ncols=4, nrows=2)
+    ax = ax.flatten()
+    psych_curve((decision+1)/2, coh, ret_ax=ax[0])
+    ax[0].set_xlabel('Coherence')
+    ax[0].set_ylabel('Probability of right')
+    ax[0].set_title('Data')
+    psych_curve((decision_model+1)/2, coh, ret_ax=ax[4])
+    ax[4].set_xlabel('Coherence')
+    ax[4].set_ylabel('Probability of right')
+    ax[4].set_title('Model')
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
+    ax[1].set_title('Data')
+    pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
+                                         sound_len=sound_len_model, ax=ax[5])
+    ax[5].set_title('Model')
+    reaction_time_histogram(sound_len=sound_len, ax=ax[2])
+    ax[2].set_title('Data')
+    reaction_time_histogram(sound_len=sound_len_model, ax=ax[6])
+    ax[6].set_title('Model')
+    express_performance(hit=hit, coh=coh, sound_len=sound_len,
+                        pos_tach_ax=pos_tach_ax, ax=ax[3])
+    # express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
+    #                     pos_tach_ax=pos_tach_ax_model, ax=ax[7])
+    fig.suptitle('')
+
+
 def run_model(stim, zt, coh):
     num_tr = int(len(zt))
     data_augment_factor = 10

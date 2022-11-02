@@ -104,7 +104,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
     tmp_data = data_curve['tmp_bin']
     data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
     nan_penalty = 0.3
-    w_rms = 0.2
+    w_rms = 0.5
     if results:
         files = glob.glob(res_path+'*22.npz')
         diff_mn = []
@@ -172,7 +172,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                 # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
                 diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
                 window = np.exp(-np.arange(len(tmp_simul))**1/10)
-                # window = 1
+                window = 1
                 diff_rms = np.subtract(curve_tmp,
                                        np.array(data_curve['pcom']
                                                 [tmp_simul]) *
