@@ -37,8 +37,8 @@ from scipy.interpolate import interp1d
 
 def distbysubj(
     df,
-    data, # x?
-    by, #
+    data,  # x?
+    by,
     grid_kwargs={},
     dist_kwargs={},
     override_defaults=False
@@ -59,7 +59,8 @@ def distbysubj(
         def_grid_kw = dict(col_wrap=2, hue="CoM_sugg", aspect=2)
         def_grid_kw.update(grid_kwargs)
 
-        def_dist_kw = dict(kde=False, norm_hist=True, bins=np.linspace(0, 400, 50))
+        def_dist_kw = dict(kde=False, norm_hist=True,
+                           bins=np.linspace(0, 400, 50))
         def_dist_kw.update(dist_kwargs)
 
     g = sns.FacetGrid(df, col=by, **def_grid_kw)
@@ -71,7 +72,9 @@ def distbysubj(
 # f, ax = plt.subplots(ncols=2, nrows=3,sharex=True, figsize=(16,9))
 # ax = ax.flatten()
 # for i, subj in enumerate([f'LE{x}' for x in range(82,88)]):
-#     vec_toplot = np.concatenate([df.loc[df.subjid==subj, 'sound_len'].values+300, 1000*np.concatenate(df.loc[df.subjid==subj,'fb'].values)])
+    # vec_toplot = np.concatenate([df.loc[df.subjid==subj, 'sound_len'].values+300,
+    #                              1000*np.concatenate(df.loc[df.subjid==subj,
+    #                                                         'fb'].values)])
 #     sns.distplot(vec_toplot[(vec_toplot<=700)], kde=False, ax=ax[i])
 #     ax[i].set_title(subj)
 #     ax[i].axvline(300, c='k', ls=':')
@@ -116,7 +119,7 @@ def raw_psych(y, x, lapses=True):
 def psych_curve(
     target,
     coherence,
-    ret_ax=None, # if none returns data
+    ret_ax=None,  # if none returns data
     annot=False,
     xspace=np.linspace(-1, 1, 50),
     kwargs_plot={},
@@ -126,8 +129,9 @@ def psych_curve(
     function to plot psych curves
     target: binomial target (y), aka R_response, or Repeat
     coherence: coherence (x)
-    ret_ax: 
-        None: returns tupple of vectors: points (2-D, x&y) and confidence intervals (2D, lower and upper), fitted line[2D, x, and y]
+    ret_ax:
+        None: returns tupple of vectors: points (2-D, x&y) and confidence
+             intervals (2D, lower and upper), fitted line[2D, x, and y]
         True: returns matplotlib ax object
     xspace: x points to retrieve y_pred from curve fitting
     kwargs: aesthethics for each of the plotting
@@ -144,17 +148,19 @@ def psych_curve(
     """ not required
     if not (coherence<0).sum(): # 0 in the sum means there are no values under 0
         coherence = coherence * 2 - 1 # (from 01 to -11)
-    
+
     r_resp = np.full(hit.size, np.nan)
     r_resp[np.where(np.logical_or(hit==0, hit==1)==True)[0]] = 0
-    r_resp[np.where(np.logical_and(rewside==1, hit==1)==True)[0]] = 1 # right and correct
-    r_resp[np.where(np.logical_and(rewside==0, hit==0)==True)[0]] = 1 # left and incorrect
+    right and correct:
+    r_resp[np.where(np.logical_and(rewside==1, hit==1)==True)[0]] = 1
+    left and incorrect:
+    r_resp[np.where(np.logical_and(rewside==0, hit==0)==True)[0]] = 1
     """
 
     kwargs_plot_default = {"color": "tab:blue"}
     kwargs_error_default = dict(
-                ls="none", marker="o", markersize=3, capsize=4, color="maroon"
-            )
+        ls="none", marker="o", markersize=3, capsize=4, color="maroon"
+    )
 
     kwargs_plot_default.update(kwargs_plot)
     kwargs_error_default.update(kwargs_error)
@@ -174,7 +180,6 @@ def psych_curve(
     s, b, RL, LL = loglike["x"]
     y_fit = RL + (1 - RL - LL) / (1 + np.exp(-(s * xspace + b)))
 
-
     if ret_ax is None:
         return (
             tab.index.values,
@@ -183,7 +188,9 @@ def psych_curve(
             (xspace, y_fit),
             {"sens": s, "bias": b, "RL": RL, "LL": LL},
         )
-        # plot it with plot(*3rd_returnvalue) + errorbar(*1st_retval, yerr=2nd_retval, ls='none')
+        # plot it with plot(*3rd_returnvalue) + errorbar(*1st_retval,
+        #                                                yerr=2nd_retval,
+        #                                                ls='none')
     else:
         ret_ax.axhline(y=0.5, linestyle=":", c="k")
         ret_ax.axvline(x=0, linestyle=":", c="k")
@@ -210,27 +217,31 @@ def psych_curve(
 def correcting_kiani(hit, rresp, com, ev, **kwargs):
     """
     figure like in resulaj 2009
-    hit: hithistory vector; 
+    hit: hithistory vector;
     rresp: right response vector,
     com: change of mind vector,
-    ev: evidence vector 
-    kwargs: plt.errobar kwargs except for label and color! (if passed will make this function crash)
-    now we plot choices because stim, without taking into account reward/correct because of unfair task
+    ev: evidence vector
+    kwargs: plt.errobar kwargs except for label and color!
+           (if passed will make this function crash)
+    now we plot choices because stim, without taking into account reward/correct
+    because of unfair task
     """
     def_kws = dict(
         marker="o",
         markersize=3,
         capsize=4)
 
-    def_kws.update(kwargs) # update default kws with those provided in function calll
+    # update default kws with those provided in function calll
+    def_kws.update(kwargs)
 
     # pal = sns.color_palette()
     tmp = pd.DataFrame(
-        np.array([hit, rresp, com, ev]).T, columns=["hit", "R_response", "com", "ev"]
+        np.array([hit, rresp, com, ev]).T, columns=[
+            "hit", "R_response", "com", "ev"]
     )
     tmp["init_choice"] = tmp["R_response"]
-    tmp.loc[tmp.com == True, "init_choice"] = (
-        tmp.loc[tmp.com == True, "init_choice"].values - 1
+    tmp.loc[tmp.com == True, "init_choice"] = (tmp.loc[tmp.com == True,
+                                                       "init_choice"].values - 1
     ) ** 2
     # transform to 0_1 space
     tmp.loc[tmp.ev < 0, "init_choice"] = (
@@ -242,38 +253,45 @@ def correcting_kiani(hit, rresp, com, ev, **kwargs):
 
     tmp.loc[:, "ev"] = tmp.loc[:, "ev"].abs()
 
-    counts_ac, nobs_ac, mean_ac, counts_ae, nobs_ae, mean_ae = [], [], [], [], [], []
-    ## adapt to noenv sessions, because there are only 4
+    counts_ac, nobs_ac, mean_ac, counts_ae, nobs_ae, mean_ae =\
+        [], [], [], [], [], []
+    # adapt to noenv sessions, because there are only 4
     evrange = np.linspace(0, 1, 6)
     for i in range(5):
         counts_ac += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "R_response"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "R_response"
             ].sum()
         ]
         nobs_ac += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "R_response"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "R_response"
             ].count()
         ]
         mean_ac += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "R_response"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "R_response"
             ].mean()
         ]
         counts_ae += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "init_choice"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "init_choice"
             ].sum()
         ]
         nobs_ae += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "init_choice"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "init_choice"
             ].count()
         ]
         mean_ae += [
             tmp.loc[
-                (tmp.ev >= evrange[i]) & (tmp.ev <= evrange[i + 1]), "init_choice"
+                (tmp.ev >= evrange[i]) & (
+                    tmp.ev <= evrange[i + 1]), "init_choice"
             ].mean()
         ]
 
@@ -307,19 +325,23 @@ def correcting_kiani(hit, rresp, com, ev, **kwargs):
 # pending: pcom kiani
 
 # transition com vs transition regular
-def com_heatmap(
-    x, y, com, flip=False, annotate=True, predefbins=None, return_mat=False, folding=False, annotate_div=1,**kwargs
-):
-    """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated from tmp dataframe
+def com_heatmap(x, y, com, flip=False, annotate=True, predefbins=None,
+                return_mat=False, folding=False, annotate_div=1, **kwargs):
+    """x: priors; y: av_stim, com_col, Flip (for single matrx.),
+          all calculated from tmp dataframe
     TODO: improve binning option, or let add custom bins
     TODO: add example call
-    g = sns.FacetGrid(df[df.special_trial==0].dropna(subset=['avtrapz', 'rtbins']), col='rtbins', col_wrap=3, height=5, sharex=False)
-    g = g.map(plotting.com_heatmap, 'norm_prior','avtrapz','CoM_sugg', vmax=.15).set_axis_labels('prior', 'average stim')
+    g = sns.FacetGrid(df[df.special_trial==0].dropna(subset=['avtrapz', 'rtbins']),
+                      col='rtbins', col_wrap=3, height=5, sharex=False)
+    g = g.map(plotting.com_heatmap, 'norm_prior','avtrapz','CoM_sugg',
+              vmax=.15).set_axis_labels('prior', 'average stim')
 
     annotate_div= number to divide
     """
-    warnings.warn("when used alone (ie single axis obj) by default sns y-flips it")
-    tmp = pd.DataFrame(np.array([x, y, com]).T, columns=["prior", "stim", "com"])
+    warnings.warn(
+        "when used alone (ie single axis obj) by default sns y-flips it")
+    tmp = pd.DataFrame(np.array([x, y, com]).T,
+                       columns=["prior", "stim", "com"])
 
     # make bins
     tmp["binned_prior"] = np.nan
@@ -331,14 +353,13 @@ def com_heatmap(
         predefbinsflag = True
         bins = np.asarray(predefbins[0])
 
-
     tmp.loc[:, "binned_prior"], priorbins = pd.cut(
-        tmp.prior, bins=bins, retbins=True, labels=np.arange(bins.size-1), include_lowest=True
-    )
-    
+        tmp.prior, bins=bins, retbins=True, labels=np.arange(bins.size-1),
+        include_lowest=True)
 
     tmp.loc[:, "binned_prior"] = tmp.loc[:, "binned_prior"].astype(int)
-    priorlabels = [round((priorbins[i] + priorbins[i + 1]) / 2, 2) for i in range(bins.size-1)]
+    priorlabels = [round((priorbins[i] + priorbins[i + 1]) / 2, 2)
+                   for i in range(bins.size-1)]
 
     tmp["binned_stim"] = np.nan
     maxedge_stim = tmp.stim.abs().max()
@@ -347,24 +368,24 @@ def com_heatmap(
     else:
         bins = np.asarray(predefbins[1])
     tmp.loc[:, "binned_stim"], stimbins = pd.cut(
-        tmp.stim, bins=bins, retbins=True, labels=np.arange(bins.size-1), include_lowest=True
-    )
+        tmp.stim, bins=bins, retbins=True, labels=np.arange(bins.size-1),
+        include_lowest=True)
     tmp.loc[:, "binned_stim"] = tmp.loc[:, "binned_stim"].astype(int)
-    stimlabels = [round((stimbins[i] + stimbins[i + 1]) / 2, 2) for i in range(bins.size-1)]
+    stimlabels = [round((stimbins[i] + stimbins[i + 1]) / 2, 2)
+                  for i in range(bins.size-1)]
 
-    if len(stimlabels)!=len(priorlabels):
-        warnings.warn('WARNING, this was never tested with "non-squared matrices"')
+    if len(stimlabels) != len(priorlabels):
+        warnings.warn(
+            'WARNING, this was never tested with "non-squared matrices"')
 
     # populate matrices
     matrix = np.zeros((len(stimlabels), len(priorlabels)))
     nmat = matrix.copy()
     plain_com_mat = matrix.copy()
     for i in range(len(stimlabels)):
-        switch = (
-            tmp.loc[(tmp.com == True) & (tmp.binned_stim == i)]
-            .groupby("binned_prior")["binned_prior"]
-            .count()
-        )
+        switch = (tmp.loc[(tmp.com == True) & (tmp.binned_stim == i)]
+                  .groupby("binned_prior")["binned_prior"]
+                  .count())
         nobs = (
             switch
             + tmp.loc[(tmp.com == False) & (tmp.binned_stim == i)]
@@ -383,10 +404,9 @@ def com_heatmap(
         plain_com_mat[i, switch.index.astype(int)] = switch.values
         matrix[i, crow.index.astype(int)] = crow
 
-
-    if folding: # get indexes
-        iu = np.triu_indices(len(stimlabels),1)
-        il = np.tril_indices(len(stimlabels),-1)
+    if folding:  # get indexes
+        iu = np.triu_indices(len(stimlabels), 1)
+        il = np.tril_indices(len(stimlabels), -1)
         tmp_nmat = np.fliplr(nmat.copy())
         tmp_nmat[iu] += tmp_nmat[il]
         tmp_nmat[il] = 0
@@ -402,15 +422,14 @@ def com_heatmap(
         return matrix, nmat
 
     if isinstance(annotate, str):
-        if annotate=='com':
+        if annotate == 'com':
             annotate = True
             annotmat = plain_com_mat/annotate_div
-        if annotate=='counts':
+        if annotate == 'counts':
             annotate = True
             annotmat = nmat/annotate_div
     else:
         annotmat = nmat/annotate_div
-    
 
     if not kwargs:
         kwargs = dict(cmap="viridis", fmt=".0f")
@@ -420,12 +439,10 @@ def com_heatmap(
         # nmat = np.flipud(nmat)
         # stimlabels=np.flip(stimlabels)
         if annotate:
-            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), **kwargs).set(
-                xlabel="prior",
-                ylabel="average stim",
-                xticklabels=priorlabels,
-                yticklabels=np.flip(stimlabels),
-            )
+            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat),
+                            **kwargs).set(xlabel="prior", ylabel="average stim",
+                                          xticklabels=priorlabels,
+                                          yticklabels=np.flip(stimlabels))
         else:
             g = sns.heatmap(np.flipud(matrix), annot=None, **kwargs).set(
                 xlabel="prior",
@@ -454,8 +471,11 @@ def com_heatmap(
 
 # com_kde2D
 # import scipy.stats as stats
-# g = sns.jointplot(test3.loc[test3.CoM_sugg==True,'allprior_single'], test3.loc[test3.CoM_sugg==True,'current_stimuli'],kind='reg', color=current_palette[1])
-# g.set_axis_labels('prior(lateral+transition*(resp-1)+aftereffect)', 'weighted current stimulus')
+# g = sns.jointplot(test3.loc[test3.CoM_sugg==True,'allprior_single'],
+#                   test3.loc[test3.CoM_sugg==True,'current_stimuli'],kind='reg',
+#                   color=current_palette[1])
+# g.set_axis_labels('prior(lateral+transition*(resp-1)+aftereffect)',
+#                   'weighted current stimulus')
 # g.annotate(stats.pearsonr)
 # plt.show()
 
@@ -467,14 +487,16 @@ def com_heatmap(
 # f, ax = plt.subplots(ncols=2,figsize=(16,12))
 
 # sns.boxplot(x=('subjid','first'), y=('CoM_sugg', 'mean'), data=tmp, ax=ax[0])
-# sns.stripplot(x=('subjid','first'), y=('CoM_sugg', 'mean'),data=tmp, color=".25", linewidth=1, edgecolor='w', jitter=True, ax=ax[0])
+# sns.stripplot(x=('subjid','first'), y=('CoM_sugg', 'mean'),data=tmp, color=".25",
+#               linewidth=1, edgecolor='w', jitter=True, ax=ax[0])
 # ax[0].set_ylim([-0.001, 0.04])
 # ax[0].set_xlabel('subject')
 # ax[0].set_ylabel('#CoM across training sessions')
 
 # #2nd
 # sns.boxplot(x=('subjid','first'), y=('CoM_sugg', 'sum'), data=tmp, ax=ax[1])
-# sns.stripplot(x=('subjid','first'), y=('CoM_sugg', 'sum'),data=tmp, color=".25", linewidth=1, edgecolor='w', jitter=True, ax=ax[1])
+# sns.stripplot(x=('subjid','first'), y=('CoM_sugg', 'sum'),data=tmp, color=".25",
+#               linewidth=1, edgecolor='w', jitter=True, ax=ax[1])
 # ax[1].set_ylim([-0.5, 20])
 # ax[1].set_xlabel('subject')
 # ax[1].set_ylabel('#CoM across training sessions')
@@ -509,7 +531,7 @@ def binned_curve(
     bins: edges to bin,
     ax: if provided it plots there
     sem: if false it uses statsmodels proportion confint beta,
-    xpos: position to plot in x-ax, else it will use bin index comming fromn groupby
+    xpos: position to plot in x-ax, else it will use bin index comming from groupby
         none= use index
         int/float = number to scale index
         list/array = x-vec array (to plot)
@@ -526,8 +548,9 @@ def binned_curve(
         g.set_ylabel('accu')
         plt.show()
     """
-    mdf = df.copy() # memory leak where?
-    mdf["tmp_bin"] = pd.cut(mdf[var_tobin], bins, include_lowest=True, labels=False)
+    mdf = df.copy()  # memory leak where?
+    mdf["tmp_bin"] = pd.cut(mdf[var_tobin], bins,
+                            include_lowest=True, labels=False)
 
     traces_default_kws = {"color": "grey", "alpha": 0.15}
     traces_default_kws.update(traces_kw)
@@ -582,7 +605,8 @@ def binned_curve(
     if sem_err:
         yerrtoplot = tmp["e"]
     else:
-        yerrtoplot = [tmp["e"].apply(lambda x: x[0]), tmp["e"].apply(lambda x: x[1])]
+        yerrtoplot = [tmp["e"].apply(
+            lambda x: x[0]), tmp["e"].apply(lambda x: x[1])]
 
     if "label" not in errorbar_kw.keys():
         errorbar_kw["label"] = var_toplot
@@ -590,7 +614,7 @@ def binned_curve(
     if return_data:
         # returns x, y and errors
         return xpos_plot, tmp["m"], yerrtoplot
-    
+
     ax.errorbar(xpos_plot, tmp["m"], yerr=yerrtoplot, **errorbar_kw)
     if legend:
         ax.legend()
@@ -613,7 +637,8 @@ def binned_curve(
 
             if traces_rolling:  # needs debug
                 y_traces = (
-                    traces_tmp[tr].rolling(traces_rolling, min_periods=1).mean().values
+                    traces_tmp[tr].rolling(
+                        traces_rolling, min_periods=1).mean().values
                 )
             else:
                 y_traces = traces_tmp[tr].values
@@ -630,14 +655,17 @@ def interpolapply(
     resp_side="R_response",
     collapse_sides=False,
     interpolatespace=np.linspace(-700000, 1000000, 1701),
-    fixation_us=300000,  # from fixation onset (0) to startsound (300) to longest possible considered RT  (+400ms) to longest possible considered motor time (+1s)
+    # from fixation onset (0) to startsound (300) to longest possible considered
+    # RT  (+400ms) to longest possible considered motor time (+1s)
+    fixation_us=300000,
     align="action",
     interp_extend=False,
     discarded_tstamp=0,
 ):  # we can speed up below funcction for trajectories
     # for ii,i in enumerate(idx_dic[b]):
 
-    # think about discarding first few frames from trajectory_y because they are noisy (due to camera delay they likely belong to previous state)
+    # think about discarding first few frames from trajectory_y because they are
+    # noisy (due to camera delay they likely belong to previous state)
     x_vec = []
     y_vec = []
     try:
@@ -652,14 +680,17 @@ def interpolapply(
                                     "us")).astype(float)
             # x_vec = x_vec.astype(float)
         elif align == "action":
-            # next line crashes when there's a (accidental)silent trial and sound_len is np.nan
+            # next line crashes when there's a (accidental)silent trial and
+            # sound_len is np.nan
             x_vec = (
                 x_vec
                 - int(fixation_us + (row["sound_len"] * 1e3))
             ).astype(
                 float
             )  # shift it in order to align 0 with motor-response/action onset
-            # x_vec = (x_vec - np.timedelta64(int((row['sound_len'] * 10**3)), 'us')).astype(float) # shift it in order to align 0 with motor-response/action onset
+            # x_vec = (x_vec - np.timedelta64(int((row['sound_len'] * 10**3)),
+            # 'us')).astype(float)
+            # shift it in order to align 0 with motor-response/action onset
         elif align == "response":
             x_vec = (
                 x_vec
@@ -679,9 +710,9 @@ def interpolapply(
 
         # else it is aliggned with
         if isinstance(trajectory, tuple):  # when is this shit being executed
-            y_vec = row[trajectory[0]][
-                :, trajectory[1]
-            ]  # this wont work if there are several columns called like trajectory[0] in the original df
+            y_vec = row[trajectory[0]][:, trajectory[1]]
+        # this wont work if there are several columns called like trajectory[0]
+        # in the original df
         else:  # is a column name
             y_vec = row[trajectory]
         if collapse_sides:
@@ -737,22 +768,26 @@ def trajectory_thr(
     """
     This changed a lot!, review default plots
     Exclude invalids
-    atm this will only retrieve data, not plotting if ax=None 
+    atm this will only retrieve data, not plotting if ax=None
     # if a single bin, both edges must be provided
     fpsmin: minimum fps to consider trajectories
     align ='action' or 'sound'
     if duplicated indexes in df this wont work
     bins= if single element it does not use edges but == that value
-    fixation_delay_offset = 300-fixation state lenght (ie new state matrix should use 80)
-    trajectory: str (colname) where trajectory is. tuple (colname, which col to use in the array) for cols containing arrays.
-    discarded_tstamp: number of tstamps to ommit (for 1st and second derivatives!) # old
+    fixation_delay_offset = 300-fixation state lenght
+    (ie new state matrix should use 80)
+    trajectory: str (colname) where trajectory is. tuple (colname, which col
+                to use in the array) for cols containing arrays.
+    discarded_tstamp: number of tstamps to ommit
+                     (for 1st and second derivatives!) # old
     thr (threshold should be able to accept as many thr like bins)
     # rollingmean for noisy traj (d1 and d2)
     bintype='edges', 'categorical', 'dfmask'
     # """
 
     if bintype not in ["edges", "categorical", "dfmask"]:
-        raise ValueError('bintype can take values: "edges", "categorical" and "dfmask"')
+        raise ValueError(
+            'bintype can take values: "edges", "categorical" and "dfmask"')
 
     categorical_bins = False
     if bintype != "edges":
@@ -760,14 +795,12 @@ def trajectory_thr(
     if align not in ["action", "sound", "response"]:
         raise ValueError('align must be "action","sound" or "response"')
     if (fixation_us != 300000) or (fixation_delay_offset != 0):
-        print(
-            "fixation and delay offset should be adressed and you should avoid tweaking defaults"
-        )
+        print("fixation and delay offset should be adressed and you should " +
+              "avoid tweaking defaults")
 
     if (df.index.value_counts() > 1).sum():
-        raise IndexError(
-            "input dataframe contains duplicate index entries hence this function would not work propperly"
-        )
+        raise IndexError("input dataframe contains duplicate index entries hence" +
+                         " this function would not work propperly")
 
     if isinstance(cmap, str):
         cmap = cm.get_cmap(cmap)
@@ -828,7 +861,7 @@ def trajectory_thr(
         #    print('collapsing sides!')
         arrays = (
             test.loc[idx_dic[b]]
-            #.swifter.progress_bar(False) # swifter removed
+            # .swifter.progress_bar(False) # swifter removed
             .apply(
                 lambda x: interpolapply(
                     x,
@@ -845,7 +878,8 @@ def trajectory_thr(
         )
 
         if arrays.size > 0:
-            matrix_dic[b] = np.concatenate(arrays).reshape(-1, interpolatespace.size)
+            matrix_dic[b] = np.concatenate(
+                arrays).reshape(-1, interpolatespace.size)
 
         tmp_mat = matrix_dic[b][:, zeropos_interp:]
         # wont iterate anymore
@@ -884,7 +918,8 @@ def trajectory_thr(
                 )
             else:
                 ytoplot = np.nanmedian(matrix_dic[b], axis=0)
-            ax_traj.plot((interpolatespace) / 1000, ytoplot, **traj_kws, **extra_kw)
+            ax_traj.plot((interpolatespace) / 1000,
+                         ytoplot, **traj_kws, **extra_kw)
             # trigger legend outside of the function
 
     y_points = np.array(y_points)
@@ -913,14 +948,17 @@ def trajectory_thr(
                     **extra_kw,
                 )
         else:
-            ax.errorbar(
-                xpoints, y_points + fixation_delay_offset, yerr=y_err, **error_kwargs
-            )  # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
+            ax.errorbar(xpoints, y_points + fixation_delay_offset, yerr=y_err,
+                        **error_kwargs)
+            # add 80ms offset for those new state machine (in other words,
+            # this assumes that fixation = 300000us so it takes extra 80ms
+            # to reach threshold)
 
-        return xpoints, y_points + fixation_delay_offset, y_err, matrix_dic, idx_dic
+        return xpoints, y_points + fixation_delay_offset, y_err, matrix_dic,\
+            idx_dic
     elif ax is not None:
         if cmap is not None:
-            for i in range(len(xpoints)):  ##TODO remove duplicated code
+            for i in range(len(xpoints)):  # TODO remove duplicated code
                 if "label" not in error_kwargs.keys():
                     if bintype == "categorical":
                         extra_kw["label"] = f"{bincol}={round(bins[i],2)}"
@@ -940,15 +978,18 @@ def trajectory_thr(
                     **extra_kw,
                 )
         else:
-            ax.errorbar(
-                xpoints, y_points + fixation_delay_offset, yerr=y_err, **error_kwargs
-            )  # add 80ms offset for those new state machine (in other words, this assumes that fixation = 300000us so it takes extra 80ms to reach threshold)
+            ax.errorbar(xpoints, y_points + fixation_delay_offset, yerr=y_err,
+                        **error_kwargs)
+            # add 80ms offset for those new state machine
+            # (in other words, this assumes that fixation = 300000us so it
+            # takes extra 80ms to reach threshold)
         return ax
 
     elif not return_trash:
         return xpoints, y_points + fixation_delay_offset, y_err
-    else:  # with matrix dic we can compute median trajectories etc. for the other plot
-        return xpoints, y_points + fixation_delay_offset, y_err, matrix_dic, idx_dic
+    else:  # with matrix dic we can compute median trajects etc. for the other plot
+        return xpoints, y_points + fixation_delay_offset, y_err, matrix_dic,\
+            idx_dic
 
 
 def colored_line(x, y, z=None, ax=None, linewidth=3, MAP="viridis"):
@@ -958,7 +999,7 @@ def colored_line(x, y, z=None, ax=None, linewidth=3, MAP="viridis"):
     [xs, ys, zs] = [np.zeros((xl, 2)), np.zeros((xl, 2)), np.zeros((xl, 2))]
 
     # z is the line length drawn or a list of vals to be plotted
-    if z == None:
+    if z is None:
         z = [0]
 
     for i in range(xl - 1):
@@ -1023,7 +1064,8 @@ def gradient_np(row):
     """returns speed accel and jerk by np.gradient"""
     try:
         t = row["trajectory_stamps"].astype(float) / 1000
-        # dt1 = np.repeat(np.diff(row['trajectory_stamps'].astype(float)/1000),2).reshape(-1,2)
+        # dt1 = np.repeat(np.diff(row['trajectory_stamps']
+        # .astype(float)/1000),2).reshape(-1,2)
         t = t - t[0]
         coords = np.c_[row["trajectory_x"], row["trajectory_y"]]
         d1 = np.gradient(coords, t, axis=0)
@@ -1077,7 +1119,8 @@ def speedaccel_plot(
         zeropos_interp = 300
     else:
         ValueError('align should be either "action" or "sound"')
-    # cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1]) & (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
+    # cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1])
+    # & (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
     if axobj is None:
         f, ax = plt.subplots(
             ncols=4,
@@ -1205,7 +1248,8 @@ def speedaccel_plot(
     for i in [0, 1]:
         for k in [1, 3]:
             ax[i][k].axhline(0, ls=":", c="black")
-            # ax[i][k].legend(fancybox=False, frameon=False) # user decides to show it or not
+            # ax[i][k].legend(fancybox=False, frameon=False)
+            # user decides to show it or not
 
     plt.tight_layout()
     if suptitle is not None:
@@ -1253,7 +1297,8 @@ def full_traj_plot(
     bins = bins
     bintype = 'edges', 'categorical' or 'dfmask
     TODO: add examples of bintypes
-    TODO: add repetitions of default thresholds when collape_sides=False, according to number of bins/lines"""
+    TODO: add repetitions of default thresholds when collape_sides=False,
+          according to number of bins/lines"""
     if align == "action":
         interpolatespace = np.linspace(-700_000, 1_000_000, 1700)
         zeropos_interp = 700
@@ -1265,7 +1310,8 @@ def full_traj_plot(
         zeropos_interp = 1000
     else:
         ValueError('align should be either "action", "sound" or "response"')
-    # cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1]) & (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
+    # cdata = mdf.loc[(mdf.subjid==subject)&(mdf.sound_len<=bins[b+1]) &
+    # (mdf.sound_len>bins[b]) & (mdf.hithistory==1)]
     if axobj is None:
         f, ax = plt.subplots(
             ncols=4,
@@ -1300,7 +1346,7 @@ def full_traj_plot(
                 len(thr) == nlines
             ), f"threshold in position {i} does not match the number of bins"
 
-    ##### POSITION
+    # POSITION
     xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
         cdata,
         binningcol,
@@ -1354,7 +1400,7 @@ def full_traj_plot(
     if return_trash:
         dout["y_coord"] = [xpos, ypos, yerr, mat_d, idx_d]
 
-    ##### VELOCITY
+    # VELOCITY
     xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
         cdata,
         binningcol,
@@ -1408,7 +1454,7 @@ def full_traj_plot(
     if return_trash:
         dout["y_speed"] = [xpos, ypos, yerr, mat_d, idx_d]
 
-    #### ACCELERATION
+    # ACCELERATION
     xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
         cdata,
         binningcol,
@@ -1462,7 +1508,7 @@ def full_traj_plot(
     if return_trash:
         dout["y_accel"] = [xpos, ypos, yerr, mat_d, idx_d]
 
-    ##### JERK
+    # JERK
     xpos, ypos, yerr, mat_d, idx_d = trajectory_thr(
         cdata,
         binningcol,
@@ -1520,7 +1566,8 @@ def full_traj_plot(
     for i in [0, 1, 2, 3]:
         for k in [1, 3]:
             ax[i][k].axhline(0, ls=":", c="black")
-            # ax[i][k].legend(fancybox=False, frameon=False) # user decides to show it or not
+            # ax[i][k].legend(fancybox=False, frameon=False)
+            # user decides to show it or not
     # ax[0,3].axhline(0, ls=':', c='black')
 
     plt.tight_layout()
@@ -1567,7 +1614,8 @@ def surrogate_test(
     # mata: matrix of dims (ntrajectories, ninterpolatedspace), e.g. coh=1
     # matb: same but corresponding to alternative group (eg. coh=0)
     # pcalc discard: last noisy items to discard when calculating global pband
-    # return_extra:also returns meandiff, 95% band and pointwise significance(yes or no)
+    # return_extra:also returns meandiff, 95% band and pointwise significance
+                   (yes or no)
     # nworkers for shuffling,
     # lrG: step when searching for global band G
     """
@@ -1582,7 +1630,8 @@ def surrogate_test(
             for x in random_states
         ]
         if verbose:
-            iterable = tqdm.tqdm_notebook(as_completed(jobs), total=len(random_states))
+            iterable = tqdm.tqdm_notebook(
+                as_completed(jobs), total=len(random_states))
         else:
             iterable = as_completed(jobs)
         for job in iterable:
@@ -1647,7 +1696,7 @@ def v_(t):
 
 
 def get_traj_subplot(row, invert=True, mu=None, allSIGMA=None, sigma=5, dim=1):
-    """evaluates whether it was or not (through pandas apply), copypasting 
+    """evaluates whether it was or not (through pandas apply), copypasting
     preprocess + expand to loglike
     if want to retrieve fit traj, specify mu (list of left and right mu's)"""
     # TODO: retrieve Zk based on hyperparams
@@ -1657,7 +1706,7 @@ def get_traj_subplot(row, invert=True, mu=None, allSIGMA=None, sigma=5, dim=1):
         T = row.resp_len * 1000 + 50  # total span
         t = (
             t.astype(int) / 1000_000 - 250 - row.sound_len
-        )  #  we take 50ms earlier CportOut
+        )  # we take 50ms earlier CportOut
         if t.size < 10:
             raise ValueError("custom exception to discard trial")
 
@@ -1688,7 +1737,7 @@ def get_traj_subplot(row, invert=True, mu=None, allSIGMA=None, sigma=5, dim=1):
             N = vt @ M_1
             SIGMA = allSIGMA[int(row.R_response)]
             SIGMA_1 = np.linalg.pinv(SIGMA)
-            # W = sigma**2 * np.identity(N.shape[0]) + N @ SIGMA @ N.T # shape n x n
+            # W = sigma**2 * np.identity(N.shape[0]) + N @ SIGMA @ N.T # sh: n x n
             L = np.linalg.pinv(SIGMA_1 + N.T @ N / sigma ** 2)  # shape 6,6
 
             m = L @ (
@@ -1711,8 +1760,9 @@ def get_traj_subplot(row, invert=True, mu=None, allSIGMA=None, sigma=5, dim=1):
             return np.nan, np.nan, np.nan, np.nan, np.nan
 
 
-def get_traj_subplot_factors(row, invert=True, B=None, allSIGMA=None, sigma=5, dim=1):
-    """evaluates whether it was or not (through pandas apply), copypasting 
+def get_traj_subplot_factors(row, invert=True, B=None, allSIGMA=None, sigma=5,
+                             dim=1):
+    """evaluates whether it was or not (through pandas apply), copypasting
     preprocess + expand to loglike
     if want to retrieve fit traj, specify mu (list of left and right mu's)"""
     # TODO: retrieve Zk based on hyperparams
@@ -1723,7 +1773,7 @@ def get_traj_subplot_factors(row, invert=True, B=None, allSIGMA=None, sigma=5, d
         T = row.resp_len * 1000 + 50  # total span
         t = (
             t.astype(int) / 1000_000 - 250 - row.sound_len
-        )  #  we take 50ms earlier CportOut
+        )  # we take 50ms earlier CportOut
         if t.size < 10:
             raise ValueError("custom exception to discard trial")
 
@@ -1778,15 +1828,16 @@ def get_traj_subplot_factors(row, invert=True, B=None, allSIGMA=None, sigma=5, d
 
 
 def tachometric(
-    df, # filtered
+    df,  # filtered
     ax=None,
-    hits = 'hithistory', # column name
-    evidence='avtrapz', # column name
-    evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]), # beware those with coh .2 and .4
-    rt='sound_len', # column
-    rtbins=np.arange(0,151,3),
-    fill_error=False, # if true it uses fill between instead of errorbars
-    error_kws={}, 
+    hits='hithistory',  # column name
+    evidence='avtrapz',  # column name
+    # beware those with coh .2 and .4
+    evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
+    rt='sound_len',  # column
+    rtbins=np.arange(0, 151, 3),
+    fill_error=False,  # if true it uses fill between instead of errorbars
+    error_kws={},
     cmap='inferno',
     subplots_kws={},  # ignored if ax is provided,
     labels=None
@@ -1800,7 +1851,7 @@ def tachometric(
 
     tmp_df = df
     tmp_df['rtbin'] = pd.cut(
-        tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1), 
+        tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1),
         retbins=False, include_lowest=True, right=True
     ).astype(float)
     if ax is None:
@@ -1808,24 +1859,28 @@ def tachometric(
 
     for i in range(evidence_bins.size-1):
         tmp = (
-            tmp_df.loc[(tmp_df[evidence].abs()>=evidence_bins[i])&(tmp_df[evidence].abs()<evidence_bins[i+1])] # select stim str
+            tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
+                tmp_df[evidence].abs() < evidence_bins[i+1])]  # select stim str
             .groupby('rtbin')[hits].agg(['mean', groupby_binom_ci]).reset_index()
-            )
+        )
 
         if labels is None:
             clabel = f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}'
         else:
-            clabel= labels[i]
+            clabel = labels[i]
         if fill_error:
             ax.plot(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                tmp['mean'].values, label=clabel, c=cmap(i/(evidence_bins.size-1)),
+                tmp['mean'].values, label=clabel, c=cmap(
+                    i/(evidence_bins.size-1)),
                 marker=error_kws.get('marker', 'o')
             )
             ax.fill_between(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                tmp['mean'].values + tmp.groupby_binom_ci.apply(lambda x: x[1]),
-                y2=tmp['mean'].values - tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                tmp['mean'].values +
+                tmp.groupby_binom_ci.apply(lambda x: x[1]),
+                y2=tmp['mean'].values -
+                tmp.groupby_binom_ci.apply(lambda x: x[0]),
                 color=cmap(i/(evidence_bins.size-1)),
                 alpha=error_kws.get('alpha', 0.3)
             )
@@ -1837,72 +1892,72 @@ def tachometric(
                     tmp.groupby_binom_ci.apply(lambda x: x[0]),
                     tmp.groupby_binom_ci.apply(lambda x: x[1])
                 ],
-                label= clabel,
-                c = cmap(i/(evidence_bins.size-1)), **error_kws_
+                label=clabel,
+                c=cmap(i/(evidence_bins.size-1)), **error_kws_
             )
 
 
 def com_heatmap_paper_marginal_pcom_side(
-    df, # data source, must contain 'avtrapz' and allpriors
-    pcomlabel = None, fcolorwhite=True, side=0,
-    hide_marginal_axis=True, n_points_marginal = None, counts_on_matrix=False,
-    adjust_marginal_axes=False, # sets same max=y/x value
-    nbins=7, # nbins for the square matrix 
-    com_heatmap_kws={}, # avoid, binning and return_mat already handled by this function
-    com_col = 'CoM_sugg', priors_col = 'norm_allpriors', stim_col = 'avtrapz',
-    average_across_subjects = False
+    df,  # data source, must contain 'avtrapz' and allpriors
+    pcomlabel=None, fcolorwhite=True, side=0,
+    hide_marginal_axis=True, n_points_marginal=None, counts_on_matrix=False,
+    adjust_marginal_axes=False,  # sets same max=y/x value
+    nbins=7,  # nbins for the square matrix
+    com_heatmap_kws={},  # avoid binning & return_mat already handled by the functn
+    com_col='CoM_sugg', priors_col='norm_allpriors', stim_col='avtrapz',
+    average_across_subjects=False
 ):
-    assert side in [0,1], "side value must be either 0 or 1"
-    assert df[priors_col].abs().max()<=1, "prior must be normalized between -1 and 1"
-    assert df[stim_col].abs().max()<=1, "stimulus must be between -1 and 1"
+    assert side in [0, 1], "side value must be either 0 or 1"
+    assert df[priors_col].abs().max(
+    ) <= 1, "prior must be normalized between -1 and 1"
+    assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
     if pcomlabel is None:
         if not side:
             pcomlabel = r'$p(CoM_{R \rightarrow L})$'
         else:
             pcomlabel = r'$p(CoM_{L \rightarrow R})$'
-    
+
     if n_points_marginal is None:
-        n_points_marginal=nbins
+        n_points_marginal = nbins
     # ensure some filtering
-    #tmp = df.loc[(df.dirty==False)&(df.special_trial==0)].dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
+    # tmp = df.loc[(df.dirty==False)&(df.special_trial==0)].
+    # dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
     tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
     tmp['tmp_com'] = False
-    tmp.loc[(tmp.R_response==side)&(tmp.CoM_sugg), 'tmp_com'] = True
+    tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
     f, ax = plt.subplots(
-        ncols=2, nrows=2, 
-        gridspec_kw={'width_ratios':[8, 3], 'height_ratios': [3, 8]},
+        ncols=2, nrows=2,
+        gridspec_kw={'width_ratios': [8, 3], 'height_ratios': [3, 8]},
         figsize=(7, 5.5), sharex='col', sharey='row'
     )
 
     # some aestethics
     if fcolorwhite:
         f.patch.set_facecolor('white')
-        for i in [0,1]:
-            for j in [0,1]:
-                ax[i,j].set_facecolor('white')
-        
-    ax[0,1].axis('off')
-    ax[0,0].set_ylabel(pcomlabel)
-    ax[1,1].set_xlabel(pcomlabel)
+        for i in [0, 1]:
+            for j in [0, 1]:
+                ax[i, j].set_facecolor('white')
+
+    ax[0, 1].axis('off')
+    ax[0, 0].set_ylabel(pcomlabel)
+    ax[1, 1].set_xlabel(pcomlabel)
     if hide_marginal_axis:
-        ax[0,0].spines['top'].set_visible(False)
-        ax[0,0].spines['left'].set_visible(False)
-        ax[0,0].spines['right'].set_visible(False)
-        ax[0,0].set_yticks([])
-        #ax[1,1].xaxis.set_visible(False)
-        ax[1,1].spines['right'].set_visible(False)
-        ax[1,1].spines['top'].set_visible(False)
-        ax[1,1].spines['bottom'].set_visible(False)
-        ax[1,1].set_xticks([])
-
-
+        ax[0, 0].spines['top'].set_visible(False)
+        ax[0, 0].spines['left'].set_visible(False)
+        ax[0, 0].spines['right'].set_visible(False)
+        ax[0, 0].set_yticks([])
+        # ax[1,1].xaxis.set_visible(False)
+        ax[1, 1].spines['right'].set_visible(False)
+        ax[1, 1].spines['top'].set_visible(False)
+        ax[1, 1].spines['bottom'].set_visible(False)
+        ax[1, 1].set_xticks([])
 
     com_heatmap_kws.update({
-        'return_mat':True,
-        'predefbins':[
-            np.linspace(-1,1,nbins+1),np.linspace(-1,1,nbins+1)
+        'return_mat': True,
+        'predefbins': [
+            np.linspace(-1, 1, nbins+1), np.linspace(-1, 1, nbins+1)
         ]
-        })
+    })
     if not average_across_subjects:
         mat, nmat = com_heatmap(
             tmp.norm_allpriors.values,
@@ -1911,110 +1966,98 @@ def com_heatmap_paper_marginal_pcom_side(
             **com_heatmap_kws
         )
         # fill nans with 0
-        mat[np.isnan(mat)] = 0 
-        nmat[np.isnan(nmat)] = 0 
-        # change data to match vertical axis image standards (0,0) -> in the top left
+        mat[np.isnan(mat)] = 0
+        nmat[np.isnan(nmat)] = 0
+        # change data to match vertical axis image standards (0,0) ->
+        # in the top left
     else:
-        com_mat_list, number_mat_list = [],[]
+        com_mat_list, number_mat_list = [], []
         for subject in tmp.subjid.unique():
             cmat, cnmat = com_heatmap(
-            tmp.loc[tmp.subjid==subject, 'norm_allpriors'].values,
-            tmp.loc[tmp.subjid==subject, 'avtrapz'].values,
-            tmp.loc[tmp.subjid==subject,'tmp_com'].values,
-            **com_heatmap_kws
+                tmp.loc[tmp.subjid == subject, 'norm_allpriors'].values,
+                tmp.loc[tmp.subjid == subject, 'avtrapz'].values,
+                tmp.loc[tmp.subjid == subject, 'tmp_com'].values,
+                **com_heatmap_kws
             )
-            cmat[np.isnan(cmat)] = 0 
-            cnmat[np.isnan(cnmat)] = 0 
+            cmat[np.isnan(cmat)] = 0
+            cnmat[np.isnan(cnmat)] = 0
             com_mat_list += [cmat]
             number_mat_list += [cnmat]
 
         mat = np.stack(com_mat_list).mean(axis=0)
         nmat = np.stack(number_mat_list).mean(axis=0)
 
-
-    mat= np.flipud(mat)
+    mat = np.flipud(mat)
     nmat = np.flipud(nmat)
-        
-        
-    
 
     # marginal plots
     if counts_on_matrix:
         if average_across_subjects:
-            raise NotImplementedError(' across subjects + conunts is not implemented')
-        ax[0,0].bar(np.arange(nbins), nmat.sum(axis=0), width=1, edgecolor='k')
-        ax[1,1].barh(np.arange(nbins), nmat.sum(axis=1), height=1, edgecolor='k')
-        if hide_marginal_axis: # hack to avoid missing edge in last bar
-            ax[0,0].spines['right'].set_visible(True)
-            ax[0,0].spines['right'].set_bounds(0, nmat.sum(axis=0)[-1])
-            ax[1,1].spines['bottom'].set_visible(True)
-            ax[1,1].spines['bottom'].set_bounds(0, nmat.sum(axis=1)[-1])
+            raise NotImplementedError(
+                ' across subjects + conunts is not implemented')
+        ax[0, 0].bar(np.arange(nbins), nmat.sum(
+            axis=0), width=1, edgecolor='k')
+        ax[1, 1].barh(np.arange(nbins), nmat.sum(
+            axis=1), height=1, edgecolor='k')
+        if hide_marginal_axis:  # hack to avoid missing edge in last bar
+            ax[0, 0].spines['right'].set_visible(True)
+            ax[0, 0].spines['right'].set_bounds(0, nmat.sum(axis=0)[-1])
+            ax[1, 1].spines['bottom'].set_visible(True)
+            ax[1, 1].spines['bottom'].set_bounds(0, nmat.sum(axis=1)[-1])
 
     else:
-        xpos=(np.linspace(-0.5,nbins-0.5,n_points_marginal+1)[:-1]+np.linspace(-0.5,nbins-0.5,n_points_marginal+1)[1:])/2
+        xpos = (np.linspace(-0.5, nbins-0.5, n_points_marginal+1)
+                [:-1]+np.linspace(-0.5, nbins-0.5, n_points_marginal+1)[1:])/2
         if not average_across_subjects:
             _, means1, yerr1 = binned_curve(
-                tmp, 'tmp_com', 'norm_allpriors', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+                # so we get double amount of ticks
+                tmp, 'tmp_com', 'norm_allpriors', np.linspace(
+                    -1, 1, n_points_marginal+1),
                 sem_err=False, return_data=True
             )
-            
 
             _, means2, yerr2 = binned_curve(
-                tmp, 'tmp_com', 'avtrapz', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
+                # so we get double amount of ticks
+                tmp, 'tmp_com', 'avtrapz', np.linspace(
+                    -1, 1, n_points_marginal+1),
                 sem_err=False, return_data=True
             )
-            ax[0,0].errorbar(xpos, means1, yerr=yerr1)
-            ax[1,1].errorbar(means2, xpos[::-1], xerr=yerr2)
+            ax[0, 0].errorbar(xpos, means1, yerr=yerr1)
+            ax[1, 1].errorbar(means2, xpos[::-1], xerr=yerr2)
         else:
-            bins=np.linspace(-1,1,n_points_marginal+1)
+            bins = np.linspace(-1, 1, n_points_marginal+1)
             df['tmp_bin'] = pd.cut(
                 df.norm_allpriors,
                 bins,
-                labels=np.arange(bins.size-1), 
+                labels=np.arange(bins.size-1),
                 retbins=False, include_lowest=True, right=True
-                ).astype(float)
+            ).astype(float)
             tmp = (
-                df.groupby(['subject','tmp_bin'])
+                df.groupby(['subject', 'tmp_bin'])
                 .CoM_sugg.mean()
                 .reset_index()
                 .groupby('tmp_bin').agg(['mean', sem])
             )
-            ax[0,0].errorbar(xpos, tmp[('CoM_sugg', 'mean')], yerr=tmp[('CoM_sugg', 'sem')])
+            ax[0, 0].errorbar(xpos, tmp[('CoM_sugg', 'mean')],
+                              yerr=tmp[('CoM_sugg', 'sem')])
 
-            bins=np.linspace(-1,1,n_points_marginal+1)
+            bins = np.linspace(-1, 1, n_points_marginal+1)
             df['tmp_bin'] = pd.cut(
                 df.avtrapz,
                 bins,
-                labels=np.arange(bins.size-1), 
+                labels=np.arange(bins.size-1),
                 retbins=False, include_lowest=True, right=True
-                ).astype(float)
+            ).astype(float)
             tmp = (
-                df.groupby(['subject','tmp_bin'])
+                df.groupby(['subject', 'tmp_bin'])
                 .CoM_sugg.mean()
                 .reset_index()
                 .groupby('tmp_bin').agg(['mean', sem])
             )
-            ax[1,1].errorbar(tmp[('CoM_sugg', 'mean')], xpos[::-1], xerr=tmp[('CoM_sugg', 'sem')])
+            ax[1, 1].errorbar(tmp[('CoM_sugg', 'mean')],
+                              xpos[::-1], xerr=tmp[('CoM_sugg', 'sem')])
 
-            # this was the old strategy, trying a cleaner & more robust
-            #means1_list, means2_list = [],[]
-            #for subject in tmp.subjid.unique():
-            #    _, means1, _ = binned_curve(
-            #        tmp.loc[tmp.subjid==subject], 'tmp_com', 'norm_allpriors', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
-            #        sem_err=False, return_data=True
-            #    )
-            #
-            #    _, means2, _ = binned_curve(
-            #        tmp[tmp.subjid==subject], 'tmp_com', 'avtrapz', np.linspace(-1,1,n_points_marginal+1), # so we get double amount of ticks  
-            #        sem_err=False, return_data=True
-            #    )
-            #    means1_list += [means1]
-            #    means2_list += [means2]         
-            # ax[0,0].errorbar(xpos, means1.mean(axis=0), yerr=sem(means1, axis=0, nan_policy='omit'))
-            # ax[1,1].errorbar(means2.mean(axis=0), xpos[::-1], xerr=sem(means2, axis=0, nan_policy='omit'))
-        
-
-        #find max val to normalize
+        # find max val to normalize
     # if normalize_marginal:
     #     mval = np.concatenate([means1, means2]).max()
     #     ax[0,0].errorbar(xpos, means1/mval, yerr=yerr1/mval)
@@ -2025,38 +2068,37 @@ def com_heatmap_paper_marginal_pcom_side(
     #
     # since it is the same, simply adjust max y_
     if adjust_marginal_axes:
-        _, ymax = ax[0,0].get_ylim()
-        _, xmax = ax[1,1].get_xlim()
+        _, ymax = ax[0, 0].get_ylim()
+        _, xmax = ax[1, 1].get_xlim()
         max_val_margin = max(ymax, xmax)
-        ax[0,0].set_ylim(0,max_val_margin)
-        ax[1,1].set_xlim(0,max_val_margin)
+        ax[0, 0].set_ylim(0, max_val_margin)
+        ax[1, 1].set_xlim(0, max_val_margin)
 
-
-    ax[1,0].set_yticks(np.arange(nbins))
-    ax[1,0].set_xticks(np.arange(nbins))
-    ax[1,0].set_yticklabels(['right']+['']*(nbins-2)+['left'])
-    ax[1,0].set_xticklabels(['left']+['']*(nbins-2)+['right'])
+    ax[1, 0].set_yticks(np.arange(nbins))
+    ax[1, 0].set_xticks(np.arange(nbins))
+    ax[1, 0].set_yticklabels(['right']+['']*(nbins-2)+['left'])
+    ax[1, 0].set_xticklabels(['left']+['']*(nbins-2)+['right'])
 
     if counts_on_matrix:
-        im = ax[1,0].imshow(nmat, aspect='auto')
+        im = ax[1, 0].imshow(nmat, aspect='auto')
     else:
-        im = ax[1,0].imshow(mat, aspect='auto')
-    ax[1,0].set_xlabel('$\longleftarrow$Prior$\longrightarrow$', labelpad=-5)
-    ax[1,0].set_ylabel('$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-17)
-    divider = make_axes_locatable(ax[1,0])
+        im = ax[1, 0].imshow(mat, aspect='auto')
+    ax[1, 0].set_xlabel('$\longleftarrow$Prior$\longrightarrow$', labelpad=-5)
+    ax[1, 0].set_ylabel(
+        '$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-17)
+    divider = make_axes_locatable(ax[1, 0])
     cax = divider.append_axes('left', size='10%', pad=0.6)
 
-    divider2 = make_axes_locatable(ax[0,0])
+    divider2 = make_axes_locatable(ax[0, 0])
     empty = divider2.append_axes('left', size='10%', pad=0.6)
     empty.axis('off')
     cax2 = cax.secondary_yaxis('left')
-    cbar = f.colorbar(im, cax=cax)
+    # cbar = f.colorbar(im, cax=cax)
     cax.yaxis.set_ticks_position('left')
     if counts_on_matrix:
         cax2.set_ylabel('# trials')
     else:
         cax2.set_ylabel(pcomlabel)
-
 
     f.tight_layout()
     return f, ax

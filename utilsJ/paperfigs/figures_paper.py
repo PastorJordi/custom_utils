@@ -300,10 +300,10 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
-        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
-        # fig3.b(df, savpath=SV_FOLDER)
-        fig3.c(df, savpath=SV_FOLDER)
-        # fig3.d(df, savpath=SV_FOLDER)
+        fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+        fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
+        fig3.trajs_splitting(df, savpath=SV_FOLDER)
+        fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
 
     # fig 3
     if f3:

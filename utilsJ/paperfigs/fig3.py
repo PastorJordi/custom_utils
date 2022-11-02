@@ -26,15 +26,19 @@ def trajs_cond_on_prior(df, average=False, trajectory="trajectory_y",
 
     if not average:
         for subject in df.subjid.unique():  # dani_rats:
-            f, ax = plt.subplots(ncols=2, nrows=2, figsize=(
-                11, 8), gridspec_kw={'width_ratios': [1, 3]})
+            f, ax = plt.subplots(ncols=2, nrows=2, figsize=(11, 8),
+                                 gridspec_kw={'width_ratios': [1, 3]})
             ax = ax.flatten()
-            xpoints, ypoints, _, mat, dic = plotting.trajectory_thr(
-                df.loc[(df.subjid == subject) & (df.special_trial == 2)],
-                'choice_x_prior', np.linspace(-3, 3, 6), collapse_sides=True,
-                thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True,
-                error_kwargs=dict(marker='o'), cmap='viridis',
-                trajectory=trajectory)
+            sil_tr_indx = (df.subjid == subject) & (df.special_trial == 2)
+            xpoints, ypoints, _, mat, dic =\
+                plotting.trajectory_thr(df.loc[sil_tr_indx],
+                                        'choice_x_prior',
+                                        np.linspace(-3, 3, 6), collapse_sides=True,
+                                        thr=30, ax=ax[0], ax_traj=ax[1],
+                                        return_trash=True,
+                                        error_kwargs=dict(marker='o'),
+                                        cmap='viridis',
+                                        trajectory=trajectory)
             ax[1].legend(labels=['-2', '-1', '0', '1', '2'],
                          title='Prior')
             ax[1].set_xlim([-50, 500])
@@ -337,7 +341,7 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
 #
 
 
-def c(df, average=False, collapse_sides=False, savpath=SAVPATH):
+def trajs_splitting(df, average=False, collapse_sides=False, savpath=SAVPATH):
     # dual, when are rts{0-25} and rts{100-125} splitting?
     if not average:
         for subject in df.subjid.unique():
@@ -393,9 +397,10 @@ def c(df, average=False, collapse_sides=False, savpath=SAVPATH):
         raise NotImplementedError('averaging is not implemented')
 
 
-def d(df, collapse_sides=False, rtbins=np.linspace(0, 150, 16),
-      connect_points=True, draw_line=((0, 90), (90, 0)),
-      threshold=300, trajectory="trajectory_y", savpath=SAVPATH):
+def trajs_splitting_point(df, collapse_sides=False, rtbins=np.linspace(0, 150, 16),
+                          connect_points=True, draw_line=((0, 90), (90, 0)),
+                          threshold=300, trajectory="trajectory_y",
+                          savpath=SAVPATH):
 
     # split time/subject by coherence
     # threshold= bigger than that are turned to nan so it doesnt break figure range

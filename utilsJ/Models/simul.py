@@ -70,12 +70,9 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     return np.nan  # , -1
 
 
-def when_did_split_dat(
-    df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
-    startfrom=700,  ax=None, plot_kwargs={}, align='movement',
-    collapse_sides=False,
-    trajectory="trajectory_y"
-):
+def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
+                       startfrom=700,  ax=None, plot_kwargs={}, align='movement',
+                       collapse_sides=False, trajectory="trajectory_y"):
     """
     gets when they are statistically different by t_test,
     df= dataframe
