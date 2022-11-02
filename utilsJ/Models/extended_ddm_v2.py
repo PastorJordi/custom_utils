@@ -547,9 +547,11 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                         num_tr_per_rat=int(1e4), after_correct=True, silent=False,
-                        splitting=False, all_trials=False, return_df=False):
+                        splitting=False, all_trials=False, return_df=False,
+                        sv_folder=None):
     # import data for 1 rat
     print('Loading data')
+    sv_f = sv_folder or SV_FOLDER
     files = glob.glob(dfpath+'*.pkl')
     start = time.time()
     prior = np.empty((0, ))
@@ -644,9 +646,9 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                      bins=BINS,
                      return_data=True)
     df_pcom_rt = pd.DataFrame({'rt': xpos_plot, 'pcom': median_pcom})
-    df_pcom_rt.to_csv(SV_FOLDER + '/results/pcom_vs_rt.csv')
+    df_pcom_rt.to_csv(sv_f + '/results/pcom_vs_rt.csv')
     matrix, _ = com_heatmap_jordi(prior, coh, com, return_mat=True, flip=True)
-    np.save(SV_FOLDER + '/results/CoM_vs_prior_and_stim.npy', matrix)
+    np.save(sv_f + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
     if not silent:

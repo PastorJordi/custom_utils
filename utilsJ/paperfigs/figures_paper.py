@@ -18,8 +18,11 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.paperfigs import fig1, fig3, fig2
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/from_python/'  # Manuel
 BINS_RT = np.linspace(1, 301, 21)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -192,8 +195,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[4].set_title('Model')
     pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
     ax[1].set_title('Data')
-    pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
-                                         sound_len=sound_len_model, ax=ax[5])
+    # pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
+    #                                      sound_len=sound_len_model, ax=ax[5])
     ax[5].set_title('Model')
     reaction_time_histogram(sound_len=sound_len, ax=ax[2])
     ax[2].set_title('Data')
@@ -206,7 +209,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     fig.suptitle('')
 
 
-def run_model(stim, zt, coh):
+def run_model(stim, zt, coh, prior, gt):
     num_tr = int(len(zt))
     data_augment_factor = 10
     MT_slope = 0.123
@@ -251,7 +254,7 @@ def run_model(stim, zt, coh):
         pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
         frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
         rt_vals, rt_bins, tr_index =\
-        edd2.trial_ev_vectorized(zt=prior, stim=stim_temp, coh=coh,
+        edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                  MT_slope=MT_slope, MT_intercep=MT_intercep,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                  p_e_noise=p_e_noise, p_com_th=p_com_th,
@@ -269,23 +272,24 @@ def run_model(stim, zt, coh):
     return hit_model, reaction_time, detected_com, resp_fin
 
 
+# ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
                                   return_df=True)
-    # if we want to use data from all rats, we must use dani_clean.pkl (joined data)
+    # if we want to use data from all rats, we must use dani_clean.pkl
     # fig 1
-    fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-    prior = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    hit = np.array(df['hithistory'])
-    stim = np.array([stim for stim in df.res_sound])
-    coh = np.array(df.coh2)
-    com = df.CoM_sugg.values
-    decision = np.array(df.R_response) * 2 - 1
-    sound_len = np.array(df.sound_len)
-    gt = np.array(df.rewside) * 2 - 1
+    # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
+    # zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    # hit = np.array(df['hithistory'])
+    # stim = np.array([stim for stim in df.res_sound])
+    # coh = np.array(df.coh2)
+    # com = df.CoM_sugg.values
+    # decision = np.array(df.R_response) * 2 - 1
+    # sound_len = np.array(df.sound_len)
+    # gt = np.array(df.rewside) * 2 - 1
     # tachometrics, rt distribution, express performance
-    fig_1(coh, hit, sound_len, decision, supt='data')
+    # fig_1(coh, hit, sound_len, decision, supt='data')
 
     # fig 2
     fig3.a(df, savpath=SV_FOLDER)
@@ -295,12 +299,12 @@ if __name__ == '__main__':
 
     # fig 3
     # fig2.bcd(df)
-    fig2.e(df, savepath=SV_FOLDER)
-    fig2.f(df, savepath=SV_FOLDER)
-    fig2.g(df, savepath=SV_FOLDER)
+    # fig2.e(df, savepath=SV_FOLDER)
+    # fig2.f(df, savepath=SV_FOLDER)
+    # fig2.g(df, savepath=SV_FOLDER)
 
     # fig 5 (model)
-    hit_model, reaction_time, detected_com, resp_fin =\
-        run_model(stim=stim, zt=prior, coh=coh)
-    fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
-          supt='model')
+    # hit_model, reaction_time, detected_com, resp_fin =\
+    #     run_model(stim=stim, zt=zt, coh=coh, gt=gt)
+    # fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
+    #       supt='model')
