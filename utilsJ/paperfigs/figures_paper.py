@@ -206,7 +206,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     fig.suptitle('')
 
 
-def run_model(stim, zt, coh):
+def run_model(stim, zt, coh, gt):
     num_tr = int(len(zt))
     data_augment_factor = 10
     MT_slope = 0.123
@@ -301,6 +301,9 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     hit_model, reaction_time, detected_com, resp_fin =\
-        run_model(stim=stim, zt=prior, coh=coh)
-    fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
-          supt='model')
+        run_model(stim=stim, zt=prior, coh=coh, gt=gt)
+    fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
+          hit_model=hit_model, sound_len_model=reaction_time,
+          decision_model=resp_fin, supt='')
+    # fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
+    #       supt='model')
