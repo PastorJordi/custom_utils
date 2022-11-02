@@ -209,7 +209,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     fig.suptitle('')
 
 
-def run_model(stim, zt, coh, prior, gt):
+def run_model(stim, zt, coh, gt):
     num_tr = int(len(zt))
     data_augment_factor = 10
     MT_slope = 0.123
@@ -278,18 +278,20 @@ if __name__ == '__main__':
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
                                   return_df=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
+
     # fig 1
-    # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-    # zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    # hit = np.array(df['hithistory'])
-    # stim = np.array([stim for stim in df.res_sound])
-    # coh = np.array(df.coh2)
-    # com = df.CoM_sugg.values
-    # decision = np.array(df.R_response) * 2 - 1
-    # sound_len = np.array(df.sound_len)
-    # gt = np.array(df.rewside) * 2 - 1
+    fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    hit = np.array(df['hithistory'])
+    stim = np.array([stim for stim in df.res_sound])
+    coh = np.array(df.coh2)
+    com = df.CoM_sugg.values
+    decision = np.array(df.R_response) * 2 - 1
+    sound_len = np.array(df.sound_len)
+    gt = np.array(df.rewside) * 2 - 1
+
     # tachometrics, rt distribution, express performance
-    # fig_1(coh, hit, sound_len, decision, supt='data')
+    fig_1(coh, hit, sound_len, decision, supt='data')
 
     # fig 2
     fig3.a(df, savpath=SV_FOLDER)
@@ -298,13 +300,14 @@ if __name__ == '__main__':
     fig3.d(df, savpath=SV_FOLDER)
 
     # fig 3
-    # fig2.bcd(df)
-    # fig2.e(df, savepath=SV_FOLDER)
-    # fig2.f(df, savepath=SV_FOLDER)
-    # fig2.g(df, savepath=SV_FOLDER)
+    fig2.bcd(df)
+    fig2.e(df, savepath=SV_FOLDER)
+    fig2.f(df, savepath=SV_FOLDER)
+    fig2.g(df, savepath=SV_FOLDER)
 
     # fig 5 (model)
-    # hit_model, reaction_time, detected_com, resp_fin =\
-    #     run_model(stim=stim, zt=zt, coh=coh, gt=gt)
-    # fig_1(coh=coh, hit=hit_model, sound_len=reaction_time, decision=resp_fin,
-    #       supt='model')
+    hit_model, reaction_time, detected_com, resp_fin =\
+        run_model(stim=stim, zt=zt, coh=coh, gt=gt)
+    fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
+          hit_model=hit_model, sound_len_model=reaction_time,
+          decision_model=resp_fin, supt='')

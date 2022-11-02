@@ -816,7 +816,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     first_ind = np.array(first_ind).astype(int)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
-                                    bins=50, range=(-100, 300))
+                                    bins=17, range=(-100, 300))
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     # end_eddm = time.time()
@@ -2219,7 +2219,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1.6e5)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -2234,7 +2234,7 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44_',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=False, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2288,11 +2288,11 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 15  # fixed
-            p_t_eff = 5  # fixed
+            p_t_aff = 13  # fixed
+            p_t_eff = 6  # fixed
             p_t_a = 14  # fixed
-            p_w_zt = 0.15  # 0.15
-            p_w_stim = 0.15  # 0.2
+            p_w_zt = 0.2  # 0.15
+            p_w_stim = 0.12  # 0.2
             p_e_noise = 0.03  # 0.045
             p_com_bound = 0.  # 0.0
             p_w_a = 0.03  # fixed
