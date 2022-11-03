@@ -316,10 +316,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     window = 50
     if data:
         tit = 'Data: '
-        max_col = 0.1
     else:
         tit = 'Model: '
-        max_col = 0.3
     for i in range(4):
         zt = data_to_plot['zt'][(sound_len > window*i) *
                                 (sound_len < window*(i+1))]
@@ -333,7 +331,7 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                                                (sound_len < window*(i+1))]
         matrix, _ = com_heatmap_jordi(zt, coh, com,
                                       return_mat=True, flip=True)
-        sns.heatmap(matrix, ax=ax[i], vmin=0, vmax=max_col)
+        sns.heatmap(matrix, ax=ax[i])
         ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
     fig, ax = plt.subplots(1)
     zt = data_to_plot['zt']
