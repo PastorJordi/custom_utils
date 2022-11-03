@@ -18,11 +18,11 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.paperfigs import fig1, fig3, fig2
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
 BINS_RT = np.linspace(1, 301, 21)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -195,8 +195,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[4].set_title('Model')
     pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
     ax[1].set_title('Data')
-    # pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
-    #                                      sound_len=sound_len_model, ax=ax[5])
+    pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
+                                         sound_len=sound_len_model, ax=ax[5])
     ax[5].set_title('Model')
     reaction_time_histogram(sound_len=sound_len, ax=ax[2])
     ax[2].set_title('Data')
@@ -204,8 +204,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[6].set_title('Model')
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
-    # express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
-    #                     pos_tach_ax=pos_tach_ax_model, ax=ax[7])
+    express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
+                        pos_tach_ax=pos_tach_ax_model, ax=ax[7])
     fig.suptitle('')
 
 
@@ -221,7 +221,7 @@ def run_model(stim, zt, coh, gt):
     p_w_zt = 0.08  # 0.15
     p_w_stim = 0.1  # 0.2
     p_e_noise = 0.04  # 0.045
-    p_com_th = 0.  # 0.0
+    p_com_bound = 0.  # 0.0
     p_w_a = 0.03  # fixed
     p_a_noise = np.sqrt(5e-3)  # fixed
     p_1st_readout = 100  #
@@ -230,7 +230,7 @@ def run_model(stim, zt, coh, gt):
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-    conf = [p_w_zt, p_w_stim, p_e_noise, p_com_th, p_t_aff,
+    conf = [p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
             p_2nd_readout]
     jitters = len(conf)*[0]
@@ -238,7 +238,7 @@ def run_model(stim, zt, coh, gt):
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
     p_w_stim = conf[1]+jitters[1]*np.random.rand()
     p_e_noise = conf[2]+jitters[2]*np.random.rand()
-    p_com_th = conf[3]+jitters[3]*np.random.rand()
+    p_com_bound = conf[3]+jitters[3]*np.random.rand()
     p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
@@ -257,7 +257,7 @@ def run_model(stim, zt, coh, gt):
         edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                  MT_slope=MT_slope, MT_intercep=MT_intercep,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                 p_e_noise=p_e_noise, p_com_th=p_com_th,
+                                 p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                  num_tr=num_tr, p_w_a=p_w_a,
                                  p_a_noise=p_a_noise,
@@ -279,9 +279,9 @@ if __name__ == '__main__':
                                   return_df=True, sv_folder=SV_FOLDER)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
-    f5 = False
+    f5 = True
 
     # fig 1
     if f1:
@@ -314,8 +314,18 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        hit = np.array(df['hithistory'])
+        stim = np.array([stim for stim in df.res_sound])
+        coh = np.array(df.coh2)
+        com = df.CoM_sugg.values
+        decision = np.array(df.R_response) * 2 - 1
+        sound_len = np.array(df.sound_len)
+        gt = np.array(df.rewside) * 2 - 1
         hit_model, reaction_time, detected_com, resp_fin =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, supt='')
+        fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
+        # psychometrics model ?
