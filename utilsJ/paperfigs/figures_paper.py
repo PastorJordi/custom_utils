@@ -183,7 +183,7 @@ def fig_1(coh, hit, sound_len, decision, supt=''):
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
           decision_model, com, com_model, com_model_detected):
-    fig, ax = plt.subplots(ncols=4, nrows=3)
+    fig, ax = plt.subplots(ncols=3, nrows=3)
     ax = ax.flatten()
     psych_curve((decision+1)/2, coh, ret_ax=ax[2], kwargs_error={'label': 'Data'})
     ax[2].set_xlabel('Coherence')
@@ -191,40 +191,40 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[2].set_title('Data')
     psych_curve((decision_model+1)/2, coh, ret_ax=ax[2],
                 kwargs_error={'label': 'Model', 'color': 'k'},
-                kwargs_plot={'color': 'red'})
+                kwargs_plot={'color': 'orange'})
     ax[2].legend()
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[4])
-    ax[4].set_title('Data')
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[3])
+    ax[3].set_title('Data')
     pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
-                                         sound_len=sound_len_model, ax=ax[5])
-    ax[5].set_title('Model')
+                                         sound_len=sound_len_model, ax=ax[4])
+    ax[4].set_title('Model')
     reaction_time_histogram(sound_len=sound_len, ax=ax[0])
     ax[0].set_title('Data')
     reaction_time_histogram(sound_len=sound_len_model, ax=ax[1])
     ax[1].set_title('Model')
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
-                        pos_tach_ax=pos_tach_ax, ax=ax[3])
+                        pos_tach_ax=pos_tach_ax, ax=ax[5])
     express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
-                        pos_tach_ax=pos_tach_ax_model, ax=ax[7])
+                        pos_tach_ax=pos_tach_ax_model, ax=ax[8])
     df_plot = pd.DataFrame({'com': com, 'sound_len': sound_len,
                             'rt_model': sound_len_model, 'com_model': com_model,
                             'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data'}, ax=ax[8])
+                 errorbar_kw={'label': 'Data'}, ax=ax[6])
+    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[6])
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all'}, ax=ax[8])
-    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[8])
-    ax[8].legend()
-    ax[8].set_xlabel('RT (ms)')
-    ax[8].set_ylabel('PCoM')
+                 errorbar_kw={'label': 'Model all'}, ax=ax[6])
+    ax[6].legend()
+    ax[6].set_xlabel('RT (ms)')
+    ax[6].set_ylabel('PCoM')
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data'}, ax=ax[9])
+                 errorbar_kw={'label': 'Data'}, ax=ax[7])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[9])
-    ax[9].legend()
-    ax[9].set_xlabel('RT (ms)')
-    ax[9].set_ylabel('PCoM')
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[7])
+    ax[7].legend()
+    ax[7].set_xlabel('RT (ms)')
+    ax[7].set_ylabel('PCoM')
 
 
 def run_model(stim, zt, coh, gt):
@@ -293,7 +293,7 @@ def run_model(stim, zt, coh, gt):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE45_',
                                   return_df=True, sv_folder=SV_FOLDER)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
