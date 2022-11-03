@@ -328,4 +328,6 @@ if __name__ == '__main__':
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, supt='')
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
-        # psychometrics model ?
+        df_1 = df.copy()
+        df_1['R_response'] = (resp_fin + 1)/2
+        fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model

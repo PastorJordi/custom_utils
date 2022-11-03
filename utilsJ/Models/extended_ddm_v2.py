@@ -2234,7 +2234,7 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE46_',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE45_',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=False, splitting=splitting,
                                         silent=silent, all_trials=True)
