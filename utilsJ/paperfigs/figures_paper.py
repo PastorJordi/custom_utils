@@ -182,31 +182,49 @@ def fig_1(coh, hit, sound_len, decision, supt=''):
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
-          decision_model, supt=''):
-    fig, ax = plt.subplots(ncols=4, nrows=2)
+          decision_model, com, com_model, com_model_detected):
+    fig, ax = plt.subplots(ncols=4, nrows=3)
     ax = ax.flatten()
-    psych_curve((decision+1)/2, coh, ret_ax=ax[0])
-    ax[0].set_xlabel('Coherence')
-    ax[0].set_ylabel('Probability of right')
-    ax[0].set_title('Data')
-    psych_curve((decision_model+1)/2, coh, ret_ax=ax[4])
-    ax[4].set_xlabel('Coherence')
-    ax[4].set_ylabel('Probability of right')
-    ax[4].set_title('Model')
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
-    ax[1].set_title('Data')
+    psych_curve((decision+1)/2, coh, ret_ax=ax[2], kwargs_error={'label': 'Data'})
+    ax[2].set_xlabel('Coherence')
+    ax[2].set_ylabel('Probability of right')
+    ax[2].set_title('Data')
+    psych_curve((decision_model+1)/2, coh, ret_ax=ax[2],
+                kwargs_error={'label': 'Model', 'color': 'k'},
+                kwargs_plot={'color': 'red'})
+    ax[2].legend()
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[4])
+    ax[4].set_title('Data')
     pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
                                          sound_len=sound_len_model, ax=ax[5])
     ax[5].set_title('Model')
-    reaction_time_histogram(sound_len=sound_len, ax=ax[2])
-    ax[2].set_title('Data')
-    reaction_time_histogram(sound_len=sound_len_model, ax=ax[6])
-    ax[6].set_title('Model')
+    reaction_time_histogram(sound_len=sound_len, ax=ax[0])
+    ax[0].set_title('Data')
+    reaction_time_histogram(sound_len=sound_len_model, ax=ax[1])
+    ax[1].set_title('Model')
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
     express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
                         pos_tach_ax=pos_tach_ax_model, ax=ax[7])
-    fig.suptitle('')
+    df_plot = pd.DataFrame({'com': com, 'sound_len': sound_len,
+                            'rt_model': sound_len_model, 'com_model': com_model,
+                            'com_model_detected': com_model_detected})
+    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Data'}, ax=ax[8])
+    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Model all'}, ax=ax[8])
+    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[8])
+    ax[8].legend()
+    ax[8].set_xlabel('RT (ms)')
+    ax[8].set_ylabel('PCoM')
+    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Data'}, ax=ax[9])
+    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected'}, ax=ax[9])
+    ax[9].legend()
+    ax[9].set_xlabel('RT (ms)')
+    ax[9].set_ylabel('PCoM')
 
 
 def run_model(stim, zt, coh, gt):
@@ -269,7 +287,7 @@ def run_model(stim, zt, coh, gt):
     reaction_time = (first_ind[tr_index]+p_t_eff -
                      int(300/stim_res))*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-    return hit_model, reaction_time, detected_com, resp_fin
+    return hit_model, reaction_time, detected_com, resp_fin, com_model
 
 
 # ---MAIN
@@ -322,11 +340,12 @@ if __name__ == '__main__':
         decision = np.array(df.R_response) * 2 - 1
         sound_len = np.array(df.sound_len)
         gt = np.array(df.rewside) * 2 - 1
-        hit_model, reaction_time, detected_com, resp_fin =\
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
               hit_model=hit_model, sound_len_model=reaction_time,
-              decision_model=resp_fin, supt='')
+              decision_model=resp_fin, com=com, com_model=com_model,
+              com_model_detected=com_model_detected)
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2
