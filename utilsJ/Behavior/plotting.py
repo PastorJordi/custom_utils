@@ -766,6 +766,8 @@ def trajectory_thr(
     raiseerrors=False,
 ):
     """
+    Plot trajectories.
+
     This changed a lot!, review default plots
     Exclude invalids
     atm this will only retrieve data, not plotting if ax=None
