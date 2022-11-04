@@ -22,24 +22,24 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
@@ -316,15 +316,17 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     window = 50
     if data:
         tit = 'Data: '
-        max_col = 0.1
     else:
         tit = 'Model: '
-        max_col = 0.3
     for i in range(4):
         zt = data_to_plot['zt'][(sound_len > window*i) *
                                 (sound_len < window*(i+1))]
+        zt *= data_to_plot['final_resp'][(sound_len > window*i) *
+                                         (sound_len < window*(i+1))]
         coh = data_to_plot['avtrapz'][(sound_len > window*i) *
                                       (sound_len < window*(i+1))]
+        coh *= data_to_plot['final_resp'][(sound_len > window*i) *
+                                          (sound_len < window*(i+1))]
         if data:
             com = data_to_plot['CoM'][(sound_len > window*i) *
                                       (sound_len < window*(i+1))]
@@ -333,15 +335,16 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                                                (sound_len < window*(i+1))]
         matrix, _ = com_heatmap_jordi(zt, coh, com,
                                       return_mat=True, flip=True)
-        sns.heatmap(matrix, ax=ax[i], vmin=0, vmax=max_col)
+        sns.heatmap(matrix, ax=ax[i])
         ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
     fig, ax = plt.subplots(1)
-    zt = data_to_plot['zt']
-    coh = data_to_plot['avtrapz']
+    zt = data_to_plot['zt'] * data_to_plot['final_resp']
+    coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
     com = data_to_plot['CoM']
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     sns.heatmap(matrix, ax=ax)
+    left_right_matrix(zt, coh, com, decision)
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -752,7 +755,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a
     # zeros before p_t_a
-    dA[:p_t_a, :] = 0
+    dA[:p_t_a-p_t_eff, :] = 0
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
@@ -1174,13 +1177,13 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_1st_readout = 5
     """
-    p_w_zt_list = np.linspace(0.15, 0.25, num=num_vals-1)
+    p_w_zt_list = np.linspace(0.1, 0.25, num=num_vals)
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
     p_com_bound_list = np.linspace(0, 0.2, num=num_vals-2)
-    p_t_aff_list = np.linspace(4, 8, num=num_vals-1, dtype=int)
-    p_t_eff_list = np.linspace(8, 14, num=num_vals, dtype=int)
-    p_t_a_list = [14]
+    p_t_aff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
+    p_t_eff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
+    p_t_a_list = [18]
     p_w_a_list = [0.03]
     p_a_noise_list = [np.sqrt(5e-3)]
     p_1st_readout_list = np.linspace(80, 140, num=num_vals)
@@ -2202,7 +2205,6 @@ def cdfs(coh, sound_len, title=''):
     for i, ev in enumerate(ev_vals):
         index = ev == np.abs(coh)
         hist_data, bins = np.histogram(sound_len[index], bins=200)
-        plt.figure(18)
         plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
                  np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
                  color=colors[i], linewidth=3)
@@ -2217,10 +2219,10 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1.6e5)
+    num_tr = int(8e4)
     load_data = True
     new_sample = True
-    single_run = True
+    single_run = False
     shuffle = True
     simulate = True
     parallel = False
@@ -2234,9 +2236,9 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44_',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
                                         num_tr_per_rat=int(1e4),
-                                        after_correct=False, splitting=splitting,
+                                        after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
                 data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                         'sound_len': sound_len, 'decision': decision,
@@ -2288,17 +2290,17 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 13  # fixed
-            p_t_eff = 6  # fixed
-            p_t_a = 14  # fixed
-            p_w_zt = 0.2  # 0.15
-            p_w_stim = 0.12  # 0.2
-            p_e_noise = 0.03  # 0.045
-            p_com_bound = 0.  # 0.0
-            p_w_a = 0.03  # fixed
-            p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 80  #
-            p_2nd_readout = 180  #
+            p_t_aff = 12
+            p_t_eff = 6
+            p_t_a = 18
+            p_w_zt = 0.1
+            p_w_stim = 0.05
+            p_e_noise = 0.03
+            p_com_bound = 0.
+            p_w_a = 0.028
+            p_a_noise = np.sqrt(5e-3)
+            p_1st_readout = 80
+            p_2nd_readout = 180
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2307,18 +2309,18 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            # if plot:
-            #     left_right_matrix(zt, coh, com, decision)
-            #     data_to_plot = {'sound_len': sound_len,
-            #                     'CoM': com,
-            #                     'first_resp': decision*[~com*(-1)],
-            #                     'final_resp': decision,
-            #                     'hithistory': hit,
-            #                     'avtrapz': coh,
-            #                     'detected_com': com,
-            #                     'MT': resp_len*1e3,
-            #                     'zt': zt}
-            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            if plot:
+                # left_right_matrix(zt, coh, com, decision)
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]

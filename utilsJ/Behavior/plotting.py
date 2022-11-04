@@ -2095,7 +2095,7 @@ def com_heatmap_paper_marginal_pcom_side(
     empty = divider2.append_axes('left', size='10%', pad=0.6)
     empty.axis('off')
     cax2 = cax.secondary_yaxis('left')
-    # cbar = f.colorbar(im, cax=cax)
+    f.colorbar(im, cax=cax)
     cax.yaxis.set_ticks_position('left')
     if counts_on_matrix:
         cax2.set_ylabel('# trials')
