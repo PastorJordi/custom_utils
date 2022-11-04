@@ -6,7 +6,7 @@ Created on Mon Oct 24 10:24:12 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-# import seaborn as sns
+import seaborn as sns
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
@@ -140,9 +140,14 @@ def tachometric_data(coh, hit, sound_len, ax):
     return ax.get_position()
 
 
-def reaction_time_histogram(sound_len, ax, bins=BINS_RT):
+def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
     rm_top_right_lines(ax)
-    ax.hist(sound_len, bins=bins, alpha=0.5, density=True, linewidth=0.)
+    if label == 'Data':
+        color = 'k'
+    if label == 'Model':
+        color = 'red'
+    ax.hist(sound_len, bins=bins, alpha=0.3, density=True, linewidth=0.,
+            histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
     ax.set_ylabel('Density')
     ax.set_xlim(0, max(BINS_RT))
@@ -191,7 +196,7 @@ def fig_1(coh, hit, sound_len, decision, supt=''):
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
           decision_model, com, com_model, com_model_detected):
-    fig, ax = plt.subplots(ncols=3, nrows=3, gridspec_kw={'top': 0.95,
+    fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
                                                           'right': 0.975,
@@ -200,48 +205,65 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax = ax.flatten()
     for ax_1 in ax:
         rm_top_right_lines(ax_1)
-    psych_curve((decision+1)/2, coh, ret_ax=ax[2], kwargs_plot={'color': 'k'},
+    psych_curve((decision+1)/2, coh, ret_ax=ax[1], kwargs_plot={'color': 'k'},
                 kwargs_error={'label': 'Data', 'color': 'k'})
-    ax[2].set_xlabel('Coherence')
-    ax[2].set_ylabel('Probability of right')
-    psych_curve((decision_model+1)/2, coh, ret_ax=ax[2],
+    ax[1].set_xlabel('Coherence')
+    ax[1].set_ylabel('Probability of right')
+    psych_curve((decision_model+1)/2, coh, ret_ax=ax[1],
                 kwargs_error={'label': 'Model', 'color': 'red'},
                 kwargs_plot={'color': 'red'})
-    ax[2].legend()
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[3])
-    ax[3].set_title('Data')
+    ax[1].legend()
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[2])
+    ax[2].set_title('Data')
     pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
-                                         sound_len=sound_len_model, ax=ax[4])
-    ax[4].set_title('Model')
-    reaction_time_histogram(sound_len=sound_len, ax=ax[0])
-    ax[0].set_title('Data')
-    reaction_time_histogram(sound_len=sound_len_model, ax=ax[1])
-    ax[1].set_title('Model')
+                                         sound_len=sound_len_model, ax=ax[3])
+    ax[3].set_title('Model')
+    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0])
+    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0])
+    ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
-                        pos_tach_ax=pos_tach_ax, ax=ax[5], label='Data')
+                        pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')
     express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
-                        pos_tach_ax=pos_tach_ax_model, ax=ax[5], label='Model')
+                        pos_tach_ax=pos_tach_ax_model, ax=ax[4], label='Model')
     df_plot = pd.DataFrame({'com': com, 'sound_len': sound_len,
                             'rt_model': sound_len_model, 'com_model': com_model,
                             'com_model_detected': com_model_detected})
+    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[5])
+    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
+                                            'color': 'red'}, ax=ax[5])
+    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[5])
+    ax[5].legend()
+    ax[5].set_xlabel('RT (ms)')
+    ax[5].set_ylabel('PCoM')
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                  errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[6])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
                                             'color': 'red'}, ax=ax[6])
-    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[6])
     ax[6].legend()
     ax[6].set_xlabel('RT (ms)')
     ax[6].set_ylabel('PCoM')
-    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[7])
-    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[7])
-    ax[7].legend()
-    ax[7].set_xlabel('RT (ms)')
-    ax[7].set_ylabel('PCoM')
+    df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                            'norm_allpriors': zt/max(abs(zt)),
+                            'R_response': decision})
+    com_heatmap_paper_marginal_pcom_side(df_data, side=0)
+    com_heatmap_paper_marginal_pcom_side(df_data, side=1)
+    # matrix_data, _ = edd2.com_heatmap_jordi(zt, coh, com,
+    #                                         return_mat=True, flip=True)
+    # matrix_model, _ = edd2.com_heatmap_jordi(zt, coh, com_model,
+    #                                          return_mat=True, flip=True)
+    # sns.heatmap(matrix_data, ax=ax[8])
+    # ax[8].set_title('Data')
+    # sns.heatmap(matrix_model, ax=ax[9])
+    # ax[9].set_title('Model')
+    df_model = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com_model_detected,
+                             'norm_allpriors': zt/max(abs(zt)),
+                             'R_response': decision_model})
+    com_heatmap_paper_marginal_pcom_side(df_model, side=0)
+    com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
 def run_model(stim, zt, coh, gt):
@@ -250,17 +272,17 @@ def run_model(stim, zt, coh, gt):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 8  # fixed
-    p_t_eff = 8  # fixed
-    p_t_a = 14  # fixed
-    p_w_zt = 0.08  # 0.15
-    p_w_stim = 0.1  # 0.2
-    p_e_noise = 0.04  # 0.045
-    p_com_bound = 0.  # 0.0
-    p_w_a = 0.03  # fixed
-    p_a_noise = np.sqrt(5e-3)  # fixed
-    p_1st_readout = 100  #
-    p_2nd_readout = 180  #
+    p_t_aff = 13
+    p_t_eff = 6
+    p_t_a = 14
+    p_w_zt = 0.2
+    p_w_stim = 0.12
+    p_e_noise = 0.03
+    p_com_bound = 0.
+    p_w_a = 0.03
+    p_a_noise = np.sqrt(5e-3)
+    p_1st_readout = 80
+    p_2nd_readout = 180
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True

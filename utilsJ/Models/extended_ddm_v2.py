@@ -321,8 +321,12 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     for i in range(4):
         zt = data_to_plot['zt'][(sound_len > window*i) *
                                 (sound_len < window*(i+1))]
+        zt *= data_to_plot['final_resp'][(sound_len > window*i) *
+                                         (sound_len < window*(i+1))]
         coh = data_to_plot['avtrapz'][(sound_len > window*i) *
                                       (sound_len < window*(i+1))]
+        coh *= data_to_plot['final_resp'][(sound_len > window*i) *
+                                          (sound_len < window*(i+1))]
         if data:
             com = data_to_plot['CoM'][(sound_len > window*i) *
                                       (sound_len < window*(i+1))]
@@ -334,12 +338,13 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
         sns.heatmap(matrix, ax=ax[i])
         ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
     fig, ax = plt.subplots(1)
-    zt = data_to_plot['zt']
-    coh = data_to_plot['avtrapz']
+    zt = data_to_plot['zt'] * data_to_plot['final_resp']
+    coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
     com = data_to_plot['CoM']
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     sns.heatmap(matrix, ax=ax)
+    left_right_matrix(zt, coh, com, decision)
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
@@ -750,7 +755,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a
     # zeros before p_t_a
-    dA[:p_t_a, :] = 0
+    dA[:p_t_a-p_t_eff, :] = 0
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
@@ -1172,7 +1177,7 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_1st_readout = 5
     """
-    p_w_zt_list = np.linspace(0.15, 0.25, num=num_vals-1)
+    p_w_zt_list = np.linspace(0.1, 0.25, num=num_vals)
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
     p_com_bound_list = np.linspace(0, 0.2, num=num_vals-2)
@@ -2285,17 +2290,17 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 13  # fixed
-            p_t_eff = 6  # fixed
-            p_t_a = 14  # fixed
-            p_w_zt = 0.2  # 0.15
-            p_w_stim = 0.12  # 0.2
-            p_e_noise = 0.03  # 0.045
-            p_com_bound = 0.  # 0.0
-            p_w_a = 0.03  # fixed
-            p_a_noise = np.sqrt(5e-3)  # fixed
-            p_1st_readout = 80  #
-            p_2nd_readout = 180  #
+            p_t_aff = 12
+            p_t_eff = 6
+            p_t_a = 18
+            p_w_zt = 0.1
+            p_w_stim = 0.05
+            p_e_noise = 0.03
+            p_com_bound = 0.
+            p_w_a = 0.028
+            p_a_noise = np.sqrt(5e-3)
+            p_1st_readout = 80
+            p_2nd_readout = 180
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2305,7 +2310,7 @@ if __name__ == '__main__':
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
             if plot:
-                left_right_matrix(zt, coh, com, decision)
+                # left_right_matrix(zt, coh, com, decision)
                 data_to_plot = {'sound_len': sound_len,
                                 'CoM': com,
                                 'first_resp': decision*[~com*(-1)],
