@@ -2222,7 +2222,7 @@ if __name__ == '__main__':
     num_tr = int(8e4)
     load_data = True
     new_sample = True
-    single_run = True
+    single_run = False
     shuffle = True
     simulate = True
     parallel = False
