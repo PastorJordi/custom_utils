@@ -2200,7 +2200,6 @@ def cdfs(coh, sound_len, title=''):
     for i, ev in enumerate(ev_vals):
         index = ev == np.abs(coh)
         hist_data, bins = np.histogram(sound_len[index], bins=200)
-        plt.figure(18)
         plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
                  np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
                  color=colors[i], linewidth=3)
