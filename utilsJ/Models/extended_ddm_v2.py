@@ -23,24 +23,24 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
 
@@ -340,10 +340,14 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     fig, ax = plt.subplots(1)
     zt = data_to_plot['zt'] * data_to_plot['final_resp']
     coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
-    com = data_to_plot['CoM']
+    if data:
+        com = data_to_plot['CoM']
+    if not data:
+        com = data_to_df['detected_com']
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     sns.heatmap(matrix, ax=ax)
+    decision = data_to_plot['decision']
     left_right_matrix(zt, coh, com, decision)
 
 
@@ -755,7 +759,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a
     # zeros before p_t_a
-    dA[:p_t_a-p_t_eff, :] = 0
+    dA[:(p_t_a-p_t_eff), :] = 0
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
@@ -1122,7 +1126,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                                 'detected_mat': detected_mat,
                                 'matrix': matrix,
                                 'MT': MT,
-                                'zt': zt[tr_index]}
+                                'zt': zt[tr_index], 'decision': decision}
                 left_right_matrix(zt[tr_index], coh[tr_index],
                                   detected_com, resp_fin[tr_index])
                 pcom_model_vs_data(detected_com, com[tr_index],
@@ -2219,10 +2223,10 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(8e4)
+    num_tr = int(1e5)
     load_data = True
     new_sample = True
-    single_run = False
+    single_run = True
     shuffle = True
     simulate = True
     parallel = False
@@ -2254,7 +2258,7 @@ if __name__ == '__main__':
                 if splitting:
                     subfolder = '/splitting'
                 else:
-                    subfolder = 'SampleLE43'
+                    subfolder = ''
                 files = glob.glob(DATA_FOLDER+subfolder+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))],
                                allow_pickle=True)
@@ -2290,14 +2294,14 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 12
+            p_t_aff = 13
             p_t_eff = 6
-            p_t_a = 18
-            p_w_zt = 0.1
-            p_w_stim = 0.05
-            p_e_noise = 0.03
+            p_t_a = 17
+            p_w_zt = 0.25
+            p_w_stim = 0.03
+            p_e_noise = 0.01
             p_com_bound = 0.
-            p_w_a = 0.028
+            p_w_a = 0.03
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
             p_2nd_readout = 180
@@ -2309,18 +2313,18 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            if plot:
-                # left_right_matrix(zt, coh, com, decision)
-                data_to_plot = {'sound_len': sound_len,
-                                'CoM': com,
-                                'first_resp': decision*[~com*(-1)],
-                                'final_resp': decision,
-                                'hithistory': hit,
-                                'avtrapz': coh,
-                                'detected_com': com,
-                                'MT': resp_len*1e3,
-                                'zt': zt}
-                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            # if plot:
+            #     # left_right_matrix(zt, coh, com, decision)
+            #     data_to_plot = {'sound_len': sound_len,
+            #                     'CoM': com,
+            #                     'first_resp': decision*[~com*(-1)],
+            #                     'final_resp': decision,
+            #                     'hithistory': hit,
+            #                     'avtrapz': coh,
+            #                     'detected_com': com,
+            #                     'MT': resp_len*1e3,
+            #                     'zt': zt, 'decision': decision}
+            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
             zt = zt[:int(num_tr)]
