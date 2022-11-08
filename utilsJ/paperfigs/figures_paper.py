@@ -10,21 +10,21 @@ import seaborn as sns
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.paperfigs import fig1, fig3, fig2
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 BINS_RT = np.linspace(1, 301, 21)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -151,7 +151,7 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
     ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
             histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
-    ax.set_ylabel('Density')
+    ax.set_ylabel('Frequency')
     ax.set_xlim(0, max(BINS_RT))
 
 
@@ -211,7 +211,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
                 kwargs_error={'label': 'Data', 'color': 'k'})
     ax[1].set_xlabel('Coherence')
     ax[1].set_ylabel('Probability of right')
-    hit_model = hit_model[reaction_time >= 0]
+    hit_model = hit_model[sound_len_model >= 0]
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
     com_model = com_model[sound_len_model >= 0]
@@ -238,9 +238,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
-                            'com_model': com_model[sound_len_model >= 0],
+                            'com_model': com_model,
                             'com_model_detected':
-                                com_model_detected[sound_len_model >= 0]})
+                                com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                  errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[5])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
@@ -272,11 +272,12 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     # ax[8].set_title('Data')
     # sns.heatmap(matrix_model, ax=ax[9])
     # ax[9].set_title('Model')
+    zt_model = zt[sound_len_model >= 0]
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
-                                 com_model_detected[sound_len_model >= 0],
+                                 com_model_detected,
                              'norm_allpriors':
-                                 zt/max(abs(zt))[sound_len_model >= 0],
+                                 zt_model/max(abs(zt_model)),
                              'R_response': (decision_model+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_model, side=0)
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
@@ -288,31 +289,18 @@ def run_model(stim, zt, coh, gt, trial_index):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 6
-<<<<<<< Updated upstream
-    p_t_eff = 5
-    p_t_a = 10
-    p_w_zt = 0.25
-    p_w_stim = 0.05
+    p_t_aff = 5
+    p_t_eff = 0
+    p_t_a = 18
+    p_w_zt = 0.2
+    p_w_stim = 0.0135
     p_e_noise = 0.01
     p_com_bound = 0.
-    p_w_a = 0.035
-    p_a_noise = np.sqrt(5e-3)
-    p_1st_readout = 120
-    p_2nd_readout = 180
-=======
-    p_t_eff = 6
-    p_t_a = int(18 - p_t_eff)
-    p_w_zt = 0.15
-    p_w_stim = 0.2
-    p_e_noise = 0.035
-    p_com_bound = 0.
     p_w_a_intercept = 0.037
-    p_w_a_slope = -3e-05
-    p_a_noise = np.sqrt(5e-3)
+    p_w_a_slope = -3e-5
+    p_a_noise = 0
     p_1st_readout = 80
     p_2nd_readout = 160
->>>>>>> Stashed changes
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
@@ -356,8 +344,8 @@ def run_model(stim, zt, coh, gt, trial_index):
                                  compute_trajectories=compute_trajectories,
                                  stim_res=stim_res, all_trajs=all_trajs)
     hit_model = resp_fin == gt
-    reaction_time = (first_ind[tr_index]+p_t_eff -
-                     int(300/stim_res))*stim_res
+    first_ind[pro_vs_re == 1] += p_t_eff
+    reaction_time = (first_ind[tr_index]-int(300/stim_res))*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model
 

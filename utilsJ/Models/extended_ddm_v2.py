@@ -22,13 +22,9 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-<<<<<<< Updated upstream
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-=======
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
->>>>>>> Stashed changes
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -38,24 +34,15 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-<<<<<<< Updated upstream
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-=======
 SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
->>>>>>> Stashed changes
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-<<<<<<< Updated upstream
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-=======
 DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
->>>>>>> Stashed changes
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
 
@@ -380,22 +367,14 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     fig, ax = plt.subplots(1)
     zt = data_to_plot['zt'] * data_to_plot['final_resp']
     coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
-<<<<<<< Updated upstream
     if data:
         com = data_to_plot['CoM']
     if not data:
         com = data_to_df['detected_com']
-    matrix, _ = com_heatmap_jordi(zt, coh, com,
-                                  return_mat=True, flip=True)
-    sns.heatmap(matrix, ax=ax)
-    decision = data_to_plot['decision']
-=======
-    com = data_to_plot['CoM']
+    decision = data_to_plot['final_resp']
     com_heatmap_jordi(zt, coh, com, ax=ax, annotate=False, return_mat=False,
                       flip=True, xlabel='prior congruency',
                       ylabel='avg stim congruency', cmap='rocket')
-    decision = data_to_plot['final_resp']
->>>>>>> Stashed changes
     left_right_matrix(zt, coh, com, decision)
 
 
@@ -835,7 +814,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         if (indx_hit_bound).any():
             hit_bound = np.where(indx_hit_bound)[0][0]
         # search where action bound is reached
-        indx_hit_action = np.abs(A[:, i_t]) >= bound_a
+        indx_hit_action = A[:, i_t] >= bound_a
         hit_action = max_integration_time
         if (indx_hit_action).any():
             hit_action = np.where(indx_hit_action)[0][0]
@@ -1194,8 +1173,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                                    sound_len[tr_index], reaction_time)
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
                 MT = np.array(MT)*1e-3
-                MT_vs_ev(resp_len=MT, coh=coh[tr_index],
-                         com=detected_com)
+                # MT_vs_ev(resp_len=MT, coh=coh[tr_index],
+                #          com=detected_com)
                 if kernels_model:
                     kernels(coh=coh[tr_index], zt=zt[tr_index],
                             sound_len=reaction_time,
@@ -2287,11 +2266,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1e5)
     load_data = True
-<<<<<<< Updated upstream
-    new_sample = True
-=======
     new_sample = False
->>>>>>> Stashed changes
     single_run = True
     shuffle = True
     simulate = True
@@ -2324,7 +2299,7 @@ if __name__ == '__main__':
                 if splitting:
                     subfolder = '/splitting'
                 else:
-                    subfolder = ''
+                    subfolder = 'SampleLE43'
                 files = glob.glob(DATA_FOLDER+subfolder+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))],
                                allow_pickle=True)
@@ -2360,18 +2335,8 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-<<<<<<< Updated upstream
-            p_t_aff = 13
-            p_t_eff = 6
-            p_t_a = 17
-            p_w_zt = 0.25
-            p_w_stim = 0.03
-            p_e_noise = 0.01
-            p_com_bound = 0.
-            p_w_a = 0.03
-=======
-            p_t_aff = 6
-            p_t_eff = 6
+            p_t_aff = 4
+            p_t_eff = 4
             p_t_a = 18
             p_w_zt = 0.15
             p_w_stim = 0.07
@@ -2379,7 +2344,6 @@ if __name__ == '__main__':
             p_com_bound = 0.
             p_w_a_intercept = 0.037
             p_w_a_slope = -3e-05
->>>>>>> Stashed changes
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
             p_2nd_readout = 160
