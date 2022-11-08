@@ -22,8 +22,13 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+<<<<<<< Updated upstream
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+=======
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+>>>>>>> Stashed changes
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -33,14 +38,24 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
+<<<<<<< Updated upstream
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+=======
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+>>>>>>> Stashed changes
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+<<<<<<< Updated upstream
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+=======
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+>>>>>>> Stashed changes
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
 
@@ -312,6 +327,30 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
         ax[2].set_title('pCoM in proac. trials')
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
+    fig.suptitle('Stim/prior')
+    sound_len = data_to_plot['sound_len']
+    window = 50
+    if data:
+        tit = 'Data: '
+    else:
+        tit = 'Model: '
+    for i in range(4):
+        zt = data_to_plot['zt'][(sound_len > window*i) *
+                                (sound_len < window*(i+1))]
+        coh = data_to_plot['avtrapz'][(sound_len > window*i) *
+                                      (sound_len < window*(i+1))]
+        if data:
+            com = data_to_plot['CoM'][(sound_len > window*i) *
+                                      (sound_len < window*(i+1))]
+        if not data:
+            com = data_to_plot['detected_com'][(sound_len > window*i) *
+                                               (sound_len < window*(i+1))]
+        com_heatmap_jordi(zt, coh, com, return_mat=False, flip=True, ax=ax[i],
+                          annotate=False, cmap='rocket')
+        ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
+    fig, ax = plt.subplots(nrows=2, ncols=2)
+    ax = ax.flatten()
+    fig.suptitle('Stim/prior congruent with final decision')
     sound_len = data_to_plot['sound_len']
     window = 50
     if data:
@@ -333,13 +372,15 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
         if not data:
             com = data_to_plot['detected_com'][(sound_len > window*i) *
                                                (sound_len < window*(i+1))]
-        matrix, _ = com_heatmap_jordi(zt, coh, com,
-                                      return_mat=True, flip=True)
-        sns.heatmap(matrix, ax=ax[i])
+        com_heatmap_jordi(zt, coh, com, annotate=False,
+                          return_mat=False, flip=True, ax=ax[i],
+                          xlabel='prior congruency',
+                          ylabel='avg stim congruency', cmap='rocket')
         ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
     fig, ax = plt.subplots(1)
     zt = data_to_plot['zt'] * data_to_plot['final_resp']
     coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
+<<<<<<< Updated upstream
     if data:
         com = data_to_plot['CoM']
     if not data:
@@ -348,12 +389,20 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                                   return_mat=True, flip=True)
     sns.heatmap(matrix, ax=ax)
     decision = data_to_plot['decision']
+=======
+    com = data_to_plot['CoM']
+    com_heatmap_jordi(zt, coh, com, ax=ax, annotate=False, return_mat=False,
+                      flip=True, xlabel='prior congruency',
+                      ylabel='avg stim congruency', cmap='rocket')
+    decision = data_to_plot['final_resp']
+>>>>>>> Stashed changes
     left_right_matrix(zt, coh, com, decision)
 
 
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                       predefbins=None, return_mat=False,
-                      folding=False, annotate_div=1, **kwargs):
+                      folding=False, annotate_div=1, ax=None,
+                      xlabel='prior', ylabel='average stim', **kwargs):
     """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated
     from tmp dataframe
     g = sns.FacetGrid(df[df.special_trial==0].dropna(
@@ -459,31 +508,31 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
         # nmat = np.flipud(nmat)
         # stimlabels=np.flip(stimlabels)
         if annotate:
-            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat),
-                            **kwargs).set(xlabel="prior",
-                                          ylabel="average stim",
+            g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), ax=ax,
+                            **kwargs).set(xlabel=xlabel,
+                                          ylabel=ylabel,
                                           xticklabels=priorlabels,
                                           yticklabels=np.flip(stimlabels))
 
         else:
-            g = sns.heatmap(np.flipud(matrix), annot=None, **kwargs).set(
-                xlabel="prior",
-                ylabel="average stim",
+            g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None, **kwargs).set(
+                xlabel=xlabel,
+                ylabel=ylabel,
                 xticklabels=priorlabels,
                 yticklabels=np.flip(stimlabels),
             )
     else:
         if annotate:
-            g = sns.heatmap(matrix, annot=annotmat, **kwargs).set(
-                xlabel="prior",
-                ylabel="average stim",
+            g = sns.heatmap(matrix, ax=ax, annot=annotmat, **kwargs).set(
+                xlabel=xlabel,
+                ylabel=ylabel,
                 xticklabels=priorlabels,
                 yticklabels=stimlabels,
             )
         else:
-            g = sns.heatmap(matrix, annot=None, **kwargs).set(
-                xlabel="prior",
-                ylabel="average stim",
+            g = sns.heatmap(matrix, ax=ax, annot=None, **kwargs).set(
+                xlabel=xlabel,
+                ylabel=ylabel,
                 xticklabels=priorlabels,
                 yticklabels=stimlabels,
             )
@@ -665,16 +714,19 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         fix_onset = None
         traj_stamps = None
     if return_df:
-        return df
+        if after_correct:
+            return df.query("aftererror == 0")
+        else:
+            return df
     else:
         return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
             hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
 
 
-def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
-                        p_e_noise, p_com_bound, p_t_eff, p_t_aff,
-                        p_t_a, p_w_a, p_a_noise, p_1st_readout,
-                        p_2nd_readout, num_tr, stim_res,
+def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_zt,
+                        p_w_stim, p_e_noise, p_com_bound, p_t_eff, p_t_aff,
+                        p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise,
+                        p_1st_readout, p_2nd_readout, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(3e4),
                         fixation_ms=300):
@@ -706,7 +758,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         fitting parameter: afferent latency to integrate stimulus.
     p_t_a : float
         fitting parameter: latency for action integration.
-    p_w_a : float
+    p_w_a_intercept : float
         fitting parameter: drift of action noise.
     p_a_noise : float
         fitting parameter: standard deviation of action noise (gaussian).
@@ -757,7 +809,8 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
     N = Ve.shape[0]
     # add noise
     dW = np.random.randn(N, num_tr)*p_e_noise+Ve
-    dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a
+    dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a_intercept +\
+        p_w_a_slope*trial_index
     # zeros before p_t_a
     dA[:(p_t_a-p_t_eff), :] = 0
     # accumulate
@@ -851,7 +904,7 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*(i_t % num_trials_per_session) + MT_intercep
+            MT = MT_slope*trial_index[i_t] + MT_intercep
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
@@ -923,10 +976,11 @@ def trial_ev_vectorized(zt, stim, coh, MT_slope, MT_intercep, p_w_zt, p_w_stim,
             rt_vals, rt_bins, None
 
 
-def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
-              configurations, jitters, stim_res, compute_trajectories=False,
-              plot=False, existing_data=None, detect_CoMs_th=5, shuffle=False,
-              all_trajs=False, kernels_model=False):
+def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamps,
+              fix_onset, configurations, jitters, stim_res,
+              compute_trajectories=False, plot=False, existing_data=None,
+              detect_CoMs_th=5, shuffle=False, all_trajs=False,
+              kernels_model=False):
     """
 
     Parameters
@@ -969,7 +1023,8 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                       'p_e_noise': p_e_noise_vals,
                       'p_com_bound': p_com_bound_vals,
                       'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
-                      'p_t_a': p_t_a_vals, 'p_w_a': p_w_a_vals,
+                      'p_t_a': p_t_a_vals, 'p_w_a_intercept': p_w_a_intercept_vals,
+                      'p_w_a_slope': p_w_a_slope_vals,
                       'p_a_noise': p_a_noise_vals,
                       'p_1st_readout': p_1st_readout_vals,
                       'p_2nd_readout': p_2nd_readout_vals,
@@ -996,6 +1051,7 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
         zt = zt[indx_sh]
         coh = coh[indx_sh]
         gt = gt[indx_sh]
+        trial_index = trial_index[indx_sh]
     if com is not None:
         com = com[indx_sh]
     if sound_len is not None:
@@ -1014,7 +1070,8 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
     p_t_aff_vals = []
     p_t_eff_vals = []
     p_t_a_vals = []
-    p_w_a_vals = []
+    p_w_a_intercept_vals = []
+    p_w_a_slope_vals = []
     p_a_noise_vals = []
     p_1st_readout_vals = []
     p_2nd_readout_vals = []
@@ -1034,10 +1091,11 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
         print('p_t_aff: '+str(conf[4]))
         print('p_t_eff: '+str(conf[5]))
         print('p_t_a: '+str(conf[6]))
-        print('p_w_a: '+str(conf[7]))
-        print('p_a_noise: '+str(conf[8]))
-        print('p_1st_readout: '+str(conf[9]))
-        print('p_2nd_readout: '+str(conf[10]))
+        print('p_w_a_intercept: '+str(conf[7]))
+        print('p_w_a_slope: '+str(conf[8]))
+        print('p_a_noise: '+str(conf[9]))
+        print('p_1st_readout: '+str(conf[10]))
+        print('p_2nd_readout: '+str(conf[11]))
         start = time.time()
         if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -1047,10 +1105,11 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
             p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
             p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
             p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
-            p_w_a = conf[7]+jitters[7]*np.random.rand()
-            p_a_noise = conf[8]+jitters[8]*np.random.rand()
-            p_1st_readout = conf[9]+jitters[9]*np.random.rand()
-            p_2nd_readout = conf[10]+jitters[10]*np.random.rand()
+            p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
+            p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+            p_a_noise = conf[9]+jitters[9]*np.random.rand()
+            p_1st_readout = conf[10]+jitters[10]*np.random.rand()
+            p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
             stim_temp =\
                 np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
@@ -1060,11 +1119,13 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
                 frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
                 rt_vals, rt_bins, tr_index =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
+                                    trial_index=trial_index,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                     p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                    num_tr=num_tr, p_w_a=p_w_a,
+                                    num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+                                    p_w_a_slope=p_w_a_slope,
                                     p_a_noise=p_a_noise,
                                     p_1st_readout=p_1st_readout,
                                     p_2nd_readout=p_2nd_readout,
@@ -1149,10 +1210,11 @@ def run_model(stim, zt, coh, gt, com, sound_len, traj_y, traj_stamps, fix_onset,
             p_t_aff_vals.append([conf[4], p_t_aff])
             p_t_eff_vals.append([conf[5], p_t_eff])
             p_t_a_vals.append([conf[6], p_t_a])
-            p_w_a_vals.append([conf[7], p_w_a])
-            p_a_noise_vals.append([conf[8], p_a_noise])
-            p_1st_readout_vals.append([conf[9], p_1st_readout])
-            p_2nd_readout_vals.append([conf[10], p_2nd_readout])
+            p_w_a_intercept_vals.append([conf[7], p_w_a_intercept])
+            p_w_a_slope_vals.append([conf[8], p_w_a_slope])
+            p_a_noise_vals.append([conf[9], p_a_noise])
+            p_1st_readout_vals.append([conf[10], p_1st_readout])
+            p_2nd_readout_vals.append([conf[11], p_2nd_readout])
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
             xpos_rt_pcom.append(xpos_plot)
@@ -1177,7 +1239,7 @@ def set_parameters(num_vals=3, factor=8):
     p_w_stim = 0.2
     p_e_noise = 0.06
     p_com_bound = 0.1
-    p_w_a = 0.03
+    p_w_a_intercept = 0.03
     p_a_noise = 0.04
     p_1st_readout = 5
     """
@@ -1188,14 +1250,14 @@ def set_parameters(num_vals=3, factor=8):
     p_t_aff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
     p_t_eff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
     p_t_a_list = [18]
-    p_w_a_list = [0.03]
+    p_w_a_intercept_list = [0.03]
     p_a_noise_list = [np.sqrt(5e-3)]
     p_1st_readout_list = np.linspace(80, 140, num=num_vals)
     p_2nd_readout_list = np.linspace(100, 175, num=num_vals)
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
-                                            p_w_a_list, p_a_noise_list,
+                                            p_w_a_intercept_list, p_a_noise_list,
                                             p_1st_readout_list,
                                             p_2nd_readout_list))
     if num_vals == 1:
@@ -2225,7 +2287,11 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1e5)
     load_data = True
+<<<<<<< Updated upstream
     new_sample = True
+=======
+    new_sample = False
+>>>>>>> Stashed changes
     single_run = True
     shuffle = True
     simulate = True
@@ -2271,9 +2337,9 @@ if __name__ == '__main__':
                 resp_len = data['resp_len']
                 decision = data['decision']
                 hit = data['hit']
+                trial_index = data['trial_index']
                 if silent:
                     special_trial = data['special_trial']
-                # trial_index = data['trial_index']
                 if splitting:
                     traj_y = data['trajectory_y']
                     fix_onset = data['fix_onset_dt']
@@ -2294,6 +2360,7 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
+<<<<<<< Updated upstream
             p_t_aff = 13
             p_t_eff = 6
             p_t_a = 17
@@ -2302,14 +2369,27 @@ if __name__ == '__main__':
             p_e_noise = 0.01
             p_com_bound = 0.
             p_w_a = 0.03
+=======
+            p_t_aff = 6
+            p_t_eff = 6
+            p_t_a = 18
+            p_w_zt = 0.15
+            p_w_stim = 0.07
+            p_e_noise = 0.035
+            p_com_bound = 0.
+            p_w_a_intercept = 0.037
+            p_w_a_slope = -3e-05
+>>>>>>> Stashed changes
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
-            p_2nd_readout = 180
+            p_2nd_readout = 160
             compute_trajectories = True
             plot = True
             all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-                              p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
+                              p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope,
+                              p_a_noise,
+                              p_1st_readout,
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
@@ -2333,6 +2413,7 @@ if __name__ == '__main__':
             coh = coh[:int(num_tr)]
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
+            trial_index = trial_index[:int(num_tr)]
             hit = hit[:int(num_tr)]
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
@@ -2358,11 +2439,13 @@ if __name__ == '__main__':
             com = com[:int(num_tr)]
             gt = gt[:int(num_tr)]
             hit = hit[:int(num_tr)]
+            trial_index = trial_index[:int(num_tr)]
             configurations = list(configurations)
             num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
             Parallel(n_jobs=num_cores)\
-                (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt, com=None,
+                (delayed(run_model)(stim=stim, zt=zt, coh=coh, gt=gt,
+                                    trial_index=trial_index, com=None,
                                     sound_len=None, traj_y=None,
                                     configurations=configurations
                                     [int(i_par*step):int((i_par+1)*step)],
@@ -2375,6 +2458,7 @@ if __name__ == '__main__':
                  for i_par in range(num_cores))
         else:  # sequential runs
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
+                      trial_index=trial_index,
                       sound_len=sound_len, traj_y=traj_y,
                       traj_stamps=traj_stamps, fix_onset=fix_onset,
                       configurations=configurations, jitters=jitters,

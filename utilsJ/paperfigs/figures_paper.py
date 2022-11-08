@@ -148,7 +148,7 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
         color = 'k'
     if label == 'Model':
         color = 'red'
-    ax.hist(sound_len, bins=bins, alpha=0.3, density=True, linewidth=0.,
+    ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
             histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
     ax.set_ylabel('Density')
@@ -282,13 +282,14 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
-def run_model(stim, zt, coh, gt):
+def run_model(stim, zt, coh, gt, trial_index):
     num_tr = int(len(zt))
     data_augment_factor = 10
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
     p_t_aff = 6
+<<<<<<< Updated upstream
     p_t_eff = 5
     p_t_a = 10
     p_w_zt = 0.25
@@ -299,12 +300,25 @@ def run_model(stim, zt, coh, gt):
     p_a_noise = np.sqrt(5e-3)
     p_1st_readout = 120
     p_2nd_readout = 180
+=======
+    p_t_eff = 6
+    p_t_a = int(18 - p_t_eff)
+    p_w_zt = 0.15
+    p_w_stim = 0.2
+    p_e_noise = 0.035
+    p_com_bound = 0.
+    p_w_a_intercept = 0.037
+    p_w_a_slope = -3e-05
+    p_a_noise = np.sqrt(5e-3)
+    p_1st_readout = 80
+    p_2nd_readout = 160
+>>>>>>> Stashed changes
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
     conf = [p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-            p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
             p_2nd_readout]
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
@@ -315,10 +329,11 @@ def run_model(stim, zt, coh, gt):
     p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
-    p_w_a = conf[7]+jitters[7]*np.random.rand()
-    p_a_noise = conf[8]+jitters[8]*np.random.rand()
-    p_1st_readout = conf[9]+jitters[9]*np.random.rand()
-    p_2nd_readout = conf[10]+jitters[10]*np.random.rand()
+    p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
+    p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+    p_a_noise = conf[9]+jitters[9]*np.random.rand()
+    p_1st_readout = conf[10]+jitters[10]*np.random.rand()
+    p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -328,11 +343,13 @@ def run_model(stim, zt, coh, gt):
         frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
         rt_vals, rt_bins, tr_index =\
         edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
+                                 trial_index=trial_index,
                                  MT_slope=MT_slope, MT_intercep=MT_intercep,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                  p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                 num_tr=num_tr, p_w_a=p_w_a,
+                                 num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+                                 p_w_a_slope=p_w_a_slope,
                                  p_a_noise=p_a_noise,
                                  p_1st_readout=p_1st_readout,
                                  p_2nd_readout=p_2nd_readout,
@@ -349,7 +366,8 @@ def run_model(stim, zt, coh, gt):
 if __name__ == '__main__':
     plt.close('all')
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
-                                  return_df=True, sv_folder=SV_FOLDER)
+                                  return_df=True, sv_folder=SV_FOLDER,
+                                  after_correct=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = False
@@ -395,8 +413,9 @@ if __name__ == '__main__':
         decision = np.array(df.R_response) * 2 - 1
         sound_len = np.array(df.sound_len)
         gt = np.array(df.rewside) * 2 - 1
+        trial_index = np.array(df.origidx)
         hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt)
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
