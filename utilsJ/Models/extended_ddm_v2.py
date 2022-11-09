@@ -2265,7 +2265,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(8e4)
+    num_tr = int(3e4)
     load_data = True
     new_sample = True
     single_run = False
