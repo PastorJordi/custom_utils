@@ -138,7 +138,7 @@ def tachometric_data(coh, hit, sound_len, ax):
     ax.set_ylabel('Accuracy')
     ax.set_title('Data')
     ax.set_ylim(0, 1.1)
-    ax.legend()
+    ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
 
@@ -152,7 +152,7 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
             histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
     ax.set_ylabel('Frequency')
-    ax.set_xlim(0, max(BINS_RT))
+    # ax.set_xlim(0, max(bins))
 
 
 def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
@@ -227,8 +227,10 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
                                              sound_len_model >= 0],
                                          ax=ax[3])
     ax[3].set_title('Model')
-    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0])
-    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0])
+    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
+                            bins=np.linspace(-300, 400, 70))
+    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0],
+                            bins=np.linspace(-300, 400, 70))
     ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')
@@ -261,7 +263,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[6].set_ylabel('PCoM')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
-                            'R_response': decision})
+                            'R_response': (decision+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_data, side=0)
     com_heatmap_paper_marginal_pcom_side(df_data, side=1)
     # matrix_data, _ = edd2.com_heatmap_jordi(zt, coh, com,
@@ -289,16 +291,16 @@ def run_model(stim, zt, coh, gt, trial_index):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 5
-    p_t_eff = 0
-    p_t_a = 18
+    p_t_aff = 12
+    p_t_eff = 6
+    p_t_a = int(18 - p_t_eff)  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
-    p_w_stim = 0.0135
-    p_e_noise = 0.01
+    p_w_stim = 0.08
+    p_e_noise = 0.06
     p_com_bound = 0.
     p_w_a_intercept = 0.037
-    p_w_a_slope = -3e-5
-    p_a_noise = 0
+    p_w_a_slope = -3e-05  # fixed
+    p_a_noise = np.sqrt(5e-3)  # fixed
     p_1st_readout = 80
     p_2nd_readout = 160
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
@@ -344,8 +346,7 @@ def run_model(stim, zt, coh, gt, trial_index):
                                  compute_trajectories=compute_trajectories,
                                  stim_res=stim_res, all_trajs=all_trajs)
     hit_model = resp_fin == gt
-    first_ind[pro_vs_re == 1] += p_t_eff
-    reaction_time = (first_ind[tr_index]-int(300/stim_res))*stim_res
+    reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model
 
@@ -393,15 +394,25 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
+        after_correct_id = np.where(df.aftererror == 0)[0]
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        zt = zt[after_correct_id]
         hit = np.array(df['hithistory'])
+        hit = hit[after_correct_id]
         stim = np.array([stim for stim in df.res_sound])
+        stim = stim[after_correct_id, :]
         coh = np.array(df.coh2)
+        coh = coh[after_correct_id]
         com = df.CoM_sugg.values
+        com = com[after_correct_id]
         decision = np.array(df.R_response) * 2 - 1
+        decision = decision[after_correct_id]
         sound_len = np.array(df.sound_len)
+        sound_len = sound_len[after_correct_id]
         gt = np.array(df.rewside) * 2 - 1
+        gt = gt[after_correct_id]
         trial_index = np.array(df.origidx)
+        trial_index = trial_index[after_correct_id]
         hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,

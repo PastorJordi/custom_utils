@@ -24,24 +24,24 @@ from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 21)
@@ -193,8 +193,6 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     if data:
         fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
         ax = ax.flatten()
-        trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
-        data_to_plot['trial_idxs'] = trial_idxs
         data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
                                                          'hithistory',
                                                          'avtrapz',
@@ -203,8 +201,6 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     else:
         fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
         ax = ax.flatten()
-        trial_idxs = np.arange(len(data_to_plot['sound_len'])) % 600
-        data_to_plot['trial_idxs'] = trial_idxs
         data_to_plot['re_vs_pro'] = (data_to_plot['pro_vs_re'] - 1)*(-1)
         data_to_df = {key: data_to_plot[key] for key in ['CoM', 'sound_len',
                                                          'detected_com',
@@ -791,7 +787,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a_intercept +\
         p_w_a_slope*trial_index
     # zeros before p_t_a
-    dA[:(p_t_a-p_t_eff), :] = 0
+    dA[:p_t_a, :] = 0
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
@@ -852,7 +848,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         second_ind.append(indx_update_ch)
         second_ev.append(E[indx_update_ch, i_t])
     com = resp_first != resp_fin
-    first_ind = np.array(first_ind).astype(int)
+    first_ind = np.array(first_ind)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=17, range=(-100, 300))
@@ -1114,8 +1110,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
             print(np.mean(com_model))
             if plot:
                 start_plot = time.time()
-                reaction_time = (first_ind[tr_index]+p_t_eff -
-                                 int(300/stim_res))*stim_res
+                reaction_time = (first_ind[tr_index] + p_t_eff -
+                                 300/stim_res)*stim_res
                 detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
                 MT = [len(t) for t in total_traj]
                 # ind_com_model = detected_com.astype(int)
@@ -1166,7 +1162,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                                 'detected_mat': detected_mat,
                                 'matrix': matrix,
                                 'MT': MT,
-                                'zt': zt[tr_index], 'decision': decision}
+                                'zt': zt[tr_index], 'decision': decision,
+                                'trial_idxs': trial_index[tr_index]}
                 left_right_matrix(zt[tr_index], coh[tr_index],
                                   detected_com, resp_fin[tr_index])
                 pcom_model_vs_data(detected_com, com[tr_index],
@@ -1225,14 +1222,14 @@ def set_parameters(num_vals=3, factor=8):
     p_w_zt_list = np.linspace(0.1, 0.25, num=num_vals)
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
-    p_com_bound_list = np.linspace(0, 0.2, num=num_vals-2)
-    p_t_aff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
-    p_t_eff_list = np.linspace(8, 16, num=num_vals-1, dtype=int)
-    p_t_a_list = [18]
-    p_w_a_intercept_list = [0.03]
-    p_a_noise_list = [np.sqrt(5e-3)]
-    p_1st_readout_list = np.linspace(80, 140, num=num_vals)
-    p_2nd_readout_list = np.linspace(100, 175, num=num_vals)
+    p_com_bound_list = [0]
+    p_t_aff_list = np.linspace(4, 15, num=num_vals, dtype=int)
+    p_t_eff_list = np.linspace(4, 15, num=num_vals, dtype=int)
+    p_t_a_list = np.linspace(12, 20, num=num_vals)
+    p_w_a_intercept_list = np.linspace(0.02, 0.05, num=num_vals)
+    p_a_noise_list = np.linspace(0.03, 0.09, num=num_vals)
+    p_1st_readout_list = [80]
+    p_2nd_readout_list = [180]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -1245,14 +1242,14 @@ def set_parameters(num_vals=3, factor=8):
         jitters = [np.diff(p_w_zt_list)[0]/factor,
                    np.diff(p_w_stim_list)[0]/factor,
                    0.0001,
-                   np.diff(p_com_bound_list)[0]/factor,
+                   0.01,
                    np.diff(p_t_aff_list)[0]/factor,
                    np.diff(p_t_eff_list)[0]/factor,
                    0.5,
                    0.005,
                    0.0001,
-                   np.diff(p_1st_readout_list)[0]/factor,
-                   np.diff(p_2nd_readout_list)[0]/factor]
+                   1,
+                   1]
     return configurations, jitters
 
 
@@ -2281,7 +2278,7 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE40_',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2299,7 +2296,7 @@ if __name__ == '__main__':
                 if splitting:
                     subfolder = '/splitting'
                 else:
-                    subfolder = 'SampleLE43'
+                    subfolder = ''
                 files = glob.glob(DATA_FOLDER+subfolder+'/sample_*')
                 data = np.load(files[np.random.choice(a=len(files))],
                                allow_pickle=True)
@@ -2335,20 +2332,20 @@ if __name__ == '__main__':
             stim_res = 1
         # RUN MODEL
         if single_run:  # single run with specific parameters
-            p_t_aff = 4
-            p_t_eff = 4
-            p_t_a = 18
-            p_w_zt = 0.15
-            p_w_stim = 0.07
-            p_e_noise = 0.035
+            p_t_aff = 2
+            p_t_eff = 5
+            p_t_a = int(18 - p_t_eff)  # 90 ms (18) PSIAM fit includes p_t_eff
+            p_w_zt = 0.2
+            p_w_stim = 0.15
+            p_e_noise = 0.04
             p_com_bound = 0.
-            p_w_a_intercept = 0.037
+            p_w_a_intercept = 0
             p_w_a_slope = -3e-05
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
             p_2nd_readout = 160
             compute_trajectories = True
-            plot = True
+            plot = False
             all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope,
@@ -2367,7 +2364,8 @@ if __name__ == '__main__':
             #                     'avtrapz': coh,
             #                     'detected_com': com,
             #                     'MT': resp_len*1e3,
-            #                     'zt': zt, 'decision': decision}
+            #                     'zt': zt, 'decision': decision,
+            #                     'trial_idxs': trial_index}
             #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
             decision = decision[:int(num_tr)]
             stim = stim[:, :int(num_tr)]
@@ -2389,7 +2387,7 @@ if __name__ == '__main__':
                 traj_stamps = None
         else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=4)
-            compute_trajectories = True
+            compute_trajectories = False
             plot = False
             all_trajs = True
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
