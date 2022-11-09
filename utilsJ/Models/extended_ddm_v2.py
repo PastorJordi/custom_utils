@@ -2265,7 +2265,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(8e4)
     load_data = True
     new_sample = True
     single_run = False
@@ -2335,6 +2335,16 @@ if __name__ == '__main__':
                 np.random.randn(num_timesteps, num_tr)*1e-1
             stim_res = 1
         # RUN MODEL
+        decision = decision[:int(num_tr)]
+        stim = stim[:, :int(num_tr)]
+        zt = zt[:int(num_tr)]
+        sound_len = sound_len[:int(num_tr)]
+        resp_len = resp_len[:int(num_tr)]
+        coh = coh[:int(num_tr)]
+        com = com[:int(num_tr)]
+        gt = gt[:int(num_tr)]
+        trial_index = trial_index[:int(num_tr)]
+        hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
             p_t_aff = 2
             p_t_eff = 5
@@ -2371,16 +2381,6 @@ if __name__ == '__main__':
             #                     'zt': zt, 'decision': decision,
             #                     'trial_idxs': trial_index}
             #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
-            decision = decision[:int(num_tr)]
-            stim = stim[:, :int(num_tr)]
-            zt = zt[:int(num_tr)]
-            sound_len = sound_len[:int(num_tr)]
-            resp_len = resp_len[:int(num_tr)]
-            coh = coh[:int(num_tr)]
-            com = com[:int(num_tr)]
-            gt = gt[:int(num_tr)]
-            trial_index = trial_index[:int(num_tr)]
-            hit = hit[:int(num_tr)]
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]
@@ -2396,16 +2396,6 @@ if __name__ == '__main__':
             all_trajs = True
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
         if parallel:  # run simulatings using joblib toolbox
-            decision = decision[:int(num_tr)]
-            stim = stim[:, :int(num_tr)]
-            zt = zt[:int(num_tr)]
-            sound_len = sound_len[:int(num_tr)]
-            resp_len = resp_len[:int(num_tr)]
-            coh = coh[:int(num_tr)]
-            com = com[:int(num_tr)]
-            gt = gt[:int(num_tr)]
-            hit = hit[:int(num_tr)]
-            trial_index = trial_index[:int(num_tr)]
             configurations = list(configurations)
             num_cores = int(mp.cpu_count())
             step = int(np.ceil(len(configurations)/num_cores))
