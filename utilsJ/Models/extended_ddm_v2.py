@@ -35,7 +35,6 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
@@ -851,7 +850,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     first_ind = np.array(first_ind)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
-                                    bins=41, range=(-100, 300))
+                                    bins=np.linspace(-100, 300, 81))
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     # end_eddm = time.time()
@@ -2353,12 +2352,12 @@ if __name__ == '__main__':
             p_w_stim = 0.15
             p_e_noise = 0.04
             p_com_bound = 0.
-            p_w_a_intercept = 0
+            p_w_a_intercept = 0.03
             p_w_a_slope = -3e-05
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
             p_2nd_readout = 160
-            compute_trajectories = True
+            compute_trajectories = False
             plot = False
             all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
