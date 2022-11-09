@@ -2263,7 +2263,7 @@ if __name__ == '__main__':
     # tests_trajectory_update(remaining_time=100, w_updt=10)
     num_tr = int(1e5)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = True
     simulate = True
@@ -2278,7 +2278,7 @@ if __name__ == '__main__':
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE40_',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
