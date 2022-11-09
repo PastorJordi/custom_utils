@@ -851,7 +851,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     first_ind = np.array(first_ind)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
-                                    bins=17, range=(-100, 300))
+                                    bins=41, range=(-100, 300))
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     # end_eddm = time.time()
