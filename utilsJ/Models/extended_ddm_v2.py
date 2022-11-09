@@ -1250,7 +1250,7 @@ def set_parameters(num_vals=3, factor=8):
                    np.diff(p_t_eff_list)[0]/factor,
                    0.5,
                    0.005,
-                   0.0001,
+                   1e-8,
                    0.0001,
                    1,
                    1]

@@ -106,7 +106,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
     nan_penalty = 0.3
     w_rms = 0.5
     if results:
-        files = glob.glob(res_path+'*22.npz')
+        files = glob.glob(res_path+'*180.npz')
         diff_mn = []
         diff_rms_mat = []
         diff_norm_mat = []
