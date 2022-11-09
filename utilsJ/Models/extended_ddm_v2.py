@@ -1219,16 +1219,16 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_1st_readout = 5
     """
-    p_w_zt_list = np.linspace(0.1, 0.25, num=num_vals)
+    p_w_zt_list = np.linspace(0.1, 0.2, num=num_vals-1)
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
-    p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
+    p_e_noise_list = np.linspace(0.02, 0.06, num=num_vals-1)
     p_com_bound_list = [0]
     p_t_aff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
     p_t_eff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
     p_t_a_list = np.linspace(12, 20, num=num_vals)
     p_w_a_intercept_list = np.linspace(0.02, 0.05, num=num_vals)
     p_w_a_slope_list = - np.linspace(2e-5, 4e-5, num=num_vals-1)
-    p_a_noise_list = np.linspace(0.03, 0.09, num=num_vals)
+    p_a_noise_list = np.linspace(0.04, 0.1, num=num_vals-1)
     p_1st_readout_list = [80]
     p_2nd_readout_list = [180]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
