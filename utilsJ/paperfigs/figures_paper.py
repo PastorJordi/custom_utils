@@ -23,6 +23,8 @@ DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 BINS_RT = np.linspace(1, 301, 21)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -136,7 +138,7 @@ def tachometric_data(coh, hit, sound_len, ax):
     ax.set_ylabel('Accuracy')
     ax.set_title('Data')
     ax.set_ylim(0, 1.1)
-    ax.legend()
+    ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
 
@@ -146,11 +148,11 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
         color = 'k'
     if label == 'Model':
         color = 'red'
-    ax.hist(sound_len, bins=bins, alpha=0.3, density=True, linewidth=0.,
+    ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
             histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
-    ax.set_ylabel('Density')
-    ax.set_xlim(0, max(BINS_RT))
+    ax.set_ylabel('Frequency')
+    # ax.set_xlim(0, max(bins))
 
 
 def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
@@ -209,25 +211,38 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
                 kwargs_error={'label': 'Data', 'color': 'k'})
     ax[1].set_xlabel('Coherence')
     ax[1].set_ylabel('Probability of right')
-    psych_curve((decision_model+1)/2, coh, ret_ax=ax[1],
+    hit_model = hit_model[sound_len_model >= 0]
+    com_model_detected = com_model_detected[sound_len_model >= 0]
+    decision_model = decision_model[sound_len_model >= 0]
+    com_model = com_model[sound_len_model >= 0]
+    psych_curve((decision_model+1)/2, coh[sound_len_model >= 0], ret_ax=ax[1],
                 kwargs_error={'label': 'Model', 'color': 'red'},
                 kwargs_plot={'color': 'red'})
     ax[1].legend()
     pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[2])
     ax[2].set_title('Data')
-    pos_tach_ax_model = tachometric_data(coh=coh, hit=hit_model,
-                                         sound_len=sound_len_model, ax=ax[3])
+    pos_tach_ax_model = tachometric_data(coh=coh[sound_len_model >= 0],
+                                         hit=hit_model,
+                                         sound_len=sound_len_model[
+                                             sound_len_model >= 0],
+                                         ax=ax[3])
     ax[3].set_title('Model')
-    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0])
-    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0])
+    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
+                            bins=np.linspace(-300, 400, 70))
+    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0],
+                            bins=np.linspace(-300, 400, 70))
     ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')
-    express_performance(hit=hit_model, coh=coh, sound_len=sound_len_model,
+    express_performance(hit=hit_model, coh=coh[sound_len_model >= 0],
+                        sound_len=sound_len_model[sound_len_model >= 0],
                         pos_tach_ax=pos_tach_ax_model, ax=ax[4], label='Model')
-    df_plot = pd.DataFrame({'com': com, 'sound_len': sound_len,
-                            'rt_model': sound_len_model, 'com_model': com_model,
-                            'com_model_detected': com_model_detected})
+    df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
+                            'sound_len': sound_len[sound_len_model >= 0],
+                            'rt_model': sound_len_model[sound_len_model >= 0],
+                            'com_model': com_model,
+                            'com_model_detected':
+                                com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                  errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[5])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
@@ -248,7 +263,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[6].set_ylabel('PCoM')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
-                            'R_response': decision})
+                            'R_response': (decision+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_data, side=0)
     com_heatmap_paper_marginal_pcom_side(df_data, side=1)
     # matrix_data, _ = edd2.com_heatmap_jordi(zt, coh, com,
@@ -259,36 +274,41 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     # ax[8].set_title('Data')
     # sns.heatmap(matrix_model, ax=ax[9])
     # ax[9].set_title('Model')
-    df_model = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com_model_detected,
-                             'norm_allpriors': zt/max(abs(zt)),
-                             'R_response': decision_model})
+    zt_model = zt[sound_len_model >= 0]
+    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
+                             'CoM_sugg':
+                                 com_model_detected,
+                             'norm_allpriors':
+                                 zt_model/max(abs(zt_model)),
+                             'R_response': (decision_model+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_model, side=0)
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
-def run_model(stim, zt, coh, gt):
+def run_model(stim, zt, coh, gt, trial_index):
     num_tr = int(len(zt))
     data_augment_factor = 10
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 13
+    p_t_aff = 12
     p_t_eff = 6
-    p_t_a = 14
+    p_t_a = int(18 - p_t_eff)  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
-    p_w_stim = 0.12
-    p_e_noise = 0.03
+    p_w_stim = 0.08
+    p_e_noise = 0.06
     p_com_bound = 0.
-    p_w_a = 0.03
-    p_a_noise = np.sqrt(5e-3)
+    p_w_a_intercept = 0.037
+    p_w_a_slope = -3e-05  # fixed
+    p_a_noise = np.sqrt(5e-3)  # fixed
     p_1st_readout = 80
-    p_2nd_readout = 180
+    p_2nd_readout = 160
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
     conf = [p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-            p_t_eff, p_t_a, p_w_a, p_a_noise, p_1st_readout,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
             p_2nd_readout]
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
@@ -299,10 +319,11 @@ def run_model(stim, zt, coh, gt):
     p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
-    p_w_a = conf[7]+jitters[7]*np.random.rand()
-    p_a_noise = conf[8]+jitters[8]*np.random.rand()
-    p_1st_readout = conf[9]+jitters[9]*np.random.rand()
-    p_2nd_readout = conf[10]+jitters[10]*np.random.rand()
+    p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
+    p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+    p_a_noise = conf[9]+jitters[9]*np.random.rand()
+    p_1st_readout = conf[10]+jitters[10]*np.random.rand()
+    p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -312,19 +333,20 @@ def run_model(stim, zt, coh, gt):
         frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
         rt_vals, rt_bins, tr_index =\
         edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
+                                 trial_index=trial_index,
                                  MT_slope=MT_slope, MT_intercep=MT_intercep,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                  p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                 num_tr=num_tr, p_w_a=p_w_a,
+                                 num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+                                 p_w_a_slope=p_w_a_slope,
                                  p_a_noise=p_a_noise,
                                  p_1st_readout=p_1st_readout,
                                  p_2nd_readout=p_2nd_readout,
                                  compute_trajectories=compute_trajectories,
                                  stim_res=stim_res, all_trajs=all_trajs)
     hit_model = resp_fin == gt
-    reaction_time = (first_ind[tr_index]+p_t_eff -
-                     int(300/stim_res))*stim_res
+    reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model
 
@@ -333,7 +355,8 @@ def run_model(stim, zt, coh, gt):
 if __name__ == '__main__':
     plt.close('all')
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
-                                  return_df=True, sv_folder=SV_FOLDER)
+                                  return_df=True, sv_folder=SV_FOLDER,
+                                  after_correct=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = False
@@ -371,16 +394,27 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
+        after_correct_id = np.where(df.aftererror == 0)[0]
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        zt = zt[after_correct_id]
         hit = np.array(df['hithistory'])
+        hit = hit[after_correct_id]
         stim = np.array([stim for stim in df.res_sound])
+        stim = stim[after_correct_id, :]
         coh = np.array(df.coh2)
+        coh = coh[after_correct_id]
         com = df.CoM_sugg.values
+        com = com[after_correct_id]
         decision = np.array(df.R_response) * 2 - 1
+        decision = decision[after_correct_id]
         sound_len = np.array(df.sound_len)
+        sound_len = sound_len[after_correct_id]
         gt = np.array(df.rewside) * 2 - 1
+        gt = gt[after_correct_id]
+        trial_index = np.array(df.origidx)
+        trial_index = trial_index[after_correct_id]
         hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt)
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
