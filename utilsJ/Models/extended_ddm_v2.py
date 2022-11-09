@@ -1223,17 +1223,20 @@ def set_parameters(num_vals=3, factor=8):
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.05, num=num_vals)
     p_com_bound_list = [0]
-    p_t_aff_list = np.linspace(4, 15, num=num_vals, dtype=int)
-    p_t_eff_list = np.linspace(4, 15, num=num_vals, dtype=int)
+    p_t_aff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
+    p_t_eff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
     p_t_a_list = np.linspace(12, 20, num=num_vals)
     p_w_a_intercept_list = np.linspace(0.02, 0.05, num=num_vals)
+    p_w_a_slope_list = - np.linspace(2e-5, 4e-5, num=num_vals-1)
     p_a_noise_list = np.linspace(0.03, 0.09, num=num_vals)
     p_1st_readout_list = [80]
     p_2nd_readout_list = [180]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
-                                            p_w_a_intercept_list, p_a_noise_list,
+                                            p_w_a_intercept_list,
+                                            p_w_a_slope_list,
+                                            p_a_noise_list,
                                             p_1st_readout_list,
                                             p_2nd_readout_list))
     if num_vals == 1:
@@ -1247,6 +1250,7 @@ def set_parameters(num_vals=3, factor=8):
                    np.diff(p_t_eff_list)[0]/factor,
                    0.5,
                    0.005,
+                   0.0001,
                    0.0001,
                    1,
                    1]
