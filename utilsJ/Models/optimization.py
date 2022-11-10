@@ -247,7 +247,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                 action_t_a = []
                 plt.plot(rt_bins[0][:-1], data_rt_dist_norm, label='data',
                          linewidth=1.8)
-            for i in range(10):
+            for i in range(20):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
