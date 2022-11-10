@@ -156,9 +156,11 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             data_rt_dist = np.load(res_path + 'RT_distribution.npy')
             data_rt_dist_norm = data_rt_dist/data_rt_dist.sum()
             # data_rt_bins = np.load(res_path + 'RT_bins.npy')
+            ind_rms = rt_bins[0][:-1] >= 0  # non-considering FB
             for val in range(len(rt_vals)):
                 vals_norm = rt_vals[val, :] / rt_vals[val, :].sum()
-                diff_rms = np.subtract(data_rt_dist_norm, vals_norm)**2
+                diff_rms = np.subtract(data_rt_dist_norm[ind_rms],
+                                       vals_norm[ind_rms])**2
                 diff_rms_mat.append(np.sqrt(np.nansum(diff_rms)))
                 curve_total.append(vals_norm)
         if objective == 'curve':
@@ -219,7 +221,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             ind_min = np.argmax(diff_mn)
         else:
             ind_sorted = np.argsort(np.abs(diff_rms_mat))
-            ind_min = ind_sorted[0]
+            ind_min = ind_sorted[1]
             # second_in = (diff_mn*(diff_mn!=diff_mn[ind_min])).argmin()
         optimal_params = {}
         file_index = np.array(file_index)
@@ -237,9 +239,15 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                          linestyle='', marker='o')
             plt.figure()
             if objective == 'RT':
+                action_slope = []
+                action_intercept = []
+                zt_weight = []
+                stim_weight = []
+                aff_eff_sum = []
+                action_t_a = []
                 plt.plot(rt_bins[0][:-1], data_rt_dist_norm, label='data',
                          linewidth=1.8)
-            for i in range(5):
+            for i in range(10):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
@@ -255,15 +263,45 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                              optimal_params['median_pcom_rt'],
                              label=f'simul_{i}')
                 if objective == 'RT':
+                    action_t_a.append(optimal_params['p_t_a'][0] * stim_res)
+                    action_slope.append(optimal_params['p_w_a_slope'][0])
+                    action_intercept.append(optimal_params['p_w_a_intercept'][0])
+                    aff_eff_sum.append((optimal_params['p_t_eff'][0] +
+                                       optimal_params['p_t_aff'][0])*stim_res)
+                    zt_weight.append(optimal_params['p_w_zt'][0])
+                    stim_weight.append(optimal_params['p_w_stim'][0])
                     norm_vals = optimal_params['rt_vals_all'] /\
                         optimal_params['rt_vals_all'].sum()
                     plt.plot(rt_bins[0][:-1], norm_vals, label=f'simul_{i}')
             plt.xlabel('RT (ms)')
+            plt.legend()
             if objective == 'curve':
                 plt.ylabel('pCoM - detected')
             if objective == 'RT':
                 plt.ylabel('Density')
-            plt.legend()
+                variables = ['p_t_a', 'AI_intercept', 'AI_slope',
+                             'sum t_aff + t_eff (ms)', 'weight_zt', 'stim_weight']
+                fig, ax = plt.subplots(ncols=len(variables))
+                fig.suptitle('Parameters for the 100 configs with lowest RMSE')
+                for r, variable in enumerate([action_t_a, action_intercept,
+                                              action_slope, aff_eff_sum,
+                                              zt_weight, stim_weight]):
+                    ax[r].boxplot(variable)
+                    ax[r].set_title(variables[r])
+                plt.figure()
+                diff_rms_mat = np.array(diff_rms_mat)
+                plt.plot(diff_rms_mat[ind_sorted[0:100].astype(int)],
+                         action_t_a/max(action_t_a), '.', label='p_t_a')
+                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                         aff_eff_sum/max(aff_eff_sum), '.', label='t_eff+t_aff')
+                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                         action_intercept/max(action_intercept), '.',
+                         label='AI_int')
+                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                         np.abs(action_slope / max(np.abs(action_slope))),
+                         '.', label='AI_slo')
+                plt.xlabel('RMSE')
+                plt.legend()
             # let's see the matrices
             fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
             sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
