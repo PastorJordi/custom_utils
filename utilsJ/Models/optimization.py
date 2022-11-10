@@ -136,7 +136,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                                 else 0
                             diff_mn.append(ssim_val)
                             max_ssim = True
-                else:
+                if objective == 'curve':
                     rt_vals_pcom = data.get('xpos_rt_pcom')
                     rt_vals_pcom = [rt.astype(int) for
                                     rt in rt_vals_pcom]
@@ -148,52 +148,72 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                         rt_vals.append(rt_vals_pcom[i_pcom])
                         x_val.append(x_val_at_updt[i_pcom])
                         file_index.append(i_f)
-        for curve_ind, _ in enumerate(rt_vals):
-            x_perc = np.nanmean(np.abs(x_val[curve_ind]) > det_th)
-            x_perc = 1
-            perc_list.append(x_perc)
-            tmp_simul =\
-                np.array((rt_vals[curve_ind])/(bin_size-1),
-                         dtype=int)
-            if len(rt_vals[curve_ind]) == 0 or np.isnan(x_perc):
-                diff_mn.append(1e3)
-                diff_norm_mat.append(1e3)
-                diff_rms_mat.append(1e3)
-            else:
-                curve_tmp = curve_total[curve_ind]*x_perc + 1e-6
-                curve_norm = curve_tmp / np.nanmax(curve_tmp)
-                # diff_norm = np.subtract(curve_norm,
-                #                         np.array(data_curve_norm[tmp_simul])) ** 2
-                diff_norm = np.corrcoef(curve_norm,
-                                        data_curve_norm[tmp_simul].values)
-                diff_norm = diff_norm[0, 1] if not np.isnan(
-                    diff_norm[0, 1]) else -1
-                num_nans = len(tmp_data) - len(tmp_simul)
-                # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
-                diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
-                window = np.exp(-np.arange(len(tmp_simul))**1/10)
-                window = 1
-                diff_rms = np.subtract(curve_tmp,
-                                       np.array(data_curve['pcom']
-                                                [tmp_simul]) *
-                                       window) ** 2
-                diff_rms_mat.append(np.sqrt(np.nansum(diff_rms)) +
-                                    num_nans * nan_penalty)
-                diff = (1 - w_rms)*(1 - diff_norm) + w_rms*np.sqrt(np.nansum(
-                    diff_rms)) + num_nans * nan_penalty
-                diff_mn.append(diff) if not np.isnan(diff) else diff_mn.append(1e3)
-                max_ssim = False
+                if objective == 'RT':
+                    rt_vals = data.get('rt_vals_all')
+                    rt_bins = data.get('rt_bins_all')
+                    file_index = np.repeat(0, len(rt_vals))
+        if objective == 'RT':
+            data_rt_dist = np.load(res_path + 'RT_distribution.npy')
+            data_rt_dist_norm = data_rt_dist/data_rt_dist.sum()
+            # data_rt_bins = np.load(res_path + 'RT_bins.npy')
+            for val in range(len(rt_vals)):
+                vals_norm = rt_vals[val, :] / rt_vals[val, :].sum()
+                diff_rms = np.subtract(data_rt_dist_norm, vals_norm)**2
+                diff_rms_mat.append(np.sqrt(np.nansum(diff_rms)))
+                curve_total.append(vals_norm)
+        if objective == 'curve':
+            for curve_ind, _ in enumerate(rt_vals):
+                x_perc = np.nanmean(np.abs(x_val[curve_ind]) > det_th)
+                x_perc = 1
+                perc_list.append(x_perc)
+                tmp_simul =\
+                    np.array((rt_vals[curve_ind])/(bin_size-1),
+                             dtype=int)
+                if len(rt_vals[curve_ind]) == 0 or np.isnan(x_perc):
+                    diff_mn.append(1e3)
+                    diff_norm_mat.append(1e3)
+                    diff_rms_mat.append(1e3)
+                else:
+                    curve_tmp = curve_total[curve_ind]*x_perc + 1e-6
+                    curve_norm = curve_tmp / np.nanmax(curve_tmp)
+                    # diff_norm = np.subtract(curve_norm,
+                    #                         np.array(data_curve_norm[
+                    #                             tmp_simul])) ** 2
+                    diff_norm = np.corrcoef(curve_norm,
+                                            data_curve_norm[tmp_simul].values)
+                    diff_norm = diff_norm[0, 1] if not np.isnan(
+                        diff_norm[0, 1]) else -1
+                    num_nans = len(tmp_data) - len(tmp_simul)
+                    # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
+                    diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
+                    window = np.exp(-np.arange(len(tmp_simul))**1/10)
+                    window = 1
+                    diff_rms = np.subtract(curve_tmp,
+                                           np.array(data_curve['pcom']
+                                                    [tmp_simul]) *
+                                           window) ** 2
+                    diff_rms_mat.append(np.sqrt(np.nansum(diff_rms)) +
+                                        num_nans * nan_penalty)
+                    diff = (1 - w_rms)*(1 - diff_norm) + w_rms*np.sqrt(np.nansum(
+                        diff_rms)) + num_nans * nan_penalty
+                    diff_mn.append(diff) if not np.isnan(diff) else\
+                        diff_mn.append(1e3)
+                    max_ssim = False
         if plot:
             plt.figure()
             plt.plot(curve_total[np.argmin(diff_rms_mat)],
                      label='min rms')
-            plt.plot(curve_total[np.argmin(diff_norm_mat)],
-                     label='min norm')
-            plt.plot(curve_total[np.argmin(diff_mn)],
-                     label='min joined')
             # plt.plot(data_curve_norm, label='norm data')
-            plt.plot(data_curve['pcom'], label='data')
-            plt.ylabel('pCoM')
+            if objective == 'curve':
+                plt.plot(curve_total[np.argmin(diff_norm_mat)],
+                         label='min norm')
+                plt.plot(curve_total[np.argmin(diff_mn)],
+                         label='min joined')
+                plt.plot(data_curve['pcom'], label='data')
+                plt.ylabel('pCoM')
+            if objective == 'RT':
+                plt.plot(data_rt_dist_norm, label='data')
+                plt.ylabel('Density')
             plt.legend()
         if max_ssim:
             ind_min = np.argmax(diff_mn)
@@ -212,10 +232,14 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                     optimal_params[k] = data[k][ind_min - min_num]
         if plot:
             # For the best 10 configurations:
+            if objective == 'curve':
+                plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
+                         linestyle='', marker='o')
             plt.figure()
-            plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
-                     linestyle='', marker='o')
-            for i in range(20):
+            if objective == 'RT':
+                plt.plot(rt_bins[0][:-1], data_rt_dist_norm, label='data',
+                         linewidth=1.8)
+            for i in range(5):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
@@ -226,11 +250,19 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                             optimal_params[k] = data[k]
                         else:
                             optimal_params[k] = data[k][ind_min - min_num]
-                plt.plot(optimal_params['xpos_rt_pcom'],
-                         optimal_params['median_pcom_rt'],
-                         label=f'simul_{i}')
+                if objective == 'curve':
+                    plt.plot(optimal_params['xpos_rt_pcom'],
+                             optimal_params['median_pcom_rt'],
+                             label=f'simul_{i}')
+                if objective == 'RT':
+                    norm_vals = optimal_params['rt_vals_all'] /\
+                        optimal_params['rt_vals_all'].sum()
+                    plt.plot(rt_bins[0][:-1], norm_vals, label=f'simul_{i}')
             plt.xlabel('RT (ms)')
-            plt.ylabel('pCoM - detected')
+            if objective == 'curve':
+                plt.ylabel('pCoM - detected')
+            if objective == 'RT':
+                plt.ylabel('Density')
             plt.legend()
             # let's see the matrices
             fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
@@ -426,7 +458,7 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = True
+    optimization = False
     rms_comparison = False
     plotting = False
     plot_rms_llk = False
