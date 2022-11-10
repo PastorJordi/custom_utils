@@ -1029,14 +1029,14 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
         coh = coh[indx_sh]
         gt = gt[indx_sh]
         trial_index = trial_index[indx_sh]
-    if com is not None:
-        com = com[indx_sh]
-    if sound_len is not None:
-        sound_len = sound_len[indx_sh]
-    if traj_y is not None and traj_stamps is not None and fix_onset is not None:
-        traj_y = traj_y[indx_sh]
-        fix_onset = fix_onset[indx_sh]
-        traj_stamps = traj_stamps[indx_sh]
+        if com is not None:
+            com = com[indx_sh]
+        if sound_len is not None:
+            sound_len = sound_len[indx_sh]
+        if traj_y is not None and traj_stamps is not None and fix_onset is not None:
+            traj_y = traj_y[indx_sh]
+            fix_onset = fix_onset[indx_sh]
+            traj_stamps = traj_stamps[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.123
     MT_intercep = 254
