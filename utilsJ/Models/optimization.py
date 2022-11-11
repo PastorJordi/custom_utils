@@ -234,10 +234,10 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                     optimal_params[k] = data[k][ind_min - min_num]
         if plot:
             # For the best 10 configurations:
+            plt.figure()
             if objective == 'curve':
                 plt.plot(data_curve['rt'], data_curve['pcom'], label='data',
                          linestyle='', marker='o')
-            plt.figure()
             if objective == 'RT':
                 action_slope = []
                 action_intercept = []
@@ -247,7 +247,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                 action_t_a = []
                 plt.plot(rt_bins[0][:-1], data_rt_dist_norm, label='data',
                          linewidth=1.8)
-            for i in range(20):
+            for i in range(10):
                 ind_min = ind_sorted[i]
                 optimal_params = {}
                 file_index = np.array(file_index)
@@ -290,14 +290,14 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                     ax[r].set_title(variables[r])
                 plt.figure()
                 diff_rms_mat = np.array(diff_rms_mat)
-                plt.plot(diff_rms_mat[ind_sorted[0:100].astype(int)],
+                plt.plot(diff_rms_mat[ind_sorted[0:i+1].astype(int)],
                          action_t_a/max(action_t_a), '.', label='p_t_a')
-                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                plt.plot(diff_rms_mat[ind_sorted[0:i+1]],
                          aff_eff_sum/max(aff_eff_sum), '.', label='t_eff+t_aff')
-                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                plt.plot(diff_rms_mat[ind_sorted[0:i+1]],
                          action_intercept/max(action_intercept), '.',
                          label='AI_int')
-                plt.plot(diff_rms_mat[ind_sorted[0:100]],
+                plt.plot(diff_rms_mat[ind_sorted[0:i+1]],
                          np.abs(action_slope / max(np.abs(action_slope))),
                          '.', label='AI_slo')
                 plt.xlabel('RMSE')
