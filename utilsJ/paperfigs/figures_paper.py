@@ -18,11 +18,11 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.paperfigs import fig1, fig3, fig2
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/from_python/'  # Manuel
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 BINS_RT = np.linspace(1, 301, 21)
@@ -356,12 +356,12 @@ if __name__ == '__main__':
     plt.close('all')
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
                                   return_df=True, sv_folder=SV_FOLDER,
-                                  after_correct=True)
+                                  after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
-    f5 = True
+    f5 = False
 
     # fig 1
     if f1:

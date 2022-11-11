@@ -180,13 +180,9 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
             else:
                 ac_cond = (df.aftererror*1) >= 0
             xpoints, ypoints, _, mat, dic = plotting.trajectory_thr(
-                df.loc[
-                    (df.subjid == subject)
-                    & (df.allpriors.abs() < prior_limit)
-                    & ac_cond
-                    & (df.special_trial == 0)
-                    & (df.sound_len < rt_lim)
-                ],
+                df.loc[(df.subjid == subject) & (df.allpriors.abs() < prior_limit)
+                       & ac_cond & (df.special_trial == 0) &
+                       (df.sound_len < rt_lim)],
                 'choice_x_coh', bins, collapse_sides=True,
                 thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True,
                 error_kwargs=dict(marker='o'), cmap='viridis',
@@ -204,14 +200,10 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
             ax[1].set_ylim([-10, 80])
             threshold = .2
             xpoints, ypoints, _, mat, dic = plotting.trajectory_thr(
-                df.loc[
-                    (df.subjid == subject)
-                    & (df.allpriors.abs() < prior_limit)
-                    & ac_cond
-                    & (df.special_trial == 0)
-                    & (df.sound_len < rt_lim)
-                ],
-                'choice_x_coh', bins, collapse_sides=True,
+                df.loc[(df.subjid == subject) & (df.allpriors.abs() < prior_limit)
+                       & ac_cond & (df.special_trial == 0)
+                       & (df.sound_len < rt_lim)],
+                    'choice_x_coh', bins, collapse_sides=True,
                 thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
                 error_kwargs=dict(marker='o'), cmap='viridis',
                 bintype='categorical', trajectory=velocity)  # XXX ACCELY col name?
