@@ -230,7 +230,6 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
             plt.show()
 
     else:
-        # raise NotImplementedError('need to rewrite and support diff. coherences')
         # use dfmask instead of categories in trajectory_thr()
         f, ax = plt.subplots(ncols=2, nrows=2, figsize=(
             11, 8), gridspec_kw={'width_ratios': [1, 3]})

@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from scipy.stats import sem
 import sys
 from utilsJ.Models import simul
 # from scipy import interpolate
@@ -16,8 +17,14 @@ from utilsJ.Models import simul
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
-    com_heatmap_paper_marginal_pcom_side
+    com_heatmap_paper_marginal_pcom_side, trajectory_thr
 import fig1, fig3, fig2
+import matplotlib
+matplotlib.rcParams['font.size'] = 8
+# matplotlib.rcParams['font.family'] = 'Arial'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'Helvetica'
+matplotlib.rcParams['lines.markersize'] = 3
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
@@ -96,53 +103,209 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
     ax[1].set_title('Model')
 
 
-def trajs_splitting(df, average=False, collapse_sides=False):
-    # dual, when are rts{0-25} and rts{100-125} splitting?
-    if not average:
-        for subject in df.subjid.unique():
+def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.05, marginy=0.05):
+    ratio = fgsz[0]/fgsz[1]
+    pos = ax.get_position()
+    ax_inset = plt.axes([pos.x1-inset_sz-marginx, pos.y0+marginy, inset_sz,
+                         inset_sz*ratio])
+    return ax_inset
 
-            if not collapse_sides:
-                f, ax = plt.subplots(nrows=2, sharex=True, figsize=(6, 12))
-                split_time_0_L =\
-                    simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
-                                             ax=ax[0],
-                                             plot_kwargs=dict(color='tab:green'))
-                # split_time_0_R =
-                simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
-                                         ax=ax[0],
-                                         plot_kwargs=dict(color='tab:purple'))
-                # split_time_4_L =
-                simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
-                                         ax=ax[1], rtbin=4,
-                                         plot_kwargs=dict(color='tab:green'))
-                # split_time_4_R =
-                simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
-                                         ax=ax[1], rtbin=4,
-                                         plot_kwargs=dict(color='tab:purple'))
-                # ax[0].set_xlim(-10, 150)
-                ax[0].set_title('RT {0, 25} ms')
-                ax[1].set_title('RT {100, 125} ms')
-                ax[1].set_xlabel('time from movement onset (ms)')
-                ax[0].set_ylabel('y dimension (px)')
-                ax[1].set_ylabel('y dimension (px)')
-            else:  # collapse_sides == True
-                f, ax = plt.subplots(figsize=(6, 6))
-                rtbins = np.linspace(0, 90, 2)
-                rtbin = 0
-                lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
-                simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
-                                         collapse_sides=True, ax=ax,
-                                         rtbin=rtbin, rtbins=rtbins,
-                                         plot_kwargs=dict(color='tab:green',
-                                                          label=lbl))
-                ax.set_xlim(-10, 140)
-                ax.set_xlabel('time from movement onset (ms)')
-                ax.set_ylabel('y dimension (px)')
-                ax.set_title(subject)
-                ax.legend()
-            plt.show()
+
+def trajs_cond_on_coh(df, ax, average=False, prior_limit=0.25, rt_lim=25,
+                      after_correct_only=True, trajectory="trajectory_y",
+                      velocity=("traj_d1", 1)):
+    """median position and velocity in silent trials splitting by prior"""
+    # TODO: adapt for mean + sem
+    nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
+    df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df.loc[nanidx, 'allpriors'] = np.nan
+    df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
+    bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+
+    # dani_rats: # this is with sound, it can use all sunbjects data
+    for subject in df.subjid.unique():
+        if after_correct_only:
+            ac_cond = df.aftererror == False
+        else:
+            ac_cond = (df.aftererror*1) >= 0
+        # position
+        indx_trajs = (df.subjid == subject) &\
+            (df.allpriors.abs() < prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim)
+        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+            trajectory_thr(df.loc[indx_trajs], 'choice_x_coh', bins,
+                           collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap='viridis', bintype='categorical',
+                           trajectory=trajectory)
+        ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
+                     title='Coherence')
+        ax[1].set_xlim([-50, 500])
+        ax[1].set_xlabel('time from movement onset (MT, ms)')
+        for i in [0, 30]:
+            ax[1].axhline(i, ls=':', c='gray')
+        ax[1].set_ylabel('y coord. (px)')
+        ax[0].set_xlabel('ev. towards response')
+        ax[0].set_ylabel('time to threshold (30px)')
+        ax[0].plot(xpoints, ypoints, color='k', ls=':')
+        ax[1].set_ylim([-10, 80])
+        ax2 = ax[0].twinx()
+        ax2.errorbar(xpoints, mt_time, mt_time_err, color='c', ls=':')
+        ax2.set_label('Motor time')
+        # velocities
+        threshold = .2
+        xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
+            df.loc[indx_trajs], 'choice_x_coh', bins, collapse_sides=True,
+            thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
+            error_kwargs=dict(marker='o'), cmap='viridis',
+            bintype='categorical', trajectory=velocity)
+        # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
+        #              title='Coherence', loc='upper left')
+        ax[3].set_xlim([-50, 500])
+        ax[3].set_xlabel('time from movement onset (MT, ms)')
+        ax[3].set_ylim([-0.05, 0.5])
+        for i in [0, threshold]:
+            ax[3].axhline(i, ls=':', c='gray')
+        ax[3].set_ylabel('y coord velocity (px/ms)')
+        ax[2].set_xlabel('ev. towards response')
+        ax[2].set_ylabel(f'time to threshold ({threshold} px/ms)')
+        ax[2].plot(xpoints, ypoints, color='k', ls=':')
+        plt.show()
+
+
+def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 90, 2)):
+    """
+    Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
+    between 0 and 90.
+
+
+    Parameters
+    ----------
+    df : dataframe
+        DESCRIPTION.
+    rtbin : TYPE, optional
+        DESCRIPTION. The default is 0.
+    rtbins : TYPE, optional
+        DESCRIPTION. The default is np.linspace(0, 90, 2).
+
+    Raises
+    ------
+    NotImplementedError
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    for subject in df.subjid.unique():
+        lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
+        simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
+                                 collapse_sides=True, ax=ax,
+                                 rtbin=rtbin, rtbins=rtbins,
+                                 plot_kwargs=dict(color='tab:green',
+                                                  label=lbl))
+        ax.set_xlim(-10, 140)
+        ax.set_ylim(-5, 20)
+        ax.set_xlabel('time from movement onset (ms)')
+        ax.set_ylabel('y dimension (px)')
+        ax.set_title(subject)
+        ax.legend()
+        plt.show()
+
+
+def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300, 
+                          rtbins=np.linspace(0, 150, 16), connect_points=True,
+                          draw_line=((0, 90), (90, 0)),
+                          trajectory="trajectory_y"):
+
+    # split time/subject by coherence
+    # threshold= bigger than that are turned to nan so it doesnt break figure range
+    # this wont work if when_did_split_dat returns Nones instead of NaNs
+    # plot will not work fine with uneven bins
+    out_data = []
+    for subject in df.subjid.unique():
+        for i in range(rtbins.size-1):
+            if collapse_sides:
+                current_split_index = simul.when_did_split_dat(
+                    df=df.loc[(df.special_trial == 0) & (df.subjid == subject)],
+                    side=0,  # side has no effect because this is collapsing_sides
+                    rtbin=i, rtbins=rtbins,
+                    collapse_sides=True,
+                    trajectory=trajectory
+                )
+                out_data += [current_split_index]
+            else:
+                for j in [0, 1]:  # side values
+                    current_split_index = simul.when_did_split_dat(
+                        df.loc[df.subjid == subject],
+                        j,  # side has no effect because this is collapsing_sides
+                        rtbin=i, rtbins=rtbins,
+                        collapse_sides=True,
+                        trajectory=trajectory
+                    )
+                    out_data += [current_split_index]
+
+    # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
+    # ideally, make it NaN resilient
+    out_data = np.array(out_data).reshape(
+        df.subjid.unique().size, rtbins.size-1, -1)
+    # set axes: rtbins, subject, sides
+    out_data = np.swapaxes(out_data, 0, 1)
+
+    # change the type so we can have NaNs
+    out_data = out_data.astype(float)
+
+    out_data[out_data > threshold] = np.nan
+
+    binsize = rtbins[1]-rtbins[0]
+
+    scatter_kws = {'color': (.6, .6, .6, .3), 'edgecolor': (.6, .6, .6, 1)}
+    if collapse_sides:
+        nrepeats = df.subjid.unique().size  # n subjects
     else:
-        raise NotImplementedError('averaging is not implemented')
+        nrepeats = df.subjid.unique().size * 2  # two responses per subject
+    # because we might want to plot each subject connecting lines, lets iterate
+    # draw  datapoints
+    if not connect_points:
+        ax.scatter(  # add some offset/shift on x axis based on binsize
+            binsize/2 + binsize * (np.repeat(
+                np.arange(rtbins.size-1), nrepeats
+            ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
+            out_data.flatten(),
+            **scatter_kws,
+        )
+    else:
+        for i in range(df.subjid.unique().size):
+            for j in range(out_data.shape[2]):
+                ax.plot(
+                    binsize/2 + binsize * np.arange(rtbins.size-1)
+                    + np.random.normal(loc=0, scale=0.2, size=rtbins.size-1),
+                    out_data[:, i, j],
+                    marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                    mew=1, color=(.6, .6, .6, .3)
+                )
+
+    error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='k', marker='o', label='mean & SEM')
+    ax.errorbar(
+        binsize/2 + binsize * np.arange(rtbins.size-1),
+        # we do the mean across rtbin axis
+        np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
+        # other axes we dont care
+        yerr=sem(out_data.reshape(rtbins.size-1, -1),
+                 axis=1, nan_policy='omit'),
+        **error_kws
+    )
+    if draw_line is not None:
+        ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
+
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('time to split (ms)')
+    ax.legend()
+    plt.show()
+# 3d histogram-like*?
 
 
 def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
@@ -443,12 +606,12 @@ def run_model(stim, zt, coh, gt, trial_index):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44_',
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + '',
                                   return_df=True, sv_folder=SV_FOLDER,
                                   after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = False
+    f1 = False
+    f2 = True
     f3 = False
     f5 = False
 
@@ -479,10 +642,28 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
+        fgsz = (8, 8)
+        inset_sz = 0.1
+        f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
+        ax = ax.flatten()
+        ax_cohs = np.array([ax[0], ax[2]])
+        ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
+        ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+        ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                             marginy=0.15)
+        ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+        for a in ax:
+            rm_top_right_lines(a)
+        trajs_cond_on_coh(df=df, ax=ax_cohs)
+        # splits
+        ax_split = np.array([ax[1], ax[3]])
+        trajs_splitting(df, ax=ax_split[0])
+        df_all_rats = edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
+                                               return_df=True, sv_folder=SV_FOLDER,
+                                               after_correct=True, silent=True)
+
+        trajs_splitting_point(df=df_all_rats, ax=ax_split[1])
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
-        # fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
-        trajs_splitting(df, savpath=SV_FOLDER, collapse_sides=True)
-        fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
 
     # fig 3
     if f3:
