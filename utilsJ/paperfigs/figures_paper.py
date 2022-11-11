@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import sys
+from utilsJ.Models import simul
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -93,6 +94,55 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
     ax[1].set_xlabel('RT (ms)')
     ax[1].set_ylabel('Accuracy')
     ax[1].set_title('Model')
+
+
+def trajs_splitting(df, average=False, collapse_sides=False):
+    # dual, when are rts{0-25} and rts{100-125} splitting?
+    if not average:
+        for subject in df.subjid.unique():
+
+            if not collapse_sides:
+                f, ax = plt.subplots(nrows=2, sharex=True, figsize=(6, 12))
+                split_time_0_L =\
+                    simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
+                                             ax=ax[0],
+                                             plot_kwargs=dict(color='tab:green'))
+                # split_time_0_R =
+                simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
+                                         ax=ax[0],
+                                         plot_kwargs=dict(color='tab:purple'))
+                # split_time_4_L =
+                simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
+                                         ax=ax[1], rtbin=4,
+                                         plot_kwargs=dict(color='tab:green'))
+                # split_time_4_R =
+                simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
+                                         ax=ax[1], rtbin=4,
+                                         plot_kwargs=dict(color='tab:purple'))
+                # ax[0].set_xlim(-10, 150)
+                ax[0].set_title('RT {0, 25} ms')
+                ax[1].set_title('RT {100, 125} ms')
+                ax[1].set_xlabel('time from movement onset (ms)')
+                ax[0].set_ylabel('y dimension (px)')
+                ax[1].set_ylabel('y dimension (px)')
+            else:  # collapse_sides == True
+                f, ax = plt.subplots(figsize=(6, 6))
+                rtbins = np.linspace(0, 90, 2)
+                rtbin = 0
+                lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
+                simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
+                                         collapse_sides=True, ax=ax,
+                                         rtbin=rtbin, rtbins=rtbins,
+                                         plot_kwargs=dict(color='tab:green',
+                                                          label=lbl))
+                ax.set_xlim(-10, 140)
+                ax.set_xlabel('time from movement onset (ms)')
+                ax.set_ylabel('y dimension (px)')
+                ax.set_title(subject)
+                ax.legend()
+            plt.show()
+    else:
+        raise NotImplementedError('averaging is not implemented')
 
 
 def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
@@ -354,7 +404,7 @@ def run_model(stim, zt, coh, gt, trial_index):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44_',
                                   return_df=True, sv_folder=SV_FOLDER,
                                   after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
@@ -381,8 +431,8 @@ if __name__ == '__main__':
     # fig 2
     if f2:
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
-        fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
-        fig3.trajs_splitting(df, savpath=SV_FOLDER)
+        # fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
+        trajs_splitting(df, savpath=SV_FOLDER, collapse_sides=True)
         fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
 
     # fig 3

@@ -172,8 +172,8 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
     if not average:
         # dani_rats: # this is with sound, it can use all sunbjects data
         for subject in df.subjid.unique():
-            f, ax = plt.subplots(ncols=2, nrows=2, figsize=(
-                11, 8), gridspec_kw={'width_ratios': [1, 3]})
+            f, ax = plt.subplots(ncols=2, nrows=2, figsize=(11, 8),
+                                 gridspec_kw={'width_ratios': [1, 3]})
             ax = ax.flatten()
             if after_correct_only:
                 ac_cond = df.aftererror == False
@@ -372,19 +372,27 @@ def trajs_splitting(df, average=False, collapse_sides=False, savpath=SAVPATH):
             else:  # collapse_sides == True
                 f, ax = plt.subplots(figsize=(6, 6))
                 # split_time_0 =
+                rtbins = np.linspace(0, 90, 2)
+                rtbin = 0
+                lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
                 simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
                                          collapse_sides=True, ax=ax,
+                                         rtbin=rtbin, rtbins=rtbins,
                                          plot_kwargs=dict(color='tab:green',
-                                                          label='rtbin=0'))
+                                                          label=lbl))
                 # split_time_4 =
-                simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
-                                         ax=ax, collapse_sides=True, rtbin=4,
-                                         plot_kwargs=dict(color='tab:blue',
-                                                          label='rtbin=4'))
-                ax.set_xlim(-10, 150)
+                # rtbin = 4
+                # lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
+                # simul.when_did_split_dat(df=df[df.subjid == subject], side=1,
+                #                          ax=ax, collapse_sides=True, rtbin=rtbin,
+                #                          rtbins=rtbins,
+                #                          plot_kwargs=dict(color='tab:blue',
+                #                                           label=lbl))
+                ax.set_xlim(-10, 140)
                 ax.set_xlabel('time from movement onset (ms)')
                 ax.set_ylabel('y dimension (px)')
                 ax.set_title(subject)
+                ax.legend()
             if not collapse_sides:
                 figname = f'{savpath}{subject}3c_split_median_traj.svg'
             else:
@@ -410,8 +418,8 @@ def trajs_splitting_point(df, collapse_sides=False, rtbins=np.linspace(0, 150, 1
         for i in range(rtbins.size-1):
             if collapse_sides:
                 current_split_index = simul.when_did_split_dat(
-                    df.loc[(df.special_trial == 0) & (df.subjid == subject)],
-                    0,  # side has no effect because this is collapsing_sides
+                    df=df.loc[(df.special_trial == 0) & (df.subjid == subject)],
+                    side=0,  # side has no effect because this is collapsing_sides
                     rtbin=i, rtbins=rtbins,
                     collapse_sides=True,
                     trajectory=trajectory

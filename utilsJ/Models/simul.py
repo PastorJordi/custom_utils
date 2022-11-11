@@ -62,9 +62,9 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     tot_iter= remaining)
     if ax, it plots medians + splittime"""
     for i in range(tot_iter):
-        t2, p2 = ttest_ind(
-            a[:, startfrom + i], b[:, startfrom + i], nan_policy=nan_policy
-        )
+        pop_a = a[:, startfrom + i]
+        pop_b = b[:, startfrom + i]
+        _, p2 = ttest_ind(pop_a, pop_b, nan_policy=nan_policy)
         if p2 < pval:
             return i  # , np.nanmedian(a[:,startfrom+i])
     return np.nan  # , -1
