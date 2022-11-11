@@ -221,7 +221,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             ind_min = np.argmax(diff_mn)
         else:
             ind_sorted = np.argsort(np.abs(diff_rms_mat))
-            ind_min = ind_sorted[1]
+            ind_min = ind_sorted[0]
             # second_in = (diff_mn*(diff_mn!=diff_mn[ind_min])).argmin()
         optimal_params = {}
         file_index = np.array(file_index)
@@ -304,7 +304,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                 plt.legend()
             # let's see the matrices
             fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18, 7))
-            sns.heatmap(optimal_params['pcom_matrix'], ax=ax[0])
+            sns.heatmap(np.flipud(optimal_params['pcom_matrix']), ax=ax[0])
             ax[0].set_title('Simulation')
             sns.heatmap(data_mat, ax=ax[1])
             ax[1].set_title('Data')
