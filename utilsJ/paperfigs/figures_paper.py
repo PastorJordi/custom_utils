@@ -228,9 +228,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
                                          ax=ax[3])
     ax[3].set_title('Model')
     reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
-                            bins=np.linspace(-300, 400, 70))
+                            bins=np.linspace(-150, 300, 91))
     reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0],
-                            bins=np.linspace(-300, 400, 70))
+                            bins=np.linspace(-150, 300, 91))
     ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')

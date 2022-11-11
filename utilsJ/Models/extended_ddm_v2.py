@@ -24,7 +24,6 @@ from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -34,7 +33,6 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
@@ -682,6 +680,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     np.save(sv_f + '/results/CoM_vs_prior_and_stim.npy', matrix)
     stim = stim.T
     com = com.astype(int)
+    rt_vals, rt_bins = np.histogram(sound_len,
+                                    bins=np.linspace(-100, 300, 81))
+    np.save(sv_f + '/results/RT_distribution.npy', rt_vals)
+    np.save(sv_f + '/results/RT_bins.npy', rt_bins)
     if not silent:
         special_trial = None
     if not splitting:
@@ -851,7 +853,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     first_ind = np.array(first_ind)
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
-                                    bins=41, range=(-100, 300))
+                                    bins=np.linspace(-100, 300, 81))
     matrix, _ = com_heatmap_jordi(zt, coh, com,
                                   return_mat=True, flip=True)
     # end_eddm = time.time()
@@ -1027,14 +1029,14 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
         coh = coh[indx_sh]
         gt = gt[indx_sh]
         trial_index = trial_index[indx_sh]
-    if com is not None:
-        com = com[indx_sh]
-    if sound_len is not None:
-        sound_len = sound_len[indx_sh]
-    if traj_y is not None and traj_stamps is not None and fix_onset is not None:
-        traj_y = traj_y[indx_sh]
-        fix_onset = fix_onset[indx_sh]
-        traj_stamps = traj_stamps[indx_sh]
+        if com is not None:
+            com = com[indx_sh]
+        if sound_len is not None:
+            sound_len = sound_len[indx_sh]
+        if traj_y is not None and traj_stamps is not None and fix_onset is not None:
+            traj_y = traj_y[indx_sh]
+            fix_onset = fix_onset[indx_sh]
+            traj_stamps = traj_stamps[indx_sh]
     num_tr = stim.shape[1]
     MT_slope = 0.123
     MT_intercep = 254
@@ -1079,6 +1081,7 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
             p_com_bound = conf[3]+jitters[3]*np.random.rand()
             p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
             p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
+            p_t_eff = 16 - p_t_aff
             p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
             p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
             p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
@@ -1219,17 +1222,17 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_1st_readout = 5
     """
-    p_w_zt_list = np.linspace(0.1, 0.2, num=num_vals-1)
+    p_w_zt_list = [0.1]
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.06, num=num_vals-1)
-    p_com_bound_list = [0]
-    p_t_aff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
-    p_t_eff_list = np.linspace(4, 12, num=num_vals-1, dtype=int)
+    p_com_bound_list = np.linspace(0, 0.9, num=num_vals)
+    p_t_aff_list = np.linspace(4, 12, num=num_vals, dtype=int)
+    p_t_eff_list = [10]  # will be 16 (80ms) - p_t_aff
     p_t_a_list = np.linspace(12, 20, num=num_vals)
-    p_w_a_intercept_list = np.linspace(0.02, 0.05, num=num_vals)
-    p_w_a_slope_list = - np.linspace(2e-5, 4e-5, num=num_vals-1)
-    p_a_noise_list = np.linspace(0.04, 0.1, num=num_vals-1)
-    p_1st_readout_list = [80]
+    p_w_a_intercept_list = [0.05]
+    p_w_a_slope_list = [2e-5]
+    p_a_noise_list = [0.04]
+    p_1st_readout_list = np.linspace(60, 180, num=num_vals)
     p_2nd_readout_list = [180]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
@@ -1240,17 +1243,17 @@ def set_parameters(num_vals=3, factor=8):
                                             p_1st_readout_list,
                                             p_2nd_readout_list))
     if num_vals == 1:
-        jitters = np.repeat(0.01, 10)
+        jitters = np.repeat(0.00001, 12)
     else:
-        jitters = [np.diff(p_w_zt_list)[0]/factor,
-                   np.diff(p_w_stim_list)[0]/factor,
+        jitters = [1e-4,
+                   1e-4,
                    0.0001,
-                   0.01,
+                   0.001,
                    np.diff(p_t_aff_list)[0]/factor,
-                   np.diff(p_t_eff_list)[0]/factor,
+                   1e-4,
                    0.5,
-                   0.005,
-                   0.0001,
+                   0.0005,
+                   1e-8,
                    0.0001,
                    1,
                    1]
@@ -2265,11 +2268,11 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(3e4)
+    num_tr = int(8e4)
     load_data = True
     new_sample = True
     single_run = False
-    shuffle = True
+    shuffle = False
     simulate = True
     parallel = False
     plot_t12 = False
@@ -2353,12 +2356,12 @@ if __name__ == '__main__':
             p_w_stim = 0.15
             p_e_noise = 0.04
             p_com_bound = 0.
-            p_w_a_intercept = 0
+            p_w_a_intercept = 0.03
             p_w_a_slope = -3e-05
             p_a_noise = np.sqrt(5e-3)
             p_1st_readout = 80
             p_2nd_readout = 160
-            compute_trajectories = True
+            compute_trajectories = False
             plot = False
             all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
@@ -2391,7 +2394,7 @@ if __name__ == '__main__':
                 traj_stamps = None
         else:  # set grid search of parameters
             configurations, jitters = set_parameters(num_vals=4)
-            compute_trajectories = False
+            compute_trajectories = True
             plot = False
             all_trajs = True
         existing_data = None  # SV_FOLDER+'/results/all_results_1.npz'
