@@ -832,6 +832,8 @@ def trajectory_thr(
                 xpoints = np.arange(len(bins.keys()))
     y_points = []
     y_err = []
+    mt_time = []
+    mt_time_err = []
 
     test = df.loc[df.framerate >= fpsmin]
 
@@ -861,8 +863,9 @@ def trajectory_thr(
 
         # if collapse_sides:
         #    print('collapsing sides!')
+        selected_trials = test.loc[idx_dic[b]]
         arrays = (
-            test.loc[idx_dic[b]]
+            selected_trials
             # .swifter.progress_bar(False) # swifter removed
             .apply(
                 lambda x: interpolapply(
@@ -896,6 +899,10 @@ def trajectory_thr(
         y_err += [sem(c[idxes], nan_policy="omit")]
 
         extra_kw = {}
+
+        # get motor time
+        mt_time += [np.median(selected_trials.resp_len)*1e3]
+        mt_time_err += [sem(selected_trials.resp_len*1e3, nan_policy="omit")]
 
         # plot section
         if ax_traj is not None:  # original stuff
@@ -957,7 +964,7 @@ def trajectory_thr(
             # to reach threshold)
 
         return xpoints, y_points + fixation_delay_offset, y_err, matrix_dic,\
-            idx_dic
+            idx_dic, mt_time, mt_time_err
     elif ax is not None:
         if cmap is not None:
             for i in range(len(xpoints)):  # TODO remove duplicated code

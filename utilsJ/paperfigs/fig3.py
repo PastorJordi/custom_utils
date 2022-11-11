@@ -179,14 +179,19 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
                 ac_cond = df.aftererror == False
             else:
                 ac_cond = (df.aftererror*1) >= 0
-            xpoints, ypoints, _, mat, dic = plotting.trajectory_thr(
-                df.loc[(df.subjid == subject) & (df.allpriors.abs() < prior_limit)
-                       & ac_cond & (df.special_trial == 0) &
-                       (df.sound_len < rt_lim)],
-                'choice_x_coh', bins, collapse_sides=True,
-                thr=30, ax=ax[0], ax_traj=ax[1], return_trash=True,
-                error_kwargs=dict(marker='o'), cmap='viridis',
-                bintype='categorical', trajectory=trajectory)
+            indx_trajs = (df.subjid == subject) &\
+                (df.allpriors.abs() < prior_limit) &\
+                ac_cond & (df.special_trial == 0) &\
+                (df.sound_len < rt_lim)
+            xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+                plotting.trajectory_thr(df.loc[indx_trajs],
+                                        'choice_x_coh', bins, collapse_sides=True,
+                                        thr=30, ax=ax[0], ax_traj=ax[1],
+                                        return_trash=True,
+                                        error_kwargs=dict(marker='o'),
+                                        cmap='viridis',
+                                        bintype='categorical',
+                                        trajectory=trajectory)
             ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
                          title='Coherence')
             ax[1].set_xlim([-50, 500])
@@ -198,12 +203,14 @@ def trajs_cond_on_coh(df, average=False, prior_limit=0.25, rt_lim=25,
             ax[0].set_ylabel('time to threshold (30px)')
             ax[0].plot(xpoints, ypoints, color='k', ls=':')
             ax[1].set_ylim([-10, 80])
+            ax2 = ax[0].twinx()
+            ax2.errorbar(xpoints, mt_time, mt_time_err, color='c', ls=':')
             threshold = .2
-            xpoints, ypoints, _, mat, dic = plotting.trajectory_thr(
+            xpoints, ypoints, _, mat, dic, _, _ = plotting.trajectory_thr(
                 df.loc[(df.subjid == subject) & (df.allpriors.abs() < prior_limit)
                        & ac_cond & (df.special_trial == 0)
                        & (df.sound_len < rt_lim)],
-                    'choice_x_coh', bins, collapse_sides=True,
+                'choice_x_coh', bins, collapse_sides=True,
                 thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
                 error_kwargs=dict(marker='o'), cmap='viridis',
                 bintype='categorical', trajectory=velocity)  # XXX ACCELY col name?

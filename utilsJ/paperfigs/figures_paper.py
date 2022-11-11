@@ -10,13 +10,13 @@ import seaborn as sns
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
-from utilsJ.paperfigs import fig1, fig3, fig2
+import fig1, fig3, fig2
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
@@ -380,7 +380,7 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
-        fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
         fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
         fig3.trajs_splitting(df, savpath=SV_FOLDER)
         fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
@@ -423,3 +423,28 @@ if __name__ == '__main__':
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2
         fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
+
+    # from utilsJ.Models import extended_ddm_v2 as edd2
+    # import numpy as np
+    # import matplotlib.pyplot as plt
+    # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+    # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    #     'ChangesOfMind/figures/from_python/'  # Manuel
+
+    # df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+    #                               return_df=True, sv_folder=SV_FOLDER)
+
+    # coms = df.loc[df.CoM_sugg]
+    # rts = coms.sound_len
+
+    # max_ = 0
+    # for tr in range(len(coms)):
+    #     trial = df.iloc[tr]
+    #     traj = trial['trajectory_y']
+    #     plt.plot(traj, 'k')
+    #     max_temp = np.nanmax(traj)
+    #     if max_temp > max_:
+    #         max_ = max_temp
+    #         print(max_)
+    #     if np.nanmax(traj) > 200:
+    #         print(trial)
