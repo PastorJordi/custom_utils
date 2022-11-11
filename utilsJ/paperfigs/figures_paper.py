@@ -179,14 +179,15 @@ def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
     ax[1].plot(mean_vel)
 
 
-def tachometric_data(coh, hit, sound_len, ax):
+def tachometric_data(coh, hit, sound_len, ax, label='Data'):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len})
     tachometric(df_plot_data, ax=ax, fill_error=True)
+    ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
-    ax.set_title('Data')
+    ax.set_title(label)
     ax.set_ylim(0, 1.1)
     ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
@@ -233,20 +234,39 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
     ax.legend()
 
 
-def fig_1(coh, hit, sound_len, decision, supt=''):
-    fig, ax = plt.subplots(ncols=2, nrows=2)
+def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
+    fig, ax = plt.subplots(ncols=3, nrows=2)
     ax = ax.flatten()
-    psych_curve((decision+1)/2, coh, ret_ax=ax[0])
+    for i in range(len(ax)):
+        rm_top_right_lines(ax[i])
+    if label == 'Data':
+        color = 'k'
+    if label == 'Model':
+        color = 'red'
+    psych_curve((decision+1)/2, coh, ret_ax=ax[0], kwargs_plot={'color': color},
+                kwargs_error={'label': label, 'color': color})
     ax[0].set_xlabel('Coherence')
     ax[0].set_ylabel('Probability of right')
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1])
-    reaction_time_histogram(sound_len=sound_len, ax=ax[2])
-    express_performance(hit=hit, coh=coh, sound_len=sound_len,
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1],
+                                   label=label)
+    reaction_time_histogram(sound_len=sound_len, ax=ax[2], label=label)
+    express_performance(hit=hit, coh=coh, sound_len=sound_len, label=label,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
-    fig.suptitle('')
+    fig.suptitle(supt)
+    # decision_s = decision
+    decision_01 = (decision+1)/2
+    edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[4], flip=True,
+                           annotate=False, xlabel='prior', ylabel='avg stim',
+                           cmap='rocket')
+    ax[4].set_title('Pright')
+    edd2.com_heatmap_jordi(zt/max(zt)*decision, coh, hit, ax=ax[5],
+                           flip=True,
+                           xlabel='prior congruency with final decision',
+                           annotate=False, ylabel='avg stim ', cmap='rocket')
+    ax[5].set_title('Pcorrect')
 
 
-def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
+def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected):
     fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
@@ -311,6 +331,26 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     ax[6].legend()
     ax[6].set_xlabel('RT (ms)')
     ax[6].set_ylabel('PCoM')
+    # decision_01 = (decision+1)/2
+    # edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
+    #                        annotate=False, xlabel='prior', ylabel='avg stim',
+    #                        cmap='rocket')
+    # ax[8].set_title('Pright Data')
+    zt_model = zt[sound_len_model >= 0]
+    # coh_model = coh[sound_len_model >= 0]
+    # decision_01_model = (decision_model+1)/2
+    # edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
+    #                        flip=True, annotate=False, xlabel='prior',
+    #                        ylabel='avg stim', cmap='rocket')
+    # ax[9].set_title('Pright Model')
+    # edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
+    #                        flip=True, xlabel='prior', annotate=False,
+    #                        ylabel='avg stim', cmap='rocket')
+    # ax[10].set_title('Pcorrect Data')
+    # edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
+    #                        flip=True, xlabel='prior', annotate=False,
+    #                        ylabel='avg stim', cmap='rocket')
+    # ax[11].set_title('Pcorrect Model')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
                             'R_response': (decision+1)/2})
@@ -324,7 +364,6 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model,
     # ax[8].set_title('Data')
     # sns.heatmap(matrix_model, ax=ax[9])
     # ax[9].set_title('Model')
-    zt_model = zt[sound_len_model >= 0]
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
                                  com_model_detected,
@@ -341,15 +380,15 @@ def run_model(stim, zt, coh, gt, trial_index):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 12
-    p_t_eff = 6
-    p_t_a = int(18 - p_t_eff)  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
-    p_w_stim = 0.08
-    p_e_noise = 0.06
+    p_t_aff = 8
+    p_t_eff = 8
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.1
+    p_w_stim = 0.05
+    p_e_noise = 0.02
     p_com_bound = 0.
-    p_w_a_intercept = 0.037
-    p_w_a_slope = -3e-05  # fixed
+    p_w_a_intercept = 0.05
+    p_w_a_slope = -2e-05  # fixed
     p_a_noise = np.sqrt(5e-3)  # fixed
     p_1st_readout = 80
     p_2nd_readout = 160
@@ -408,42 +447,14 @@ if __name__ == '__main__':
                                   return_df=True, sv_folder=SV_FOLDER,
                                   after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
-    f2 = True
+    f1 = True
+    f2 = False
     f3 = False
     f5 = False
 
     # fig 1
     if f1:
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        hit = np.array(df['hithistory'])
-        stim = np.array([stim for stim in df.res_sound])
-        coh = np.array(df.coh2)
-        com = df.CoM_sugg.values
-        decision = np.array(df.R_response) * 2 - 1
-        sound_len = np.array(df.sound_len)
-        gt = np.array(df.rewside) * 2 - 1
-
-        # tachometrics, rt distribution, express performance
-        fig_1(coh, hit, sound_len, decision, supt='data')
-
-    # fig 2
-    if f2:
-        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
-        # fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
-        trajs_splitting(df, savpath=SV_FOLDER, collapse_sides=True)
-        fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
-
-    # fig 3
-    if f3:
-        fig2.bcd(df)
-        fig2.e(df, savepath=SV_FOLDER)
-        fig2.f(df, savepath=SV_FOLDER)
-        fig2.g(df, savepath=SV_FOLDER)
-
-    # fig 5 (model)
-    if f5:
         after_correct_id = np.where(df.aftererror == 0)[0]
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         zt = zt[after_correct_id]
@@ -463,9 +474,48 @@ if __name__ == '__main__':
         gt = gt[after_correct_id]
         trial_index = np.array(df.origidx)
         trial_index = trial_index[after_correct_id]
+        # tachometrics, rt distribution, express performance
+        fig_1(coh, hit, sound_len, decision, zt, supt='data')
+
+    # fig 2
+    if f2:
+        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+        # fig3.trajs_cond_on_coh(df, savpath=SV_FOLDER)
+        trajs_splitting(df, savpath=SV_FOLDER, collapse_sides=True)
+        fig3.trajs_splitting_point(df, savpath=SV_FOLDER)
+
+    # fig 3
+    if f3:
+        fig2.bcd(df)
+        fig2.e(df, savepath=SV_FOLDER)
+        fig2.f(df, savepath=SV_FOLDER)
+        fig2.g(df, savepath=SV_FOLDER)
+
+    # fig 5 (model)
+    if f5:
+        if not f1:
+            after_correct_id = np.where(df.aftererror == 0)[0]
+            zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+            zt = zt[after_correct_id]
+            hit = np.array(df['hithistory'])
+            hit = hit[after_correct_id]
+            stim = np.array([stim for stim in df.res_sound])
+            stim = stim[after_correct_id, :]
+            coh = np.array(df.coh2)
+            coh = coh[after_correct_id]
+            com = df.CoM_sugg.values
+            com = com[after_correct_id]
+            decision = np.array(df.R_response) * 2 - 1
+            decision = decision[after_correct_id]
+            sound_len = np.array(df.sound_len)
+            sound_len = sound_len[after_correct_id]
+            gt = np.array(df.rewside) * 2 - 1
+            gt = gt[after_correct_id]
+            trial_index = np.array(df.origidx)
+            trial_index = trial_index[after_correct_id]
         hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
-        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision,
+        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
               com_model_detected=com_model_detected)
@@ -473,7 +523,9 @@ if __name__ == '__main__':
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2
         fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
-
+        if f1:
+            fig_1(coh, hit_model, reaction_time, resp_fin, zt, supt='Model',
+                  label='Model')
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
