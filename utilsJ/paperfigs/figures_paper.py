@@ -606,7 +606,7 @@ def run_model(stim, zt, coh, gt, trial_index):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + '',
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44_',
                                   return_df=True, sv_folder=SV_FOLDER,
                                   after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
@@ -658,11 +658,8 @@ if __name__ == '__main__':
         # splits
         ax_split = np.array([ax[1], ax[3]])
         trajs_splitting(df, ax=ax_split[0])
-        df_all_rats = edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
-                                               return_df=True, sv_folder=SV_FOLDER,
-                                               after_correct=True, silent=True)
-
-        trajs_splitting_point(df=df_all_rats, ax=ax_split[1])
+        # XXX: do this panel for all rats?
+        trajs_splitting_point(df=df, ax=ax_split[1])
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
 
     # fig 3
