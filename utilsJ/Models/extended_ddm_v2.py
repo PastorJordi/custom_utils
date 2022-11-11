@@ -484,6 +484,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), ax=ax,
                             **kwargs).set(xlabel=xlabel,
                                           ylabel=ylabel,
+                                          xticks=np.arange(len(priorlabels))+0.5,
+                                          yticks=np.arange(len(stimlabels))+0.5,
                                           xticklabels=priorlabels,
                                           yticklabels=np.flip(stimlabels))
 
@@ -491,6 +493,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None, **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
+                xticks=np.arange(len(priorlabels))+0.5,
+                yticks=np.arange(len(stimlabels))+0.5,
                 xticklabels=priorlabels,
                 yticklabels=np.flip(stimlabels),
             )
@@ -499,6 +503,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             g = sns.heatmap(matrix, ax=ax, annot=annotmat, **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
+                xticks=np.arange(len(priorlabels))+0.5,
+                yticks=np.arange(len(stimlabels))+0.5,
                 xticklabels=priorlabels,
                 yticklabels=stimlabels,
             )
@@ -506,6 +512,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             g = sns.heatmap(matrix, ax=ax, annot=None, **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
+                xticks=np.arange(len(priorlabels))+0.5,
+                yticks=np.arange(len(stimlabels))+0.5,
                 xticklabels=priorlabels,
                 yticklabels=stimlabels,
             )

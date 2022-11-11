@@ -10,7 +10,7 @@ import seaborn as sns
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -18,11 +18,11 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 import fig1, fig3, fig2
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 BINS_RT = np.linspace(1, 301, 21)
@@ -209,15 +209,15 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
                            annotate=False, xlabel='prior', ylabel='avg stim',
                            cmap='rocket')
     ax[4].set_title('Pright')
-    edd2.com_heatmap_jordi(zt/max(zt)*decision, coh, hit, ax=ax[5],
+    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5],
                            flip=True,
-                           xlabel='prior congruency with final decision',
+                           xlabel='prior',
                            annotate=False, ylabel='avg stim ', cmap='rocket')
     ax[5].set_title('Pcorrect')
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected):
+          decision_model, com, com_model, com_model_detected, pro_vs_re):
     fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
@@ -281,26 +281,26 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[6].legend()
     ax[6].set_xlabel('RT (ms)')
     ax[6].set_ylabel('PCoM')
-    # decision_01 = (decision+1)/2
-    # edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
-    #                        annotate=False, xlabel='prior', ylabel='avg stim',
-    #                        cmap='rocket')
-    # ax[8].set_title('Pright Data')
+    decision_01 = (decision+1)/2
+    edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
+                           annotate=False, xlabel='prior', ylabel='avg stim',
+                           cmap='rocket')
+    ax[8].set_title('Pright Data')
     zt_model = zt[sound_len_model >= 0]
-    # coh_model = coh[sound_len_model >= 0]
-    # decision_01_model = (decision_model+1)/2
-    # edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
-    #                        flip=True, annotate=False, xlabel='prior',
-    #                        ylabel='avg stim', cmap='rocket')
-    # ax[9].set_title('Pright Model')
-    # edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
-    #                        flip=True, xlabel='prior', annotate=False,
-    #                        ylabel='avg stim', cmap='rocket')
-    # ax[10].set_title('Pcorrect Data')
-    # edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
-    #                        flip=True, xlabel='prior', annotate=False,
-    #                        ylabel='avg stim', cmap='rocket')
-    # ax[11].set_title('Pcorrect Model')
+    coh_model = coh[sound_len_model >= 0]
+    decision_01_model = (decision_model+1)/2
+    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
+                           flip=True, annotate=False, xlabel='prior',
+                           ylabel='avg stim', cmap='rocket')
+    ax[9].set_title('Pright Model')
+    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
+                           flip=True, xlabel='prior', annotate=False,
+                           ylabel='avg stim', cmap='rocket')
+    ax[10].set_title('Pcorrect Data')
+    edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
+                           flip=True, xlabel='prior', annotate=False,
+                           ylabel='avg stim', cmap='rocket')
+    ax[11].set_title('Pcorrect Model')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
                             'R_response': (decision+1)/2})
@@ -324,6 +324,19 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
+def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
+    coh_com = coh[com]
+    gt_com = gt[com]
+    decision_com = decision[com]
+    ev_vals = np.unique(np.abs(coh_com))
+    acc_ch1 = []
+    acc_ch2 = []
+    for ev in ev_vals:
+        index = np.abs(coh_com) == ev
+        acc_ch1.append(np.mean((-decision_com[index]) == gt_com[index]))
+        acc_ch2.append(np.mean(decision_com[index] == gt_com[index]))
+
+
 def run_model(stim, zt, coh, gt, trial_index):
     num_tr = int(len(zt))
     data_augment_factor = 10
@@ -332,15 +345,15 @@ def run_model(stim, zt, coh, gt, trial_index):
     detect_CoMs_th = 5
     p_t_aff = 8
     p_t_eff = 8
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_a = 16  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.1
-    p_w_stim = 0.05
+    p_w_stim = 0.08
     p_e_noise = 0.02
     p_com_bound = 0.
     p_w_a_intercept = 0.05
     p_w_a_slope = -2e-05  # fixed
-    p_a_noise = np.sqrt(5e-3)  # fixed
-    p_1st_readout = 80
+    p_a_noise = 0.04  # fixed
+    p_1st_readout = 140
     p_2nd_readout = 160
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
@@ -393,14 +406,15 @@ def run_model(stim, zt, coh, gt, trial_index):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+    subject = 'LE43'
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
                                   return_df=True, sv_folder=SV_FOLDER,
                                   after_correct=True, silent=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
-    f5 = False
+    f5 = True
 
     # fig 1
     if f1:
@@ -473,9 +487,7 @@ if __name__ == '__main__':
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2
         fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
-        if f1:
-            fig_1(coh, hit_model, reaction_time, resp_fin, zt, supt='Model',
-                  label='Model')
+
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
