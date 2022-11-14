@@ -397,6 +397,25 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
     ax.legend()
 
 
+def cdfs(coh, sound_len, ax, title=''):
+    rm_top_right_lines(ax)
+    colors = ['k', 'darkred', 'darkorange', 'gold']
+    index_1 = sound_len <= 300
+    sound_len = sound_len[index_1]
+    coh = coh[index_1]
+    ev_vals = np.unique(np.abs(coh))
+    for i, ev in enumerate(ev_vals):
+        index = ev == np.abs(coh)
+        hist_data, bins = np.histogram(sound_len[index], bins=200)
+        plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
+                 np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
+                 color=colors[i], linewidth=3)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('CDF')
+    ax.legend()
+    ax.set_title(str(title))
+
+
 def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
     fig, ax = plt.subplots(ncols=3, nrows=2)
     ax = ax.flatten()
@@ -412,7 +431,8 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
     ax[0].set_ylabel('Probability of right')
     pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1],
                                    label=label)
-    reaction_time_histogram(sound_len=sound_len, ax=ax[2], label=label)
+    # reaction_time_histogram(sound_len=sound_len, ax=ax[2], label=label)
+    cdfs(coh=coh, sound_len=sound_len, ax=ax[2], title='')
     express_performance(hit=hit, coh=coh, sound_len=sound_len, label=label,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
     fig.suptitle(supt)
@@ -474,8 +494,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
                             'com_model': com_model,
-                            'com_model_detected':
-                                com_model_detected})
+                            'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                  errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[5])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
@@ -557,17 +576,18 @@ def run_model(stim, zt, coh, gt, trial_index):
     MT_intercep = 254
     detect_CoMs_th = 5
     p_t_aff = 8
-    p_t_eff = 8
-    p_t_a = 16  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_eff = 5
+    p_t_a = 15  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.1
-    p_w_stim = 0.08
+    p_w_stim = 0.05
     p_e_noise = 0.02
     p_com_bound = 0.
     p_w_a_intercept = 0.05
     p_w_a_slope = -2e-05  # fixed
     p_a_noise = 0.04  # fixed
     p_1st_readout = 140
-    p_2nd_readout = 160
+    p_2nd_readout = 100
+
     stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
