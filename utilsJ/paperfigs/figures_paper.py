@@ -9,12 +9,12 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
 import sys
-from utilsJ.Models import simul
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side, trajectory_thr
@@ -26,14 +26,14 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-BINS_RT = np.linspace(1, 301, 21)
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
 
@@ -430,7 +430,7 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected, pro_vs_re):
+          decision_model, com, com_model, com_model_detected):
     fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
@@ -622,12 +622,13 @@ if __name__ == '__main__':
     subject = 'LE43'
     df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
                                   return_df=True, sv_folder=SV_FOLDER,
-                                  after_correct=True, silent=True)
+                                  after_correct=True, silent=True,
+                                  all_trials=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
-    f5 = False
+    f5 = True
 
     # fig 1
     if f1:

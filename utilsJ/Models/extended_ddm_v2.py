@@ -23,26 +23,26 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-BINS = np.linspace(1, 301, 21)
+BINS = np.linspace(1, 301, 11)
 
 
 def tests_trajectory_update(remaining_time=100, w_updt=10):
@@ -1180,6 +1180,10 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                 pcom_model_vs_data(detected_com, com[tr_index],
                                    sound_len[tr_index], reaction_time)
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
+                mean_com_traj_peak(trajectories=None, com=detected_com,
+                                   sound_len=reaction_time,
+                                   decision=resp_fin, motor_time=MT,
+                                   val_at_updt=x_val_at_updt, data=False)
                 MT = np.array(MT)*1e-3
                 # MT_vs_ev(resp_len=MT, coh=coh[tr_index],
                 #          com=detected_com)
@@ -2271,21 +2275,57 @@ def cdfs(coh, sound_len, title=''):
     plt.title(str(title))
 
 
+def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time,
+                       val_at_updt=None, data=True):
+    if data:
+        peak_com = []
+        traj_com = trajectories[com.astype(bool)]
+        for i_t, traj in enumerate(traj_com):
+            signed_traj = traj*decision[i_t]
+            peak_com.append(abs(min(signed_traj)))
+    if not data:
+        peak_com = np.array(val_at_updt)[com.astype(bool)]
+        motor_time = np.array(motor_time)
+    fig, ax = plt.subplots(nrows=2, ncols=2)
+    ax = ax.flatten()
+    ax[0].hist(peak_com, bins=30, range=(0, 120))
+    ax[0].set_xlabel('CoM peak')
+    ax[0].set_ylabel('Counts')
+    df_plot = pd.DataFrame({'RT': sound_len[com.astype(bool)],
+                            'ComPeak': peak_com})
+    bins_rt = np.linspace(0, 300, 21)
+    binned_curve(df_plot, 'ComPeak', 'RT', bins=bins_rt,
+                 ax=ax[1], xpos=np.diff(bins_rt)[0])
+    ax[1].set_xlabel('RT (ms)')
+    ax[1].set_ylabel('CoM peak')
+    com_heatmap_jordi(zt[com.astype(bool)], coh[com.astype(bool)],
+                      (np.array(peak_com) < 50)*1.0, flip=True,
+                      annotate=False, ax=ax[2])
+    ax[2].set_title('Peak < 50 px.')
+    df_plot = pd.DataFrame({'MT': motor_time[com.astype(bool)]*1e3,
+                            'ComPeak': peak_com})
+    bins_mt = np.linspace(150, 600, 31)
+    binned_curve(df_plot, 'ComPeak', 'MT', bins=bins_mt,
+                 ax=ax[3], xpos=np.diff(bins_mt)[0])
+    ax[3].set_xlabel('MT (ms)')
+    ax[3].set_ylabel('CoM peak')
+
+
 # --- MAIN
 if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(8e4)
+    num_tr = int(1.6e5)
     load_data = True
-    new_sample = True
-    single_run = False
+    new_sample = False
+    single_run = True
     shuffle = False
     simulate = True
     parallel = False
     plot_t12 = False
     data_augment_factor = 10
-    splitting = False
+    splitting = True
     silent = False
     if simulate:
         # GET DATA
@@ -2357,20 +2397,20 @@ if __name__ == '__main__':
         trial_index = trial_index[:int(num_tr)]
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
-            p_t_aff = 2
-            p_t_eff = 5
-            p_t_a = int(18 - p_t_eff)  # 90 ms (18) PSIAM fit includes p_t_eff
-            p_w_zt = 0.2
-            p_w_stim = 0.15
-            p_e_noise = 0.04
+            p_t_aff = 7
+            p_t_eff = 7
+            p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+            p_w_zt = 0.15
+            p_w_stim = 0.09
+            p_e_noise = 0.03
             p_com_bound = 0.
-            p_w_a_intercept = 0.03
-            p_w_a_slope = -3e-05
-            p_a_noise = np.sqrt(5e-3)
-            p_1st_readout = 80
+            p_w_a_intercept = 0.05
+            p_w_a_slope = -2e-05  # fixed
+            p_a_noise = 0.04  # fixed
+            p_1st_readout = 120
             p_2nd_readout = 160
-            compute_trajectories = False
-            plot = False
+            compute_trajectories = True
+            plot = True
             all_trajs = True
             configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope,
@@ -2379,19 +2419,22 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            # if plot:
-            #     # left_right_matrix(zt, coh, com, decision)
-            #     data_to_plot = {'sound_len': sound_len,
-            #                     'CoM': com,
-            #                     'first_resp': decision*[~com*(-1)],
-            #                     'final_resp': decision,
-            #                     'hithistory': hit,
-            #                     'avtrapz': coh,
-            #                     'detected_com': com,
-            #                     'MT': resp_len*1e3,
-            #                     'zt': zt, 'decision': decision,
-            #                     'trial_idxs': trial_index}
-            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            if plot:
+                # left_right_matrix(zt, coh, com, decision)
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt, 'decision': decision,
+                                'trial_idxs': trial_index}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+                mean_com_traj_peak(trajectories=traj_y, com=com,
+                                   sound_len=sound_len, decision=decision,
+                                   motor_time=resp_len)
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]
