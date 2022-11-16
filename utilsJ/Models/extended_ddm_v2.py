@@ -786,6 +786,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # TODO: COMMENT EVERY FORKING LINE
     bound = 1
     bound_a = 2.2
+    # p_leak = 0.1
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -798,6 +799,10 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         p_w_a_slope*trial_index
     # zeros before p_t_a
     dA[:p_t_a, :] = 0
+    # adding leak
+    # rolled_dW = np.roll(dW, 1)
+    # rolled_dW[0, :] = 0
+    # dW += -rolled_dW*p_leak
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior

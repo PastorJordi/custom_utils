@@ -10,8 +10,8 @@ import seaborn as sns
 from scipy.stats import sem
 import sys
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -26,13 +26,16 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -351,8 +354,8 @@ def tachometric_data(coh, hit, sound_len, ax, label='Data'):
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
-    ax.set_ylim(0, 1.1)
-    ax.legend([1, 0.5, 0.25, 0])
+    ax.set_ylim(0.4, 1.1)
+    # ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
 
@@ -588,16 +591,16 @@ def run_model(stim, zt, coh, gt, trial_index):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 8
-    p_t_eff = 5
-    p_t_a = 15  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.1
-    p_w_stim = 0.05
-    p_e_noise = 0.02
+    p_t_aff = 7
+    p_t_eff = 8
+    p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.12
+    p_w_stim = 0.18
+    p_e_noise = 0.03
     p_com_bound = 0.
     p_w_a_intercept = 0.05
-    p_w_a_slope = -2e-05  # fixed
-    p_a_noise = 0.04  # fixed
+    p_w_a_slope = -2.3e-05  # fixed
+    p_a_noise = 0.042  # fixed
     p_1st_readout = 140
     p_2nd_readout = 100
 
@@ -665,7 +668,7 @@ if __name__ == '__main__':
                                       after_correct=True, silent=True,
                                       all_trials=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
     f5 = True
