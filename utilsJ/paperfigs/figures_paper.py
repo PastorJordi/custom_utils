@@ -11,8 +11,8 @@ from scipy.stats import sem
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -26,13 +26,13 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
 
@@ -397,22 +397,32 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
     ax.legend()
 
 
-def cdfs(coh, sound_len, ax, title=''):
-    rm_top_right_lines(ax)
+def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title=''):
     colors = ['k', 'darkred', 'darkorange', 'gold']
     index_1 = sound_len <= 300
     sound_len = sound_len[index_1]
     coh = coh[index_1]
     ev_vals = np.unique(np.abs(coh))
     for i, ev in enumerate(ev_vals):
-        index = ev == np.abs(coh)
-        hist_data, bins = np.histogram(sound_len[index], bins=200)
-        plt.plot(bins[:-1]+(bins[1]-bins[0])/2,
-                 np.cumsum(hist_data)/np.sum(hist_data), label=str(ev),
-                 color=colors[i], linewidth=3)
+        if f5:
+            if ev == 0 or ev == 1:
+                index = ev == np.abs(coh)
+                hist_data, bins = np.histogram(sound_len[index], bins=200)
+                ax.plot(bins[:-1]+(bins[1]-bins[0])/2,
+                        np.cumsum(hist_data)/np.sum(hist_data),
+                        label=str(ev) + ' ' + label_title,
+                        color=colors[i], linewidth=2, linestyle=linestyle)
+        else:
+            index = ev == np.abs(coh)
+            hist_data, bins = np.histogram(sound_len[index], bins=200)
+            ax.plot(bins[:-1]+(bins[1]-bins[0])/2,
+                    np.cumsum(hist_data)/np.sum(hist_data),
+                    label=str(ev) + ' ' + label_title,
+                    color=colors[i], linewidth=2, linestyle=linestyle)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('CDF')
-    ax.legend()
+    ax.set_xlim(-1, 152)
+    ax.legend(title='Coherence')
     ax.set_title(str(title))
 
 
@@ -432,7 +442,7 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
     pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1],
                                    label=label)
     # reaction_time_histogram(sound_len=sound_len, ax=ax[2], label=label)
-    cdfs(coh=coh, sound_len=sound_len, ax=ax[2], title='')
+    cdfs(coh=coh, sound_len=sound_len, f5=False, ax=ax[2], title='')
     express_performance(hit=hit, coh=coh, sound_len=sound_len, label=label,
                         pos_tach_ax=pos_tach_ax, ax=ax[3])
     fig.suptitle(supt)
@@ -517,6 +527,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
                            annotate=False, xlabel='prior', ylabel='avg stim',
                            cmap='rocket')
+    cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
+    cdfs(coh, reaction_time, f5=True, ax=ax[7], label_title='Model',
+         linestyle='--')
     ax[8].set_title('Pright Data')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
@@ -640,12 +653,19 @@ def run_model(stim, zt, coh, gt, trial_index):
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
-                                  return_df=True, sv_folder=SV_FOLDER,
-                                  after_correct=True, silent=True,
-                                  all_trials=True)
+    all_rats = False
+    if all_rats:
+        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
+                                      return_df=True, sv_folder=SV_FOLDER,
+                                      after_correct=True, silent=True,
+                                      all_trials=True)
+    else:
+        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
+                                      return_df=True, sv_folder=SV_FOLDER,
+                                      after_correct=True, silent=True,
+                                      all_trials=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f5 = True
@@ -673,7 +693,7 @@ if __name__ == '__main__':
         trial_index = np.array(df.origidx)
         trial_index = trial_index[after_correct_id]
         # tachometrics, rt distribution, express performance
-        fig_1(coh, hit, sound_len, decision, zt, supt='data')
+        fig_1(coh, hit, sound_len, decision, zt, supt='')
 
     # fig 2
     if f2:
