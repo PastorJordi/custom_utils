@@ -225,7 +225,7 @@ def trial_ev(zt, stim, trial_index, MT_slope, MT_intercep, p_w_zt,
 
 
 def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_aff, init_trajs, total_traj, p_t_eff, frst_traj_motor_time,
+             p_t_aff, init_traj, total_traj, p_t_eff, frst_traj_motor_time,
              p_com_bound, stim_res=50, trial=0, l=''):
     f, ax = plt.subplots(nrows=2, ncols=1, figsize=(6, 12), sharex=True)
     ax = ax.flatten()
@@ -260,8 +260,8 @@ def plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     ax[1].set_ylabel(l+', y(px)')
     print(len(init_traj))
     ax[1].legend()
-    for a in ax:
-        a.set_xlim([first_ind*stim_res-50, second_ind*stim_res+50])
+    # for a in ax:
+    #     a.set_xlim([first_ind*stim_res-50, second_ind*stim_res+50])
     f.savefig('/home/manuel/Descargas/example_trials.png', dpi=400,
               bbox_inches='tight')
 
@@ -307,6 +307,8 @@ if __name__ == "__main__":
                  p_a_noise=p_a_noise, p_1st_readout=p_1st_readout,
                  p_2nd_readout=p_2nd_readout, stim_res=stim_res)
     
-    plotting(com, E, A, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
-             p_t_aff, init_traj, total_traj, p_t_eff, frst_traj_motor_time,
-             p_com_bound, stim_res=50, trial=0)
+    plotting(com=com, E=E, A=A, second_ind=second_ind, first_ind=first_ind,
+             resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
+             p_t_aff=p_t_aff, init_traj=init_traj, total_traj=total_traj,
+             p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
+             p_com_bound=p_com_bound, stim_res=stim_res)
