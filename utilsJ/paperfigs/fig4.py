@@ -210,15 +210,16 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
 # XXX
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_traj, total_traj, p_t_eff, frst_traj_motor_time,
-             p_com_bound, fixation, ax, stim_res=50, trial=0, l=''):
+             p_com_bound, fixation, ax, stim_res=50, trial=0, l='',
+             color2='c'):
     ax = ax.flatten()
     ax[1].set_xlabel('Time (ms)')
     max_xlim = 0
     # traj_in = False
     edd2.draw_lines(ax, frst=first_ind*stim_res, sec=second_ind*stim_res,
-                    p_t_aff=p_t_aff*stim_res, p_com_bound=p_com_bound)
-    color1 = 'green' if resp_first < 0 else 'purple'
-    color2 = 'green' if resp_fin < 0 else 'purple'
+                    p_t_aff=p_t_aff*stim_res, p_com_bound=p_com_bound,
+                    clrs_ro=['c', color2])
+    color1 = 'k'
 
     x_2 = np.arange(second_ind+1)*stim_res
     x_1 = np.arange(first_ind+1)*stim_res
@@ -280,11 +281,13 @@ if __name__ == "__main__":
     MT_intercep = 254
     f, ax = plt.subplots(nrows=2, ncols=1, figsize=(6, 12))
     # trials
-    trial_type = 'confirmation'
-    for trial_type in ['confirmation', 'CoM']:
-        if trial_type == 'confirmation':
+    trial_types = ['confirmation', 'CoM']
+    seeds = [0, 1]
+    colors = ['b', 'm']
+    for i_tt, tt in enumerate(trial_types):
+        if tt == 'confirmation':
             stim_offset = 0.7
-        elif trial_type == 'CoM':
+        elif tt == 'CoM':
             stim_offset = -2
         zt = np.array([2])
         stim = np.random.randn(20, 1)+stim_offset
@@ -303,8 +306,7 @@ if __name__ == "__main__":
         common_noise[hit_action+1:] = 0 
         dW = common_noise*p_e_noise+Ve
         # individual noise
-        seed = 0 if trial_type == 'confirmation' else 1
-        np.random.seed(seed)
+        np.random.seed(seeds[i_tt])
         common_noise = np.random.randn(N, num_tr)
         common_noise[:hit_action] = 0 
         dW = common_noise*p_e_noise+dW
@@ -327,6 +329,6 @@ if __name__ == "__main__":
                  p_t_aff=p_t_aff, init_traj=init_traj, total_traj=total_traj,
                  p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
                  p_com_bound=p_com_bound, stim_res=stim_res, fixation=fixation,
-                 ax=ax)
+                 ax=ax, color2=colors[i_tt])
     f.savefig(SV_FOLDER+'example_trials.png', dpi=400,
               bbox_inches='tight')
