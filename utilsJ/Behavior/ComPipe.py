@@ -373,7 +373,7 @@ class chom:
             if not os.path.isdir(item):
                 # raise ValueError(f'could not find path: {item}') # crashes pipes, just warn with a print
                 print(f"could not find path: {item}")
-        chom.load_available(self, npy=analyze_trajectories)
+        # chom.load_available(self, npy=analyze_trajectories)
 
     # this could be executed when creating instance
     def load_available(self, npy=True, plot=False, plot_kwargs={}):
