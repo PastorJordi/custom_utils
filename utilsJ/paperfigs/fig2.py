@@ -104,8 +104,10 @@ def a(
 
 def bcd(sv_folder=None):
     sv_folder = sv_folder or SAVPATH
-    portspng = '/home/jordi/Documents/changes_of_mind/changes_of_mind_scripts/templates/box03/ports.png'
-    ratcompng = '/home/jordi/Documents/changes_of_mind/demo/materials/craft_vid/CoM/0/001965.png'
+    portspng = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/Figure_2/ports.png'
+    ratcompng = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/Figure_2/001965.png'
     img = plt.imread(portspng)
     rat = plt.imread(ratcompng)
     fig, ax = plt.subplots(ncols=3, figsize=(18, 5.5), gridspec_kw={
