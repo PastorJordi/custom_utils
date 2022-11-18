@@ -724,7 +724,7 @@ if __name__ == '__main__':
     # fig 3
     if f3:
         rat_path = '/home/molano/Dropbox/project_Barna/' +\
-            'ChangesOfMind/figures/Figure 3/'
+            'ChangesOfMind/figures/Figure_3/'
         fig2.bcd(parentpath=rat_path, sv_folder=SV_FOLDER)
         fig2.e(df, sv_folder=SV_FOLDER)
         fig2.f(df, sv_folder=SV_FOLDER)
