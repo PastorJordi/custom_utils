@@ -1,10 +1,11 @@
-
-
-from utilsJ.regularimports import * 
+import seaborn as sns
 from utilsJ.Behavior import plotting, ComPipe
 from scipy.interpolate import interp1d
 from scipy.stats import sem
 from matplotlib import cm
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 SAVPATH = '/home/jordi/Documents/changes_of_mind/changes_of_mind_scripts/PAPER/paperfigs/test_fig_scripts/' # where to save figs
 SAVEPLOTS = True # whether to save plots or just show them
 
@@ -96,7 +97,8 @@ def a(
     plt.show()
 
 
-def bcd():
+def bcd(sv_folder=None):
+    sv_folder = sv_folder or SAVPATH
     portspng = '/home/jordi/Documents/changes_of_mind/changes_of_mind_scripts/templates/box03/ports.png'
     ratcompng = '/home/jordi/Documents/changes_of_mind/demo/materials/craft_vid/CoM/0/001965.png'
     img = plt.imread(portspng)
@@ -153,7 +155,7 @@ def bcd():
         else: 
             toappendx, toappendy = [-20], [-75]
             
-        c_resp_len = a.trial_sess.resp_len[i]
+        # c_resp_len = a.trial_sess.resp_len[i]
         c_sound_len = a.trial_sess.sound_len[i]
         tvec = (
             a.trial_sess.trajectory_stamps[i] - np.datetime64(a.trial_sess.fix_onset_dt[i])
@@ -187,13 +189,13 @@ def bcd():
     ax[2].set_ylabel('y dimension (pixels)', fontsize=14)
     ax[2].set_xticks([])
     if SAVEPLOTS:
-        fig.savefig(f'{SAVPATH}2bcd_ports_and_traj.svg')
+        fig.savefig(f'{sv_folder}2bcd_ports_and_traj.svg')
     plt.show()
 
 
-def e(df, average=False, rtbins= np.arange(0,201,10),savepath=SAVPATH):
+def e(df, average=False, rtbins= np.arange(0,201,10), sv_folder=None):
     """p(com) and RT distribution"""
-    
+    sv_folder = sv_folder or SAVPATH
     if not average:
         ax = plotting.binned_curve(
             df[df.special_trial==0],
@@ -258,12 +260,13 @@ def e(df, average=False, rtbins= np.arange(0,201,10),savepath=SAVPATH):
     plt.gcf().patch.set_facecolor('white')
     plt.gca().set_facecolor('white')
     if SAVEPLOTS:
-        plt.gcf().savefig(f'{savepath}2e_Pcom_and_RT_distr.svg')
+        plt.gcf().savefig(f'{sv_folder}2e_Pcom_and_RT_distr.svg')
     plt.show()
 
-def f(df, average=False, savepath=SAVPATH):
+def f(df, average=False, sv_folder=None):
     """com matrix and marginal axes
     be sure to pre-filter df (silent trials etc.)"""
+    sv_folder = sv_folder or SAVPATH
     if 'allpriors' not in df.columns:
         nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1)==2].index
         df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values,axis=1)
@@ -279,13 +282,13 @@ def f(df, average=False, savepath=SAVPATH):
         hide_marginal_axis=False, nbins=10, average_across_subjects=average
     )
     if SAVEPLOTS:
-        f.savefig(f'{savepath}2f_Pcom_matrix_L.svg')
+        f.savefig(f'{sv_folder}2f_Pcom_matrix_L.svg')
     plt.show()
 
-def g(df, average=False, savepath=SAVPATH):
+def g(df, average=False, sv_folder=None):
     """com matrix and marginal axes
     be sure to pre-filter df (silent trials etc.)"""
-
+    sv_folder = sv_folder or SAVPATH
     if 'allpriors' not in df.columns:
         nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1)==2].index
         df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values,axis=1)
@@ -300,5 +303,5 @@ def g(df, average=False, savepath=SAVPATH):
         hide_marginal_axis=False, nbins=10, side=1, average_across_subjects=average
     )
     if SAVEPLOTS:
-        f.savefig(f'{savepath}2g_Pcom_matrix_R.svg')
+        f.savefig(f'{sv_folder}2g_Pcom_matrix_R.svg')
     plt.show()
