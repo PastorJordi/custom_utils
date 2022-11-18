@@ -53,12 +53,141 @@ def fig_1(ax, coh, hit, sound_len, choice, zt):
     ax_temp = plt.axes([pos.x1+pos.width/2, pos.y0,
                         pos.width/2, pos.height/2])
     fp.com_heatmap_paper_marginal_pcom_side(df_data, side=1, ax=ax_temp)
+
+
+def com_heatmap_paper_marginal_pcom_side(
+    df, f=None, ax=None,  # data source, must contain 'avtrapz' and allpriors
+    pcomlabel=None, fcolorwhite=True, side=0,
+    hide_marginal_axis=True, n_points_marginal=None, counts_on_matrix=False,
+    adjust_marginal_axes=False,  # sets same max=y/x value
+    nbins=7,  # nbins for the square matrix
+    com_heatmap_kws={},  # avoid binning & return_mat already handled by the functn
+    com_col='CoM_sugg', priors_col='norm_allpriors', stim_col='avtrapz',
+    average_across_subjects=False
+):
+    assert side in [0, 1], "side value must be either 0 or 1"
+    assert df[priors_col].abs().max() <= 1, "prior must be normalized between -1 and 1"
+    assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
+    if pcomlabel is None:
+        if not side:
+            pcomlabel = r'$p(CoM_{R \rightarrow L})$'
+        else:
+            pcomlabel = r'$p(CoM_{L \rightarrow R})$'
+
+    if n_points_marginal is None:
+        n_points_marginal = nbins
+    # ensure some filtering
+    tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
+    tmp['tmp_com'] = False
+    tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
+    if f is None and ax is None:
+        f, ax = plt.subplots(
+            ncols=2, nrows=2,
+            gridspec_kw={'width_ratios': [8, 3], 'height_ratios': [3, 8]},
+            figsize=(7, 5.5), sharex='col', sharey='row')
+
+    # some aestethics
+    if fcolorwhite:
+        f.patch.set_facecolor('white')
+        for i in [0, 1]:
+            for j in [0, 1]:
+                ax[i, j].set_facecolor('white')
+
+    ax[0, 1].axis('off')
+    ax[0, 0].set_ylabel(pcomlabel)
+    ax[1, 1].set_xlabel(pcomlabel)
+    if hide_marginal_axis:
+        ax[0, 0].spines['top'].set_visible(False)
+        ax[0, 0].spines['left'].set_visible(False)
+        ax[0, 0].spines['right'].set_visible(False)
+        ax[0, 0].set_yticks([])
+        # ax[1,1].xaxis.set_visible(False)
+        ax[1, 1].spines['right'].set_visible(False)
+        ax[1, 1].spines['top'].set_visible(False)
+        ax[1, 1].spines['bottom'].set_visible(False)
+        ax[1, 1].set_xticks([])
+
+    com_heatmap_kws.update({
+        'return_mat': True,
+        'predefbins': [
+            np.linspace(-1, 1, nbins+1), np.linspace(-1, 1, nbins+1)
+        ]
+    })
+    if not average_across_subjects:
+        mat, nmat = com_heatmap(
+            tmp.norm_allpriors.values,
+            tmp.avtrapz.values,
+            tmp.tmp_com.values,
+            **com_heatmap_kws
+        )
+        # fill nans with 0
+        mat[np.isnan(mat)] = 0
+        nmat[np.isnan(nmat)] = 0
+        # change data to match vertical axis image standards (0,0) ->
+        # in the top left
+    else:
+        com_mat_list, number_mat_list = [], []
+        for subject in tmp.subjid.unique():
+            cmat, cnmat = com_heatmap(
+                tmp.loc[tmp.subjid == subject, 'norm_allpriors'].values,
+                tmp.loc[tmp.subjid == subject, 'avtrapz'].values,
+                tmp.loc[tmp.subjid == subject, 'tmp_com'].values,
+                **com_heatmap_kws
+            )
+            cmat[np.isnan(cmat)] = 0
+            cnmat[np.isnan(cnmat)] = 0
+            com_mat_list += [cmat]
+            number_mat_list += [cnmat]
+
+        mat = np.stack(com_mat_list).mean(axis=0)
+        nmat = np.stack(number_mat_list).mean(axis=0)
+
+    mat = np.flipud(mat)
+    nmat = np.flipud(nmat)
+
+   
+    # since it is the same, simply adjust max y_
+    if adjust_marginal_axes:
+        _, ymax = ax[0, 0].get_ylim()
+        _, xmax = ax[1, 1].get_xlim()
+        max_val_margin = max(ymax, xmax)
+        ax[0, 0].set_ylim(0, max_val_margin)
+        ax[1, 1].set_xlim(0, max_val_margin)
+
+    ax[1, 0].set_yticks(np.arange(nbins))
+    ax[1, 0].set_xticks(np.arange(nbins))
+    ax[1, 0].set_yticklabels(['right']+['']*(nbins-2)+['left'])
+    ax[1, 0].set_xticklabels(['left']+['']*(nbins-2)+['right'])
+
+    if counts_on_matrix:
+        im = ax[1, 0].imshow(nmat, aspect='auto')
+    else:
+        im = ax[1, 0].imshow(mat, aspect='auto')
+    ax[1, 0].set_xlabel('$\longleftarrow$Prior$\longrightarrow$', labelpad=-5)
+    ax[1, 0].set_ylabel(
+        '$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-17)
+    divider = make_axes_locatable(ax[1, 0])
+    cax = divider.append_axes('left', size='10%', pad=0.6)
+
+    divider2 = make_axes_locatable(ax[0, 0])
+    empty = divider2.append_axes('left', size='10%', pad=0.6)
+    empty.axis('off')
+    cax2 = cax.secondary_yaxis('left')
+    f.colorbar(im, cax=cax)
+    cax.yaxis.set_ticks_position('left')
+    if counts_on_matrix:
+        cax2.set_ylabel('# trials')
+    else:
+        cax2.set_ylabel(pcomlabel)
+
+    f.tight_layout()
+    return f, ax
     
 
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    all_rats = True
+    all_rats = False
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                       return_df=True, sv_folder=SV_FOLDER,
