@@ -132,7 +132,7 @@ def bcd(sv_folder=None):
     ax[1].set_ylim(100, 300)
 
     a = ComPipe.chom('LE37')
-    a.load_available()
+    # a.load_available()
     # load and preprocess data
     a.load('LE37_p4_u_20190330-150513')
     a.process(normcoords=True)
