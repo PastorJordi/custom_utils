@@ -10,6 +10,9 @@ import numpy as np
 from utilsJ.Models import extended_ddm_v2 as edd2
 import pandas as pd
 import matplotlib.pyplot as plt
+SV_FOLDER =\
+    '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/Figure\ 4/'
+
 
 # XXX
 def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
@@ -325,5 +328,5 @@ if __name__ == "__main__":
                  p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
                  p_com_bound=p_com_bound, stim_res=stim_res, fixation=fixation,
                  ax=ax)
-    f.savefig('/home/manuel/Descargas/example_trials.png', dpi=400,
+    f.savefig(SV_FOLDER+'example_trials.png', dpi=400,
               bbox_inches='tight')
