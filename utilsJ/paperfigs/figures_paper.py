@@ -460,6 +460,7 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
                            xlabel='prior',
                            annotate=False, ylabel='avg stim ', cmap='rocket')
     ax[5].set_title('Pcorrect')
+    fig.savefig(SV_FOLDER+'/Fig1.png', dpi=400, bbox_inches='tight')
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
