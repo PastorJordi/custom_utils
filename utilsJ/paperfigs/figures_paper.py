@@ -790,8 +790,6 @@ if __name__ == '__main__':
             pro_vs_re =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=num_tr)
-        hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
