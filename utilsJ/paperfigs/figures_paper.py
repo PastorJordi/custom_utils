@@ -28,13 +28,13 @@ matplotlib.rcParams['lines.markersize'] = 3
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/from_python/'  # Manuel
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
