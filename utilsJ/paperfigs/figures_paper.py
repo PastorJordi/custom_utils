@@ -722,10 +722,10 @@ if __name__ == '__main__':
 
     # fig 3
     if f3:
-        fig2.bcd()
-        fig2.e(df, savepath=SV_FOLDER)
-        fig2.f(df, savepath=SV_FOLDER)
-        fig2.g(df, savepath=SV_FOLDER)
+        # fig2.bcd()
+        fig2.e(df, sv_folder=SV_FOLDER)
+        fig2.f(df, sv_folder=SV_FOLDER)
+        fig2.g(df, sv_folder=SV_FOLDER)
 
     # fig 5 (model)
     if f5:
