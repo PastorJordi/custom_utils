@@ -102,7 +102,7 @@ def a(
     plt.show()
 
 
-def bcd(sv_folder=None):
+def bcd(parentpath, sv_folder=None):
     sv_folder = sv_folder or SAVPATH
     portspng = '/home/molano/Dropbox/project_Barna/' +\
     'ChangesOfMind/figures/Figure_3/ports.png'
@@ -131,7 +131,7 @@ def bcd(sv_folder=None):
     ax[1].set_xlim(450, 600)
     ax[1].set_ylim(100, 300)
 
-    a = ComPipe.chom('LE37')
+    a = ComPipe.chom('LE37', parentpath=parentpath)
     # a.load_available()
     # load and preprocess data
     a.load('LE37_p4_u_20190330-150513')
