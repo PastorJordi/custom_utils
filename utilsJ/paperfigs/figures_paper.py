@@ -668,9 +668,9 @@ if __name__ == '__main__':
                                       after_correct=True, silent=True,
                                       all_trials=True)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = False
-    f3 = False
+    f3 = True
     f5 = True
 
     # fig 1

@@ -12,7 +12,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 SV_FOLDER =\
     '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/Figure_4/'
-
+SV_FOLDER = '/home/manuel/Descargas/'
+    
 
 # XXX
 def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
@@ -210,7 +211,7 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
 # XXX
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_traj, total_traj, p_t_eff, frst_traj_motor_time,
-             p_com_bound, fixation, ax, stim_res=50, trial=0, l='',
+             p_com_bound, fixation, ax, stim_res=50, trial=0, lbl='',
              color2='c'):
     ax = ax.flatten()
     ax[1].set_xlabel('Time (ms)')
@@ -225,31 +226,30 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     x_1 = np.arange(first_ind+1)*stim_res
     ax[0].plot(x_2, E[:second_ind+1, trial], color=color2, alpha=0.7)
     ax[0].plot(x_1, E[:first_ind+1, trial], color=color1, lw=2)
-    ax[0].set_ylabel(l+' EA')
+    ax[0].set_ylabel('Evidence Accumulation')
     # trajectories
-    sec_ev = round(E[second_ind, trial], 2)
     # updt_motor = first_ind+frst_traj_motor_time
     init_motor = first_ind+p_t_eff
     xs = init_motor*stim_res+np.arange(0, len(total_traj))
     max_xlim = max(max_xlim, np.max(xs))
     ax[1].plot([0, xs[0]], [0, 0], color='k')
-    ax[1].plot(xs, total_traj, color='r',
-                  label='Updated traj., E:{}'.format(sec_ev))
-    first_ev = round(E[first_ind, trial], 2)
+    ax[1].plot(xs, total_traj, color=color2,
+                  label=lbl)
     xs = init_motor*stim_res+np.arange(0, len(init_traj))
     max_xlim = max(max_xlim, np.max(xs))
     ax[1].plot(xs, init_traj, color='k',
-                  label='Initial traj. E:{}'.format(first_ev))
-    ax[1].set_ylabel(l+', y(px)')
-    ax[1].set_ylabel(l+', y(px)')
-    print(len(init_traj))
+                  label='Planned trajetory')
+    ax[1].set_ylabel('y dimension (pixels)')
     ax[1].legend()
-    ax[0].set_xlim([280, second_ind*stim_res+50])
+    stim_period = stim_res*np.array([fixation, init_motor+p_t_aff])
+    clr = (.7, .7, .7)
+    ax[0].fill_between(x=stim_period, y1=-2, y2=2, alpha=0.1, color=clr)
+    ax[1].fill_between(x=stim_period, y1=-100, y2=100, alpha=0.1, color=clr)
+    ax[0].set_xlim([250, second_ind*stim_res+50])
     ax[1].set_xlim([first_ind*stim_res-50, max_xlim])
-    stim_period = [fixation, init_motor+p_t_aff]
-    for a in ax:
-        a.fill_between(x=stim_period, y1=-1, y2=1, alpha=0.5, color='k')
-
+    ax[0].set_ylim([-1.1, 1.1])
+    ax[1].set_ylim([-85, 85])
+    
 
 
 # XXX
@@ -329,6 +329,6 @@ if __name__ == "__main__":
                  p_t_aff=p_t_aff, init_traj=init_traj, total_traj=total_traj,
                  p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
                  p_com_bound=p_com_bound, stim_res=stim_res, fixation=fixation,
-                 ax=ax, color2=colors[i_tt])
+                 ax=ax, color2=colors[i_tt], lbl=tt)
     f.savefig(SV_FOLDER+'example_trials.png', dpi=400,
               bbox_inches='tight')
