@@ -102,7 +102,7 @@ def a(
     plt.show()
 
 
-def bcd(sv_folder=None):
+def bcd(parentpath, sv_folder=None):
     sv_folder = sv_folder or SAVPATH
     portspng = '/home/molano/Dropbox/project_Barna/' +\
     'ChangesOfMind/figures/Figure_3/ports.png'
@@ -131,73 +131,73 @@ def bcd(sv_folder=None):
     ax[1].set_xlim(450, 600)
     ax[1].set_ylim(100, 300)
 
-    a = ComPipe.chom('LE37')
-    a.load_available()
-    # load and preprocess data
-    a.load('LE37_p4_u_20190330-150513')
-    a.process(normcoords=True)
-    a.get_trajectories()
-    a.suggest_coms()
-    a.trial_sess['t_com'] = [[np.nan, np.nan]]*len(a.trial_sess)
-    a.trial_sess['y_com'] = np.nan
-    a.trial_sess.loc[
-        (a.trial_sess.resp_len < 2) & (a.trial_sess.CoM_sugg == True),
-        't_com'
-    ] = a.trial_sess.loc[
-        (a.trial_sess.resp_len < 2) & (a.trial_sess.CoM_sugg == True)
-    ].apply(lambda x: get_com_ty(x), axis=1)  # peak is just available for CoM trials# 'framerate'
-    a.trial_sess[['t_com', 'y_com']] = pd.DataFrame(
-        a.trial_sess['t_com'].values.tolist(), index=a.trial_sess.index)
+    # a = ComPipe.chom('LE37', parentpath=parentpath)
+    # # a.load_available()
+    # # load and preprocess data
+    # a.load('LE37_p4_u_20190330-150513')
+    # a.process(normcoords=True)
+    # a.get_trajectories()
+    # a.suggest_coms()
+    # a.trial_sess['t_com'] = [[np.nan, np.nan]]*len(a.trial_sess)
+    # a.trial_sess['y_com'] = np.nan
+    # a.trial_sess.loc[
+    #     (a.trial_sess.resp_len < 2) & (a.trial_sess.CoM_sugg == True),
+    #     't_com'
+    # ] = a.trial_sess.loc[
+    #     (a.trial_sess.resp_len < 2) & (a.trial_sess.CoM_sugg == True)
+    # ].apply(lambda x: get_com_ty(x), axis=1)  # peak is just available for CoM trials# 'framerate'
+    # a.trial_sess[['t_com', 'y_com']] = pd.DataFrame(
+    #     a.trial_sess['t_com'].values.tolist(), index=a.trial_sess.index)
 
-    a.trial_sess['ftraj'] = np.nan
-    a.trial_sess['ftraj'] = a.trial_sess.trajectory_y.apply(lambda x: len(x))
+    # a.trial_sess['ftraj'] = np.nan
+    # a.trial_sess['ftraj'] = a.trial_sess.trajectory_y.apply(lambda x: len(x))
 
-    for i in range(205, 220):  # 235):
+    # for i in range(205, 220):  # 235):
 
-        if a.trial_sess.dirty[i] or ((a.trial_sess.CoM_sugg[i] == True) & (a.trial_sess.y_com.abs()[i] < 7)):
-            print(f'skipping {i}')
-            continue
+    #     if a.trial_sess.dirty[i] or ((a.trial_sess.CoM_sugg[i] == True) & (a.trial_sess.y_com.abs()[i] < 7)):
+    #         print(f'skipping {i}')
+    #         continue
 
-        if a.trial_sess.R_response[i]:
-            toappendx, toappendy = [-20], [75]
-        else:
-            toappendx, toappendy = [-20], [-75]
+    #     if a.trial_sess.R_response[i]:
+    #         toappendx, toappendy = [-20], [75]
+    #     else:
+    #         toappendx, toappendy = [-20], [-75]
             
-        # c_resp_len = a.trial_sess.resp_len[i]
-        c_sound_len = a.trial_sess.sound_len[i]
-        tvec = (
-            a.trial_sess.trajectory_stamps[i] -
-            np.datetime64(a.trial_sess.fix_onset_dt[i])
-        ).astype(int) / 1000
-        x, y = a.trial_sess.trajectory_x[i], a.trial_sess.trajectory_y[i]
-        #print(x.size, y.size, tvec.size)
-        f = interp1d(tvec, np.c_[x, y], kind='cubic',
-                     axis=0, fill_value=np.nan, bounds_error=False)
+    #     # c_resp_len = a.trial_sess.resp_len[i]
+    #     c_sound_len = a.trial_sess.sound_len[i]
+    #     tvec = (
+    #         a.trial_sess.trajectory_stamps[i] -
+    #         np.datetime64(a.trial_sess.fix_onset_dt[i])
+    #     ).astype(int) / 1000
+    #     x, y = a.trial_sess.trajectory_x[i], a.trial_sess.trajectory_y[i]
+    #     #print(x.size, y.size, tvec.size)
+    #     f = interp1d(tvec, np.c_[x, y], kind='cubic',
+    #                  axis=0, fill_value=np.nan, bounds_error=False)
 
-        tvec_new = np.linspace(
-            0, 30 + 300+a.trial_sess.sound_len[i]+a.trial_sess.resp_len[i] * 1000, 100)
+    #     tvec_new = np.linspace(
+    #         0, 30 + 300+a.trial_sess.sound_len[i]+a.trial_sess.resp_len[i] * 1000, 100)
 
-        itraj = f(tvec_new)
-        if a.trial_sess.CoM_sugg[i]:
-            #print(f'CoM in index {i}')
-            # print(itraj.shape)
-            kws = dict(color='r', alpha=1, zorder=3)
-        else:
-            kws = dict(color='tab:blue', alpha=0.8)
+    #     itraj = f(tvec_new)
+    #     if a.trial_sess.CoM_sugg[i]:
+    #         #print(f'CoM in index {i}')
+    #         # print(itraj.shape)
+    #         kws = dict(color='r', alpha=1, zorder=3)
+    #     else:
+    #         kws = dict(color='tab:blue', alpha=0.8)
 
-        # aligned to RT
-        movement_offset = -300 - c_sound_len
-        #ax[0].plot(tvec_new + movement_offset, itraj[:,0], **kws)
-        ax[2].plot(tvec_new + movement_offset, itraj[:, 1], **kws)
+    #     # aligned to RT
+    #     movement_offset = -300 - c_sound_len
+    #     #ax[0].plot(tvec_new + movement_offset, itraj[:,0], **kws)
+    #     ax[2].plot(tvec_new + movement_offset, itraj[:, 1], **kws)
 
-        ax[1].plot(itraj[:, 0]+530, itraj[:, 1]+200, **kws)  # add offset
+    #     ax[1].plot(itraj[:, 0]+530, itraj[:, 1]+200, **kws)  # add offset
 
-    ax[2].axvline(0, color='k', ls=':', label='response onset')
-    ax[2].legend()
+    # ax[2].axvline(0, color='k', ls=':', label='response onset')
+    # ax[2].legend()
 
-    ax[2].set_xlabel('time', fontsize=14)
-    ax[2].set_ylabel('y dimension (pixels)', fontsize=14)
-    ax[2].set_xticks([])
+    # ax[2].set_xlabel('time', fontsize=14)
+    # ax[2].set_ylabel('y dimension (pixels)', fontsize=14)
+    # ax[2].set_xticks([])
     if SAVEPLOTS:
         fig.savefig(f'{sv_folder}2bcd_ports_and_traj.svg')
     plt.show()

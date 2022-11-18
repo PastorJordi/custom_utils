@@ -685,6 +685,25 @@ if __name__ == '__main__':
                                       return_df=True, sv_folder=SV_FOLDER,
                                       after_correct=True, silent=True,
                                       all_trials=True)
+    after_correct_id = np.where(df.aftererror == 0)[0]
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    zt = zt[after_correct_id]
+    hit = np.array(df['hithistory'])
+    hit = hit[after_correct_id]
+    stim = np.array([stim for stim in df.res_sound])
+    stim = stim[after_correct_id, :]
+    coh = np.array(df.coh2)
+    coh = coh[after_correct_id]
+    com = df.CoM_sugg.values
+    com = com[after_correct_id]
+    decision = np.array(df.R_response) * 2 - 1
+    decision = decision[after_correct_id]
+    sound_len = np.array(df.sound_len)
+    sound_len = sound_len[after_correct_id]
+    gt = np.array(df.rewside) * 2 - 1
+    gt = gt[after_correct_id]
+    trial_index = np.array(df.origidx)
+    trial_index = trial_index[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = False
@@ -694,25 +713,6 @@ if __name__ == '__main__':
     # fig 1
     if f1:
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-        after_correct_id = np.where(df.aftererror == 0)[0]
-        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        zt = zt[after_correct_id]
-        hit = np.array(df['hithistory'])
-        hit = hit[after_correct_id]
-        stim = np.array([stim for stim in df.res_sound])
-        stim = stim[after_correct_id, :]
-        coh = np.array(df.coh2)
-        coh = coh[after_correct_id]
-        com = df.CoM_sugg.values
-        com = com[after_correct_id]
-        decision = np.array(df.R_response) * 2 - 1
-        decision = decision[after_correct_id]
-        sound_len = np.array(df.sound_len)
-        sound_len = sound_len[after_correct_id]
-        gt = np.array(df.rewside) * 2 - 1
-        gt = gt[after_correct_id]
-        trial_index = np.array(df.origidx)
-        trial_index = trial_index[after_correct_id]
         # tachometrics, rt distribution, express performance
         fig_1(coh, hit, sound_len, decision, zt, supt='')
 
@@ -740,10 +740,17 @@ if __name__ == '__main__':
 
     # fig 3
     if f3:
-        fig2.bcd(sv_folder=SV_FOLDER)
-        fig2.e(df, savepath=SV_FOLDER)
-        fig2.f(df, savepath=SV_FOLDER)
-        fig2.g(df, savepath=SV_FOLDER)
+        rat_path = '/home/molano/Dropbox/project_Barna/' +\
+            'ChangesOfMind/figures/Figure_3/'
+        fig2.bcd(parentpath=rat_path, sv_folder=SV_FOLDER)
+        fig2.e(df, sv_folder=SV_FOLDER)
+        fig2.f(df, sv_folder=SV_FOLDER)
+        fig2.g(df, sv_folder=SV_FOLDER)
+        df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                                'norm_allpriors': zt/max(abs(zt)),
+                                'R_response': (decision+1)/2})
+        com_heatmap_paper_marginal_pcom_side(df_data, side=0)
+        com_heatmap_paper_marginal_pcom_side(df_data, side=1)
 
     # fig 5 (model)
     if f5:
@@ -783,6 +790,8 @@ if __name__ == '__main__':
             pro_vs_re =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=num_tr)
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,

@@ -1907,7 +1907,7 @@ def tachometric(
 
 
 def com_heatmap_paper_marginal_pcom_side(
-    df,  # data source, must contain 'avtrapz' and allpriors
+    df, f=None, ax=None,  # data source, must contain 'avtrapz' and allpriors
     pcomlabel=None, fcolorwhite=True, side=0,
     hide_marginal_axis=True, n_points_marginal=None, counts_on_matrix=False,
     adjust_marginal_axes=False,  # sets same max=y/x value
@@ -1934,11 +1934,11 @@ def com_heatmap_paper_marginal_pcom_side(
     tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
     tmp['tmp_com'] = False
     tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
-    f, ax = plt.subplots(
-        ncols=2, nrows=2,
-        gridspec_kw={'width_ratios': [8, 3], 'height_ratios': [3, 8]},
-        figsize=(7, 5.5), sharex='col', sharey='row'
-    )
+    if f is None and ax is None:
+        f, ax = plt.subplots(
+            ncols=2, nrows=2,
+            gridspec_kw={'width_ratios': [8, 3], 'height_ratios': [3, 8]},
+            figsize=(7, 5.5), sharex='col', sharey='row')
 
     # some aestethics
     if fcolorwhite:

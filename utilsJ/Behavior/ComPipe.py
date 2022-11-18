@@ -373,7 +373,7 @@ class chom:
             if not os.path.isdir(item):
                 # raise ValueError(f'could not find path: {item}') # crashes pipes, just warn with a print
                 print(f"could not find path: {item}")
-        chom.load_available(self, npy=analyze_trajectories)
+        # chom.load_available(self, npy=analyze_trajectories)
 
     # this could be executed when creating instance
     def load_available(self, npy=True, plot=False, plot_kwargs={}):
@@ -472,23 +472,23 @@ class chom:
             ]
         )
         if self.analyze_trajectories:
-            try:
-                self.pose = pd.read_hdf(self.POSES_PATH + target + chom.pose_ext).xs(
-                    chom.pose_ext[:-3], axis=1, drop_level=True
+            # try:
+            self.pose = pd.read_hdf(self.POSES_PATH + target + chom.pose_ext).xs(
+                chom.pose_ext[:-3], axis=1, drop_level=True
+            )
+            self.framestamps = np.load(
+                self.VIDEOS_PATH + target + ".npy", allow_pickle=True
+            )
+            # if self.framestamps.dtype is np.dtype(np.object): # idk if this will work: https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
+            # 'is' ddoes not work, boolean == does.
+            if self.framestamps.dtype == np.dtype(np.object):
+                # i hate this: https://stackoverflow.com/questions/13703720/converting-between-datetime-timestamp-and-datetime64
+                self.framestamps = np.array(
+                    self.framestamps.tolist(), dtype="datetime64"
                 )
-                self.framestamps = np.load(
-                    self.VIDEOS_PATH + target + ".npy", allow_pickle=True
-                )
-                # if self.framestamps.dtype is np.dtype(np.object): # idk if this will work: https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
-                # 'is' ddoes not work, boolean == does.
-                if self.framestamps.dtype == np.dtype(np.object):
-                    # i hate this: https://stackoverflow.com/questions/13703720/converting-between-datetime-timestamp-and-datetime64
-                    self.framestamps = np.array(
-                        self.framestamps.tolist(), dtype="datetime64"
-                    )
-            except:
-                # self.framestamps = np.load(self.VIDEOS_PATH+target+'.npy', allow_pickle=True)
-                raise IOError(f"could not load {target} framestamps")
+            # except:
+            #     # self.framestamps = np.load(self.VIDEOS_PATH+target+'.npy', allow_pickle=True)
+            #     raise IOError(f"could not load {target} framestamps")
 
     # get active ports with this #allportevents = a.sess.loc[(a.sess.TYPE=='EVENT') & (a.sess['+INFO'].str.startswith('Port')), '+INFO'].unique()
     # set([x[:5] for x in allportevents])
