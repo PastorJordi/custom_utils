@@ -375,6 +375,7 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                       predefbins=None, return_mat=False,
                       folding=False, annotate_div=1, ax=None,
+                      cbar_location='right',
                       xlabel='prior', ylabel='average stim', **kwargs):
     """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated
     from tmp dataframe
@@ -482,6 +483,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
         # stimlabels=np.flip(stimlabels)
         if annotate:
             g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), ax=ax,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location),
                             **kwargs).set(xlabel=xlabel,
                                           ylabel=ylabel,
                                           xticks=np.arange(len(priorlabels))+0.5,
@@ -490,7 +493,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                                           yticklabels=np.flip(stimlabels))
 
         else:
-            g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None, **kwargs).set(
+            g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
@@ -500,7 +505,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             )
     else:
         if annotate:
-            g = sns.heatmap(matrix, ax=ax, annot=annotmat, **kwargs).set(
+            g = sns.heatmap(matrix, ax=ax, annot=annotmat,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
@@ -509,7 +516,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                 yticklabels=stimlabels,
             )
         else:
-            g = sns.heatmap(matrix, ax=ax, annot=None, **kwargs).set(
+            g = sns.heatmap(matrix, ax=ax, annot=None,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
