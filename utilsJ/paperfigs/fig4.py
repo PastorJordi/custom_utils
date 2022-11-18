@@ -11,7 +11,7 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 import pandas as pd
 import matplotlib.pyplot as plt
 SV_FOLDER =\
-    '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/Figure\ 4/'
+    '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/Figure_4/'
 
 
 # XXX
