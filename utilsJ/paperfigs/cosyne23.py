@@ -5,17 +5,13 @@ Created on Fri Nov 18 16:49:51 2022
 
 @author: manuel
 """
-import os
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-from scipy.stats import sem
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
-import analyses
+import analyses_humans as ah
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import com_heatmap, tachometric
@@ -33,12 +29,8 @@ SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
     'ChangesOfMind/figures/Figure_3/001965.png'
 
-START_ANALYSIS = 0  # trials to ignore
-GREEN = np.array((77, 175, 74))/255
-PURPLE = np.array((152, 78, 163))/255
 
-
-def fig_1(ax, coh, hit, sound_len, choice, zt, com):
+def fig_1(df, ax, coh, hit, sound_len, choice, zt, com):
     for a in ax:
         fp.rm_top_right_lines(a)
     choice_01 = (choice+1)/2
@@ -192,91 +184,6 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_tach.spines['top'].set_visible(False)
 
 
-def traj_analysis(main_folder, subjects, steps=[None], name=''):
-    for i_s, subj in enumerate(subjects):
-        print('-----------')
-        print(subj)
-        folder = main_folder+subj+'/'
-        for i_stp, stp in enumerate(steps):
-            data_tr, data_traj = get_data_traj(folder=folder)
-            com(data_tr, data_traj, com_threshold=100, plot=True)
-
-
-def get_data_traj(folder, plot=False):
-    """
-    Extracts trajectories and psychometric data.
-    Inputs: subject name (subj) and main_folder
-    Outputs: psychometric data and trajectories data in two different dictionaries
-    """
-    # subject folder
-    # folder = main_folder+'\\'+subj+'\\'  # Alex
-    # find all data files
-    files_trials = glob.glob(folder+'*trials.csv')
-    files_traj = glob.glob(folder+'*trials-trajectories.csv')
-    # take files names
-    file_list_trials = [os.path.basename(x) for x in files_trials
-                        if x.endswith('trials.csv')]
-    file_list_traj = [os.path.basename(x) for x in files_traj
-                      if x.endswith('trials-trajectories.csv')]
-    # sort files
-    sfx_tls = [x[x.find('202'):x.find('202')+15] for x in file_list_trials]
-    sfx_trj = [x[x.find('202'):x.find('202')+15] for x in file_list_traj]
-
-    sorted_list_tls = [x for _, x in sorted(zip(sfx_tls, file_list_trials))]
-    sorted_list_trj = [x for _, x in sorted(zip(sfx_trj, file_list_traj))]
-    # create data
-    data_tls = {'correct': np.empty((0,)), 'answer_response': np.empty((0,)),
-                'soundPlay_object1_leftRightBalance': np.empty((0,)),
-                'respondedInTime': np.empty((0,)), 'block': np.empty((0,)),
-                'soundPlay_responseTime': np.empty((0,)),
-                'soundPlay_duration': np.empty((0,)),
-                'answer_responseTime': np.empty((0,))}
-    # go over all files
-    for f in sorted_list_tls:
-        # read file
-        df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
-        # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        for k in data_tls.keys():
-            values = df1[k].values[START_ANALYSIS:]
-            if k == 'soundPlay_object1_leftRightBalance':
-                values = values-.5
-                values[np.abs(values) < 0.01] = 0
-            data_tls[k] = np.concatenate((data_tls[k], values))
-    num_tr = len(data_tls['correct'])
-    data_trj = {'answer_positionsX': np.empty((0,)),
-                'answer_positionsY': np.empty((0,)),
-                'answer_times': np.empty((0,))}
-    if plot:
-        _, ax = plt.subplots()
-    for f in sorted_list_trj:
-        # read file
-        df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
-        # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        pos_x = df1['answer_positionsX'].dropna().values[:num_tr]
-        pos_y = df1['answer_positionsY'].dropna().values[:num_tr]
-        cont = 0
-        for ind_trl in range(len(pos_x)):
-            if cont == 1 and df1['trial'][ind_trl] == 1:
-                break
-            if df1['trial'][ind_trl] == 1:
-                cont = 1
-            pos_x[ind_trl] = [float(x) for x in pos_x[ind_trl].split(';')]
-            pos_y[ind_trl] = [float(x) for x in pos_y[ind_trl].split(';')]
-            if plot:
-                color = PURPLE if data_tls['answer_response'][ind_trl] == 1\
-                    else GREEN
-                ax.plot(pos_x[ind_trl], pos_y[ind_trl], color=color)
-        k = 'answer_positionsX'
-        data_trj[k] = np.concatenate((data_trj[k], pos_x))
-        k = 'answer_positionsY'
-        data_trj[k] = np.concatenate((data_trj[k], pos_y))
-        k = df1.columns[-1]
-        values = df1[k].dropna().values
-        k = 'answer_times'
-        data_trj[k] = np.concatenate((data_trj[k], values))
-    return data_tls, data_trj
-
-
 def fig_3(user_id, existing_data_path, ax_tach, ax_pright, ax_mat, humans=False):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20'
@@ -285,20 +192,26 @@ def fig_3(user_id, existing_data_path, ax_tach, ax_pright, ax_mat, humans=False)
     subj = ['general_traj']
     steps = [None]
     nm = '300'
-    df_data = traj_analysis(main_folder=folder+'\\'+nm+'ms\\',
-                            subjects=subj, steps=steps, name=nm,
-                            existing_data_path=existing_data_path)
+    df_data = ah.traj_analysis(main_folder=folder+'\\'+nm+'ms\\',
+                               subjects=subj, steps=steps, name=nm,
+                               existing_data_path=existing_data_path)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
 
 
+# --- MAIN
 if __name__ == '__main__':
     plt.close('all')
     rats = True
+    subject = 'LE43'
+    all_rats = False
+    # if we want to use data from all rats, we must use dani_clean.pkl
+    f1 = True
+    f2 = False
+    f3 = False
+
     if rats:
-        subject = 'LE43'
-        all_rats = False
         if all_rats:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                           return_df=True, sv_folder=SV_FOLDER,
@@ -339,17 +252,13 @@ if __name__ == '__main__':
         ax[0].axis('off')
         matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[2],
                       ax_mat=ax[3], humans=False)
-    # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = False
-    f3 = False
 
     # fig 1
     if f1:
         f, ax = plt.subplots(nrows=2, ncols=3)
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
-        fig_1(coh=coh, hit=hit, sound_len=sound_len,
+        fig_1(df=df, coh=coh, hit=hit, sound_len=sound_len,
               choice=choice, zt=zt, com=com, supt='')
 
     # fig 2
