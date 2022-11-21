@@ -11,6 +11,7 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
 import sys
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
 import analyses
 import figures_paper as fp
@@ -19,11 +20,11 @@ from utilsJ.Behavior.plotting import com_heatmap
 
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
@@ -125,7 +126,50 @@ def com_heatmap_paper_marginal_pcom_side(
     return mat
 
 
-def fig_3(user_id):
+def matrix_figure(df_data):
+    nbins = 7
+    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
+    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
+    f, ax = plt.subplots(nrows=2, ncols=2)
+    ax = ax.flatten()
+    for i in range(2):
+        ax[i].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$')
+        ax[i].set_ylabel(r'$\longleftarrow$Average stimulus$\longrightarrow$')
+        ax[i].set_yticks(np.arange(nbins))
+        ax[i].set_xticks(np.arange(nbins))
+        ax[i].set_yticklabels(['right']+['']*(nbins-2)+['left'])
+        ax[i].set_xticklabels(['left']+['']*(nbins-2)+['right'])
+    # R -> L
+    pcomlabel_0 = r'$p(CoM_{R \rightarrow L})$'
+    ax[0].set_title(pcomlabel_0)
+    im_0 = ax[0].imshow(matrix_side_0)
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes('left', size='10%', pad=0.6)
+    plt.colorbar(im_0, cax=cax)
+    cax.yaxis.set_ticks_position('left')
+    # L -> R
+    pcomlabel_1 = r'$p(CoM_{L \rightarrow R})$'
+    ax[1].set_title(pcomlabel_1)
+    im_1 = ax[1].imshow(matrix_side_1)
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes('left', size='10%', pad=0.6)
+    plt.colorbar(im_1, cax=cax)
+    cax.yaxis.set_ticks_position('left')
+    choice = df_data['R_response'].values
+    coh = df_data['avtrapz'].values
+    prior = df_data['norm_allpriors'].values
+    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
+                                annotate=False)
+    mat_pright = np.flipud(mat_pright)
+    im_2 = ax[2].imshow(mat_pright, cmap='rocket')
+    divider = make_axes_locatable(ax[2])
+    cax = divider.append_axes('left', size='10%', pad=0.6)
+    plt.colorbar(im_2, cax=cax)
+    cax.yaxis.set_ticks_position('left')
+    ax[2].set_title('Pright')
+
+
+def fig_3(user_id, existing_data_path):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20'
     if user_id == 'Manuel':
@@ -134,47 +178,51 @@ def fig_3(user_id):
     steps = [None]
     nm = '300'
     df_data = analyses.traj_analysis(main_folder=folder+'\\'+nm+'ms\\',
-                                     subjects=subj, steps=steps, name=nm)
-    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
-    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
+                                     subjects=subj, steps=steps, name=nm,
+                                     existing_data_path=existing_data_path)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    matrix_figure(df_data)
+
 
 
 if __name__ == '__main__':
     plt.close('all')
-    subject = 'LE43'
-    all_rats = False
-    if all_rats:
-        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
-                                      return_df=True, sv_folder=SV_FOLDER,
-                                      after_correct=True, silent=True,
-                                      all_trials=True)
-    else:
-        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
-                                      return_df=True, sv_folder=SV_FOLDER,
-                                      after_correct=True, silent=True,
-                                      all_trials=True)
-    after_correct_id = np.where(df.aftererror == 0)[0]
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    zt = zt[after_correct_id]
-    hit = np.array(df['hithistory'])
-    hit = hit[after_correct_id]
-    stim = np.array([stim for stim in df.res_sound])
-    stim = stim[after_correct_id, :]
-    coh = np.array(df.coh2)
-    coh = coh[after_correct_id]
-    com = df.CoM_sugg.values
-    com = com[after_correct_id]
-    choice = np.array(df.R_response) * 2 - 1
-    choice = choice[after_correct_id]
-    sound_len = np.array(df.sound_len)
-    sound_len = sound_len[after_correct_id]
-    gt = np.array(df.rewside) * 2 - 1
-    gt = gt[after_correct_id]
-    trial_index = np.array(df.origidx)
-    trial_index = trial_index[after_correct_id]
+    rats = False
+    if rats:
+        subject = 'LE43'
+        all_rats = False
+        if all_rats:
+            df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
+                                          return_df=True, sv_folder=SV_FOLDER,
+                                          after_correct=True, silent=True,
+                                          all_trials=True)
+        else:
+            df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
+                                          return_df=True, sv_folder=SV_FOLDER,
+                                          after_correct=True, silent=True,
+                                          all_trials=True)
+        after_correct_id = np.where(df.aftererror == 0)[0]
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        zt = zt[after_correct_id]
+        hit = np.array(df['hithistory'])
+        hit = hit[after_correct_id]
+        stim = np.array([stim for stim in df.res_sound])
+        stim = stim[after_correct_id, :]
+        coh = np.array(df.coh2)
+        coh = coh[after_correct_id]
+        com = df.CoM_sugg.values
+        com = com[after_correct_id]
+        choice = np.array(df.R_response) * 2 - 1
+        choice = choice[after_correct_id]
+        sound_len = np.array(df.sound_len)
+        sound_len = sound_len[after_correct_id]
+        gt = np.array(df.rewside) * 2 - 1
+        gt = gt[after_correct_id]
+        trial_index = np.array(df.origidx)
+        trial_index = trial_index[after_correct_id]
 
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
+    f1 = False
     f2 = False
     f3 = True
 
@@ -209,3 +257,5 @@ if __name__ == '__main__':
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
 
     # fig 3
+    fig_3(user_id='Alex', existing_data_path='C:/Users/Alexandre/Desktop/' +\
+                                             'CRM/Human/80_20/df_regressors.csv')
