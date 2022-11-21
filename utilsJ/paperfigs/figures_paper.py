@@ -28,13 +28,13 @@ matplotlib.rcParams['lines.markersize'] = 3
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -354,17 +354,26 @@ def tachometric_data(coh, hit, sound_len, ax, label='Data'):
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
-    ax.set_ylim(0.4, 1.1)
+    ax.set_ylim(0.4, 1.04)
     # ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
 
-def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61)):
+def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
+                            pro_vs_re=None):
     rm_top_right_lines(ax)
     if label == 'Data':
         color = 'k'
     if label == 'Model':
         color = 'red'
+        color_pro = 'coral'
+        color_re = 'maroon'
+        sound_len_pro = sound_len[pro_vs_re == 0]
+        sound_len_re = sound_len[pro_vs_re == 1]
+        ax.hist(sound_len_pro, bins=bins, alpha=0.3, density=False, linewidth=0.,
+                histtype='stepfilled', label=label + '-pro', color=color_pro)
+        ax.hist(sound_len_re, bins=bins, alpha=0.3, density=False, linewidth=0.,
+                histtype='stepfilled', label=label + '-reac', color=color_re)
     ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
             histtype='stepfilled', label=label, color=color)
     ax.set_xlabel("RT (ms)")
@@ -464,7 +473,7 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected):
+          decision_model, com, com_model, com_model_detected, pro_vs_re):
     fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
@@ -497,7 +506,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
                             bins=np.linspace(-150, 300, 91))
     reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0],
-                            bins=np.linspace(-150, 300, 91))
+                            bins=np.linspace(-150, 300, 91), pro_vs_re=pro_vs_re)
     ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
                         pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')
@@ -586,26 +595,34 @@ def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
         acc_ch2.append(np.mean(decision_com[index] == gt_com[index]))
 
 
-def run_model(stim, zt, coh, gt, trial_index):
-    num_tr = int(len(zt))
+def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
+    if num_tr is not None:
+        num_tr = num_tr
+    else:
+        num_tr = int(len(zt))
+    stim = stim[:, :int(num_tr)]
+    zt = zt[:int(num_tr)]
+    coh = coh[:int(num_tr)]
+    gt = gt[:int(num_tr)]
+    trial_index = trial_index[:int(num_tr)]
     data_augment_factor = 10
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 7
+    p_t_aff = 8
     p_t_eff = 8
     p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.12
-    p_w_stim = 0.18
-    p_e_noise = 0.03
+    p_w_zt = 0.2
+    p_w_stim = 0.11
+    p_e_noise = 0.02
     p_com_bound = 0.
     p_w_a_intercept = 0.05
-    p_w_a_slope = -2.3e-05  # fixed
+    p_w_a_slope = -2.5e-05  # fixed
     p_a_noise = 0.042  # fixed
-    p_1st_readout = 140
-    p_2nd_readout = 100
+    p_1st_readout = 60
+    p_2nd_readout = 150
 
-    stim = edd2.data_augmentation(stim=stim.T, daf=data_augment_factor)
+    stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
@@ -650,14 +667,14 @@ def run_model(stim, zt, coh, gt, trial_index):
     hit_model = resp_fin == gt
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-    return hit_model, reaction_time, detected_com, resp_fin, com_model
+    return hit_model, reaction_time, detected_com, resp_fin, com_model, pro_vs_re
 
 
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    all_rats = False
+    all_rats = True
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                       return_df=True, sv_folder=SV_FOLDER,
@@ -687,11 +704,10 @@ if __name__ == '__main__':
     gt = gt[after_correct_id]
     trial_index = np.array(df.origidx)
     trial_index = trial_index[after_correct_id]
-        
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
+    f1 = False
     f2 = False
-    f3 = True
+    f3 = False
     f5 = True
 
     # fig 1
@@ -739,12 +755,46 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        hit_model, reaction_time, com_model_detected, resp_fin, com_model =\
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index)
+        num_tr = 150000
+        if not f1:
+            after_correct_id = np.where(df.aftererror == 0)[0]
+            zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+            zt = zt[after_correct_id]
+            hit = np.array(df['hithistory'])
+            hit = hit[after_correct_id]
+            stim = np.array([stim for stim in df.res_sound])
+            stim = stim[after_correct_id, :]
+            coh = np.array(df.coh2)
+            coh = coh[after_correct_id]
+            com = df.CoM_sugg.values
+            com = com[after_correct_id]
+            decision = np.array(df.R_response) * 2 - 1
+            decision = decision[after_correct_id]
+            sound_len = np.array(df.sound_len)
+            sound_len = sound_len[after_correct_id]
+            gt = np.array(df.rewside) * 2 - 1
+            gt = gt[after_correct_id]
+            trial_index = np.array(df.origidx)
+            trial_index = trial_index[after_correct_id]
+        decision = decision[:int(num_tr)]
+        zt = zt[:int(num_tr)]
+        sound_len = sound_len[:int(num_tr)]
+        coh = coh[:int(num_tr)]
+        com = com[:int(num_tr)]
+        gt = gt[:int(num_tr)]
+        trial_index = trial_index[:int(num_tr)]
+        hit = hit[:int(num_tr)]
+        if stim.shape[0] != 20:
+            stim = stim.T
+        stim = stim[:, :int(num_tr)]
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+            pro_vs_re =\
+            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
+                      num_tr=num_tr)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
-              com_model_detected=com_model_detected)
+              com_model_detected=com_model_detected, pro_vs_re=pro_vs_re)
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2

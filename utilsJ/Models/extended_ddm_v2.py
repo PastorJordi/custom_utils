@@ -22,9 +22,9 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
@@ -33,14 +33,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
@@ -375,6 +375,7 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
 def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                       predefbins=None, return_mat=False,
                       folding=False, annotate_div=1, ax=None,
+                      cbar_location='right',
                       xlabel='prior', ylabel='average stim', **kwargs):
     """x: priors; y: av_stim, com_col, Flip (for single matrx.),all calculated
     from tmp dataframe
@@ -482,6 +483,8 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
         # stimlabels=np.flip(stimlabels)
         if annotate:
             g = sns.heatmap(np.flipud(matrix), annot=np.flipud(annotmat), ax=ax,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location),
                             **kwargs).set(xlabel=xlabel,
                                           ylabel=ylabel,
                                           xticks=np.arange(len(priorlabels))+0.5,
@@ -490,7 +493,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                                           yticklabels=np.flip(stimlabels))
 
         else:
-            g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None, **kwargs).set(
+            g = sns.heatmap(np.flipud(matrix), ax=ax, annot=None,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
@@ -500,7 +505,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
             )
     else:
         if annotate:
-            g = sns.heatmap(matrix, ax=ax, annot=annotmat, **kwargs).set(
+            g = sns.heatmap(matrix, ax=ax, annot=annotmat,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
@@ -509,7 +516,9 @@ def com_heatmap_jordi(x, y, com, flip=False, annotate=True,
                 yticklabels=stimlabels,
             )
         else:
-            g = sns.heatmap(matrix, ax=ax, annot=None, **kwargs).set(
+            g = sns.heatmap(matrix, ax=ax, annot=None,
+                            cbar_kws=dict(use_gridspec=False,
+                                          location=cbar_location), **kwargs).set(
                 xlabel=xlabel,
                 ylabel=ylabel,
                 xticks=np.arange(len(priorlabels))+0.5,
@@ -610,6 +619,18 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
+        if return_df:
+            if after_correct:
+                return df.query(
+                        "sound_len <= 400 and soundrfail ==\
+                            False and resp_len <=1 and R_response>= 0\
+                                and hithistory >= 0 and special_trial == 0\
+                                    and aftererror==0")
+            else:
+                return df.query(
+                        "sound_len <= 400 and soundrfail ==\
+                            False and resp_len <=1 and R_response>= 0\
+                                and hithistory >= 0 and special_trial == 0")
         if not silent:
             df = df.query(
                     "sound_len <= 400 and soundrfail ==\
@@ -698,11 +719,6 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         traj_y = None
         fix_onset = None
         traj_stamps = None
-    if return_df:
-        if after_correct:
-            return df.query("aftererror == 0")
-        else:
-            return df
     else:
         return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
             hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
@@ -786,7 +802,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # TODO: COMMENT EVERY FORKING LINE
     bound = 1
     bound_a = 2.2
-    # p_leak = 0.1
+    p_leak = 0.6
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -800,9 +816,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # zeros before p_t_a
     dA[:p_t_a, :] = 0
     # adding leak
-    # rolled_dW = np.roll(dW, 1)
-    # rolled_dW[0, :] = 0
-    # dW += -rolled_dW*p_leak
+    rolled_dW = np.roll(dW, 1)
+    rolled_dW[fixation + p_t_aff, :] = 0
+    dW += -rolled_dW*p_leak
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
@@ -1238,16 +1254,16 @@ def set_parameters(num_vals=3, factor=8):
     p_a_noise = 0.04
     p_1st_readout = 5
     """
-    p_w_zt_list = [0.1]
+    p_w_zt_list = [0.2]
     p_w_stim_list = np.linspace(0.05, 0.2, num=num_vals)
     p_e_noise_list = np.linspace(0.02, 0.06, num=num_vals-1)
-    p_com_bound_list = np.linspace(0, 0.9, num=num_vals)
+    p_com_bound_list = [0.]
     p_t_aff_list = np.linspace(4, 12, num=num_vals, dtype=int)
-    p_t_eff_list = [10]  # will be 16 (80ms) - p_t_aff
+    p_t_eff_list = np.linspace(4, 12, num=num_vals, dtype=int)
     p_t_a_list = np.linspace(12, 20, num=num_vals)
     p_w_a_intercept_list = [0.05]
-    p_w_a_slope_list = [2e-5]
-    p_a_noise_list = [0.04]
+    p_w_a_slope_list = [2.5e-5]
+    p_a_noise_list = [0.042]
     p_1st_readout_list = np.linspace(60, 180, num=num_vals)
     p_2nd_readout_list = [180]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
@@ -2322,9 +2338,9 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1.6e5)
+    num_tr = int(8e4)
     load_data = True
-    new_sample = False
+    new_sample = True
     single_run = True
     shuffle = False
     simulate = True
@@ -2404,17 +2420,17 @@ if __name__ == '__main__':
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
             p_t_aff = 8
-            p_t_eff = 5
-            p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-            p_w_zt = 0.1
-            p_w_stim = 0.05
+            p_t_eff = 8
+            p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
+            p_w_zt = 0.12
+            p_w_stim = 0.11
             p_e_noise = 0.02
             p_com_bound = 0.
             p_w_a_intercept = 0.05
-            p_w_a_slope = -2e-05  # fixed
-            p_a_noise = 0.04  # fixed
-            p_1st_readout = 140
-            p_2nd_readout = 100
+            p_w_a_slope = -2.5e-05  # fixed
+            p_a_noise = 0.042  # fixed
+            p_1st_readout = 100
+            p_2nd_readout = 150
             compute_trajectories = True
             plot = True
             all_trajs = True

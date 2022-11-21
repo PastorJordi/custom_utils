@@ -98,7 +98,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
             metrics='mse', objective='curve', bin_size=20, det_th=5,
             plot=False, stim_res=5):
-    data_mat = np.load(data_path + 'all_tr_ac_pCoM_vs_prior_and_stim.npy')
+    data_mat = np.load(data_path + 'CoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
     data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
     tmp_data = data_curve['tmp_bin']
