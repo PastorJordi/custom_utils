@@ -11,8 +11,11 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
 import sys
+sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
+import analyses
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
+from utilsJ.Behavior.plotting import com_heatmap
 
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -66,7 +69,8 @@ def com_heatmap_paper_marginal_pcom_side(
     average_across_subjects=False
 ):
     assert side in [0, 1], "side value must be either 0 or 1"
-    assert df[priors_col].abs().max() <= 1, "prior must be normalized between -1 and 1"
+    assert df[priors_col].abs().max() <= 1,\
+        "prior must be normalized between -1 and 1"
     assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
     if pcomlabel is None:
         if not side:
@@ -80,32 +84,6 @@ def com_heatmap_paper_marginal_pcom_side(
     tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
     tmp['tmp_com'] = False
     tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
-    if f is None and ax is None:
-        f, ax = plt.subplots(
-            ncols=2, nrows=2,
-            gridspec_kw={'width_ratios': [8, 3], 'height_ratios': [3, 8]},
-            figsize=(7, 5.5), sharex='col', sharey='row')
-
-    # some aestethics
-    if fcolorwhite:
-        f.patch.set_facecolor('white')
-        for i in [0, 1]:
-            for j in [0, 1]:
-                ax[i, j].set_facecolor('white')
-
-    ax[0, 1].axis('off')
-    ax[0, 0].set_ylabel(pcomlabel)
-    ax[1, 1].set_xlabel(pcomlabel)
-    if hide_marginal_axis:
-        ax[0, 0].spines['top'].set_visible(False)
-        ax[0, 0].spines['left'].set_visible(False)
-        ax[0, 0].spines['right'].set_visible(False)
-        ax[0, 0].set_yticks([])
-        # ax[1,1].xaxis.set_visible(False)
-        ax[1, 1].spines['right'].set_visible(False)
-        ax[1, 1].spines['top'].set_visible(False)
-        ax[1, 1].spines['bottom'].set_visible(False)
-        ax[1, 1].set_xticks([])
 
     com_heatmap_kws.update({
         'return_mat': True,
@@ -144,45 +122,22 @@ def com_heatmap_paper_marginal_pcom_side(
 
     mat = np.flipud(mat)
     nmat = np.flipud(nmat)
+    return mat
 
-   
-    # since it is the same, simply adjust max y_
-    if adjust_marginal_axes:
-        _, ymax = ax[0, 0].get_ylim()
-        _, xmax = ax[1, 1].get_xlim()
-        max_val_margin = max(ymax, xmax)
-        ax[0, 0].set_ylim(0, max_val_margin)
-        ax[1, 1].set_xlim(0, max_val_margin)
 
-    ax[1, 0].set_yticks(np.arange(nbins))
-    ax[1, 0].set_xticks(np.arange(nbins))
-    ax[1, 0].set_yticklabels(['right']+['']*(nbins-2)+['left'])
-    ax[1, 0].set_xticklabels(['left']+['']*(nbins-2)+['right'])
+def fig_3(user_id):
+    if user_id == 'Alex':
+        folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20'
+    if user_id == 'Manuel':
+        folder = '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'
+    subj = ['general_traj']
+    steps = [None]
+    nm = '300'
+    df_data = analyses.traj_analysis(main_folder=folder+'\\'+nm+'ms\\',
+                                     subjects=subj, steps=steps, name=nm)
+    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
+    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
 
-    if counts_on_matrix:
-        im = ax[1, 0].imshow(nmat, aspect='auto')
-    else:
-        im = ax[1, 0].imshow(mat, aspect='auto')
-    ax[1, 0].set_xlabel('$\longleftarrow$Prior$\longrightarrow$', labelpad=-5)
-    ax[1, 0].set_ylabel(
-        '$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-17)
-    divider = make_axes_locatable(ax[1, 0])
-    cax = divider.append_axes('left', size='10%', pad=0.6)
-
-    divider2 = make_axes_locatable(ax[0, 0])
-    empty = divider2.append_axes('left', size='10%', pad=0.6)
-    empty.axis('off')
-    cax2 = cax.secondary_yaxis('left')
-    f.colorbar(im, cax=cax)
-    cax.yaxis.set_ticks_position('left')
-    if counts_on_matrix:
-        cax2.set_ylabel('# trials')
-    else:
-        cax2.set_ylabel(pcomlabel)
-
-    f.tight_layout()
-    return f, ax
-    
 
 if __name__ == '__main__':
     plt.close('all')
@@ -217,12 +172,11 @@ if __name__ == '__main__':
     gt = gt[after_correct_id]
     trial_index = np.array(df.origidx)
     trial_index = trial_index[after_correct_id]
-        
+
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = True
     f2 = False
     f3 = True
-
 
     # fig 1
     if f1:
