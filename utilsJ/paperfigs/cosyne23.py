@@ -16,7 +16,7 @@ sys.path.append("C:/Users/Alexandre/Documents/psycho_priors")
 import analyses
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
-from utilsJ.Behavior.plotting import com_heatmap
+from utilsJ.Behavior.plotting import com_heatmap, tachometric
 
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -32,7 +32,7 @@ RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
     'ChangesOfMind/figures/Figure_3/001965.png'
 
 
-def fig_1(ax, coh, hit, sound_len, choice, zt):
+def fig_1(ax, coh, hit, sound_len, choice, zt, com):
     for a in ax:
         fp.rm_top_right_lines(a)
     choice_01 = (choice+1)/2
@@ -126,50 +126,67 @@ def com_heatmap_paper_marginal_pcom_side(
     return mat
 
 
-def matrix_figure(df_data):
+def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     nbins = 7
     matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
     matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
-    f, ax = plt.subplots(nrows=2, ncols=2)
-    ax = ax.flatten()
-    for i in range(2):
-        ax[i].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$')
-        ax[i].set_ylabel(r'$\longleftarrow$Average stimulus$\longrightarrow$')
-        ax[i].set_yticks(np.arange(nbins))
-        ax[i].set_xticks(np.arange(nbins))
-        ax[i].set_yticklabels(['right']+['']*(nbins-2)+['left'])
-        ax[i].set_xticklabels(['left']+['']*(nbins-2)+['right'])
-    # R -> L
-    pcomlabel_0 = r'$p(CoM_{R \rightarrow L})$'
-    ax[0].set_title(pcomlabel_0)
-    im_0 = ax[0].imshow(matrix_side_0)
-    divider = make_axes_locatable(ax[0])
-    cax = divider.append_axes('left', size='10%', pad=0.6)
-    plt.colorbar(im_0, cax=cax)
-    cax.yaxis.set_ticks_position('left')
-    # L -> R
+    # L-> R
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = r'$p(CoM_{L \rightarrow R})$'
-    ax[1].set_title(pcomlabel_1)
-    im_1 = ax[1].imshow(matrix_side_1)
-    divider = make_axes_locatable(ax[1])
-    cax = divider.append_axes('left', size='10%', pad=0.6)
+    ax_mat.set_title(pcomlabel_1)
+    im_1 = ax_mat.imshow(matrix_side_1, vmin=0, vmax=vmax)
+    divider = make_axes_locatable(ax_mat)
+    cax = divider.append_axes('left', size='10%', pad=0.9)
     plt.colorbar(im_1, cax=cax)
-    cax.yaxis.set_ticks_position('left')
+    # R -> L
+    pos = ax_mat.get_position()
+    ax_mat.set_position([pos.x0, pos.y0, pos.width/2, pos.height])
+    ax_mat_1 = plt.axes([pos.x0+pos.width/2, pos.y0,
+                         pos.width/2, pos.height])
+    pcomlabel_0 = r'$p(CoM_{L \rightarrow R})$'
+    divider = make_axes_locatable(ax_mat_1)
+    cax = divider.append_axes('right', size='10%', pad=0.9)
+    cax.axis('off')
+    ax_mat_1.set_title(pcomlabel_0)
+    ax_mat_1.imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax_mat_1.yaxis.set_ticks_position('none')
+    for ax_i in [ax_pright, ax_mat, ax_mat_1]:
+        ax_i.set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$')
+        ax_i.set_yticks(np.arange(nbins))
+        ax_i.set_xticks(np.arange(nbins))
+        ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
+    for ax_i in [ax_pright, ax_mat]:
+        ax_i.set_yticklabels(['right']+['']*(nbins-2)+['left'])
+        ax_i.set_ylabel(r'$\longleftarrow$Average stimulus$\longrightarrow$',
+                        labelpad=-17)
+    ax_mat_1.set_yticklabels(['']*nbins)
     choice = df_data['R_response'].values
     coh = df_data['avtrapz'].values
     prior = df_data['norm_allpriors'].values
     mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
                                 annotate=False)
     mat_pright = np.flipud(mat_pright)
-    im_2 = ax[2].imshow(mat_pright, cmap='rocket')
-    divider = make_axes_locatable(ax[2])
-    cax = divider.append_axes('left', size='10%', pad=0.6)
-    plt.colorbar(im_2, cax=cax)
-    cax.yaxis.set_ticks_position('left')
-    ax[2].set_title('Pright')
+    im_2 = ax_pright.imshow(mat_pright, cmap='rocket')
+    divider = make_axes_locatable(ax_pright)
+    cax1 = divider.append_axes('left', size='10%', pad=0.6)
+    plt.colorbar(im_2, cax=cax1)
+    cax1.yaxis.set_ticks_position('left')
+    ax_pright.set_title('p(right)')
+    if humans:
+        num = 8
+        rtbins = np.linspace(0, 300, num=num)
+        tachometric(df_data, ax=ax_tach, fill_error=True, rtbins=rtbins)
+    else:
+        tachometric(df_data, ax=ax_tach, fill_error=True)
+    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
+    ax_tach.set_xlabel('RT (ms)')
+    ax_tach.set_ylabel('Accuracy')
+    ax_tach.set_ylim(0.4, 1.04)
+    ax_tach.spines['right'].set_visible(False)
+    ax_tach.spines['top'].set_visible(False)
 
 
-def fig_3(user_id, existing_data_path):
+def fig_3(user_id, existing_data_path, ax_tach, ax_pright, ax_mat, humans=False):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20'
     if user_id == 'Manuel':
@@ -181,13 +198,13 @@ def fig_3(user_id, existing_data_path):
                                      subjects=subj, steps=steps, name=nm,
                                      existing_data_path=existing_data_path)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    matrix_figure(df_data)
-
+    matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
+                  ax_mat=ax_mat, humans=humans)
 
 
 if __name__ == '__main__':
     plt.close('all')
-    rats = False
+    rats = True
     if rats:
         subject = 'LE43'
         all_rats = False
@@ -220,9 +237,19 @@ if __name__ == '__main__':
         gt = gt[after_correct_id]
         trial_index = np.array(df.origidx)
         trial_index = trial_index[after_correct_id]
-
+        df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                                'norm_allpriors': zt/max(abs(zt)),
+                                'R_response':
+                                    np.array(df.R_response)[after_correct_id],
+                                'sound_len': sound_len,
+                                'hithistory': hit})
+        f, ax = plt.subplots(nrows=2, ncols=2)
+        ax = ax.flatten()
+        ax[0].axis('off')
+        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[2],
+                      ax_mat=ax[3], humans=False)
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = False
     f3 = True
 
@@ -257,5 +284,9 @@ if __name__ == '__main__':
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
 
     # fig 3
+    f, ax = plt.subplots(nrows=2, ncols=2)
+    ax = ax.flatten()
+    ax[0].axis('off')
     fig_3(user_id='Alex', existing_data_path='C:/Users/Alexandre/Desktop/' +\
-                                             'CRM/Human/80_20/df_regressors.csv')
+                                             'CRM/Human/80_20/df_regressors.csv',
+          ax_tach=ax[1], ax_pright=ax[2], ax_mat=ax[3], humans=True)
