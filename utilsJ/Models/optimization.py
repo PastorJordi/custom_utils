@@ -96,14 +96,14 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
             results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
-            metrics='mse', objective='curve', bin_size=20, det_th=5,
+            metrics='mse', objective='curve', bin_size=30, det_th=5,
             plot=False, stim_res=5):
     data_mat = np.load(data_path + 'CoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
     data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
     tmp_data = data_curve['tmp_bin']
     data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
-    nan_penalty = 0.3
+    nan_penalty = 0.
     w_rms = 0.5
     if results:
         files = glob.glob(res_path+'*180.npz')
@@ -189,7 +189,7 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                     # diff_norm_mat.append(1-diff_norm+nan_penalty*num_nans)
                     diff_norm_mat.append(1 - diff_norm + nan_penalty*num_nans)
                     window = np.exp(-np.arange(len(tmp_simul))**1/10)
-                    window = 1
+                    # window = 1
                     diff_rms = np.subtract(curve_tmp,
                                            np.array(data_curve['pcom']
                                                     [tmp_simul]) *
