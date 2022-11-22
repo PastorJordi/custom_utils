@@ -11,7 +11,7 @@ import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
-import analyses_humans as ah
+from utilsJ.Models import analyses_humans as ah
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import com_heatmap, tachometric
@@ -28,6 +28,7 @@ SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
     'ChangesOfMind/figures/Figure_3/001965.png'
+# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
 
 
 def fig_1(df, ax, coh, hit, sound_len, choice, zt, com):
@@ -134,16 +135,16 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_mat.set_title(pcomlabel_1)
     im_1 = ax_mat.imshow(matrix_side_1, vmin=0, vmax=vmax)
     divider = make_axes_locatable(ax_mat)
-    cax = divider.append_axes('left', size='10%', pad=0.9)
+    cax = divider.append_axes('left', size='7%', pad=0.9)
     plt.colorbar(im_1, cax=cax)
     # R -> L
     pos = ax_mat.get_position()
-    ax_mat.set_position([pos.x0, pos.y0, pos.width/2, pos.height])
-    ax_mat_1 = plt.axes([pos.x0+pos.width/2, pos.y0,
-                         pos.width/2, pos.height])
+    ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width/2, pos.height*6/5])
+    ax_mat_1 = plt.axes([pos.x0+pos.width/2, pos.y0*2/3,
+                         pos.width/2, pos.height*6/5])
     pcomlabel_0 = r'$p(CoM_{L \rightarrow R})$'
     divider = make_axes_locatable(ax_mat_1)
-    cax = divider.append_axes('right', size='10%', pad=0.9)
+    cax = divider.append_axes('right', size='7%', pad=0.9)
     cax.axis('off')
     ax_mat_1.set_title(pcomlabel_0)
     ax_mat_1.imshow(matrix_side_0, vmin=0, vmax=vmax)
@@ -241,25 +242,31 @@ if __name__ == '__main__':
         gt = gt[after_correct_id]
         trial_index = np.array(df.origidx)
         trial_index = trial_index[after_correct_id]
+
+    # if we want to use data from all rats, we must use dani_clean.pkl
+    f1 = True
+    f2 = False
+    f3 = True
+
+    # fig 1
+    if f1:
+        f, ax = plt.subplots(nrows=2, ncols=3)
+        ax = ax.flatten()
+        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
+        # tachometrics, rt distribution, express performance
+        # fig_1(ax=ax, coh=coh, hit=hit, sound_len=sound_len,
+        #       choice=choice, zt=zt, com=com)
         df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                                 'norm_allpriors': zt/max(abs(zt)),
                                 'R_response':
                                     np.array(df.R_response)[after_correct_id],
                                 'sound_len': sound_len,
                                 'hithistory': hit})
-        f, ax = plt.subplots(nrows=2, ncols=2)
+        f, ax = plt.subplots(nrows=2, ncols=3)
         ax = ax.flatten()
         ax[0].axis('off')
         matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[2],
                       ax_mat=ax[3], humans=False)
-
-    # fig 1
-    if f1:
-        f, ax = plt.subplots(nrows=2, ncols=3)
-        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-        # tachometrics, rt distribution, express performance
-        fig_1(df=df, coh=coh, hit=hit, sound_len=sound_len,
-              choice=choice, zt=zt, com=com, supt='')
 
     # fig 2
     if f2:
