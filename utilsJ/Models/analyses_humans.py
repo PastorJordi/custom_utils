@@ -438,7 +438,7 @@ def get_data_traj(folder, plot=False):
     # subject folder
     # folder = main_folder+'\\'+subj+'\\'  # Alex
     # find all data files
-    copy_files(ori_f=folder[:folder.find('general_traj')], fin_f=folder)
+    # copy_files(ori_f=folder[:folder.find('general_traj')], fin_f=folder)
     files_trials = glob.glob(folder+'*trials.csv')
     files_traj = glob.glob(folder+'*trials-trajectories.csv')
     # take files names

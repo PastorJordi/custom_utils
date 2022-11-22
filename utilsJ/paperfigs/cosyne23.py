@@ -5,6 +5,7 @@ Created on Fri Nov 18 16:49:51 2022
 
 @author: manuel
 """
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -211,42 +212,37 @@ if __name__ == '__main__':
     f2 = True
     f3 = True
     if f1:
-        if all_rats:
-            # df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
-            #                               return_df=True, sv_folder=SV_FOLDER,
-            #                               after_correct=True, silent=True,
-            #                               all_trials=True)
-            stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
-                trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
-                                         num_tr_per_rat=int(1e4),
-                                         after_correct=True, splitting=False,
-                                         silent=False, all_trials=False,
-                                         return_df=False, sv_folder=SV_FOLDER)
-        else:
-            df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
+        # stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
+        #     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
+        #     edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
+        #                               num_tr_per_rat=int(1e4),
+        #                               after_correct=True, splitting=False,
+        #                               silent=False, all_trials=False,
+        #                               return_df=False, sv_folder=SV_FOLDER)
+        # data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
+        #         'sound_len': sound_len, 'decision': decision,
+        #         'resp_len': resp_len, 'hit': hit, 'trial_index': trial_index,
+        #         'special_trial': special_trial, 'trajectory_y': traj_y,
+        #         'trajectory_stamps': traj_stamps, 'fix_onset_dt': fix_onset}
+        # np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
+        #           **data)
+        data = np.load(DATA_FOLDER+'/sample_73785.npz',
+                       allow_pickle=True)
+        stim = data['stim']
+        zt = data['zt']
+        coh = data['coh']
+        com = data['com']
+        gt = data['gt']
+        sound_len = data['sound_len']
+        resp_len = data['resp_len']
+        decision = data['decision']
+        hit = data['hit']
+        trial_index = data['trial_index']
+
+        df_rat = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
                                           return_df=True, sv_folder=SV_FOLDER,
                                           after_correct=True, silent=True,
                                           all_trials=True)
-            after_correct_id = np.where(df.aftererror == 0)[0]
-            zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-            zt = zt[after_correct_id]
-            hit = np.array(df['hithistory'])
-            hit = hit[after_correct_id]
-            stim = np.array([stim for stim in df.res_sound])
-            stim = stim[after_correct_id, :]
-            coh = np.array(df.coh2)
-            coh = coh[after_correct_id]
-            com = df.CoM_sugg.values
-            com = com[after_correct_id]
-            decision = np.array(df.R_response) * 2 - 1
-            decision = decision[after_correct_id]
-            sound_len = np.array(df.sound_len)
-            sound_len = sound_len[after_correct_id]
-            gt = np.array(df.rewside) * 2 - 1
-            gt = gt[after_correct_id]
-            trial_index = np.array(df.origidx)
-            trial_index = trial_index[after_correct_id]
         if stim.shape[0] != 20:
             stim = stim.T
         # FIG 1:
@@ -255,15 +251,16 @@ if __name__ == '__main__':
                                 'R_response': (decision+1)/2,
                                 'sound_len': sound_len,
                                 'hithistory': hit})
-        f, ax = plt.subplots(nrows=2, ncols=2)
+        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(4, 3))
         ax = ax.flatten()
         ax[0].axis('off')
-        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[2],
-                      ax_mat=ax[3], humans=False)
+        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[3], ax_mat=ax[5],
+                      humans=False)
+        f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
     if f2:
         # FIG 2
-        existing_model_data = False
+        existing_model_data = True
         if not existing_model_data:
             hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
                 pro_vs_re =\
@@ -279,16 +276,18 @@ if __name__ == '__main__':
                                     'hithistory': hit_model[idx]})
         else:
             df_data = pd.read_csv(DATA_FOLDER + 'df_fig_1.csv')
-        f, ax = plt.subplots(nrows=2, ncols=2)
+        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(4, 3))
         ax = ax.flatten()
         humans = False
         ax[0].axis('off')
-        matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[1],
-                      ax_pright=ax[2], ax_mat=ax[3])
+        matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[2],
+                      ax_pright=ax[4], ax_mat=ax[5])
+        f.savefig(SV_FOLDER+'fig2.svg', dpi=400, bbox_inches='tight')
     if f3:
         # FIG 3:
-        f, ax = plt.subplots(nrows=2, ncols=2)
+        f, ax = plt.subplots(nrows=2, ncols=2, figsize=(3, 3))
         ax = ax.flatten()
         ax[0].axis('off')
         fig_3(user_id='Manuel', sv_folder=SV_FOLDER,
               ax_tach=ax[1], ax_pright=ax[2], ax_mat=ax[3], humans=True)
+        f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
