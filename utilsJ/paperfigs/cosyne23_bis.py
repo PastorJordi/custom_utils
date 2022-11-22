@@ -32,6 +32,9 @@ DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 #     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/Figure_3/001965.png'
+RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
 
 
 matplotlib.rcParams['font.size'] = 8
@@ -367,6 +370,7 @@ if __name__ == '__main__':
     # XXX: do this panel for all rats?
     fp.trajs_splitting_point(df=df, ax=ax_split[1])
     # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+
     # FIG 3:
     f, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
