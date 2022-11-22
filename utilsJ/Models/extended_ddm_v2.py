@@ -719,9 +719,8 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         traj_y = None
         fix_onset = None
         traj_stamps = None
-    else:
-        return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
-            hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
+    return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
+        hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
 
 
 def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_zt,

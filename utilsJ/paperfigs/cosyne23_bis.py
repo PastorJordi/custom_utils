@@ -267,7 +267,7 @@ def fig_3(user_id, existing_data_path, ax_tach, ax_pright, ax_mat, humans=False)
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    all_rats = False
+    all_rats = True
     num_tr = int(15e4)
     return_df = False
     if all_rats:
@@ -280,7 +280,7 @@ if __name__ == '__main__':
                     edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
                                              num_tr_per_rat=int(1e4),
                                              after_correct=True, splitting=False,
-                                             silent=False, all_trials=True,
+                                             silent=False, all_trials=False,
                                              return_df=return_df)
     else:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
@@ -312,10 +312,10 @@ if __name__ == '__main__':
     # FIG 1:
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
-                            'R_response': decision,
+                            'R_response': (decision+1)/2,
                             'sound_len': sound_len,
                             'hithistory': hit})
-    f, ax = plt.subplots(nrows=2, ncols=3)
+    f, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     ax[0].axis('off')
     matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[2],
@@ -343,6 +343,30 @@ if __name__ == '__main__':
     ax[0].axis('off')
     matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[1],
                   ax_pright=ax[2], ax_mat=ax[3])
+
+    fgsz = (8, 8)
+    inset_sz = 0.1
+    f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
+    ax = ax.flatten()
+    ax_cohs = np.array([ax[0], ax[2]])
+    ax_inset = fp.add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = fp.add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                            marginy=0.15)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+    for a in ax:
+        fp.rm_top_right_lines(a)
+    df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
+                                  return_df=True, sv_folder=SV_FOLDER,
+                                  after_correct=True, silent=True,
+                                  all_trials=True)
+    fp.trajs_cond_on_coh(df=df, ax=ax_cohs)
+    # splits
+    ax_split = np.array([ax[1], ax[3]])
+    fp.trajs_splitting(df, ax=ax_split[0])
+    # XXX: do this panel for all rats?
+    fp.trajs_splitting_point(df=df, ax=ax_split[1])
+    # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
     # FIG 3:
     f, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
