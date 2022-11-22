@@ -9,16 +9,16 @@ Created on Wed Nov 16 15:54:38 2022
 import numpy as np
 from utilsJ.Models import extended_ddm_v2 as edd2
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 SV_FOLDER =\
     '/home/molano/Dropbox/project_Barna/ChangesOfMind/figures/Figure_4/'
 SV_FOLDER = '/home/manuel/Descargas/'
-    
 
-# XXX
+
 def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
              p_w_stim, p_e_noise, p_com_bound, p_t_eff, p_t_aff,
-             p_1st_readout, p_2nd_readout, num_tr, stim_res, hit_action=55):
+             p_1st_readout, p_2nd_readout, num_tr, stim_res, max_int_time,
+             fixation, hit_action=55):
     """
     Generate stim and time integration and trajectories
 
@@ -45,8 +45,6 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
         fitting parameter: efferent latency to initiate movement.
     p_t_aff : float
         fitting parameter: afferent latency to integrate stimulus.
-    p_t_a : float
-        fitting parameter: latency for action integration.
     p_w_a_intercept : float
         fitting parameter: drift of action noise.
     p_a_noise : float
@@ -98,7 +96,7 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
     i_t = 0
     # search where evidence bound is reached
     indx_hit_bound = np.abs(E[:, i_t]) >= bound
-    hit_bound = max_integration_time
+    hit_bound = max_int_time
     if (indx_hit_bound).any():
         hit_bound = np.where(indx_hit_bound)[0][0]
     # set first readout as the minimum
@@ -115,7 +113,7 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
     com_bound_signed = (-resp_first)*p_com_bound
     # second response
     indx_final_ch = hit_dec+p_t_eff+p_t_aff
-    indx_final_ch = min(indx_final_ch, max_integration_time)
+    indx_final_ch = min(indx_final_ch, max_int_time)
     # get post decision accumulated evidence with respect to CoM bound
     post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_signed
     # get CoMs indexes
@@ -200,20 +198,19 @@ def trial_ev(zt, dW, trial_index, MT_slope, MT_intercep, p_w_zt,
     xpos = int(np.diff(edd2.BINS)[0])
     xpos_plot, median_pcom, _ =\
         edd2.binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
-                     bins=edd2.BINS,
-                     return_data=True)
+                          bins=edd2.BINS,
+                          return_data=True)
     # end_traj = time.time()
     # print('Time for trajectories: ' + str(end_traj - start_traj))
     return E, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
         total_traj, init_traj, final_traj, frst_traj_motor_time,\
         x_val_at_updt, xpos_plot, median_pcom, rt_vals, rt_bins, first_resp_len
 
-# XXX
+
 def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
              p_t_aff, init_traj, total_traj, p_t_eff, frst_traj_motor_time,
              p_com_bound, fixation, ax, stim_res=50, trial=0, lbl='',
              color2='c'):
-    ax = ax.flatten()
     ax[1].set_xlabel('Time (ms)')
     max_xlim = 0
     # traj_in = False
@@ -234,11 +231,11 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     max_xlim = max(max_xlim, np.max(xs))
     ax[1].plot([0, xs[0]], [0, 0], color='k')
     ax[1].plot(xs, total_traj, color=color2,
-                  label=lbl)
+               label=lbl)
     xs = init_motor*stim_res+np.arange(0, len(init_traj))
     max_xlim = max(max_xlim, np.max(xs))
     ax[1].plot(xs, init_traj, color='k',
-                  label='Planned trajetory')
+               label='Planned trajetory')
     ax[1].set_ylabel('y dimension (pixels)')
     ax[1].legend()
     stim_period = stim_res*np.array([fixation, init_motor+p_t_aff])
@@ -249,12 +246,9 @@ def plotting(com, E, second_ind, first_ind, resp_first, resp_fin, pro_vs_re,
     ax[1].set_xlim([first_ind*stim_res-50, max_xlim])
     ax[0].set_ylim([-1.1, 1.1])
     ax[1].set_ylim([-85, 85])
-    
 
 
-# XXX
-# --- MAIN
-if __name__ == "__main__":
+def fig4(ax):
     data_augment_factor = 10
     stim_res = 50/data_augment_factor
     fixation_ms = 300
@@ -264,22 +258,14 @@ if __name__ == "__main__":
     trial_index = np.array([200])
     p_t_aff = 8
     p_t_eff = 5
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.1
     p_w_stim = 0.05
     p_e_noise = 0.02
     p_com_bound = 0.1
-    p_w_a_intercept = 0.05
-    p_w_a_slope = -2e-05  # fixed
-    p_a_noise = 0.04  # fixed
     p_1st_readout = 140
     p_2nd_readout = 100
-    compute_trajectories = True
-    plot = True
-    all_trajs = True
     MT_slope = 0.123
     MT_intercep = 254
-    f, ax = plt.subplots(nrows=2, ncols=1, figsize=(6, 12))
     # trials
     trial_types = ['confirmation', 'CoM']
     seeds = [0, 1]
@@ -288,30 +274,29 @@ if __name__ == "__main__":
         if tt == 'confirmation':
             stim_offset = 0.7
         elif tt == 'CoM':
-            stim_offset = -2
+            stim_offset = -2.5
         zt = np.array([2])
         stim = np.random.randn(20, 1)+stim_offset
         stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
-    
+
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                     stim.shape[1]))))
         # instantaneous evidence
         Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)),
-                             stim*p_w_stim))
+                             stim_temp*p_w_stim))
         max_integration_time = Ve.shape[0]-1
         N = Ve.shape[0]
         # common noise
         np.random.seed(7)
         common_noise = np.random.randn(N, num_tr)
-        common_noise[hit_action+1:] = 0 
+        common_noise[hit_action+1:] = 0
         dW = common_noise*p_e_noise+Ve
         # individual noise
         np.random.seed(seeds[i_tt])
         common_noise = np.random.randn(N, num_tr)
-        common_noise[:hit_action] = 0 
+        common_noise[:hit_action] = 0
         dW = common_noise*p_e_noise+dW
-        
-        
+
         E, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             total_traj, init_traj, final_traj, frst_traj_motor_time,\
             x_val_at_updt, xpos_plot, median_pcom, rt_vals, rt_bins,\
@@ -322,13 +307,12 @@ if __name__ == "__main__":
                      p_com_bound=p_com_bound, p_t_aff=p_t_aff, p_t_eff=p_t_eff,
                      num_tr=num_tr, p_1st_readout=p_1st_readout,
                      p_2nd_readout=p_2nd_readout, stim_res=stim_res,
-                     hit_action=hit_action)
-        
+                     hit_action=hit_action, max_int_time=max_integration_time,
+                     fixation=fixation)
+
         plotting(com=com, E=E, second_ind=second_ind, first_ind=first_ind,
                  resp_first=resp_first, resp_fin=resp_fin, pro_vs_re=pro_vs_re,
                  p_t_aff=p_t_aff, init_traj=init_traj, total_traj=total_traj,
                  p_t_eff=p_t_eff, frst_traj_motor_time=frst_traj_motor_time,
                  p_com_bound=p_com_bound, stim_res=stim_res, fixation=fixation,
                  ax=ax, color2=colors[i_tt], lbl=tt)
-    f.savefig(SV_FOLDER+'example_trials.png', dpi=400,
-              bbox_inches='tight')

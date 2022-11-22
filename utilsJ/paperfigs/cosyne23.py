@@ -5,17 +5,24 @@ Created on Fri Nov 18 16:49:51 2022
 
 @author: manuel
 """
-import time
+# import time
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import fig4
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
 from utilsJ.Models import analyses_humans as ah
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import com_heatmap, tachometric
+import matplotlib
+matplotlib.rcParams['font.size'] = 8
+# matplotlib.rcParams['font.family'] = 'Arial'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'Helvetica'
+matplotlib.rcParams['lines.markersize'] = 3
 
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -32,31 +39,25 @@ RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
 # RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
 
 
-def fig_1(df, ax, coh, hit, sound_len, choice, zt, com):
-    for a in ax:
-        fp.rm_top_right_lines(a)
-    choice_01 = (choice+1)/2
-    pos = ax[1].get_position()
-    ax[1].set_position([pos.x1, pos.y0, pos.width*3/4, pos.height*3/4])
-    edd2.com_heatmap_jordi(zt, coh, choice_01, ax=ax[1], flip=True,
-                           annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='rocket')
-    fp.tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[3])
+def plot_coms(df, ax):
+    coms = df.CoM_sugg.values
+    for tr in range(200):  # len(df_rat)):
+        if tr < 99 and not coms[tr]:
+            trial = df.iloc[tr]
+            traj = trial['trajectory_y']
+            ax.plot(traj, color=(.8, .8, .8), lw=.5)
+        elif tr > 100 and coms[tr]:
+            trial = df.iloc[tr]
+            traj = trial['trajectory_y']
+            ax.plot(traj, color='r', lw=1)
+    fp.rm_top_right_lines(ax)
+
+
+def tracking_image(ax):
     rat = plt.imread(RAT_COM_IMG)
-    fig, ax = plt.subplots(ncols=3, figsize=(18, 5.5), gridspec_kw={
-                           'width_ratios': [1, 1, 1.8]})
-    fig.patch.set_facecolor('white')
-    ax[4].set_facecolor('white')
-    ax[4].imshow(np.flipud(rat))
-    df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
-                            'norm_allpriors': zt/max(abs(zt)),
-                            'R_response': (choice+1)/2})
-    pos = ax[5].get_position()
-    ax[5].set_position([pos.x1, pos.y0, pos.width/2, pos.height/2])
-    fp.com_heatmap_paper_marginal_pcom_side(df_data, side=0, ax=ax[5])
-    ax_temp = plt.axes([pos.x1+pos.width/2, pos.y0,
-                        pos.width/2, pos.height/2])
-    fp.com_heatmap_paper_marginal_pcom_side(df_data, side=1, ax=ax_temp)
+    ax.set_facecolor('white')
+    ax.imshow(np.flipud(rat[:, 300:, :]))
+    ax.axis('off')
 
 
 def com_heatmap_paper_marginal_pcom_side(
@@ -127,51 +128,7 @@ def com_heatmap_paper_marginal_pcom_side(
 
 
 def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
-    nbins = 7
-    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
-    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
-    # L-> R
-    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = r'$p(CoM_{L \rightarrow R})$'
-    ax_mat.set_title(pcomlabel_1)
-    im_1 = ax_mat.imshow(matrix_side_1, vmin=0, vmax=vmax)
-    divider = make_axes_locatable(ax_mat)
-    cax = divider.append_axes('left', size='7%', pad=0.9)
-    plt.colorbar(im_1, cax=cax)
-    # R -> L
-    pos = ax_mat.get_position()
-    ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width/2, pos.height*6/5])
-    ax_mat_1 = plt.axes([pos.x0+pos.width/2, pos.y0*2/3,
-                         pos.width/2, pos.height*6/5])
-    pcomlabel_0 = r'$p(CoM_{L \rightarrow R})$'
-    divider = make_axes_locatable(ax_mat_1)
-    cax = divider.append_axes('right', size='7%', pad=0.9)
-    cax.axis('off')
-    ax_mat_1.set_title(pcomlabel_0)
-    ax_mat_1.imshow(matrix_side_0, vmin=0, vmax=vmax)
-    ax_mat_1.yaxis.set_ticks_position('none')
-    for ax_i in [ax_pright, ax_mat, ax_mat_1]:
-        ax_i.set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$')
-        ax_i.set_yticks(np.arange(nbins))
-        ax_i.set_xticks(np.arange(nbins))
-        ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
-    for ax_i in [ax_pright, ax_mat]:
-        ax_i.set_yticklabels(['right']+['']*(nbins-2)+['left'])
-        ax_i.set_ylabel(r'$\longleftarrow$Average stimulus$\longrightarrow$',
-                        labelpad=-17)
-    ax_mat_1.set_yticklabels(['']*nbins)
-    choice = df_data['R_response'].values
-    coh = df_data['avtrapz'].values
-    prior = df_data['norm_allpriors'].values
-    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
-                                annotate=False)
-    mat_pright = np.flipud(mat_pright)
-    im_2 = ax_pright.imshow(mat_pright, cmap='rocket')
-    divider = make_axes_locatable(ax_pright)
-    cax1 = divider.append_axes('left', size='10%', pad=0.6)
-    plt.colorbar(im_2, cax=cax1)
-    cax1.yaxis.set_ticks_position('left')
-    ax_pright.set_title('p(right)')
+    # plot tachometrics
     if humans:
         num = 8
         rtbins = np.linspace(0, 300, num=num)
@@ -184,6 +141,53 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_tach.set_ylim(0.4, 1.04)
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
+    # plot Pcoms matrices
+    nbins = 7
+    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
+    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
+    # L-> R
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    pcomlabel_1 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_1)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax_mat[0])
+    plt.colorbar(im, fraction=0.04)
+    # pos = ax_mat.get_position()
+    # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
+    # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
+    #                      pos.width, pos.height])
+    pcomlabel_0 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[1].set_title(pcomlabel_0)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax_mat[1].yaxis.set_ticks_position('none')
+    plt.sca(ax_mat[1])
+    plt.colorbar(im, fraction=0.04)
+    # pright matrix
+    choice = df_data['R_response'].values
+    coh = df_data['avtrapz'].values
+    prior = df_data['norm_allpriors'].values
+    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
+                                annotate=False)
+    mat_pright = np.flipud(mat_pright)
+    im_2 = ax_pright.imshow(mat_pright, cmap='rocket')
+    plt.sca(ax_pright)
+    plt.colorbar(im_2, fraction=0.04)
+    ax_pright.set_title('p(right)')
+
+    # R -> L
+    for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
+        ax_i.set_xlabel('Prior')
+        # ax_i.set_yticks(np.arange(nbins))
+        # ax_i.set_xticks(np.arange(nbins))
+        ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
+        ax_i.set_yticklabels(['']*nbins)
+    for ax_i in [ax_pright, ax_mat[0]]:
+        # ax_i.set_yticklabels(['right']+['']*(nbins-2)+['left'])
+        ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+
+    # ax_mat[1].set_aspect('equal', adjustable='box')
+    # ax_mat[0].set_aspect('equal', adjustable='box')
+    # ax_pright.set_aspect('equal', adjustable='box')
 
 
 def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'):
@@ -205,12 +209,12 @@ def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    subject = 'LE43'
+    subject = 'LE44'
     all_rats = True
     num_tr = int(15e4)
-    f1 = True
+    f1 = False
     f2 = True
-    f3 = True
+    f3 = False
     if f1:
         # stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
         #     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
@@ -251,11 +255,14 @@ if __name__ == '__main__':
                                 'R_response': (decision+1)/2,
                                 'sound_len': sound_len,
                                 'hithistory': hit})
-        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(4, 3))
+        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # figsize=(4, 3))
         ax = ax.flatten()
         ax[0].axis('off')
-        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[3], ax_mat=ax[5],
-                      humans=False)
+        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[3],
+                      ax_mat=[ax[4], ax[5]], humans=False)
+        plot_coms(df=df_rat, ax=ax[2])
+        ax_trck = plt.axes([.8, .55, .15, .15])
+        tracking_image(ax_trck)
         f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
     if f2:
@@ -276,18 +283,20 @@ if __name__ == '__main__':
                                     'hithistory': hit_model[idx]})
         else:
             df_data = pd.read_csv(DATA_FOLDER + 'df_fig_1.csv')
-        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(4, 3))
+        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # (4, 3))
         ax = ax.flatten()
+        fig4.fig4(ax=[ax[0], ax[3]])
         humans = False
         ax[0].axis('off')
-        matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[2],
-                      ax_pright=ax[4], ax_mat=ax[5])
+        matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[1],
+                      ax_pright=ax[2], ax_mat=[ax[4], ax[5]])
         f.savefig(SV_FOLDER+'fig2.svg', dpi=400, bbox_inches='tight')
     if f3:
         # FIG 3:
-        f, ax = plt.subplots(nrows=2, ncols=2, figsize=(3, 3))
+        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # figsize=(3, 3))
         ax = ax.flatten()
         ax[0].axis('off')
+        ax[1].axis('off')
         fig_3(user_id='Manuel', sv_folder=SV_FOLDER,
-              ax_tach=ax[1], ax_pright=ax[2], ax_mat=ax[3], humans=True)
+              ax_tach=ax[2], ax_pright=ax[3], ax_mat=[ax[4], ax[5]], humans=True)
         f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
