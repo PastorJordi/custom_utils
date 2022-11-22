@@ -227,7 +227,7 @@ def process_trajectories_rep_alt(data_tr, data_traj):
     return dict_all
 
 
-def change_of_mind(data_tr, data_traj, existing_data_path, sv_folder,
+def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                    com_threshold=50, plot=False):
     """
 
@@ -255,9 +255,9 @@ def change_of_mind(data_tr, data_traj, existing_data_path, sv_folder,
         extract_vars_from_dict(data_tr, steps=None)
     choice_12 = choice + 1
     choice_12[~valid] = 0
-    data = {'signed_evidence': ev, 'choice': choice_12,
-            'performance': perf}
-    df_regressors = pd.read_csv(existing_data_path)
+    # data = {'signed_evidence': ev, 'choice': choice_12,
+    #         'performance': perf}
+    df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
     ind_af_er = df_regressors['aftererror'] == 0
     ev = ev[ind_af_er]
     perf = perf[ind_af_er]
@@ -416,18 +416,16 @@ def plot_init_point_prior(pos_x, prior, choice, com_list):
     ax[1].set_ylabel('x position at t=0 (px)')
 
 
-def traj_analysis(main_folder, subjects, steps=[None], name='',
-                  existing_data_path='C:/Users/Alexandre/Desktop/' +
-                  'CRM/Human/80_20/df_regressors.csv'):
+def traj_analysis(data_folder, sv_folder, subjects, steps=[None], name=''):
     for i_s, subj in enumerate(subjects):
         print('-----------')
         print(subj)
-        folder = main_folder+subj+'/'
+        folder = data_folder+subj+'/'
         for i_stp, stp in enumerate(steps):
             data_tr, data_traj = get_data_traj(folder=folder)
             df_data = change_of_mind(data_tr, data_traj, com_threshold=100,
-                                     plot=False,
-                                     existing_data_path=existing_data_path)
+                                     plot=False, rgrss_folder=data_folder,
+                                     sv_folder=sv_folder)
     return df_data
 
 
@@ -440,6 +438,7 @@ def get_data_traj(folder, plot=False):
     # subject folder
     # folder = main_folder+'\\'+subj+'\\'  # Alex
     # find all data files
+    copy_files(ori_f=folder[:folder.find('general_traj')], fin_f=folder)
     files_trials = glob.glob(folder+'*trials.csv')
     files_traj = glob.glob(folder+'*trials-trajectories.csv')
     # take files names
@@ -504,3 +503,19 @@ def get_data_traj(folder, plot=False):
         k = 'answer_times'
         data_trj[k] = np.concatenate((data_trj[k], values))
     return data_tls, data_trj
+
+
+def copy_files(ori_f, fin_f):
+    def cp(name):
+        files = glob.glob(f+'*'+name)
+        for fl in files:
+            shutil.copyfile(fl, fin_f+os.path.basename(fl))
+    import shutil
+    subjects = ['ruben', 'sophia', 'cris', 'beatriz', 'ilaria', 'carlo',
+                'valeria', 'eugenia', 'richard', 'alessia_03', 'lorenzo2',
+                'marina', 'alexv', 'clara', 'sergio', 'stan',
+                'luca', 'alice', 'maria', 'arnau']
+    for sbj in subjects:
+        f = ori_f+sbj+'/'
+        cp(name='trajectories.csv')
+        cp(name='trials.csv')
