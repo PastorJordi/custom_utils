@@ -55,9 +55,9 @@ def plot_coms(df, ax, human=False):
                 time = np.arange(len(traj))*FRAME_RATE
                 ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
             if human:
-                time = trial['times']
+                time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
-                    ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+                    ax.plot(time*1e3, traj, color=(.8, .8, .8), lw=.5)
         elif tr > (ran_max/2) and coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
@@ -65,9 +65,9 @@ def plot_coms(df, ax, human=False):
                 time = np.arange(len(traj))*FRAME_RATE
                 ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
             if human:
-                time = trial['times']
+                time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
-                    ax.plot(time, traj, color='r', lw=1)
+                    ax.plot(time*1e3, traj, color='r', lw=1)
     fp.rm_top_right_lines(ax)
     if human:
         var = 'x'
