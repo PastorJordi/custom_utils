@@ -283,22 +283,23 @@ if __name__ == '__main__':
                 pro_vs_re =\
                 fp.run_model(stim=stim, zt=zt, coh=coh, gt=gt,
                              trial_index=trial_index,
-                             num_tr=None)
+                             num_tr=int(2e5))
             idx = reaction_time >= 0
-            df_data = pd.DataFrame({'avtrapz': coh[idx],
-                                    'CoM_sugg': com_model_detected[idx],
-                                    'norm_allpriors': zt[idx]/max(abs(zt[idx])),
-                                    'R_response': (resp_fin[idx] + 1)/2,
-                                    'sound_len': reaction_time[idx],
-                                    'hithistory': hit_model[idx]})
+            df_data_model = pd.DataFrame({'avtrapz': coh[idx],
+                                          'CoM_sugg': com_model_detected[idx],
+                                          'norm_allpriors': zt[idx] /
+                                          max(abs(zt[idx])),
+                                          'R_response': (resp_fin[idx] + 1)/2,
+                                          'sound_len': reaction_time[idx],
+                                          'hithistory': hit_model[idx]})
         else:
-            df_data = pd.read_csv(DATA_FOLDER + 'df_fig_1.csv')
+            df_data_model = pd.read_csv(DATA_FOLDER + 'df_fig_1.csv')
         f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # (4, 3))
         ax = ax.flatten()
         fig4.fig4(ax=[ax[0], ax[3]])
         humans = False
         ax[0].axis('off')
-        matrix_figure(df_data=df_data, humans=humans, ax_tach=ax[1],
+        matrix_figure(df_data=df_data_model, humans=humans, ax_tach=ax[1],
                       ax_pright=ax[2], ax_mat=[ax[4], ax[5]])
         f.savefig(SV_FOLDER+'fig2.svg', dpi=400, bbox_inches='tight')
     if f3:
