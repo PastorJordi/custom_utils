@@ -17,6 +17,7 @@ import types
 import tqdm
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from scipy.interpolate import interp1d
+import matplotlib as mpl
 
 # from utilsJ.Models import alex_bayes as ab
 
@@ -1881,7 +1882,7 @@ def tachometric(
             ax.plot(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values, label=clabel, c=cmap(
-                    i/(evidence_bins.size-1)),
+                    (i+2)/(evidence_bins.size)),
                 marker=error_kws.get('marker', 'o')
             )
             ax.fill_between(
@@ -1890,7 +1891,7 @@ def tachometric(
                 tmp.groupby_binom_ci.apply(lambda x: x[1]),
                 y2=tmp['mean'].values -
                 tmp.groupby_binom_ci.apply(lambda x: x[0]),
-                color=cmap(i/(evidence_bins.size-1)),
+                color=cmap(i+2/(evidence_bins.size)),
                 alpha=error_kws.get('alpha', 0.3)
             )
         else:

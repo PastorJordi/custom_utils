@@ -10,8 +10,8 @@ import seaborn as sns
 from scipy.stats import sem
 import sys
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -26,15 +26,15 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -541,7 +541,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                            annotate=False, xlabel='prior', ylabel='avg stim',
                            cmap='rocket')
     cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
-    cdfs(coh, reaction_time, f5=True, ax=ax[7], label_title='Model',
+    cdfs(coh, sound_len_model, f5=True, ax=ax[7], label_title='Model',
          linestyle='--')
     ax[8].set_title('Pright Data')
     zt_model = zt[sound_len_model >= 0]
@@ -600,11 +600,6 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
         num_tr = num_tr
     else:
         num_tr = int(len(zt))
-    stim = stim[:, :int(num_tr)]
-    zt = zt[:int(num_tr)]
-    coh = coh[:int(num_tr)]
-    gt = gt[:int(num_tr)]
-    trial_index = trial_index[:int(num_tr)]
     data_augment_factor = 10
     MT_slope = 0.123
     MT_intercep = 254
@@ -615,7 +610,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_zt = 0.2
     p_w_stim = 0.11
     p_e_noise = 0.02
-    p_com_bound = 0.
+    p_com_bound = 0.4
     p_w_a_intercept = 0.05
     p_w_a_slope = -2.5e-05  # fixed
     p_a_noise = 0.042  # fixed
@@ -674,7 +669,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    all_rats = True
+    all_rats = False
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                       return_df=True, sv_folder=SV_FOLDER,
@@ -790,7 +785,7 @@ if __name__ == '__main__':
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             pro_vs_re =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
-                      num_tr=num_tr)
+                      num_tr=None)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,

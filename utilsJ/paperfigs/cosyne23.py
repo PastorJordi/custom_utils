@@ -45,8 +45,10 @@ def plot_coms(df, ax, human=False):
     coms = df.CoM_sugg.values
     if human:
         ran_max = 200
+        max_val = 600
     if not human:
         ran_max = 200
+        max_val = 77
     for tr in range(ran_max):  # len(df_rat)):
         if tr < (ran_max/2-1) and not coms[tr]:
             trial = df.iloc[tr]
@@ -75,8 +77,11 @@ def plot_coms(df, ax, human=False):
     if not human:
         var = 'y'
         sp = 'Rats'
-    ax.set_ylabel('{} position {}-dimension (pixels)'.format(sp, var))
+    ax.set_ylabel('{} position {}-axis (pixels)'.format(sp, var))
     ax.set_xlabel('Time from movement onset (ms)')
+    ax.axhline(y=max_val, linestyle='--', color='k', lw=0.5)
+    ax.axhline(y=-max_val, linestyle='--', color='k', lw=0.5)
+    ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
 def tracking_image(ax):
@@ -158,9 +163,10 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     if humans:
         num = 8
         rtbins = np.linspace(0, 300, num=num)
-        tachometric(df_data, ax=ax_tach, fill_error=True, rtbins=rtbins)
+        tachometric(df_data, ax=ax_tach, fill_error=True, rtbins=rtbins,
+                    cmap='gist_yarg')
     else:
-        tachometric(df_data, ax=ax_tach, fill_error=True)
+        tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
@@ -196,7 +202,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
                                 annotate=False)
     mat_pright = np.flipud(mat_pright)
-    im_2 = ax_pright.imshow(mat_pright, cmap='rocket')
+    im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
     ax_pright.set_title('Proportion of rightward responses')
