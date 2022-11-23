@@ -56,7 +56,7 @@ def plot_coms(df, ax):
 def tracking_image(ax):
     rat = plt.imread(RAT_COM_IMG)
     ax.set_facecolor('white')
-    ax.imshow(np.flipud(rat[:, 300:, :]))
+    ax.imshow(np.flipud(rat[50:-50, 350:, :]))
     ax.axis('off')
 
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
         matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[3],
                       ax_mat=[ax[4], ax[5]], humans=False)
         plot_coms(df=df_rat, ax=ax[2])
-        ax_trck = plt.axes([.8, .55, .15, .15])
+        ax_trck = plt.axes([.8, .55, .17, .17])
         tracking_image(ax_trck)
         f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
