@@ -216,32 +216,32 @@ if __name__ == '__main__':
     f2 = True
     f3 = False
     if f1:
-        # stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
-        #     trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-        #     edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
-        #                               num_tr_per_rat=int(1e4),
-        #                               after_correct=True, splitting=False,
-        #                               silent=False, all_trials=False,
-        #                               return_df=False, sv_folder=SV_FOLDER)
-        # data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
-        #         'sound_len': sound_len, 'decision': decision,
-        #         'resp_len': resp_len, 'hit': hit, 'trial_index': trial_index,
-        #         'special_trial': special_trial, 'trajectory_y': traj_y,
-        #         'trajectory_stamps': traj_stamps, 'fix_onset_dt': fix_onset}
-        # np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
-        #           **data)
-        data = np.load(DATA_FOLDER+'/sample_73785.npz',
-                       allow_pickle=True)
-        stim = data['stim']
-        zt = data['zt']
-        coh = data['coh']
-        com = data['com']
-        gt = data['gt']
-        sound_len = data['sound_len']
-        resp_len = data['resp_len']
-        decision = data['decision']
-        hit = data['hit']
-        trial_index = data['trial_index']
+        stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
+            trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
+            edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
+                                      num_tr_per_rat=int(1e4),
+                                      after_correct=True, splitting=False,
+                                      silent=False, all_trials=False,
+                                      return_df=False, sv_folder=SV_FOLDER)
+        data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
+                'sound_len': sound_len, 'decision': decision,
+                'resp_len': resp_len, 'hit': hit, 'trial_index': trial_index,
+                'special_trial': special_trial, 'trajectory_y': traj_y,
+                'trajectory_stamps': traj_stamps, 'fix_onset_dt': fix_onset}
+        np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
+                  **data)
+        # data = np.load(DATA_FOLDER+'/sample_73785.npz',
+        #                allow_pickle=True)
+        # stim = data['stim']
+        # zt = data['zt']
+        # coh = data['coh']
+        # com = data['com']
+        # gt = data['gt']
+        # sound_len = data['sound_len']
+        # resp_len = data['resp_len']
+        # decision = data['decision']
+        # hit = data['hit']
+        # trial_index = data['trial_index']
 
         df_rat = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
                                           return_df=True, sv_folder=SV_FOLDER,
