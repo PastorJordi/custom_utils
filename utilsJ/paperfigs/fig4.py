@@ -261,8 +261,8 @@ def fig4(ax):
     p_w_zt = 0.1
     p_w_stim = 0.05
     p_e_noise = 0.02
-    p_com_bound = 0.1
-    p_1st_readout = 140
+    p_com_bound = 0.3
+    p_1st_readout = 60
     p_2nd_readout = 100
     MT_slope = 0.123
     MT_intercep = 254
@@ -272,10 +272,10 @@ def fig4(ax):
     colors = ['b', 'm']
     for i_tt, tt in enumerate(trial_types):
         if tt == 'confirmation':
-            stim_offset = 2.5
+            stim_offset = 1.5
         elif tt == 'CoM':
-            stim_offset = -2.5
-        zt = np.array([2])
+            stim_offset = -4
+        zt = np.array([2.5])
         stim = np.random.randn(20, 1)+stim_offset
         stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
 

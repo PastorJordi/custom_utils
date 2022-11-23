@@ -88,8 +88,8 @@ def draw_lines(ax, frst, sec, p_t_aff, p_com_bound, clrs_ro=['c', 'c']):
     ax[0].axhline(y=1, color='purple', linewidth=2)
     ax[0].axhline(y=-1, color='green', linewidth=2)
     ax[0].axhline(y=0, linestyle='--', color='k', linewidth=0.7)
-    ax[0].axhline(y=p_com_bound, color='purple', linewidth=.5, linestyle='--')
-    ax[0].axhline(y=-p_com_bound, color='green', linewidth=.5, linestyle='--')
+    ax[0].axhline(y=p_com_bound, color='grey', linewidth=.5, linestyle='--')
+    ax[0].axhline(y=-p_com_bound, color='grey', linewidth=.5, linestyle='--')
     ax[1].axhline(y=1, color='k', linewidth=1, linestyle='--')
     for a in ax:
         a.axvline(x=frst, color=clrs_ro[0], linewidth=1, linestyle='--')
