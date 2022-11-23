@@ -44,11 +44,11 @@ FRAME_RATE = 14
 def plot_coms(df, ax, human=False):
     coms = df.CoM_sugg.values
     if human:
-        ran_max = 500
+        ran_max = 200
     if not human:
         ran_max = 200
     for tr in range(ran_max):  # len(df_rat)):
-        if tr < (ran_max/2 - 1) and not coms[tr]:
+        if tr < (ran_max/2-1) and not coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
@@ -63,7 +63,7 @@ def plot_coms(df, ax, human=False):
             traj = trial['trajectory_y']
             if not human:
                 time = np.arange(len(traj))*FRAME_RATE
-                ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+                ax.plot(time, traj, color='r', lw=1)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
@@ -218,8 +218,8 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # ax_pright.set_aspect('equal', adjustable='box')
 
 
-def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300',
-          plot_trajs=True):
+def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, ax_traj, humans=False,
+          nm='300'):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'Manuel':
@@ -233,9 +233,7 @@ def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
-    if plot_trajs:
-        fig, axes = plt.subplots(1)
-        plot_coms(df_data, axes, human=humans)
+    plot_coms(df=df_data, ax=ax_traj, human=humans)
 
 
 # --- MAIN
@@ -333,5 +331,6 @@ if __name__ == '__main__':
         ax[0].axis('off')
         ax[1].axis('off')
         fig_3(user_id='Alex', sv_folder=SV_FOLDER,
-              ax_tach=ax[2], ax_pright=ax[3], ax_mat=[ax[4], ax[5]], humans=True)
+              ax_tach=ax[1], ax_pright=ax[3], ax_mat=[ax[4], ax[5]],
+              ax_traj=ax[2], humans=True)
         f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
