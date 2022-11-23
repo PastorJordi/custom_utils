@@ -335,7 +335,6 @@ if __name__ == '__main__':
         f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # figsize=(3, 3))
         ax = ax.flatten()
         ax[0].axis('off')
-        ax[1].axis('off')
         fig_3(user_id='Alex', sv_folder=SV_FOLDER,
               ax_tach=ax[1], ax_pright=ax[3], ax_mat=[ax[4], ax[5]],
               ax_traj=ax[2], humans=True)
