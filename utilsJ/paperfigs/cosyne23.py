@@ -51,6 +51,8 @@ def plot_coms(df, ax):
             traj = trial['trajectory_y']
             ax.plot(traj, color='r', lw=1)
     fp.rm_top_right_lines(ax)
+    ax.set_ylabel('Rats position y-dimension (pixels)')
+    ax.set_xlabel('Time from movement onset (ms)')
 
 
 def tracking_image(ax):
@@ -136,11 +138,12 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     else:
         tachometric(df_data, ax=ax_tach, fill_error=True)
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
-    ax_tach.set_xlabel('RT (ms)')
+    ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.4, 1.04)
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
+    ax_tach.legend()
     # plot Pcoms matrices
     nbins = 7
     matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
@@ -213,8 +216,8 @@ if __name__ == '__main__':
     all_rats = True
     num_tr = int(15e4)
     f1 = True
-    f2 = False
-    f3 = False
+    f2 = True
+    f3 = True
     if f1:
         stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
             trial_index, special_trial, traj_y, fix_onset, traj_stamps =\

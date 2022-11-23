@@ -272,7 +272,7 @@ def fig4(ax):
     colors = ['b', 'm']
     for i_tt, tt in enumerate(trial_types):
         if tt == 'confirmation':
-            stim_offset = 0.7
+            stim_offset = 2.5
         elif tt == 'CoM':
             stim_offset = -2.5
         zt = np.array([2])
