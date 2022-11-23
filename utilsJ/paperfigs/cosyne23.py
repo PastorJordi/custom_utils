@@ -218,7 +218,8 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # ax_pright.set_aspect('equal', adjustable='box')
 
 
-def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'):
+def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300',
+          plot_trajs=True):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'Manuel':
@@ -232,8 +233,9 @@ def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
-    fig, axes = plt.subplots(1)
-    plot_coms(df_data, axes, human=humans)
+    if plot_trajs:
+        fig, axes = plt.subplots(1)
+        plot_coms(df_data, axes, human=humans)
 
 
 # --- MAIN
