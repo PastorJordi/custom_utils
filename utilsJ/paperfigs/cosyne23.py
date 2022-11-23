@@ -12,6 +12,7 @@ import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import fig4
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
 from utilsJ.Models import analyses_humans as ah
 import figures_paper as fp
@@ -25,18 +26,19 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/Figure_3/001965.png'
-# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/Figure_3/001965.png'
+RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+FRAME_RATE = 14
 
 
 def plot_coms(df, ax):
@@ -45,11 +47,13 @@ def plot_coms(df, ax):
         if tr < 99 and not coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
-            ax.plot(traj, color=(.8, .8, .8), lw=.5)
+            time = np.arange(len(traj))*FRAME_RATE
+            ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
         elif tr > 100 and coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
-            ax.plot(traj, color='r', lw=1)
+            time = np.arange(len(traj))*FRAME_RATE
+            ax.plot(time, traj, color='r', lw=1)
     fp.rm_top_right_lines(ax)
     ax.set_ylabel('Rats position y-dimension (pixels)')
     ax.set_xlabel('Time from movement onset (ms)')
@@ -58,7 +62,7 @@ def plot_coms(df, ax):
 def tracking_image(ax):
     rat = plt.imread(RAT_COM_IMG)
     ax.set_facecolor('white')
-    ax.imshow(np.flipud(rat[50:-50, 350:, :]))
+    ax.imshow(np.flipud(rat[100:-100, 350:-50, :]))
     ax.axis('off')
 
 
@@ -140,7 +144,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
-    ax_tach.set_ylim(0.4, 1.04)
+    ax_tach.set_ylim(0.3, 1.04)
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
     ax_tach.legend()
@@ -175,11 +179,11 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im_2 = ax_pright.imshow(mat_pright, cmap='rocket')
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
-    ax_pright.set_title('p(right)')
+    ax_pright.set_title('Proportion of rightward responses')
 
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
-        ax_i.set_xlabel('Prior')
+        ax_i.set_xlabel('Prior Evidence')
         # ax_i.set_yticks(np.arange(nbins))
         # ax_i.set_xticks(np.arange(nbins))
         ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
@@ -216,23 +220,23 @@ if __name__ == '__main__':
     all_rats = True
     num_tr = int(15e4)
     f1 = True
-    f2 = True
-    f3 = True
+    f2 = False
+    f3 = False
     if f1:
         stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
             trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
             edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
-                                      num_tr_per_rat=int(1e4),
-                                      after_correct=True, splitting=False,
-                                      silent=False, all_trials=True,
-                                      return_df=False, sv_folder=SV_FOLDER)
+                                     num_tr_per_rat=int(1e4),
+                                     after_correct=True, splitting=False,
+                                     silent=False, all_trials=True,
+                                     return_df=False, sv_folder=SV_FOLDER)
         data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                 'sound_len': sound_len, 'decision': decision,
                 'resp_len': resp_len, 'hit': hit, 'trial_index': trial_index,
                 'special_trial': special_trial, 'trajectory_y': traj_y,
                 'trajectory_stamps': traj_stamps, 'fix_onset_dt': fix_onset}
         np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
-                  **data)
+                 **data)
         # data = np.load(DATA_FOLDER+'/sample_73785.npz',
         #                allow_pickle=True)
         # stim = data['stim']
@@ -258,13 +262,15 @@ if __name__ == '__main__':
                                 'R_response': (decision+1)/2,
                                 'sound_len': sound_len,
                                 'hithistory': hit})
-        f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # figsize=(4, 3))
+        f, ax = plt.subplots(nrows=2, ncols=4, figsize=(8, 6))  # figsize=(4, 3))
         ax = ax.flatten()
         ax[0].axis('off')
-        matrix_figure(df_data, ax_tach=ax[1], ax_pright=ax[3],
-                      ax_mat=[ax[4], ax[5]], humans=False)
-        plot_coms(df=df_rat, ax=ax[2])
-        ax_trck = plt.axes([.8, .55, .17, .17])
+        ax[1].axis('off')
+        matrix_figure(df_data, ax_tach=ax[3], ax_pright=ax[2],
+                      ax_mat=[ax[6], ax[7]], humans=False)
+        plot_coms(df=df_rat, ax=ax[5])
+        # ax_trck = plt.axes([.8, .55, .17, .17])
+        ax_trck = ax[4]
         tracking_image(ax_trck)
         f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
@@ -300,6 +306,6 @@ if __name__ == '__main__':
         ax = ax.flatten()
         ax[0].axis('off')
         ax[1].axis('off')
-        fig_3(user_id='Manuel', sv_folder=SV_FOLDER,
+        fig_3(user_id='Alex', sv_folder=SV_FOLDER,
               ax_tach=ax[2], ax_pright=ax[3], ax_mat=[ax[4], ax[5]], humans=True)
         f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
