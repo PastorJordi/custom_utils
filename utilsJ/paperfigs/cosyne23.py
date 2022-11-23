@@ -186,8 +186,9 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
         ax_i.set_xlabel('Prior Evidence')
         # ax_i.set_yticks(np.arange(nbins))
         # ax_i.set_xticks(np.arange(nbins))
-        ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
+        # ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
         ax_i.set_yticklabels(['']*nbins)
+        ax_i.set_xticklabels(['']*nbins)
     for ax_i in [ax_pright, ax_mat[0]]:
         # ax_i.set_yticklabels(['right']+['']*(nbins-2)+['left'])
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
@@ -220,8 +221,8 @@ if __name__ == '__main__':
     all_rats = True
     num_tr = int(15e4)
     f1 = True
-    f2 = False
-    f3 = False
+    f2 = True
+    f3 = True
     if f1:
         stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
             trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
@@ -262,7 +263,7 @@ if __name__ == '__main__':
                                 'R_response': (decision+1)/2,
                                 'sound_len': sound_len,
                                 'hithistory': hit})
-        f, ax = plt.subplots(nrows=2, ncols=4, figsize=(8, 6))  # figsize=(4, 3))
+        f, ax = plt.subplots(nrows=2, ncols=4, figsize=(8, 5))  # figsize=(4, 3))
         ax = ax.flatten()
         ax[0].axis('off')
         ax[1].axis('off')
