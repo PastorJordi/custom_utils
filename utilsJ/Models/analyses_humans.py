@@ -301,7 +301,9 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                             'norm_allpriors': norm_allpriors,
                             'R_response': R_response,
                             'sound_len': reaction_time[indx]*1e3,
-                            'hithistory': perf[indx]})
+                            'hithistory': perf[indx],
+                            'trajectory_y': pos_x[indx],
+                            'times': answer_times[indx]})
     if plot:
         fig, ax = plt.subplots(1)
         bins = np.linspace(0, 350, 8)  # rt bins

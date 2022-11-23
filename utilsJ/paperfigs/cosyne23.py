@@ -41,21 +41,41 @@ RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
 FRAME_RATE = 14
 
 
-def plot_coms(df, ax):
+def plot_coms(df, ax, human=False):
     coms = df.CoM_sugg.values
-    for tr in range(200):  # len(df_rat)):
-        if tr < 99 and not coms[tr]:
+    if human:
+        ran_max = 500
+    if not human:
+        ran_max = 200
+    for tr in range(ran_max):  # len(df_rat)):
+        if tr < (ran_max/2 - 1) and not coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
-            time = np.arange(len(traj))*FRAME_RATE
-            ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
-        elif tr > 100 and coms[tr]:
+            if not human:
+                time = np.arange(len(traj))*FRAME_RATE
+                ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+            if human:
+                time = trial['times']
+                if time[-1] < 0.3 and time[-1] > 0.1:
+                    ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+        elif tr > (ran_max/2) and coms[tr]:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
-            time = np.arange(len(traj))*FRAME_RATE
-            ax.plot(time, traj, color='r', lw=1)
+            if not human:
+                time = np.arange(len(traj))*FRAME_RATE
+                ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+            if human:
+                time = trial['times']
+                if time[-1] < 0.3 and time[-1] > 0.1:
+                    ax.plot(time, traj, color='r', lw=1)
     fp.rm_top_right_lines(ax)
-    ax.set_ylabel('Rats position y-dimension (pixels)')
+    if human:
+        var = 'x'
+        sp = 'Subject'
+    if not human:
+        var = 'y'
+        sp = 'Rats'
+    ax.set_ylabel('{} position {}-dimension (pixels)'.format(sp, var))
     ax.set_xlabel('Time from movement onset (ms)')
 
 
@@ -154,7 +174,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_1)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
     plt.sca(ax_mat[0])
@@ -163,7 +183,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
     # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
     #                      pos.width, pos.height])
-    pcomlabel_0 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[1].set_title(pcomlabel_0)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
     ax_mat[1].yaxis.set_ticks_position('none')
@@ -212,6 +232,8 @@ def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, humans=False, nm='300'
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
+    fig, axes = plt.subplots(1)
+    plot_coms(df_data, axes, human=humans)
 
 
 # --- MAIN
