@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import fig4
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
+import fig4
 from utilsJ.Models import analyses_humans as ah
 import figures_paper as fp
 from utilsJ.Models import extended_ddm_v2 as edd2
