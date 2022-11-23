@@ -263,12 +263,12 @@ def fig4(ax):
     p_e_noise = 0.02
     p_com_bound = 0.3
     p_1st_readout = 60
-    p_2nd_readout = 100
+    p_2nd_readout = 80
     MT_slope = 0.123
     MT_intercep = 254
     # trials
     trial_types = ['confirmation', 'CoM']
-    seeds = [0, 1]
+    seeds = [1, 3]
     colors = ['b', 'm']
     for i_tt, tt in enumerate(trial_types):
         if tt == 'confirmation':
