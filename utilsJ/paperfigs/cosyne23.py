@@ -5,7 +5,7 @@ Created on Fri Nov 18 16:49:51 2022
 
 @author: manuel
 """
-# import time
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -212,8 +212,8 @@ if __name__ == '__main__':
     subject = 'LE44'
     all_rats = True
     num_tr = int(15e4)
-    f1 = False
-    f2 = True
+    f1 = True
+    f2 = False
     f3 = False
     if f1:
         stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             edd2.get_data_and_matrix(dfpath=DATA_FOLDER,
                                       num_tr_per_rat=int(1e4),
                                       after_correct=True, splitting=False,
-                                      silent=False, all_trials=False,
+                                      silent=False, all_trials=True,
                                       return_df=False, sv_folder=SV_FOLDER)
         data = {'stim': stim, 'zt': zt, 'coh': coh, 'gt': gt, 'com': com,
                 'sound_len': sound_len, 'decision': decision,
