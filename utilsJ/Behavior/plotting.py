@@ -1856,7 +1856,7 @@ def tachometric(
 
     cmap = cm.get_cmap(cmap)
     rtbinsize = rtbins[1]-rtbins[0]
-    error_kws_ = dict(marker='o', capsize=3)
+    error_kws_ = dict(marker='', capsize=3)
     error_kws_.update(error_kws)
 
     tmp_df = df
@@ -1883,7 +1883,7 @@ def tachometric(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values, label=clabel, c=cmap(
                     (i+2)/(evidence_bins.size)),
-                marker=error_kws.get('marker', 'o')
+                marker=error_kws.get('marker', '')
             )
             ax.fill_between(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,

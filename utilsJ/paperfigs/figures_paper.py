@@ -11,8 +11,8 @@ from scipy.stats import sem
 import sys
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -26,13 +26,13 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
@@ -349,7 +349,7 @@ def tachometric_data(coh, hit, sound_len, ax, label='Data'):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len})
-    tachometric(df_plot_data, ax=ax, fill_error=True)
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg')
     ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
@@ -462,7 +462,7 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
     decision_01 = (decision+1)/2
     edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[4], flip=True,
                            annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='rocket')
+                           cmap='PRGn_r')
     ax[4].set_title('Pright')
     edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5],
                            flip=True,
@@ -539,7 +539,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     decision_01 = (decision+1)/2
     edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
                            annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='rocket')
+                           cmap='PRGn_r')
     cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
     cdfs(coh, sound_len_model, f5=True, ax=ax[7], label_title='Model',
          linestyle='--')
@@ -549,7 +549,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     decision_01_model = (decision_model+1)/2
     edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
                            flip=True, annotate=False, xlabel='prior',
-                           ylabel='avg stim', cmap='rocket')
+                           ylabel='avg stim', cmap='PRGn_r')
     ax[9].set_title('Pright Model')
     edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
                            flip=True, xlabel='prior', annotate=False,
@@ -606,16 +606,16 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     detect_CoMs_th = 5
     p_t_aff = 8
     p_t_eff = 8
-    p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_a = 13  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.11
     p_e_noise = 0.02
-    p_com_bound = 0.4
+    p_com_bound = 0.
     p_w_a_intercept = 0.05
     p_w_a_slope = -2.5e-05  # fixed
-    p_a_noise = 0.042  # fixed
-    p_1st_readout = 60
-    p_2nd_readout = 150
+    p_a_noise = 0.05  # fixed
+    p_1st_readout = 1
+    p_2nd_readout = 100
 
     stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
@@ -662,7 +662,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     hit_model = resp_fin == gt
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-    return hit_model, reaction_time, detected_com, resp_fin, com_model, pro_vs_re
+    return hit_model, reaction_time, detected_com, resp_fin, com_model,\
+        pro_vs_re, total_traj
 
 
 # ---MAIN
@@ -747,7 +748,6 @@ if __name__ == '__main__':
         com_heatmap_paper_marginal_pcom_side(df_data, side=0)
         com_heatmap_paper_marginal_pcom_side(df_data, side=1)
 
-
     # fig 5 (model)
     if f5:
         num_tr = 150000
@@ -783,7 +783,7 @@ if __name__ == '__main__':
             stim = stim.T
         stim = stim[:, :int(num_tr)]
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            pro_vs_re =\
+            pro_vs_re, trajs =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=None)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
@@ -794,7 +794,26 @@ if __name__ == '__main__':
         df_1 = df.copy()
         df_1['R_response'] = (resp_fin + 1)/2
         fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
-
+    MT = [len(t) for t in trajs]
+    df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
+                           'sound_len': reaction_time,
+                           'rewside': gt, 'R_response': (resp_fin+1)/2,
+                           'resp_len': MT})
+    df_sim['traj_d1'] = [np.diff(t) for t in trajs]
+    df_sim['aftererror'] = df.aftererror
+    df_sim['subjid'] = 'simul'
+    df_sim['dW_trans'] = df.dW_trans
+    df_sim['dW_lat'] = df.dW_lat
+    df_sim['special_trial'] = df.special_trial
+    df_sim['framerate'] = 1
+    fig, ax = plt.subplots(ncols=2, nrows=2)
+    ax = ax.flatten()
+    trajs_cond_on_coh(df_sim, ax=ax)
+    simul.when_did_split_simul(df_sim, side=1, ax=ax,
+                               plot_kwargs=dict(color='tab:green',
+                                                label='RTs'))
+    ax.set_xlim(-10, 140)
+    ax.set_ylim(-5, 20)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
