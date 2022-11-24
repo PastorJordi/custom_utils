@@ -283,7 +283,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
     com_peak = []
     for i, traj in enumerate(pos_x):
         traj = np.array(traj)
-        max_val = max((traj-traj[0]) * (-choice_signed[i]))
+        max_val = max((traj) * (-choice_signed[i]))
         com_list.append(max_val > com_threshold)
         com_peak.append(max_val)
     df_plot = pd.DataFrame({'sound_len': reaction_time*1e3, 'CoM': com_list,

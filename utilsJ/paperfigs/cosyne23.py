@@ -43,33 +43,34 @@ FRAME_RATE = 14
 
 def plot_coms(df, ax, human=False):
     coms = df.CoM_sugg.values
+    decision = df.R_response.values
     if human:
-        ran_max = 200
+        ran_max = 600
         max_val = 600
     if not human:
         ran_max = 200
         max_val = 77
-    for tr in range(ran_max):  # len(df_rat)):
-        if tr < (ran_max/2-1) and not coms[tr]:
+    for tr in reversed(range(ran_max)):  # len(df_rat)):
+        if tr > (ran_max/1.2) and not coms[tr] and decision[tr] == 1:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
                 time = np.arange(len(traj))*FRAME_RATE
-                ax.plot(time, traj, color=(.8, .8, .8), lw=.5)
+                ax.plot(time, traj, color='tab:cyan', lw=.5)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
-                    ax.plot(time*1e3, traj, color=(.8, .8, .8), lw=.5)
-        elif tr > (ran_max/2) and coms[tr]:
+                    ax.plot(time*1e3, traj, color='tab:cyan', lw=.5)
+        elif tr < (ran_max/1.2-1) and coms[tr] and decision[tr] == 0:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
                 time = np.arange(len(traj))*FRAME_RATE
-                ax.plot(time, traj, color='r', lw=1)
+                ax.plot(time, traj, color='tab:olive', lw=2)
             if human:
                 time = np.array(trial['times'])
-                if time[-1] < 0.3 and time[-1] > 0.1:
-                    ax.plot(time*1e3, traj, color='r', lw=1)
+                if time[-1] < 0.3 and time[-1] > 0.2:
+                    ax.plot(time*1e3, traj, color='tab:olive', lw=2)
     fp.rm_top_right_lines(ax)
     if human:
         var = 'x'
@@ -79,8 +80,8 @@ def plot_coms(df, ax, human=False):
         sp = 'Rats'
     ax.set_ylabel('{} position {}-axis (pixels)'.format(sp, var))
     ax.set_xlabel('Time from movement onset (ms)')
-    ax.axhline(y=max_val, linestyle='--', color='k', lw=0.5)
-    ax.axhline(y=-max_val, linestyle='--', color='k', lw=0.5)
+    ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
+    ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
