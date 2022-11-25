@@ -20,6 +20,7 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side, trajectory_thr
 import fig1, fig3, fig2
 import matplotlib
+import matplotlib.pylab as pl
 matplotlib.rcParams['font.size'] = 8
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
@@ -541,7 +542,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     decision_01 = (decision+1)/2
     edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
                            annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='PRGn_r')
+                           cmap='PRGn_r', vmin=0., vmax=1)
     cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
     cdfs(coh, sound_len_model, f5=True, ax=ax[7], label_title='Model',
          linestyle='--')
@@ -551,15 +552,15 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     decision_01_model = (decision_model+1)/2
     edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
                            flip=True, annotate=False, xlabel='prior',
-                           ylabel='avg stim', cmap='PRGn_r')
+                           ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
     ax[9].set_title('Pright Model')
     edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
                            flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='coolwarm')
+                           ylabel='avg stim', cmap='coolwarm', vmin=0.2, vmax=1)
     ax[10].set_title('Pcorrect Data')
     edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
                            flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='coolwarm')
+                           ylabel='avg stim', cmap='coolwarm', vmin=0.2, vmax=1)
     ax[11].set_title('Pcorrect Model')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
@@ -585,13 +586,88 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
 
 
 def traj_model_plot(df_sim):
-    fig, ax = plt.subplots(ncols=2, nrows=2)
+    f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
     ax = ax.flatten()
+    ax_cohs = np.array([ax[0], ax[2]])
+    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginy=0.15)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs_cond_on_coh(df_sim, ax=ax)
     simul.whole_splitting(df=df_sim, ax=ax[1], simul=True)
     ax[1].set_xlim(-10, 200)
     ax[1].set_ylim(-20, 20)
     trajs_splitting_point(df=df_sim, ax=ax[3], sim=True)
+    trajs_cond_on_coh(df=df_sim, ax=ax_cohs)
+
+
+def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
+                        vel_thr=0.2):
+    if median:
+        func_final = np.nanmedian
+    if not median:
+        func_final = np.nanmean
+    nanidx = df_sim.loc[df_sim[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
+    df_sim['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df_sim.loc[nanidx, 'allpriors'] = np.nan
+    df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
+    bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    bins_zt = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    df_sim['normallpriors'] = df_sim['allpriors']/np.nanmax(df_sim['allpriors'])
+    lens = []
+    fig, ax = plt.subplots(nrows=2)
+    ax = ax.flatten()
+    signed_response = df_sim.R_response.values
+    colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_coh)))
+    for i_ev, ev in enumerate(bins_coh):
+        if not prior:
+            index = (df_sim.choice_x_coh.values == ev) *\
+                (df_sim.R_response.values == 1)
+        if prior:
+            if ev == 1:
+                break
+            index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
+                (df_sim.normallpriors.values < bins_zt[i_ev + 1])
+            # (df_sim.R_response.values == 1) *\
+        lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
+        traj_all = np.empty((sum(index), max(lens)))
+        traj_all[:] = np.nan
+        vel_all = np.empty((sum(index), max(lens)))
+        vel_all[:] = np.nan
+        for tr in range(sum(index)):
+            vals_traj = df_sim.traj[index].values[tr] *\
+                (signed_response[index][tr]*2 - 1)
+            vals_vel = df_sim.traj_d1[index].values[tr] *\
+                (signed_response[index][tr]*2 - 1)
+            traj_all[tr, :len(vals_traj)] = vals_traj
+            vel_all[tr, :len(vals_vel)] = vals_vel
+        # [plt.plot(t) for t in df_sim.trajectory_y[index].values]
+        mean_traj = func_final(traj_all, axis=0)
+        std_traj = np.sqrt(np.nanstd(traj_all, axis=0) / sum(index))
+        val_traj = np.argmin(mean_traj >= traj_thr)
+        mean_vel = func_final(vel_all, axis=0)
+        std_vel = np.sqrt(np.nanstd(vel_all, axis=0) / sum(index))
+        ax[0].plot(np.arange(len(mean_traj)), mean_traj, label='{}'.format(ev),
+                   color=colormap[i_ev])
+        ax[0].fill_between(x=np.arange(len(mean_traj)),
+                           y1=mean_traj - std_traj, y2=mean_traj + std_traj,
+                           color=colormap[i_ev])
+        ax[1].plot(np.arange(len(mean_vel)), mean_vel, label='{}'.format(ev),
+                   color=colormap[i_ev])
+        ax[1].fill_between(x=np.arange(len(mean_vel)),
+                           y1=mean_vel - std_vel, y2=mean_vel + std_vel,
+                           color=colormap[i_ev])
+    ax[0].axhline(y=30, linestyle='--', color='k', alpha=0.4)
+    ax[1].axhline(y=0.2, linestyle='--', color='k', alpha=0.4)
+    if prior:
+        leg_title = 'prior congruency'
+    if not prior:
+        leg_title = 'stim congruency'
+    ax[0].legend(title=leg_title)
+    ax[0].set_title('Median trajectory')
+    ax[1].legend(title=leg_title)
+    ax[1].set_title('Median velocity')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
@@ -617,19 +693,20 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_intercep = 254
     detect_CoMs_th = 5
     p_t_aff = 8
-    p_t_eff = 9
-    p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_eff = 8
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.11
     p_e_noise = 0.02
     p_com_bound = 0.
-    p_w_a_intercept = 0.05
+    p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
     p_1st_readout = 40
     p_2nd_readout = 100
 
-    stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
+    stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
+                                  daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
@@ -681,8 +758,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    subject = 'LE43'
-    all_rats = True
+    subject = 'LE44'
+    all_rats = False
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                       return_df=True, sv_folder=SV_FOLDER,
@@ -693,7 +770,8 @@ if __name__ == '__main__':
                                       return_df=True, sv_folder=SV_FOLDER,
                                       after_correct=True, silent=True,
                                       all_trials=True)
-    after_correct_id = np.where((df.aftererror == 0)*(df.special_trial == 0))[0]
+    after_correct_id = np.where((df.aftererror == 0))
+    # *(df.special_trial == 0))[0]
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     zt = zt[after_correct_id]
     hit = np.array(df['hithistory'])
@@ -789,15 +867,16 @@ if __name__ == '__main__':
     MT = [len(t) for t in trajs]
     df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
                            'sound_len': reaction_time,
-                           'rewside': df.rewside[:int(num_tr)],
+                           'rewside': (gt + 1)/2,
                            'R_response': (resp_fin+1)/2,
                            'resp_len': MT})
     df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-    df_sim['aftererror'] = df.aftererror[:int(num_tr)]
+    df_sim['aftererror'] = np.array(df.aftererror)[after_correct_id][:int(num_tr)]
     df_sim['subjid'] = 'simul'
-    df_sim['dW_trans'] = df.dW_trans[:int(num_tr)]
-    df_sim['dW_lat'] = df.dW_lat[:int(num_tr)]
-    df_sim['special_trial'] = df.special_trial[:int(num_tr)]
+    df_sim['dW_trans'] = np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
+    df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
+    df_sim['special_trial'] = np.array(df.special_trial)[:int(num_tr)]\
+        [after_correct_id]
     df_sim['traj'] = df_sim['trajectory_y']
     df_sim['framerate'] = 1
     traj_model_plot(df_sim)
