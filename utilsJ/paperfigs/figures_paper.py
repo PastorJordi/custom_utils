@@ -616,19 +616,20 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     bins_zt = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     df_sim['normallpriors'] = df_sim['allpriors']/np.nanmax(df_sim['allpriors'])
     lens = []
-    fig, ax = plt.subplots(nrows=2)
+    fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     signed_response = df_sim.R_response.values
-    colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_coh)))
     for i_ev, ev in enumerate(bins_coh):
         if not prior:
             index = (df_sim.choice_x_coh.values == ev) *\
                 (df_sim.R_response.values == 1)
+            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_coh)))
         if prior:
             if ev == 1:
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1])
+            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_zt)))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
         traj_all = np.empty((sum(index), max(lens)))
@@ -645,9 +646,12 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
         # [plt.plot(t) for t in df_sim.trajectory_y[index].values]
         mean_traj = func_final(traj_all, axis=0)
         std_traj = np.sqrt(np.nanstd(traj_all, axis=0) / sum(index))
-        val_traj = np.argmin(mean_traj >= traj_thr)
+        val_traj = np.argmax(mean_traj >= traj_thr)
+        ax[2].scatter(ev, val_traj, color=colormap[i_ev])
         mean_vel = func_final(vel_all, axis=0)
         std_vel = np.sqrt(np.nanstd(vel_all, axis=0) / sum(index))
+        val_vel = np.argmax(mean_vel >= vel_thr)
+        ax[3].scatter(ev, val_vel, color=colormap[i_ev])
         ax[0].plot(np.arange(len(mean_traj)), mean_traj, label='{}'.format(ev),
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
@@ -665,9 +669,17 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     if not prior:
         leg_title = 'stim congruency'
     ax[0].legend(title=leg_title)
+    ax[0].set_ylabel('y-coord (px)')
+    ax[0].set_ylabel('Time from movement onset (ms)')
     ax[0].set_title('Median trajectory')
     ax[1].legend(title=leg_title)
+    ax[1].set_ylabel('Velocity (px/s)')
+    ax[1].set_ylabel('Time from movement onset (ms)')
     ax[1].set_title('Median velocity')
+    ax[2].set_xlabel('Evidence congruency')
+    ax[2].set_ylabel('Time to reach threshold (ms)')
+    ax[3].set_xlabel('Evidence congruency')
+    ax[3].set_ylabel('Time to reach threshold (ms)')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
