@@ -10,9 +10,9 @@ import seaborn as sns
 from scipy.stats import sem
 import sys
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -31,10 +31,10 @@ matplotlib.rcParams['lines.markersize'] = 3
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -219,6 +219,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 90, 2)):
 
 
 def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
+                          sim=False,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
                           trajectory="trajectory_y"):
@@ -227,11 +228,15 @@ def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
     # threshold= bigger than that are turned to nan so it doesnt break figure range
     # this wont work if when_did_split_dat returns Nones instead of NaNs
     # plot will not work fine with uneven bins
+    if sim:
+        splitfun = simul.when_did_split_simul
+    if not sim:
+        splitfun = simul.when_did_split_dat
     out_data = []
     for subject in df.subjid.unique():
         for i in range(rtbins.size-1):
             if collapse_sides:
-                current_split_index = simul.when_did_split_dat(
+                current_split_index = splitfun(
                     df=df.loc[(df.special_trial == 0) & (df.subjid == subject)],
                     side=0,  # side has no effect because this is collapsing_sides
                     rtbin=i, rtbins=rtbins,
@@ -241,13 +246,10 @@ def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
                 out_data += [current_split_index]
             else:
                 for j in [0, 1]:  # side values
-                    current_split_index = simul.when_did_split_dat(
+                    current_split_index = splitfun(
                         df.loc[df.subjid == subject],
                         j,  # side has no effect because this is collapsing_sides
-                        rtbin=i, rtbins=rtbins,
-                        collapse_sides=True,
-                        trajectory=trajectory
-                    )
+                        rtbin=i, rtbins=rtbins)
                     out_data += [current_split_index]
 
     # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
@@ -411,7 +413,7 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
 
 def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title=''):
     colors = ['k', 'darkred', 'darkorange', 'gold']
-    index_1 = sound_len <= 300
+    index_1 = (sound_len <= 300)*(sound_len > 0)
     sound_len = sound_len[index_1]
     coh = coh[index_1]
     ev_vals = np.unique(np.abs(coh))
@@ -553,11 +555,11 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[9].set_title('Pright Model')
     edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
                            flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='rocket')
+                           ylabel='avg stim', cmap='coolwarm')
     ax[10].set_title('Pcorrect Data')
     edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
                            flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='rocket')
+                           ylabel='avg stim', cmap='coolwarm')
     ax[11].set_title('Pcorrect Model')
     df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
                             'norm_allpriors': zt/max(abs(zt)),
@@ -580,6 +582,16 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                              'R_response': (decision_model+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_model, side=0)
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
+
+
+def traj_model_plot(df_sim):
+    fig, ax = plt.subplots(ncols=2, nrows=2)
+    ax = ax.flatten()
+    # trajs_cond_on_coh(df_sim, ax=ax)
+    simul.whole_splitting(df=df_sim, ax=ax[1], simul=True)
+    ax[1].set_xlim(-10, 200)
+    ax[1].set_ylim(-20, 20)
+    trajs_splitting_point(df=df_sim, ax=ax[3], sim=True)
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
@@ -605,16 +617,16 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_intercep = 254
     detect_CoMs_th = 5
     p_t_aff = 8
-    p_t_eff = 8
-    p_t_a = 13  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_eff = 9
+    p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.11
     p_e_noise = 0.02
     p_com_bound = 0.
     p_w_a_intercept = 0.05
-    p_w_a_slope = -2.5e-05  # fixed
-    p_a_noise = 0.05  # fixed
-    p_1st_readout = 1
+    p_w_a_slope = -2.2e-05  # fixed
+    p_a_noise = 0.04  # fixed
+    p_1st_readout = 40
     p_2nd_readout = 100
 
     stim = edd2.data_augmentation(stim=stim, daf=data_augment_factor)
@@ -670,7 +682,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE43'
-    all_rats = False
+    all_rats = True
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
                                       return_df=True, sv_folder=SV_FOLDER,
@@ -681,7 +693,7 @@ if __name__ == '__main__':
                                       return_df=True, sv_folder=SV_FOLDER,
                                       after_correct=True, silent=True,
                                       all_trials=True)
-    after_correct_id = np.where(df.aftererror == 0)[0]
+    after_correct_id = np.where((df.aftererror == 0)*(df.special_trial == 0))[0]
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     zt = zt[after_correct_id]
     hit = np.array(df['hithistory'])
@@ -702,7 +714,7 @@ if __name__ == '__main__':
     trial_index = trial_index[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f5 = True
 
@@ -726,7 +738,7 @@ if __name__ == '__main__':
         ax_cohs = np.insert(ax_cohs, 2, ax_inset)
         for a in ax:
             rm_top_right_lines(a)
-        trajs_cond_on_coh(df=df, ax=ax_cohs)
+        trajs_cond_on_coh(df=df, ax=ax_cohs, average=True)
         # splits
         ax_split = np.array([ax[1], ax[3]])
         trajs_splitting(df, ax=ax_split[0])
@@ -750,27 +762,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = 150000
-        if not f1:
-            after_correct_id = np.where(df.aftererror == 0)[0]
-            zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-            zt = zt[after_correct_id]
-            hit = np.array(df['hithistory'])
-            hit = hit[after_correct_id]
-            stim = np.array([stim for stim in df.res_sound])
-            stim = stim[after_correct_id, :]
-            coh = np.array(df.coh2)
-            coh = coh[after_correct_id]
-            com = df.CoM_sugg.values
-            com = com[after_correct_id]
-            decision = np.array(df.R_response) * 2 - 1
-            decision = decision[after_correct_id]
-            sound_len = np.array(df.sound_len)
-            sound_len = sound_len[after_correct_id]
-            gt = np.array(df.rewside) * 2 - 1
-            gt = gt[after_correct_id]
-            trial_index = np.array(df.origidx)
-            trial_index = trial_index[after_correct_id]
+        num_tr = int(3e5)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
@@ -790,30 +782,25 @@ if __name__ == '__main__':
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re)
-        fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
-        df_1 = df.copy()
-        df_1['R_response'] = (resp_fin + 1)/2
-        fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
+        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
+        # df_1 = df.copy()
+        # df_1['R_response'] = (resp_fin + 1)/2
+        # fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
     MT = [len(t) for t in trajs]
     df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
                            'sound_len': reaction_time,
-                           'rewside': gt, 'R_response': (resp_fin+1)/2,
+                           'rewside': df.rewside[:int(num_tr)],
+                           'R_response': (resp_fin+1)/2,
                            'resp_len': MT})
     df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-    df_sim['aftererror'] = df.aftererror
+    df_sim['aftererror'] = df.aftererror[:int(num_tr)]
     df_sim['subjid'] = 'simul'
-    df_sim['dW_trans'] = df.dW_trans
-    df_sim['dW_lat'] = df.dW_lat
-    df_sim['special_trial'] = df.special_trial
+    df_sim['dW_trans'] = df.dW_trans[:int(num_tr)]
+    df_sim['dW_lat'] = df.dW_lat[:int(num_tr)]
+    df_sim['special_trial'] = df.special_trial[:int(num_tr)]
+    df_sim['traj'] = df_sim['trajectory_y']
     df_sim['framerate'] = 1
-    fig, ax = plt.subplots(ncols=2, nrows=2)
-    ax = ax.flatten()
-    trajs_cond_on_coh(df_sim, ax=ax)
-    simul.when_did_split_simul(df_sim, side=1, ax=ax,
-                               plot_kwargs=dict(color='tab:green',
-                                                label='RTs'))
-    ax.set_xlim(-10, 140)
-    ax.set_ylim(-5, 20)
+    traj_model_plot(df_sim)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
