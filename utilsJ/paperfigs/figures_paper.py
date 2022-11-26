@@ -607,11 +607,13 @@ def traj_model_plot(df_sim):
 
 def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                         vel_thr=0.2):
+    # TODO: save each matrix? or save the mean and std
     if median:
         func_final = np.nanmedian
     if not median:
         func_final = np.nanmean
-    nanidx = df_sim.loc[df_sim[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
+    nanidx = df_sim.loc[df_sim[['dW_trans',
+                                'dW_lat']].isna().sum(axis=1) == 2].index
     df_sim['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
