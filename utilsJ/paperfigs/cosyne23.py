@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.pylab as pl
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/Alexandre/Documents/psycho_priors") 
 import fig4
@@ -243,14 +244,69 @@ def fig_3(user_id, sv_folder, ax_tach, ax_pright, ax_mat, ax_traj, humans=False,
     plot_coms(df=df_data, ax=ax_traj, human=humans)
 
 
+def human_trajs(df_data, max_mt=600, jitter=0.003, wanted_precision=8):
+    coh = df_data.avtrapz.values
+    decision = df_data.R_response.values
+    trajs = df_data.trajectory_y.values
+    times = df_data.times.values
+    ev_vals = np.unique(np.abs(np.round(coh, 2)))
+    bins = [0, 0.25, 0.5, 1]
+    congruent_coh = coh * (decision*2 - 1)
+    fig, ax = plt.subplots(2)
+    ax = ax.flatten()
+    colormap = pl.cm.viridis(np.linspace(0, 1, len(ev_vals)))
+    for i_ev, ev in enumerate(ev_vals):
+        index = np.abs(np.round(congruent_coh, 2)) == ev
+        all_trajs = np.empty((sum(index), max_mt))
+        all_trajs[:] = np.nan
+        all_vels = np.empty((sum(index), max_mt))
+        all_vels[:] = np.nan
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)\
+                + jitter
+            max_time = max(time)*1e3
+            if max_time > max_mt:
+                continue
+            vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+                                 xp=time*1e3, fp=vals)
+            vels_fin = np.diff(vals_fin)/wanted_precision
+            all_trajs[tr, :len(vals_fin)] = vals_fin - vals_fin[0]
+            all_vels[tr, :len(vels_fin)] = vels_fin - vels_fin[0]
+        mean_traj = np.nanmedian(all_trajs, axis=0)
+        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
+        mean_vel = np.nanmedian(all_vels, axis=0)
+        std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
+        ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
+                   color=colormap[i_ev], label='{}'.format(bins[i_ev]))
+        ax[0].fill_between(x=np.arange(len(mean_traj))*wanted_precision,
+                           y1=mean_traj-std_traj, y2=mean_traj+std_traj,
+                           color=colormap[i_ev])
+        ax[1].plot(np.arange(len(mean_vel))*wanted_precision, mean_vel,
+                   color=colormap[i_ev], label='{}'.format(bins[i_ev]))
+        ax[1].fill_between(x=np.arange(len(mean_vel))*wanted_precision,
+                           y1=mean_vel-std_vel, y2=mean_vel+std_vel,
+                           color=colormap[i_ev])
+    ax[0].set_xlim(-0.1, 550)
+    ax[1].set_xlim(-0.1, 550)
+    ax[0].axhline(y=200, linestyle='--', color='k', alpha=0.4)
+    ax[1].axhline(y=1, linestyle='--', color='k', alpha=0.4)
+    ax[0].legend(title='stimulus')
+    ax[0].set_title('Median trajectory')
+    ax[1].legend(title='stimulus')
+    ax[1].set_title('Median velocity')
+    # much stronger for prior (?)
+
+
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
     subject = 'LE44'
     all_rats = True
     num_tr = int(15e4)
-    f1 = True
-    f2 = True
+    f1 = False
+    f2 = False
     f3 = True
     if f1:
         stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\

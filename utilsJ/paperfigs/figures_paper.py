@@ -18,6 +18,7 @@ from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side, trajectory_thr
+from utilsJ.Models import analyses_humans as ah
 import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
@@ -586,6 +587,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
 
 
 def traj_model_plot(df_sim):
+    fgsz = (8, 8)
+    inset_sz = 0.1
     f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
     ax = ax.flatten()
     ax_cohs = np.array([ax[0], ax[2]])
@@ -619,6 +622,8 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     signed_response = df_sim.R_response.values
+    vals_thr_traj = []
+    vals_thr_vel = []
     for i_ev, ev in enumerate(bins_coh):
         if not prior:
             index = (df_sim.choice_x_coh.values == ev) *\
@@ -647,11 +652,13 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
         mean_traj = func_final(traj_all, axis=0)
         std_traj = np.sqrt(np.nanstd(traj_all, axis=0) / sum(index))
         val_traj = np.argmax(mean_traj >= traj_thr)
-        ax[2].scatter(ev, val_traj, color=colormap[i_ev])
+        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
+        vals_thr_traj.append(val_traj)
         mean_vel = func_final(vel_all, axis=0)
         std_vel = np.sqrt(np.nanstd(vel_all, axis=0) / sum(index))
         val_vel = np.argmax(mean_vel >= vel_thr)
-        ax[3].scatter(ev, val_vel, color=colormap[i_ev])
+        ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
+        vals_thr_vel.append(val_vel)
         ax[0].plot(np.arange(len(mean_traj)), mean_traj, label='{}'.format(ev),
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
@@ -666,8 +673,12 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[1].axhline(y=0.2, linestyle='--', color='k', alpha=0.4)
     if prior:
         leg_title = 'prior congruency'
+        ax[2].plot(bins_zt, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+        ax[3].plot(bins_zt, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     if not prior:
         leg_title = 'stim congruency'
+        ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+        ax[3].plot(bins_coh, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     ax[0].legend(title=leg_title)
     ax[0].set_ylabel('y-coord (px)')
     ax[0].set_ylabel('Time from movement onset (ms)')
@@ -680,6 +691,73 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[2].set_ylabel('Time to reach threshold (ms)')
     ax[3].set_xlabel('Evidence congruency')
     ax[3].set_ylabel('Time to reach threshold (ms)')
+
+
+def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
+                wanted_precision=8):
+    if user_id == 'Alex':
+        folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'Manuel':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    subj = ['general_traj']
+    steps = [None]
+    df_data = ah.traj_analysis(data_folder=folder,
+                               subjects=subj, steps=steps, name=nm,
+                               sv_folder=sv_folder)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    coh = df_data.avtrapz.values
+    decision = df_data.R_response.values
+    trajs = df_data.trajectory_y.values
+    times = df_data.times.values
+    ev_vals = np.unique(np.abs(np.round(coh, 2)))
+    bins = [0, 0.25, 0.5, 1]
+    congruent_coh = coh * (decision*2 - 1)
+    fig, ax = plt.subplots(2)
+    ax = ax.flatten()
+    colormap = pl.cm.viridis(np.linspace(0, 1, len(ev_vals)))
+    for i_ev, ev in enumerate(ev_vals):
+        index = np.abs(np.round(congruent_coh, 2)) == ev
+        all_trajs = np.empty((sum(index), max_mt))
+        all_trajs[:] = np.nan
+        all_vels = np.empty((sum(index), max_mt))
+        all_vels[:] = np.nan
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)\
+                + jitter
+            max_time = max(time)*1e3
+            if max_time > max_mt:
+                continue
+            vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+                                 xp=time*1e3, fp=vals)
+            vels_fin = np.diff(vals_fin)/wanted_precision
+            all_trajs[tr, :len(vals_fin)] = vals_fin - vals_fin[0]
+            all_vels[tr, :len(vels_fin)] = vels_fin - vels_fin[0]
+        mean_traj = np.nanmedian(all_trajs, axis=0)
+        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
+        mean_vel = np.nanmedian(all_vels, axis=0)
+        std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
+        ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
+                   color=colormap[i_ev], label='{}'.format(bins[i_ev]))
+        ax[0].fill_between(x=np.arange(len(mean_traj))*wanted_precision,
+                           y1=mean_traj-std_traj, y2=mean_traj+std_traj,
+                           color=colormap[i_ev])
+        ax[1].plot(np.arange(len(mean_vel))*wanted_precision, mean_vel,
+                   color=colormap[i_ev], label='{}'.format(bins[i_ev]))
+        ax[1].fill_between(x=np.arange(len(mean_vel))*wanted_precision,
+                           y1=mean_vel-std_vel, y2=mean_vel+std_vel,
+                           color=colormap[i_ev])
+    ax[0].set_xlim(-0.1, 550)
+    ax[1].set_xlim(-0.1, 550)
+    ax[1].set_ylim(-0.5, 4)
+    ax[0].axhline(y=200, linestyle='--', color='k', alpha=0.4)
+    ax[1].axhline(y=1, linestyle='--', color='k', alpha=0.4)
+    ax[0].legend(title='stimulus')
+    ax[0].set_title('Median trajectory')
+    ax[1].legend(title='stimulus')
+    ax[1].set_title('Median velocity')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
@@ -807,6 +885,7 @@ if __name__ == '__main__':
     f2 = True
     f3 = False
     f5 = True
+    f6 = True
 
     # fig 1
     if f1:
@@ -876,22 +955,28 @@ if __name__ == '__main__':
         # df_1 = df.copy()
         # df_1['R_response'] = (resp_fin + 1)/2
         # fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
-    MT = [len(t) for t in trajs]
-    df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
-                           'sound_len': reaction_time,
-                           'rewside': (gt + 1)/2,
-                           'R_response': (resp_fin+1)/2,
-                           'resp_len': MT})
-    df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-    df_sim['aftererror'] = np.array(df.aftererror)[after_correct_id][:int(num_tr)]
-    df_sim['subjid'] = 'simul'
-    df_sim['dW_trans'] = np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
-    df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
-    df_sim['special_trial'] = np.array(df.special_trial)[:int(num_tr)]\
-        [after_correct_id]
-    df_sim['traj'] = df_sim['trajectory_y']
-    df_sim['framerate'] = 1
-    traj_model_plot(df_sim)
+        if f6:
+            MT = [len(t) for t in trajs]
+            df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
+                                   'sound_len': reaction_time,
+                                   'rewside': (gt + 1)/2,
+                                   'R_response': (resp_fin+1)/2,
+                                   'resp_len': MT})
+            df_sim['traj_d1'] = [np.diff(t) for t in trajs]
+            df_sim['aftererror'] =\
+                np.array(df.aftererror)[after_correct_id][:int(num_tr)]
+            df_sim['subjid'] = 'simul'
+            df_sim['dW_trans'] =\
+                np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
+            df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
+            df_sim['special_trial'] =\
+                np.array(df.special_trial)[:int(num_tr)][after_correct_id]
+            df_sim['traj'] = df_sim['trajectory_y']
+            # simulation plots
+            traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
+                                vel_thr=0.2)
+            # human traj plots
+            human_trajs(user_id='Alex', sv_folder=SV_FOLDER)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
