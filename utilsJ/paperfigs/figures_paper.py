@@ -619,7 +619,8 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     bins_zt = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    df_sim['normallpriors'] = df_sim['allpriors']/np.nanmax(df_sim['allpriors'])
+    df_sim['normallpriors'] = df_sim['allpriors'] /\
+        np.nanmax(df_sim['allpriors'].abs())
     lens = []
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
@@ -742,15 +743,15 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                                  xp=time*1e3, fp=vals)
             vels_fin = np.diff(vals_fin)/wanted_precision
             all_trajs[tr, :len(vals_fin)] = vals_fin - vals_fin[0]
-            all_vels[tr, :len(vels_fin)] = vels_fin - vels_fin[0]
+            all_vels[tr, :len(vels_fin)] = vels_fin
         mean_traj = np.nanmedian(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
-        val_traj = np.argmax(mean_traj >= traj_thr)*wanted_precision
+        val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
         vals_thr_traj.append(val_traj)
         ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
         mean_vel = np.nanmedian(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
-        val_vel = np.argmax(mean_vel >= vel_thr)*wanted_precision
+        val_vel = np.where(mean_vel >= vel_thr)[0][2]*wanted_precision
         vals_thr_vel.append(val_vel)
         ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
         ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
@@ -767,7 +768,7 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     ax[3].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     ax[0].set_xlim(-0.1, 550)
     ax[1].set_xlim(-0.1, 550)
-    ax[1].set_ylim(-0.5, 4)
+    ax[1].set_ylim(-0.5, 5)
     ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[0].legend(title='stimulus')
@@ -816,7 +817,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 40
+    p_1st_readout = 10
     p_2nd_readout = 100
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
