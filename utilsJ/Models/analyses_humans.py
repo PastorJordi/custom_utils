@@ -66,9 +66,6 @@ def get_data(subj, main_folder):
     return data
 
 
-
-
-
 def tune_panel(ax, xlabel, ylabel, font=10):
     ax.set_xlabel(xlabel, fontsize=font)
     ax.set_ylabel(ylabel, fontsize=font)

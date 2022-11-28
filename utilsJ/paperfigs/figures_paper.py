@@ -10,9 +10,9 @@ import seaborn as sns
 from scipy.stats import sem
 import sys
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -33,10 +33,10 @@ matplotlib.rcParams['lines.markersize'] = 3
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -636,7 +636,7 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1])
-            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_zt)))
+            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_zt)-1))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
         traj_all = np.empty((sum(index), max(lens)))
@@ -675,8 +675,10 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[1].axhline(y=0.2, linestyle='--', color='k', alpha=0.4)
     if prior:
         leg_title = 'prior congruency'
-        ax[2].plot(bins_zt, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-        ax[3].plot(bins_zt, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+        ax[2].plot(bins_zt[:-1], vals_thr_traj, color='k', linestyle='--',
+                   alpha=0.6)
+        ax[3].plot(bins_zt[:-1], vals_thr_vel, color='k', linestyle='--',
+                   alpha=0.6)
     if not prior:
         leg_title = 'stim congruency'
         ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
@@ -696,9 +698,11 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
 
 
 def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                wanted_precision=8):
+                wanted_precision=8, traj_thr=240, vel_thr=2):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'AlexCRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
     if user_id == 'Manuel':
         folder =\
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
@@ -715,9 +719,11 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
     congruent_coh = coh * (decision*2 - 1)
-    fig, ax = plt.subplots(2)
+    fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     colormap = pl.cm.viridis(np.linspace(0, 1, len(ev_vals)))
+    vals_thr_traj = []
+    vals_thr_vel = []
     for i_ev, ev in enumerate(ev_vals):
         index = np.abs(np.round(congruent_coh, 2)) == ev
         all_trajs = np.empty((sum(index), max_mt))
@@ -739,8 +745,14 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
             all_vels[tr, :len(vels_fin)] = vels_fin - vels_fin[0]
         mean_traj = np.nanmedian(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
+        val_traj = np.argmax(mean_traj >= traj_thr)*wanted_precision
+        vals_thr_traj.append(val_traj)
+        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
         mean_vel = np.nanmedian(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
+        val_vel = np.argmax(mean_vel >= vel_thr)*wanted_precision
+        vals_thr_vel.append(val_vel)
+        ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
         ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
                    color=colormap[i_ev], label='{}'.format(bins[i_ev]))
         ax[0].fill_between(x=np.arange(len(mean_traj))*wanted_precision,
@@ -751,15 +763,25 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
         ax[1].fill_between(x=np.arange(len(mean_vel))*wanted_precision,
                            y1=mean_vel-std_vel, y2=mean_vel+std_vel,
                            color=colormap[i_ev])
+    ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[3].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     ax[0].set_xlim(-0.1, 550)
     ax[1].set_xlim(-0.1, 550)
     ax[1].set_ylim(-0.5, 4)
-    ax[0].axhline(y=200, linestyle='--', color='k', alpha=0.4)
-    ax[1].axhline(y=1, linestyle='--', color='k', alpha=0.4)
+    ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
+    ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[0].legend(title='stimulus')
+    ax[0].set_ylabel('y-coord (px)')
+    ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_title('Median trajectory')
     ax[1].legend(title='stimulus')
+    ax[1].set_ylabel('Velocity (px/s)')
+    ax[1].set_xlabel('Time from movement onset (ms)')
     ax[1].set_title('Median velocity')
+    ax[2].set_xlabel('Evidence congruency')
+    ax[2].set_ylabel('Time to reach threshold (ms)')
+    ax[3].set_xlabel('Evidence congruency')
+    ax[3].set_ylabel('Time to reach threshold (ms)')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
@@ -978,7 +1000,8 @@ if __name__ == '__main__':
             traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                                 vel_thr=0.2)
             # human traj plots
-            human_trajs(user_id='Alex', sv_folder=SV_FOLDER)
+            human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
+                        wanted_precision=12, traj_thr=240, vel_thr=2)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
