@@ -1987,9 +1987,9 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5, neg_pos=False,
     stim_res = int(stim_res)
     max_RT = (max(sound_len) + 1).astype(int)
     if indexing:
-        percentile_zt = np.percentile(np.abs(zt), 20)
-        index_coh = (np.abs(coh) <= 0.5)*(sound_len > 100) *\
-            (np.abs(zt) < percentile_zt)
+        # percentile_zt = np.percentile(np.abs(zt), 20)
+        index_coh = (np.abs(coh) <= 0.25)*(sound_len > 100) *\
+            (sound_len < 150)
         array_energy = np.empty((len(zt[index_coh]), max_RT))
         array_energy[:] = np.nan
         array_com_energy = np.empty((sum(com[index_coh]), max_RT))
@@ -2046,9 +2046,10 @@ def kernels(coh, zt, sound_len, decision, stim, com, stim_res=5, neg_pos=False,
                      alpha=0.3)
     plt.axhline(y=0, linestyle='--', color='k', lw=1)
     if type_1_or_2 is None:
-        plt.title('coh = {}, RT > {} ms, zt < {}'.
+        plt.title('coh = {},{} < RT < {} ms, zt < {}'.
                   format(np.unique(np.abs(coh_indexed)),
                          int(np.min(sound_len[index_coh])),
+                         int(np.max(sound_len[index_coh])),
                          np.max(np.abs(zt[index_coh]))))
     else:
         plt.title('CoM Type {}. coh = {}. margin = {}'.
@@ -2344,7 +2345,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(8e4)
+    num_tr = int(1e5)
     load_data = True
     new_sample = True
     single_run = True
@@ -2426,17 +2427,17 @@ if __name__ == '__main__':
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
             p_t_aff = 8
-            p_t_eff = 8
-            p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
-            p_w_zt = 0.12
+            p_t_eff = 9
+            p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+            p_w_zt = 0.2
             p_w_stim = 0.11
             p_e_noise = 0.02
             p_com_bound = 0.
-            p_w_a_intercept = 0.05
+            p_w_a_intercept = 0.052
             p_w_a_slope = -2.5e-05  # fixed
-            p_a_noise = 0.042  # fixed
-            p_1st_readout = 100
-            p_2nd_readout = 150
+            p_a_noise = 0.04  # fixed
+            p_1st_readout = 120
+            p_2nd_readout = 140
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2447,22 +2448,22 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            # if plot:
-            #     # left_right_matrix(zt, coh, com, decision)
-            #     data_to_plot = {'sound_len': sound_len,
-            #                     'CoM': com,
-            #                     'first_resp': decision*[~com*(-1)],
-            #                     'final_resp': decision,
-            #                     'hithistory': hit,
-            #                     'avtrapz': coh,
-            #                     'detected_com': com,
-            #                     'MT': resp_len*1e3,
-            #                     'zt': zt, 'decision': decision,
-            #                     'trial_idxs': trial_index}
-            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
-            #     mean_com_traj_peak(trajectories=traj_y, com=com,
-            #                        sound_len=sound_len, decision=decision,
-            #                        motor_time=resp_len)
+            if plot:
+                # left_right_matrix(zt, coh, com, decision)
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt, 'decision': decision,
+                                'trial_idxs': trial_index}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+                # mean_com_traj_peak(trajectories=traj_y, com=com,
+                #                    sound_len=sound_len, decision=decision,
+                #                    motor_time=resp_len)
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]

@@ -9,10 +9,11 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
 import sys
+from scipy.optimize import curve_fit
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -28,13 +29,13 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
@@ -442,7 +443,8 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title=''):
     ax.set_title(str(title))
 
 
-def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
+def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
+          label='Data'):
     fig, ax = plt.subplots(ncols=3, nrows=2)
     ax = ax.flatten()
     for i in range(len(ax)):
@@ -471,9 +473,39 @@ def fig_1(coh, hit, sound_len, decision, zt, supt='', label='Data'):
     edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5],
                            flip=True,
                            xlabel='prior',
-                           annotate=False, ylabel='avg stim ', cmap='rocket')
+                           annotate=False, ylabel='avg stim ', cmap='coolwarm')
     ax[5].set_title('Pcorrect')
     fig.savefig(SV_FOLDER+'/Fig1.png', dpi=400, bbox_inches='tight')
+
+
+def fig_1_mt_weights(df):
+    fig1, ax1 = plt.subplots(1)
+    w_coh = []
+    w_t_i = []
+    w_zt = []
+    for subject in df.subjid.unique():
+        df_1 = df.loc[df.subjid == subject]
+        resp_len = np.array(df_1.resp_len)
+        decision = np.array(df_1.R_response)*2 - 1
+        coh = np.array(df_1.coh2)
+        trial_index = np.array(df_1.origidx)
+        zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+        params = mt_linear_reg(mt=resp_len, coh=coh*decision/max(np.abs(coh)),
+                               trial_index=trial_index/max(trial_index),
+                               prior=zt*decision/max(np.abs(zt)), plot=False)
+        w_coh.append(params[1])
+        w_t_i.append(params[2])
+        w_zt.append(params[3])
+    mean_1 = np.nanmean(w_coh)
+    mean_2 = np.nanmean(w_t_i)
+    mean_3 = np.nanmean(w_zt)
+    std_1 = np.sqrt(np.nanstd(w_coh)/len(w_coh))
+    std_2 = np.sqrt(np.nanstd(w_t_i)/len(w_t_i))
+    std_3 = np.sqrt(np.nanstd(w_zt)/len(w_zt))
+    ax1.bar(x=['Stimulus Congruency', 'Trial index', 'Prior Congruency'],
+            y=[mean_1, mean_2, mean_3], yerr=[std_1, std_2, std_3],
+            capsize=3)
+    ax1.set_ylabel('Weight (a.u.)')
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -584,6 +616,13 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                              'R_response': (decision_model+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_model, side=0)
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
+    MT = [len(t) for t in trajs]
+    params = mt_linear_reg(mt=np.array(MT)*1e-3, coh=coh*resp_fin/max(np.abs(coh)),
+                           trial_index=trial_index/max(trial_index),
+                           prior=zt*resp_fin/max(np.abs(zt)), plot=False)
+    fig1, ax1 = plt.subplots(1)
+    ax1.bar(['Stimulus Congruency', 'Trial index', 'Prior Congruency'], params[1::])
+    ax1.set_ylabel('Weight (a.u.)')
 
 
 def traj_model_plot(df_sim):
@@ -798,6 +837,48 @@ def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
         acc_ch2.append(np.mean(decision_com[index] == gt_com[index]))
 
 
+def linear_fun(x, a, b, c, d):
+    return a + b*x[0] + c*x[1] + d*x[2]
+
+
+def mt_linear_reg(mt, coh, trial_index, prior, plot=False):
+    """
+
+    Parameters
+    ----------
+    mt : array
+        DESCRIPTION.
+    coh : array (abs)
+        DESCRIPTION.
+    trial_index : array
+        DESCRIPTION.
+    prior : array (abs)
+        congruent prior with final decision.
+
+    Returns
+    -------
+    popt : TYPE
+        DESCRIPTION.
+
+    """
+    trial_index = trial_index.astype(float)
+    xdata = np.array([[coh], [trial_index], [prior]]).reshape(3, len(prior))
+    ydata = np.array(mt*1e3)
+    popt, pcov = curve_fit(f=linear_fun, xdata=xdata, ydata=ydata)
+    if plot:
+        df = pd.DataFrame({'coh': coh/max(coh), 'prior': prior/max(prior),
+                           'MT': resp_len*1e3,
+                           'trial_index': trial_index/max(trial_index)})
+        plt.figure()
+        sns.pointplot(data=df, x='coh', y='MT', label='coh')
+        sns.pointplot(data=df, x='prior', y='MT', label='prior')
+        sns.pointplot(data=df, x='trial_index', y='MT', label='trial_index')
+        plt.ylabel('MT (ms)')
+        plt.xlabel('normalized variables')
+        plt.legend()
+    return popt
+
+
 def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     if num_tr is not None:
         num_tr = num_tr
@@ -817,8 +898,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 10
-    p_2nd_readout = 100
+    p_1st_readout = 40
+    p_2nd_readout = 120
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -873,7 +954,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    subject = 'LE44'
+    subject = 'LE43'
     all_rats = False
     if all_rats:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
@@ -905,18 +986,21 @@ if __name__ == '__main__':
     gt = gt[after_correct_id]
     trial_index = np.array(df.origidx)
     trial_index = trial_index[after_correct_id]
+    resp_len = np.array(df.resp_len)
+    resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f5 = True
-    f6 = True
+    f6 = False
 
     # fig 1
     if f1:
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
-        fig_1(coh, hit, sound_len, decision, zt, supt='')
+        fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
+        fig_1_mt_weights(df)
 
     # fig 2
     if f2:
