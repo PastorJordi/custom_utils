@@ -414,7 +414,8 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
     ax.legend()
 
 
-def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title=''):
+def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
+         model=False):
     colors = ['k', 'darkred', 'darkorange', 'gold']
     index_1 = (sound_len <= 300)*(sound_len > 0)
     sound_len = sound_len[index_1]
@@ -425,10 +426,18 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title=''):
             if ev == 0 or ev == 1:
                 index = ev == np.abs(coh)
                 hist_data, bins = np.histogram(sound_len[index], bins=200)
-                ax.plot(bins[:-1]+(bins[1]-bins[0])/2,
-                        np.cumsum(hist_data)/np.sum(hist_data),
-                        label=str(ev) + ' ' + label_title,
-                        color=colors[i], linewidth=2, linestyle=linestyle)
+                cdf_vals = np.cumsum(hist_data)/np.sum(hist_data)
+                xvals = bins[:-1]+(bins[1]-bins[0])/2
+                if model:
+                    x_interp = np.arange(0, 300, 10)
+                    cdf_vals_interp = np.interp(x_interp, xvals, cdf_vals)
+                    ax.plot(x_interp, cdf_vals_interp,
+                            label=str(ev) + ' ' + label_title,
+                            color=colors[i], linewidth=2, linestyle=linestyle)
+                else:
+                    ax.plot(xvals, cdf_vals,
+                            label=str(ev) + ' ' + label_title,
+                            color=colors[i], linewidth=2, linestyle=linestyle)
         else:
             index = ev == np.abs(coh)
             hist_data, bins = np.histogram(sound_len[index], bins=200)
@@ -479,7 +488,6 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
 
 
 def fig_1_mt_weights(df):
-    fig1, ax1 = plt.subplots(1)
     w_coh = []
     w_t_i = []
     w_zt = []
@@ -502,10 +510,28 @@ def fig_1_mt_weights(df):
     std_1 = np.sqrt(np.nanstd(w_coh)/len(w_coh))
     std_2 = np.sqrt(np.nanstd(w_t_i)/len(w_t_i))
     std_3 = np.sqrt(np.nanstd(w_zt)/len(w_zt))
-    ax1.bar(x=['Stimulus Congruency', 'Trial index', 'Prior Congruency'],
-            y=[mean_1, mean_2, mean_3], yerr=[std_1, std_2, std_3],
-            capsize=3)
-    ax1.set_ylabel('Weight (a.u.)')
+    errors = [std_1, std_2, std_3]
+    means = [mean_1, mean_2, mean_3]
+    return means, errors
+
+
+def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
+              width=0.35):
+    labels = ['Stimulus Congruency', 'Trial index', 'Prior Congruency']
+    if not f5:
+        ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='k',
+               ecolor='blue')
+        ax.set_ylabel('Weight (a.u.)')
+    if f5:
+        x = np.arange(len(labels))
+        ax.bar(x=x-width/2, height=means, yerr=errors, width=width,
+               capsize=3, color='k', label='Data', ecolor='blue')
+        ax.bar(x=x+width/2, height=means_model, yerr=errors_model, width=width,
+               capsize=3, color='red', label='Model')
+        ax.set_ylabel('Weight (a.u.)')
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels)
+        ax.legend()
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -578,7 +604,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                            cmap='PRGn_r', vmin=0., vmax=1)
     cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
     cdfs(coh, sound_len_model, f5=True, ax=ax[7], label_title='Model',
-         linestyle='--')
+         linestyle='--', model=True)
     ax[8].set_title('Pright Data')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
@@ -616,13 +642,6 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                              'R_response': (decision_model+1)/2})
     com_heatmap_paper_marginal_pcom_side(df_model, side=0)
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
-    MT = [len(t) for t in trajs]
-    params = mt_linear_reg(mt=np.array(MT)*1e-3, coh=coh*resp_fin/max(np.abs(coh)),
-                           trial_index=trial_index/max(trial_index),
-                           prior=zt*resp_fin/max(np.abs(zt)), plot=False)
-    fig1, ax1 = plt.subplots(1)
-    ax1.bar(['Stimulus Congruency', 'Trial index', 'Prior Congruency'], params[1::])
-    ax1.set_ylabel('Weight (a.u.)')
 
 
 def traj_model_plot(df_sim):
@@ -899,7 +918,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
     p_1st_readout = 40
-    p_2nd_readout = 120
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -989,7 +1008,7 @@ if __name__ == '__main__':
     resp_len = np.array(df.resp_len)
     resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f5 = True
@@ -1000,7 +1019,9 @@ if __name__ == '__main__':
         fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
         fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        fig_1_mt_weights(df)
+        means, errors = fig_1_mt_weights(df)
+        fig, ax = plt.subplots(1)
+        plot_bars(means=means, errors=errors, ax=ax)
 
     # fig 2
     if f2:
@@ -1064,24 +1085,31 @@ if __name__ == '__main__':
         # df_1 = df.copy()
         # df_1['R_response'] = (resp_fin + 1)/2
         # fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
+        MT = [len(t) for t in trajs]
+        df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
+                               'sound_len': reaction_time,
+                               'rewside': (gt + 1)/2,
+                               'R_response': (resp_fin+1)/2,
+                               'resp_len': np.array(MT)*1e-3})
+        df_sim['traj_d1'] = [np.diff(t) for t in trajs]
+        df_sim['aftererror'] =\
+            np.array(df.aftererror)[after_correct_id][:int(num_tr)]
+        df_sim['subjid'] = 'simul'
+        df_sim['dW_trans'] =\
+            np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
+        df_sim['origidx'] =\
+            np.array(df.origidx)[:int(num_tr)][after_correct_id]
+        df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
+        df_sim['special_trial'] =\
+            np.array(df.special_trial)[:int(num_tr)][after_correct_id]
+        df_sim['traj'] = df_sim['trajectory_y']
+        # simulation plots
+        means, errors = fig_1_mt_weights(df)
+        means_model, errors_model = fig_1_mt_weights(df_sim)
+        fig, ax = plt.subplots(1)
+        plot_bars(means=means, errors=errors, ax=ax, f5=f5,
+                  means_model=means_model, errors_model=errors_model)
         if f6:
-            MT = [len(t) for t in trajs]
-            df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
-                                   'sound_len': reaction_time,
-                                   'rewside': (gt + 1)/2,
-                                   'R_response': (resp_fin+1)/2,
-                                   'resp_len': MT})
-            df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-            df_sim['aftererror'] =\
-                np.array(df.aftererror)[after_correct_id][:int(num_tr)]
-            df_sim['subjid'] = 'simul'
-            df_sim['dW_trans'] =\
-                np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
-            df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
-            df_sim['special_trial'] =\
-                np.array(df.special_trial)[:int(num_tr)][after_correct_id]
-            df_sim['traj'] = df_sim['trajectory_y']
-            # simulation plots
             traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                                 vel_thr=0.2)
             # human traj plots
