@@ -10,6 +10,9 @@ import seaborn as sns
 from scipy.stats import sem
 import sys
 from scipy.optimize import curve_fit
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
+from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -23,6 +26,7 @@ from utilsJ.Models import analyses_humans as ah
 import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
+
 matplotlib.rcParams['font.size'] = 8
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
@@ -898,6 +902,13 @@ def mt_linear_reg(mt, coh, trial_index, prior, plot=False):
     return popt
 
 
+def basic_statistics(decision, resp_fin):
+    mat = confusion_matrix(decision, resp_fin)
+    print(mat)
+    fpr, tpr, _ = roc_curve(resp_fin, decision)
+    RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+
+
 def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     if num_tr is not None:
         num_tr = num_tr
@@ -1081,6 +1092,9 @@ if __name__ == '__main__':
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re)
+        basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
+        basic_statistics(com, com_model_detected)  # com
+        basic_statistics(hit, hit_model)  # hit
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
         # df_1 = df.copy()
         # df_1['R_response'] = (resp_fin + 1)/2
