@@ -949,8 +949,6 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             second_response_len =\
                 float(remaining_m_time + offset -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
-            #           float(remaining_m_time +
-            # p_2nd_readout*np.abs(1 - np.abs(updt_ev) - com_bound_signed))
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
