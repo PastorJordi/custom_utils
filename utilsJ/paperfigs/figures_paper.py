@@ -15,8 +15,8 @@ from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -33,13 +33,13 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
@@ -123,7 +123,7 @@ def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.05, marginy=0.05):
 
 def trajs_cond_on_coh(df, ax, average=False, prior_limit=0.25, rt_lim=25,
                       after_correct_only=True, trajectory="trajectory_y",
-                      velocity=("traj_d1", 1)):
+                      velocity=("traj_d1", 1), acceleration=('traj_d2', 1)):
     """median position and velocity in silent trials splitting by prior"""
     # TODO: adapt for mean + sem
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
@@ -181,6 +181,25 @@ def trajs_cond_on_coh(df, ax, average=False, prior_limit=0.25, rt_lim=25,
         ax[2].set_xlabel('ev. towards response')
         ax[2].set_ylabel(f'time to threshold ({threshold} px/ms)')
         ax[2].plot(xpoints, ypoints, color='k', ls=':')
+        plt.show()
+        # acceleration
+        threshold = .0015
+        xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
+            df.loc[indx_trajs], 'choice_x_coh', bins, collapse_sides=True,
+            thr=threshold, ax=ax[4], ax_traj=ax[5], return_trash=True,
+            error_kwargs=dict(marker='o'), cmap='viridis',
+            bintype='categorical', trajectory=acceleration)
+        # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
+        #              title='Coherence', loc='upper left')
+        ax[5].set_xlim([-50, 500])
+        ax[5].set_xlabel('time from movement onset (MT, ms)')
+        ax[5].set_ylim([-0.003, 0.0035])
+        for i in [0, threshold]:
+            ax[5].axhline(i, ls=':', c='gray')
+        ax[5].set_ylabel('y coord accelration (px/ms)')
+        ax[4].set_xlabel('ev. towards response')
+        ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
+        ax[4].plot(xpoints, ypoints, color='k', ls=':')
         plt.show()
 
 
@@ -742,10 +761,14 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                    alpha=0.6)
         ax[3].plot(bins_zt[:-1], vals_thr_vel, color='k', linestyle='--',
                    alpha=0.6)
+        ax[2].set_xlabel('Prior congruency')
+        ax[3].set_xlabel('Prior congruency')
     if not prior:
         leg_title = 'stim congruency'
         ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
         ax[3].plot(bins_coh, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+        ax[2].set_xlabel('Evidence congruency')
+        ax[3].set_xlabel('Evidence congruency')
     ax[0].legend(title=leg_title)
     ax[0].set_ylabel('y-coord (px)')
     ax[0].set_ylabel('Time from movement onset (ms)')
@@ -754,14 +777,12 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[1].set_ylabel('Velocity (px/s)')
     ax[1].set_ylabel('Time from movement onset (ms)')
     ax[1].set_title('Median velocity')
-    ax[2].set_xlabel('Evidence congruency')
     ax[2].set_ylabel('Time to reach threshold (ms)')
-    ax[3].set_xlabel('Evidence congruency')
     ax[3].set_ylabel('Time to reach threshold (ms)')
 
 
 def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                wanted_precision=8, traj_thr=240, vel_thr=2):
+                wanted_precision=8, traj_thr=160, vel_thr=2):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -806,14 +827,17 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
             vels_fin = np.diff(vals_fin)/wanted_precision
             all_trajs[tr, :len(vals_fin)] = vals_fin - vals_fin[0]
             all_vels[tr, :len(vels_fin)] = vels_fin
-        mean_traj = np.nanmedian(all_trajs, axis=0)
+        mean_traj = np.nanmean(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
         val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
         vals_thr_traj.append(val_traj)
         ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
-        mean_vel = np.nanmedian(all_vels, axis=0)
+        mean_vel = np.nanmean(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
-        val_vel = np.where(mean_vel >= vel_thr)[0][2]*wanted_precision
+        for ind_v, velocity in enumerate(mean_vel):
+            if velocity >= vel_thr and ind_v*wanted_precision >= traj_thr:
+                val_vel = ind_v*wanted_precision
+                break
         vals_thr_vel.append(val_vel)
         ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
         ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
@@ -830,7 +854,7 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     ax[3].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     ax[0].set_xlim(-0.1, 550)
     ax[1].set_xlim(-0.1, 550)
-    ax[1].set_ylim(-0.5, 5)
+    ax[1].set_ylim(1, 4)
     ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[0].legend(title='stimulus')
@@ -1020,10 +1044,10 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = True
-    f2 = False
+    f2 = True
     f3 = False
     f5 = True
-    f6 = False
+    f6 = True
 
     # fig 1
     if f1:
@@ -1038,14 +1062,17 @@ if __name__ == '__main__':
     if f2:
         fgsz = (8, 8)
         inset_sz = 0.1
-        f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
+        f, ax = plt.subplots(nrows=3, ncols=2, figsize=fgsz)
         ax = ax.flatten()
-        ax_cohs = np.array([ax[0], ax[2]])
+        ax_cohs = np.array([ax[0], ax[2], ax[4]])
         ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
         ax_cohs = np.insert(ax_cohs, 0, ax_inset)
         ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                              marginy=0.15)
         ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+        ax_inset = add_inset(ax=ax_cohs[4], inset_sz=inset_sz, fgsz=fgsz,
+                             marginy=0.15)
+        ax_cohs = np.insert(ax_cohs, 4, ax_inset)
         for a in ax:
             rm_top_right_lines(a)
         trajs_cond_on_coh(df=df, ax=ax_cohs, average=True)
@@ -1124,7 +1151,7 @@ if __name__ == '__main__':
         plot_bars(means=means, errors=errors, ax=ax, f5=f5,
                   means_model=means_model, errors_model=errors_model)
         if f6:
-            traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
+            traj_cond_coh_simul(df_sim, median=True, prior=False, traj_thr=30,
                                 vel_thr=0.2)
             # human traj plots
             human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,

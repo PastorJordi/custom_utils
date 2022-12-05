@@ -61,11 +61,17 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
     startfrom: matrix index to start from (should be 0th position in ms
     tot_iter= remaining)
     if ax, it plots medians + splittime"""
+    # n = 0
     for i in range(tot_iter):
         pop_a = a[:, startfrom + i]
         pop_b = b[:, startfrom + i]
         _, p2 = ttest_ind(pop_a, pop_b, nan_policy=nan_policy)
         if p2 < pval:
+            # and n == 0:
+            #     n += 1
+            # if p2 > pval and n == 1:
+            #     n += 1
+            # if p2 < pval and n == 2:
             return i  # , np.nanmedian(a[:,startfrom+i])
     return np.nan  # , -1
 
