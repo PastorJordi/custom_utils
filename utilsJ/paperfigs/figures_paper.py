@@ -701,7 +701,8 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    bins_zt = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    bins_zt = [-1, -0.5, -0.1, 0.1, 0.5, 1]
+    xvals_zt = [-1, -0.5, 0, 0.5, 1]
     df_sim['normallpriors'] = df_sim['allpriors'] /\
         np.nanmax(df_sim['allpriors'].abs())
     lens = []
@@ -710,7 +711,12 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     signed_response = df_sim.R_response.values
     vals_thr_traj = []
     vals_thr_vel = []
-    for i_ev, ev in enumerate(bins_coh):
+    labels_zt = ['inc. high', 'inc. low', 'zero', 'con. low', 'con. high']
+    if prior:
+        bins_ref = bins_zt
+    else:
+        bins_ref = bins_coh
+    for i_ev, ev in enumerate(bins_ref):
         if not prior:
             index = (df_sim.choice_x_coh.values == ev) *\
                 (df_sim.R_response.values == 1)
@@ -738,19 +744,27 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
         mean_traj = func_final(traj_all, axis=0)
         std_traj = np.sqrt(np.nanstd(traj_all, axis=0) / sum(index))
         val_traj = np.argmax(mean_traj >= traj_thr)
-        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
+        if prior:
+            xval = xvals_zt[i_ev]
+        else:
+            xval = ev
+        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=60)
         vals_thr_traj.append(val_traj)
         mean_vel = func_final(vel_all, axis=0)
         std_vel = np.sqrt(np.nanstd(vel_all, axis=0) / sum(index))
         val_vel = np.argmax(mean_vel >= vel_thr)
-        ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
+        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=60)
         vals_thr_vel.append(val_vel)
-        ax[0].plot(np.arange(len(mean_traj)), mean_traj, label='{}'.format(ev),
+        if not prior:
+            label = '{}'.format(ev)
+        if prior:
+            label = labels_zt[i_ev]
+        ax[0].plot(np.arange(len(mean_traj)), mean_traj, label=label,
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
                            y1=mean_traj - std_traj, y2=mean_traj + std_traj,
                            color=colormap[i_ev])
-        ax[1].plot(np.arange(len(mean_vel)), mean_vel, label='{}'.format(ev),
+        ax[1].plot(np.arange(len(mean_vel)), mean_vel, label=label,
                    color=colormap[i_ev])
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
@@ -759,28 +773,28 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[1].axhline(y=0.2, linestyle='--', color='k', alpha=0.4)
     if prior:
         leg_title = 'prior congruency'
-        ax[2].plot(bins_zt[:-1], vals_thr_traj, color='k', linestyle='--',
+        ax[2].plot(xvals_zt, vals_thr_traj, color='k', linestyle='--',
                    alpha=0.6)
-        ax[3].plot(bins_zt[:-1], vals_thr_vel, color='k', linestyle='--',
+        ax[3].plot(xvals_zt, vals_thr_vel, color='k', linestyle='--',
                    alpha=0.6)
-        ax[2].set_xlabel('Prior congruency')
-        ax[3].set_xlabel('Prior congruency')
+        ax[2].set_xlabel('Prior congruency', fontsize=10)
+        ax[3].set_xlabel('Prior congruency', fontsize=10)
     if not prior:
         leg_title = 'stim congruency'
         ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
         ax[3].plot(bins_coh, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Evidence congruency')
-        ax[3].set_xlabel('Evidence congruency')
+        ax[2].set_xlabel('Evidence congruency', fontsize=10)
+        ax[3].set_xlabel('Evidence congruency', fontsize=10)
     ax[0].legend(title=leg_title)
-    ax[0].set_ylabel('y-coord (px)')
-    ax[0].set_ylabel('Time from movement onset (ms)')
-    ax[0].set_title('Median trajectory')
+    ax[0].set_ylabel('y-coord (px)', fontsize=10)
+    ax[0].set_xlabel('Time from movement onset (ms)', fontsize=10)
+    ax[0].set_title('Mean trajectory', fontsize=10)
     ax[1].legend(title=leg_title)
-    ax[1].set_ylabel('Velocity (px/s)')
-    ax[1].set_ylabel('Time from movement onset (ms)')
-    ax[1].set_title('Median velocity')
-    ax[2].set_ylabel('Time to reach threshold (ms)')
-    ax[3].set_ylabel('Time to reach threshold (ms)')
+    ax[1].set_ylabel('Velocity (px/s)', fontsize=10)
+    ax[1].set_xlabel('Time from movement onset (ms)', fontsize=10)
+    ax[1].set_title('Mean velocity', fontsize=10)
+    ax[2].set_ylabel('Time to reach threshold (ms)', fontsize=10)
+    ax[3].set_ylabel('Time to reach threshold (ms)', fontsize=10)
 
 
 def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
@@ -953,8 +967,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 40
-    p_2nd_readout = 40
+    p_1st_readout = 50
+    p_2nd_readout = 60
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -1161,6 +1175,8 @@ if __name__ == '__main__':
                   means_model=means_model, errors_model=errors_model)
         if f6:
             traj_cond_coh_simul(df_sim, median=False, prior=True, traj_thr=30,
+                                vel_thr=0.2)
+            traj_cond_coh_simul(df_sim, median=False, prior=False, traj_thr=30,
                                 vel_thr=0.2)
             # human traj plots
             human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
