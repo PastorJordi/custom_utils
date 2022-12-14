@@ -552,7 +552,7 @@ def fig_1_mt_weights(df, plot=False):
     errors = [std_1, std_2, std_3]
     means = [mean_1, mean_2, mean_3]
     if plot:
-        fig, ax = plt.figure(figsize=(3, 2))
+        fig, ax = plt.subplots(figsize=(3, 2))
         # TODO: not the most informative name for a function
         plot_bars(means=means, errors=errors, ax=ax)
         rm_top_right_lines(ax=ax)
@@ -1268,9 +1268,9 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
-    f5 = True
+    f5 = False
     f6 = False
 
     # fig 1
