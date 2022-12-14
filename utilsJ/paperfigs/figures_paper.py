@@ -15,13 +15,13 @@ from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
-    com_heatmap_paper_marginal_pcom_side, trajectory_thr
+    com_heatmap_paper_marginal_pcom_side, trajectory_thr, com_heatmap
 from utilsJ.Models import analyses_humans as ah
 import fig1, fig3, fig2
 import matplotlib
@@ -33,13 +33,13 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
@@ -411,6 +411,20 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
     # ax.set_xlim(0, max(bins))
 
 
+def pdf_cohs(sound_len, ax, coh, bins=np.linspace(1, 301, 61), yaxis=True):
+    ev_vals = np.unique(np.abs(coh))
+    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, len(ev_vals)))
+    for i_coh, ev in enumerate(ev_vals):
+        index = np.abs(coh) == ev
+        counts_coh, bins_coh = np.histogram(sound_len[index], bins=bins)
+        norm_counts = counts_coh/sum(counts_coh)
+        xvals = bins_coh[:-1]+(bins_coh[1]-bins_coh[0])/2
+        ax.plot(xvals, norm_counts, color=colormap[i_coh])
+    ax.set_xlabel('Reaction time (ms)')
+    if yaxis:
+        ax.set_ylabel('Density')
+
+
 def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
                         inset=False):
     " all rats..? "
@@ -559,8 +573,11 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
         ax.legend()
 
 
-def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected, pro_vs_re):
+def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
+             decision_model, com, com_model, com_model_detected, pro_vs_re):
+    """
+    Deprecated
+    """
     fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
@@ -592,7 +609,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[3].set_title('Model')
     reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
                             bins=np.linspace(-150, 300, 91))
-    reaction_time_histogram(sound_len=sound_len_model, label='Model', ax=ax[0],
+    reaction_time_histogram(sound_len=sound_len_model[sound_len_model >= 0],
+                            label='Model', ax=ax[0],
                             bins=np.linspace(-150, 300, 91), pro_vs_re=pro_vs_re)
     ax[0].legend()
     express_performance(hit=hit, coh=coh, sound_len=sound_len,
@@ -669,6 +687,155 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
+def com_heatmap_marginal_pcom_side_mat(
+    df, f=None, ax=None,  # data source, must contain 'avtrapz' and allpriors
+    pcomlabel=None, fcolorwhite=True, side=0,
+    hide_marginal_axis=True, n_points_marginal=None, counts_on_matrix=False,
+    adjust_marginal_axes=False,  # sets same max=y/x value
+    nbins=7,  # nbins for the square matrix
+    com_heatmap_kws={},  # avoid binning & return_mat already handled by the functn
+    com_col='CoM_sugg', priors_col='norm_allpriors', stim_col='avtrapz',
+    average_across_subjects=False
+):
+    assert side in [0, 1], "side value must be either 0 or 1"
+    assert df[priors_col].abs().max() <= 1,\
+        "prior must be normalized between -1 and 1"
+    assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
+    if pcomlabel is None:
+        if not side:
+            pcomlabel = r'$p(CoM_{R \rightarrow L})$'
+        else:
+            pcomlabel = r'$p(CoM_{L \rightarrow R})$'
+
+    if n_points_marginal is None:
+        n_points_marginal = nbins
+    # ensure some filtering
+    tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
+    tmp['tmp_com'] = False
+    tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
+
+    com_heatmap_kws.update({
+        'return_mat': True,
+        'predefbins': [
+            np.linspace(-1, 1, nbins+1), np.linspace(-1, 1, nbins+1)
+        ]
+    })
+    if not average_across_subjects:
+        mat, nmat = com_heatmap(
+            tmp.norm_allpriors.values,
+            tmp.avtrapz.values,
+            tmp.tmp_com.values,
+            **com_heatmap_kws
+        )
+        # fill nans with 0
+        mat[np.isnan(mat)] = 0
+        nmat[np.isnan(nmat)] = 0
+        # change data to match vertical axis image standards (0,0) ->
+        # in the top left
+    else:
+        com_mat_list, number_mat_list = [], []
+        for subject in tmp.subjid.unique():
+            cmat, cnmat = com_heatmap(
+                tmp.loc[tmp.subjid == subject, 'norm_allpriors'].values,
+                tmp.loc[tmp.subjid == subject, 'avtrapz'].values,
+                tmp.loc[tmp.subjid == subject, 'tmp_com'].values,
+                **com_heatmap_kws
+            )
+            cmat[np.isnan(cmat)] = 0
+            cnmat[np.isnan(cnmat)] = 0
+            com_mat_list += [cmat]
+            number_mat_list += [cnmat]
+
+        mat = np.stack(com_mat_list).mean(axis=0)
+        nmat = np.stack(number_mat_list).mean(axis=0)
+
+    mat = np.flipud(mat)
+    nmat = np.flipud(nmat)
+    return mat
+
+
+def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
+          decision_model, com, com_model, com_model_detected, pro_vs_re,
+          df_sim, means, errors, means_model, errors_model):
+    fig, ax = plt.subplots(ncols=4, nrows=4, gridspec_kw={'top': 0.95,
+                                                          'bottom': 0.055,
+                                                          'left': 0.055,
+                                                          'right': 0.975,
+                                                          'hspace': 0.38,
+                                                          'wspace': 0.225})
+    ax = ax.flatten()
+    for ax_1 in ax:
+        rm_top_right_lines(ax_1)
+    hit_model = hit_model[sound_len_model >= 0]
+    com_model_detected = com_model_detected[sound_len_model >= 0]
+    decision_model = decision_model[sound_len_model >= 0]
+    com_model = com_model[sound_len_model >= 0]
+    _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
+                         sound_len=sound_len_model[sound_len_model >= 0],
+                         ax=ax[2])
+    pdf_cohs(sound_len=sound_len, ax=ax[0], coh=coh, yaxis=True)
+    pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[1],
+             coh=coh[sound_len_model >= 0], yaxis=False)
+    ax[0].set_title('Data')
+    ax[1].set_title('Model')
+    df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
+                            'sound_len': sound_len[sound_len_model >= 0],
+                            'rt_model': sound_len_model[sound_len_model >= 0],
+                            'com_model': com_model,
+                            'com_model_detected': com_model_detected})
+    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[4])
+    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
+                                            'color': 'red'}, ax=ax[4])
+    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[4])
+    ax[4].xaxis.tick_top()
+    ax[4].xaxis.tick_bottom()
+    ax[4].legend()
+    ax[4].set_xlabel('RT (ms)')
+    ax[4].set_ylabel('PCoM')
+    zt_model = zt[sound_len_model >= 0]
+    coh_model = coh[sound_len_model >= 0]
+    decision_01_model = (decision_model+1)/2
+    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[3],
+                           flip=True, annotate=False, xlabel='prior',
+                           ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
+    ax[3].set_title('Pright Model')
+    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
+                             'CoM_sugg':
+                                 com_model_detected,
+                             'norm_allpriors':
+                                 zt_model/max(abs(zt_model)),
+                             'R_response': (decision_model+1)/2})
+    nbins = 7
+    matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=0)
+    matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=1)
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax[5].set_title(pcomlabel_1)
+    im = ax[5].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax[5])
+    plt.colorbar(im, fraction=0.04)
+    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax[6].set_title(pcomlabel_0)
+    im = ax[6].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax[6].yaxis.set_ticks_position('none')
+    plt.sca(ax[6])
+    plt.colorbar(im, fraction=0.04)
+    for ax_i in [ax[5], ax[6]]:
+        ax_i.set_xlabel('Prior Evidence')
+        ax_i.set_yticklabels(['']*nbins)
+        ax_i.set_xticklabels(['']*nbins)
+    ax[5].set_ylabel('Stimulus Evidence')
+    plot_bars(means=means, errors=errors, ax=ax[7], f5=True,
+              means_model=means_model, errors_model=errors_model)
+    ax_pr = [ax[i] for i in [8, 12, 9, 13]]
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=False, prior=True)
+    ax_coh = [ax[i] for i in [10, 14, 11, 15]]
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=False, prior=False)
+
+
 def traj_model_plot(df_sim):
     fgsz = (8, 8)
     inset_sz = 0.1
@@ -688,7 +855,7 @@ def traj_model_plot(df_sim):
     trajs_cond_on_coh(df=df_sim, ax=ax_cohs)
 
 
-def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
+def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
                         vel_thr=0.2):
     # TODO: save each matrix? or save the mean and std
     if median:
@@ -701,14 +868,15 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    bins_zt = [-1, -0.5, -0.1, 0.1, 0.5, 1]
+    bins_zt = [-1, -0.6, -0.15, 0.15, 0.6, 1]
     xvals_zt = [-1, -0.5, 0, 0.5, 1]
-    df_sim['normallpriors'] = df_sim['allpriors'] /\
-        np.nanmax(df_sim['allpriors'].abs())
-    lens = []
-    fig, ax = plt.subplots(nrows=2, ncols=2)
-    ax = ax.flatten()
     signed_response = df_sim.R_response.values
+    df_sim['normallpriors'] = df_sim['allpriors'] /\
+        np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
+    lens = []
+    if ax is None:
+        fig, ax = plt.subplots(nrows=2, ncols=2)
+        ax = ax.flatten()
     vals_thr_traj = []
     vals_thr_vel = []
     labels_zt = ['inc. high', 'inc. low', 'zero', 'con. low', 'con. high']
@@ -725,7 +893,8 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
             if ev == 1:
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
-                (df_sim.normallpriors.values < bins_zt[i_ev + 1])
+                (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
+                (df_sim.R_response.values == 1)
             colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_zt)-1))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
@@ -740,10 +909,10 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
                 (signed_response[index][tr]*2 - 1)
             traj_all[tr, :len(vals_traj)] = vals_traj
             vel_all[tr, :len(vals_vel)] = vals_vel
-        # [plt.plot(t) for t in df_sim.trajectory_y[index].values]
         mean_traj = func_final(traj_all, axis=0)
-        std_traj = np.sqrt(np.nanstd(traj_all, axis=0) / sum(index))
-        val_traj = np.argmax(mean_traj >= traj_thr)
+        std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
+        # val_traj = np.argmax(mean_traj >= traj_thr)
+        val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
         if prior:
             xval = xvals_zt[i_ev]
         else:
@@ -751,7 +920,7 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
         ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=60)
         vals_thr_traj.append(val_traj)
         mean_vel = func_final(vel_all, axis=0)
-        std_vel = np.sqrt(np.nanstd(vel_all, axis=0) / sum(index))
+        std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
         val_vel = np.argmax(mean_vel >= vel_thr)
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=60)
         vals_thr_vel.append(val_vel)
@@ -793,8 +962,40 @@ def traj_cond_coh_simul(df_sim, median=True, prior=True, traj_thr=30,
     ax[1].set_ylabel('Velocity (px/s)', fontsize=10)
     ax[1].set_xlabel('Time from movement onset (ms)', fontsize=10)
     ax[1].set_title('Mean velocity', fontsize=10)
-    ax[2].set_ylabel('Time to reach threshold (ms)', fontsize=10)
+    ax[2].set_ylabel('MT (ms)', fontsize=10)
     ax[3].set_ylabel('Time to reach threshold (ms)', fontsize=10)
+
+
+def supp_trajs_prior_cong(df_sim, ax=None):
+    signed_response = df_sim.R_response.values
+    nanidx = df_sim.loc[df_sim[['dW_trans',
+                                'dW_lat']].isna().sum(axis=1) == 2].index
+    df_sim['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df_sim.loc[nanidx, 'allpriors'] = np.nan
+    df_sim['normallpriors'] = df_sim['allpriors'] /\
+        np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
+    if ax is None:
+        fig, ax = plt.subplots(1)
+    bins_zt = [0.6, 1]
+    lens = []
+    for i_ev, ev in enumerate(bins_zt):
+        if ev == 1:
+            break
+        index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
+            (df_sim.normallpriors.values < bins_zt[i_ev + 1])
+        lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
+        traj_all = np.empty((sum(index), max(lens)))
+        traj_all[:] = np.nan
+        for tr in range(sum(index)):
+            vals_traj = df_sim.traj[index].values[tr] *\
+                (signed_response[index][tr]*2 - 1)
+            traj_all[tr, :len(vals_traj)] = vals_traj
+            ax.plot(vals_traj, color='k', alpha=0.4)
+        mean_traj = np.nanmean(traj_all, axis=0)
+    ax.plot(np.arange(len(mean_traj)), mean_traj, label='Mean', color='yellow',
+            linewidth=4)
+    ax.set_ylabel('y-coord (px)', fontsize=10)
+    ax.set_xlabel('Time from movement onset (ms)', fontsize=10)
 
 
 def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
@@ -967,8 +1168,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 50
-    p_2nd_readout = 60
+    p_1st_readout = 40
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -1058,11 +1259,11 @@ if __name__ == '__main__':
     resp_len = np.array(df.resp_len)
     resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = True
+    f1 = False
+    f2 = False
     f3 = False
     f5 = True
-    f6 = True
+    f6 = False
 
     # fig 1
     if f1:
@@ -1138,17 +1339,9 @@ if __name__ == '__main__':
             pro_vs_re, trajs =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=None)
-        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
-              hit_model=hit_model, sound_len_model=reaction_time,
-              decision_model=resp_fin, com=com, com_model=com_model,
-              com_model_detected=com_model_detected, pro_vs_re=pro_vs_re)
-        basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-        basic_statistics(com, com_model_detected)  # com
-        basic_statistics(hit, hit_model)  # hit
-        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics data
-        # df_1 = df.copy()
-        # df_1['R_response'] = (resp_fin + 1)/2
-        # fig1.d(df_1, savpath=SV_FOLDER, average=True)  # psychometrics model
+        # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
+        # basic_statistics(com, com_model_detected)  # com
+        # basic_statistics(hit, hit_model)  # hit
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
                                'sound_len': reaction_time,
@@ -1170,17 +1363,20 @@ if __name__ == '__main__':
         # simulation plots
         means, errors = fig_1_mt_weights(df)
         means_model, errors_model = fig_1_mt_weights(df_sim)
-        fig, ax = plt.subplots(1)
-        plot_bars(means=means, errors=errors, ax=ax, f5=f5,
-                  means_model=means_model, errors_model=errors_model)
+        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
+              hit_model=hit_model, sound_len_model=reaction_time,
+              decision_model=resp_fin, com=com, com_model=com_model,
+              com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
+              means=means, errors=errors, means_model=means_model,
+              errors_model=errors_model, df_sim=df_sim)
         if f6:
             traj_cond_coh_simul(df_sim, median=False, prior=True, traj_thr=30,
                                 vel_thr=0.2)
-            traj_cond_coh_simul(df_sim, median=False, prior=False, traj_thr=30,
-                                vel_thr=0.2)
+            # traj_cond_coh_simul(df_sim, median=False, prior=False, traj_thr=30,
+            #                     vel_thr=0.2)
             # human traj plots
-            human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
-                        wanted_precision=12, traj_thr=250, vel_thr=2.6)
+            # human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
+            #             wanted_precision=12, traj_thr=250, vel_thr=2.6)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt

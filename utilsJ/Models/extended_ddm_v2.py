@@ -916,7 +916,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*trial_index[i_t] + MT_intercep
+            MT = MT_slope*trial_index[i_t] + MT_intercep + 10*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
@@ -947,7 +947,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             com_bound_signed = (-sign_)*p_com_bound
             offset = 140
             second_response_len =\
-                float(remaining_m_time + offset -
+                float(remaining_m_time + offset*com[i_t] -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
@@ -2425,17 +2425,17 @@ if __name__ == '__main__':
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
             p_t_aff = 8
-            p_t_eff = 9
+            p_t_eff = 8
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
             p_w_zt = 0.2
             p_w_stim = 0.11
             p_e_noise = 0.02
             p_com_bound = 0.
             p_w_a_intercept = 0.052
-            p_w_a_slope = -2.5e-05  # fixed
+            p_w_a_slope = -2.2e-05  # fixed
             p_a_noise = 0.04  # fixed
-            p_1st_readout = 120
-            p_2nd_readout = 140
+            p_1st_readout = 40
+            p_2nd_readout = 40
             compute_trajectories = True
             plot = True
             all_trajs = True
