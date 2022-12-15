@@ -1158,8 +1158,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 5
+    p_t_eff = 5
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.11
@@ -1168,8 +1168,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 40
-    p_2nd_readout = 40
+    p_1st_readout = 10
+    p_2nd_readout = 10
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -1369,14 +1369,11 @@ if __name__ == '__main__':
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
+        supp_trajs_prior_cong(df_sim, ax=None)
         if f6:
-            traj_cond_coh_simul(df_sim, median=False, prior=True, traj_thr=30,
-                                vel_thr=0.2)
-            # traj_cond_coh_simul(df_sim, median=False, prior=False, traj_thr=30,
-            #                     vel_thr=0.2)
             # human traj plots
-            # human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
-            #             wanted_precision=12, traj_thr=250, vel_thr=2.6)
+            human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
+                        wanted_precision=12, traj_thr=250, vel_thr=2.6)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt

@@ -923,6 +923,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
+            prior0 += np.random.randn(len(prior0))*0.03  # noise
             init_trajs.append(prior0)
             # TRAJ. UPDATE
             velocities = np.gradient(prior0)
@@ -952,6 +953,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
+            traj_fin += np.random.randn(len(traj_fin))*0.03  # noise
             final_trajs.append(traj_fin)
             # joined trajectories
             traj_before_uptd = prior0[0:t_updt]
@@ -2424,8 +2426,8 @@ if __name__ == '__main__':
         trial_index = trial_index[:int(num_tr)]
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
-            p_t_aff = 8
-            p_t_eff = 8
+            p_t_aff = 5
+            p_t_eff = 5
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
             p_w_zt = 0.2
             p_w_stim = 0.11
@@ -2434,8 +2436,8 @@ if __name__ == '__main__':
             p_w_a_intercept = 0.052
             p_w_a_slope = -2.2e-05  # fixed
             p_a_noise = 0.04  # fixed
-            p_1st_readout = 40
-            p_2nd_readout = 40
+            p_1st_readout = 10
+            p_2nd_readout = 10
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2446,22 +2448,22 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            if plot:
-                # left_right_matrix(zt, coh, com, decision)
-                data_to_plot = {'sound_len': sound_len,
-                                'CoM': com,
-                                'first_resp': decision*[~com*(-1)],
-                                'final_resp': decision,
-                                'hithistory': hit,
-                                'avtrapz': coh,
-                                'detected_com': com,
-                                'MT': resp_len*1e3,
-                                'zt': zt, 'decision': decision,
-                                'trial_idxs': trial_index}
-                plot_misc(data_to_plot, stim_res=stim_res, data=True)
-                # mean_com_traj_peak(trajectories=traj_y, com=com,
-                #                    sound_len=sound_len, decision=decision,
-                #                    motor_time=resp_len)
+            # if plot:
+            #     left_right_matrix(zt, coh, com, decision)
+            #     data_to_plot = {'sound_len': sound_len,
+            #                     'CoM': com,
+            #                     'first_resp': decision*[~com*(-1)],
+            #                     'final_resp': decision,
+            #                     'hithistory': hit,
+            #                     'avtrapz': coh,
+            #                     'detected_com': com,
+            #                     'MT': resp_len*1e3,
+            #                     'zt': zt, 'decision': decision,
+            #                     'trial_idxs': trial_index}
+            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
+            #     mean_com_traj_peak(trajectories=traj_y, com=com,
+            #                         sound_len=sound_len, decision=decision,
+            #                         motor_time=resp_len)
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]
