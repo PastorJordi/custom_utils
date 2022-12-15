@@ -33,11 +33,11 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/from_python/'  # Manuel
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
@@ -493,7 +493,7 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
 
 def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
           label='Data'):
-    fig, ax = plt.subplots(ncols=3, nrows=2)
+    fig, ax = plt.subplots(ncols=3, nrows=2, figsize=(8, 4))
     ax = ax.flatten()
     for i in range(len(ax)):
         rm_top_right_lines(ax[i])
@@ -514,19 +514,19 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
     fig.suptitle(supt)
     # decision_s = decision
     decision_01 = (decision+1)/2
+    # TODO: fix issue with heatmap: only half of first and last row is displayed
     edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[4], flip=True,
                            annotate=False, xlabel='prior', ylabel='avg stim',
                            cmap='PRGn_r')
     ax[4].set_title('Pright')
-    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5],
-                           flip=True,
-                           xlabel='prior',
+    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5], flip=True, xlabel='prior',
                            annotate=False, ylabel='avg stim ', cmap='coolwarm')
     ax[5].set_title('Pcorrect')
     fig.savefig(SV_FOLDER+'/Fig1.png', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'/Fig1.svg', dpi=400, bbox_inches='tight')
 
 
-def fig_1_mt_weights(df):
+def fig_1_mt_weights(df, plot=False):
     w_coh = []
     w_t_i = []
     w_zt = []
@@ -551,6 +551,14 @@ def fig_1_mt_weights(df):
     std_3 = np.sqrt(np.nanstd(w_zt)/len(w_zt))
     errors = [std_1, std_2, std_3]
     means = [mean_1, mean_2, mean_3]
+    if plot:
+        fig, ax = plt.subplots(figsize=(3, 2))
+        # TODO: not the most informative name for a function
+        plot_bars(means=means, errors=errors, ax=ax)
+        rm_top_right_lines(ax=ax)
+        fig.savefig(SV_FOLDER+'/Fig1_mt_weights.png', dpi=400, bbox_inches='tight')
+        fig.savefig(SV_FOLDER+'/Fig1_mt_weights.svg', dpi=400, bbox_inches='tight')
+
     return means, errors
 
 
@@ -1260,19 +1268,17 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
-    f5 = True
+    f5 = False
     f6 = False
 
     # fig 1
     if f1:
-        fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
+        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
         fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        means, errors = fig_1_mt_weights(df)
-        fig, ax = plt.subplots(1)
-        plot_bars(means=means, errors=errors, ax=ax)
+        fig_1_mt_weights(df, plot=True)
 
     # fig 2
     if f2:
