@@ -14,8 +14,8 @@ from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -33,15 +33,15 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -545,9 +545,9 @@ def fig_1_mt_weights(df, plot=False):
     mean_1 = np.nanmean(w_coh)
     mean_2 = np.nanmean(w_t_i)
     mean_3 = np.nanmean(w_zt)
-    std_1 = np.sqrt(np.nanstd(w_coh)/len(w_coh))
-    std_2 = np.sqrt(np.nanstd(w_t_i)/len(w_t_i))
-    std_3 = np.sqrt(np.nanstd(w_zt)/len(w_zt))
+    std_1 = np.nanstd(w_coh)/np.sqrt(len(w_coh))
+    std_2 = np.nanstd(w_t_i)/np.sqrt(len(w_t_i))
+    std_3 = np.nanstd(w_zt)/np.sqrt(len(w_zt))
     errors = [std_1, std_2, std_3]
     means = [mean_1, mean_2, mean_3]
     if plot:
@@ -1231,17 +1231,21 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    all_rats = False
+    all_rats = True
     if all_rats:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
     else:
         subjects = ['LE43']
-
+    df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
                                       sv_folder=SV_FOLDER, after_correct=True,
                                       silent=True, all_trials=True)
+        if all_rats:
+            df_all = pd.concat((df_all, df))
+    if all_rats:
+        df = df_all
     after_correct_id = np.where((df.aftererror == 0))
     # *(df.special_trial == 0))[0]
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
@@ -1269,9 +1273,6 @@ if __name__ == '__main__':
     f2 = True
     f3 = True
     f5 = False
-    f2 = False
-    f3 = False
-    f5 = True
     f6 = False
 
     # fig 1
