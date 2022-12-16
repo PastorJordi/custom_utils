@@ -712,14 +712,15 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
 
 
 def fig_1_def(df_data):
+    nbins = 7
     f, ax = plt.subplots(nrows=2, ncols=3, figsize=(8, 5))  # figsize=(4, 3))
     ax = ax.flatten()
     ax[0].axis('off')
     ax[1].axis('off')
     ax[3].axis('off')
     ax[4].axis('off')
-    ax_tach = ax[2]
-    ax_pright = ax[5]
+    ax_tach = ax[5]
+    ax_pright = ax[2]
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
@@ -738,9 +739,11 @@ def fig_1_def(df_data):
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
     ax_pright.set_title('Proportion of rightward responses')
-    # ax_trck = plt.axes([.8, .55, .17, .17])
-    ax_trck = ax[4]
-    tracking_image(ax_trck)
+
+    ax_pright.set_xlabel('Prior Evidence')
+    ax_pright.set_yticklabels(['']*nbins)
+    ax_pright.set_xticklabels(['']*nbins)
+    ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
 
@@ -818,6 +821,47 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax, color='grey')
     ax.set_ylabel('Weight (a.u.)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
+
+
+def fig_3(df):
+    fig, ax = plt.subplots(2, 4, figsize=(10, 5))
+    ax = ax.flatten()
+    ax_mat = [ax[2], ax[3]]
+    ax[5].axis('off')
+    ax[6].axis('off')
+    ax[7].axis('off')
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[4])
+    plot_coms(df=df, ax=ax[1])
+    ax_trck = ax[0]
+    tracking_image(ax_trck)
+    # plot Pcoms matrices
+    nbins = 7
+    matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df, side=0)
+    matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df, side=1)
+    # L-> R
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_1)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax_mat[0])
+    plt.colorbar(im, fraction=0.04)
+    # pos = ax_mat.get_position()
+    # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
+    # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
+    #                      pos.width, pos.height])
+    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[1].set_title(pcomlabel_0)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax_mat[1].yaxis.set_ticks_position('none')
+    plt.sca(ax_mat[1])
+    plt.colorbar(im, fraction=0.04)
+    for ax_i in [ax_mat[0], ax_mat[1]]:
+        ax_i.set_xlabel('Prior Evidence')
+        ax_i.set_yticklabels(['']*nbins)
+        ax_i.set_xticklabels(['']*nbins)
+    for ax_i in [ax_mat[0]]:
+        ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+    f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1512,7 +1556,7 @@ if __name__ == '__main__':
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = True
     f2 = False
-    f3 = False
+    f3 = True
     f5 = False
     f6 = False
 
@@ -1520,7 +1564,7 @@ if __name__ == '__main__':
     if f1:
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
-        fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
+        # fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
         fig_1_mt_weights(df, plot=True, means_errs=False)
         fig_1_def(df_data=df)
 
@@ -1559,17 +1603,11 @@ if __name__ == '__main__':
 
     # fig 3
     if f3:
+        fig, ax = plt.subplots(1)
         rat_path = '/home/molano/Dropbox/project_Barna/' +\
             'ChangesOfMind/figures/Figure_3/'
         fig2.bcd(parentpath=rat_path, sv_folder=SV_FOLDER)
-        fig2.e(df, sv_folder=SV_FOLDER)
-        fig2.f(df, sv_folder=SV_FOLDER)
-        fig2.g(df, sv_folder=SV_FOLDER)
-        df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
-                                'norm_allpriors': zt/max(abs(zt)),
-                                'R_response': (decision+1)/2})
-        com_heatmap_paper_marginal_pcom_side(df_data, side=0)
-        com_heatmap_paper_marginal_pcom_side(df_data, side=1)
+        fig_3(df)
 
     # fig 5 (model)
     if f5:
