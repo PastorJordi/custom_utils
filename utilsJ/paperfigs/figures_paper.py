@@ -725,7 +725,7 @@ def fig_1_def(df_data):
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
 
-def fig_1_mt_weights(df, plot=False):
+def fig_1_mt_weights(df, plot=False, means_errs=True):
     w_coh = []
     w_t_i = []
     w_zt = []
@@ -751,14 +751,22 @@ def fig_1_mt_weights(df, plot=False):
     errors = [std_1, std_2, std_3]
     means = [mean_1, mean_2, mean_3]
     if plot:
-        fig, ax = plt.subplots(figsize=(3, 2))
-        # TODO: not the most informative name for a function
-        plot_bars(means=means, errors=errors, ax=ax)
-        rm_top_right_lines(ax=ax)
-        fig.savefig(SV_FOLDER+'/Fig1_mt_weights.png', dpi=400, bbox_inches='tight')
-        fig.savefig(SV_FOLDER+'/Fig1_mt_weights.svg', dpi=400, bbox_inches='tight')
-
-    return means, errors
+        if means_errs:
+            fig, ax = plt.subplots(figsize=(3, 2))
+            # TODO: not the most informative name for a function
+            plot_bars(means=means, errors=errors, ax=ax)
+            rm_top_right_lines(ax=ax)
+            fig.savefig(SV_FOLDER+'/Fig1_mt_weights.png', dpi=400,
+                        bbox_inches='tight')
+            fig.savefig(SV_FOLDER+'/Fig1_mt_weights.svg', dpi=400,
+                        bbox_inches='tight')
+        else:
+            fig, ax = plt.subplots(figsize=(3, 2))
+            plot_violins(w_coh=w_coh, w_t_i=w_t_i, w_zt=w_zt, ax=ax)
+    if means_errs:
+        return means, errors
+    else:
+        return w_coh, w_t_i, w_zt
 
 
 def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
@@ -778,6 +786,19 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.legend()
+
+
+def plot_violins(w_coh, w_t_i, w_zt, ax):
+    labels = ['Stimulus Congruency', 'Trial index', 'Prior Congruency']
+    arr_weights = np.concatenate((w_coh, w_t_i, w_zt))
+    label_1 = []
+    for j in range(len(labels)):
+        for i in range(len(w_coh)):
+            label_1.append(labels[j])
+    df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
+    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax, color='grey')
+    ax.set_ylabel('Weight (a.u.)')
+    ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1470,9 +1491,9 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
-    f2 = True
-    f3 = True
+    f1 = True
+    f2 = False
+    f3 = False
     f5 = False
     f6 = False
 
@@ -1481,7 +1502,8 @@ if __name__ == '__main__':
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
         fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        fig_1_mt_weights(df, plot=True)
+        fig_1_mt_weights(df, plot=True, means_errs=False)
+        fig_1_def(df_data=df)
 
     # fig 2
     if f2:
@@ -1570,8 +1592,8 @@ if __name__ == '__main__':
             np.array(df.special_trial)[:int(num_tr)][after_correct_id]
         df_sim['traj'] = df_sim['trajectory_y']
         # simulation plots
-        means, errors = fig_1_mt_weights(df)
-        means_model, errors_model = fig_1_mt_weights(df_sim)
+        means, errors = fig_1_mt_weights(df, means_errs=True)
+        means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,
