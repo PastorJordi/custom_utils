@@ -21,6 +21,7 @@ import sys
 import multiprocessing as mp
 from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
+import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -610,6 +611,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     decision = np.empty((0, ))
     hit = np.empty((0, ))
     trial_index = np.empty((0, ))
+    subject = np.empty((0, ))
     if splitting:
         traj_y = np.empty((0, ))
         traj_stamps = np.empty((0, ))
@@ -672,6 +674,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         sound_len_tmp = np.array(df.sound_len)
         trial_index_tmp = np.array(df.origidx)
         resp_len_tmp = np.array(df.resp_len)
+        subject_tmp = df.subjid.values
         if silent:
             special_trial_tmp = np.array(df.special_trial)
         if splitting:
@@ -690,6 +693,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         resp_len = np.concatenate((resp_len, resp_len_tmp[indx]))
         hit = np.concatenate((hit, hit_tmp[indx]))
         trial_index = np.concatenate((trial_index, trial_index_tmp[indx]))
+        subject = np.concatenate((subject, subject_tmp[indx]))
         if silent:
             special_trial = np.concatenate((special_trial,
                                             special_trial_tmp[indx]))
@@ -727,7 +731,8 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         fix_onset = None
         traj_stamps = None
     return stim, prior, coh, gt, com, decision, sound_len, resp_len,\
-        hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps
+        hit, trial_index, special_trial, traj_y, fix_onset, traj_stamps,\
+        subject
 
 
 def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_zt,
@@ -916,15 +921,14 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*trial_index[i_t] + MT_intercep + 10*np.random.randn(1)
+            MT = MT_slope*trial_index[i_t] + MT_intercep + 20*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
-            prior0 += np.random.randn(len(prior0))*0.03  # noise
-            init_trajs.append(prior0)
+            init_trajs.append(prior0 + np.random.randn(len(prior0))*1)
             # TRAJ. UPDATE
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
@@ -953,11 +957,11 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)
-            traj_fin += np.random.randn(len(traj_fin))*0.03  # noise
             final_trajs.append(traj_fin)
             # joined trajectories
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+            traj_updt += np.random.randn(len(traj_updt))*1  # noise
             total_traj.append(traj_updt)
             if com[i_t]:
                 opp_side_values = traj_updt.copy()
@@ -2340,6 +2344,30 @@ def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time,
     ax[3].set_ylabel('CoM peak')
 
 
+def pdf_cohs(sound_len, ax, coh, bins=np.linspace(1, 301, 61), yaxis=True):
+    ev_vals = np.unique(np.abs(coh))
+    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, len(ev_vals)))
+    for i_coh, ev in enumerate(ev_vals):
+        index = np.abs(coh) == ev
+        counts_coh, bins_coh = np.histogram(sound_len[index], bins=bins)
+        norm_counts = counts_coh/sum(counts_coh)
+        xvals = bins_coh[:-1]+(bins_coh[1]-bins_coh[0])/2
+        ax.plot(xvals, norm_counts, color=colormap[i_coh])
+    ax.set_xlabel('Reaction time (ms)')
+    ax.set_xlim(0, 150)
+    if yaxis:
+        ax.set_ylabel('Density')
+
+
+def pdf_cohs_subjects(subjects, sound_len, coh):
+    fig, ax = plt.subplots(nrows=3, ncols=5)
+    ax = ax.flatten()
+    for isub, subj in enumerate(np.unique(subjects)):
+        pdf_cohs(sound_len[subjects == subj], ax[isub], coh[subjects == subj],
+                 bins=np.linspace(1, 301, 61), yaxis=True)
+        ax[isub].set_title(str(subj))
+
+
 # --- MAIN
 if __name__ == '__main__':
     # TODO: organize script
@@ -2361,8 +2389,9 @@ if __name__ == '__main__':
         if load_data:  # experimental data
             if new_sample:  # get a new sample
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
-                    trial_index, special_trial, traj_y, fix_onset, traj_stamps =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
+                    trial_index, special_trial, traj_y, fix_onset, traj_stamps,\
+                    subjects =\
+                    get_data_and_matrix(dfpath=DATA_FOLDER,
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2374,6 +2403,7 @@ if __name__ == '__main__':
                         'fix_onset_dt': fix_onset}
                 np.savez(DATA_FOLDER+'/sample_'+str(time.time())[-5:]+'.npz',
                          **data)
+                pdf_cohs_subjects(subjects, sound_len, coh)
             else:  # use existing sample
                 if silent:
                     subfolder = '/silent'
@@ -2426,8 +2456,8 @@ if __name__ == '__main__':
         trial_index = trial_index[:int(num_tr)]
         hit = hit[:int(num_tr)]
         if single_run:  # single run with specific parameters
-            p_t_aff = 5
-            p_t_eff = 5
+            p_t_aff = 8
+            p_t_eff = 8
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
             p_w_zt = 0.2
             p_w_stim = 0.11
@@ -2448,22 +2478,22 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
-            # if plot:
-            #     left_right_matrix(zt, coh, com, decision)
-            #     data_to_plot = {'sound_len': sound_len,
-            #                     'CoM': com,
-            #                     'first_resp': decision*[~com*(-1)],
-            #                     'final_resp': decision,
-            #                     'hithistory': hit,
-            #                     'avtrapz': coh,
-            #                     'detected_com': com,
-            #                     'MT': resp_len*1e3,
-            #                     'zt': zt, 'decision': decision,
-            #                     'trial_idxs': trial_index}
-            #     plot_misc(data_to_plot, stim_res=stim_res, data=True)
-            #     mean_com_traj_peak(trajectories=traj_y, com=com,
-            #                         sound_len=sound_len, decision=decision,
-            #                         motor_time=resp_len)
+            if plot:
+                # left_right_matrix(zt, coh, com, decision)
+                data_to_plot = {'sound_len': sound_len,
+                                'CoM': com,
+                                'first_resp': decision*[~com*(-1)],
+                                'final_resp': decision,
+                                'hithistory': hit,
+                                'avtrapz': coh,
+                                'detected_com': com,
+                                'MT': resp_len*1e3,
+                                'zt': zt, 'decision': decision,
+                                'trial_idxs': trial_index}
+                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+                mean_com_traj_peak(trajectories=traj_y, com=com,
+                                    sound_len=sound_len, decision=decision,
+                                    motor_time=resp_len)
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]

@@ -33,11 +33,11 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
@@ -779,7 +779,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_model = com_model[sound_len_model >= 0]
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         ax=ax[2])
+                         ax=ax[2], label='Model')
     pdf_cohs(sound_len=sound_len, ax=ax[0], coh=coh, yaxis=True)
     pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[1],
              coh=coh[sound_len_model >= 0], yaxis=False)
@@ -1165,8 +1165,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 5
-    p_t_eff = 5
+    p_t_aff = 8
+    p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.11
@@ -1269,6 +1269,9 @@ if __name__ == '__main__':
     f2 = True
     f3 = True
     f5 = False
+    f2 = False
+    f3 = False
+    f5 = True
     f6 = False
 
     # fig 1
