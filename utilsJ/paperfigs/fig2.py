@@ -203,11 +203,11 @@ def bcd(parentpath, sv_folder=None):
     plt.show()
 
 
-def e(df, average=False, rtbins= np.arange(0,201,10), sv_folder=None):
+def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=False):
     """p(com) and RT distribution"""
     sv_folder = sv_folder or SAVPATH
     if not average:
-        ax = plotting.binned_curve(
+        plotting.binned_curve(
             df[df.special_trial == 0],
             'CoM_sugg',
             'sound_len',
@@ -219,7 +219,7 @@ def e(df, average=False, rtbins= np.arange(0,201,10), sv_folder=None):
             errorbar_kw={'color': 'tab:orange',
                          'label': 'p(CoM)', 'zorder': 3},
             traces='subjid',
-            traces_kw=dict(alpha=0.3)
+            traces_kw=dict(alpha=0.3), ax=ax
         )
     else:  # mean of means + sem
         rtbinsize = rtbins[1]-rtbins[0]
@@ -251,19 +251,18 @@ def e(df, average=False, rtbins= np.arange(0,201,10), sv_folder=None):
             yerr=tmp['sem'],
             label='p(CoM)', color='tab:orange'
         )
-
-    hist_list = []
-    for subject in df.subjid.unique():
-        counts, bns = np.histogram(df[(df.subjid == subject) & (
-            df.special_trial == 0)].sound_len.dropna().values, bins=rtbins)
-        hist_list += [counts]
-
     ax.set_ylim(0, 0.08)
-    _, ymax = ax.get_ylim()
-    counts = np.stack(hist_list).mean(axis=0)
-    ax.hist(bns[:-1], bns, weights=0.5*ymax * counts /
-            counts.max(), alpha=.4, label='RT distribution')
-
+    if dist:
+        hist_list = []
+        for subject in df.subjid.unique():
+            counts, bns = np.histogram(df[(df.subjid == subject) & (
+                df.special_trial == 0)].sound_len.dropna().values, bins=rtbins)
+            hist_list += [counts]
+        ax.set_ylim(0, 0.08)
+        _, ymax = ax.get_ylim()
+        counts = np.stack(hist_list).mean(axis=0)
+        ax.hist(bns[:-1], bns, weights=0.5*ymax * counts /
+                counts.max(), alpha=.4, label='RT distribution')
     ax.set_xlabel('Reaction Time (ms)')
     ax.legend(fancybox=False, frameon=False)
     ax.spines['right'].set_visible(False)

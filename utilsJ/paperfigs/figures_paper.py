@@ -861,7 +861,7 @@ def fig_3(df):
         ax_i.set_xticklabels(['']*nbins)
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-    f.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1603,10 +1603,6 @@ if __name__ == '__main__':
 
     # fig 3
     if f3:
-        fig, ax = plt.subplots(1)
-        rat_path = '/home/molano/Dropbox/project_Barna/' +\
-            'ChangesOfMind/figures/Figure_3/'
-        fig2.bcd(parentpath=rat_path, sv_folder=SV_FOLDER)
         fig_3(df)
 
     # fig 5 (model)
