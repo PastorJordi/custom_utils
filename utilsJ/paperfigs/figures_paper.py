@@ -267,8 +267,7 @@ def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
                 current_split_index = splitfun(
                     df=df.loc[(df.special_trial == 0) & (df.subjid == subject)],
                     side=0,  # side has no effect because this is collapsing_sides
-                    rtbin=i, rtbins=rtbins,
-                    collapse_sides=True,
+                    rtbin=i, rtbins=rtbins, collapse_sides=True,
                     trajectory=trajectory
                 )
                 out_data += [current_split_index]
@@ -1232,18 +1231,17 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    subject = 'LE43'
     all_rats = False
     if all_rats:
-        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'meta_subject/',
-                                      return_df=True, sv_folder=SV_FOLDER,
-                                      after_correct=True, silent=True,
-                                      all_trials=True)
+        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
+                    'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
     else:
-        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + subject,
-                                      return_df=True, sv_folder=SV_FOLDER,
-                                      after_correct=True, silent=True,
-                                      all_trials=True)
+        subjects = ['LE43']
+
+    for sbj in subjects:
+        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
+                                      sv_folder=SV_FOLDER, after_correct=True,
+                                      silent=True, all_trials=True)
     after_correct_id = np.where((df.aftererror == 0))
     # *(df.special_trial == 0))[0]
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
@@ -1269,7 +1267,7 @@ if __name__ == '__main__':
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = True
-    f3 = False
+    f3 = True
     f5 = False
     f6 = False
 
