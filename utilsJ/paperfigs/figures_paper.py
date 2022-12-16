@@ -42,9 +42,195 @@ matplotlib.rcParams['lines.markersize'] = 3
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-
+# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/Figure_3/001965.png'
+# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
+    'craft_vid/CoM/a/001965.png'
+FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
+
+
+def plot_coms(df, ax, human=False):
+    coms = df.CoM_sugg.values
+    decision = df.R_response.values
+    if human:
+        ran_max = 600
+        max_val = 600
+    if not human:
+        ran_max = 900
+        max_val = 77
+    for tr in reversed(range(ran_max)):  # len(df_rat)):
+        if tr > (ran_max/1.06) and not coms[tr] and decision[tr] == 1:
+            trial = df.iloc[tr]
+            traj = trial['trajectory_y']
+            if not human:
+                time = np.arange(len(traj))*FRAME_RATE
+                ax.plot(time, traj, color='tab:cyan', lw=.5)
+            if human:
+                time = np.array(trial['times'])
+                if time[-1] < 0.3 and time[-1] > 0.1:
+                    ax.plot(time*1e3, traj, color='tab:cyan', lw=.5)
+        elif tr < (ran_max/1.06-1) and coms[tr] and decision[tr] == 0:
+            trial = df.iloc[tr]
+            traj = trial['trajectory_y']
+            if not human:
+                time = np.arange(len(traj))*FRAME_RATE
+                ax.plot(time, traj, color='tab:olive', lw=2)
+            if human:
+                time = np.array(trial['times'])
+                if time[-1] < 0.3 and time[-1] > 0.2:
+                    ax.plot(time*1e3, traj, color='tab:olive', lw=2)
+    rm_top_right_lines(ax)
+    if human:
+        var = 'x'
+        sp = 'Subject'
+    if not human:
+        var = 'y'
+        sp = 'Rats'
+    ax.set_ylabel('{} position {}-axis (pixels)'.format(sp, var))
+    ax.set_xlabel('Time from movement onset (ms)')
+    ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
+    ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
+    ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
+
+
+def tracking_image(ax):
+    rat = plt.imread(RAT_COM_IMG)
+    ax.set_facecolor('white')
+    ax.imshow(np.flipud(rat[100:-100, 350:-50, :]))
+    ax.axis('off')
+
+
+def com_heatmap_paper_marginal_pcom_side(
+    df, f=None, ax=None,  # data source, must contain 'avtrapz' and allpriors
+    pcomlabel=None, fcolorwhite=True, side=0,
+    hide_marginal_axis=True, n_points_marginal=None, counts_on_matrix=False,
+    adjust_marginal_axes=False,  # sets same max=y/x value
+    nbins=7,  # nbins for the square matrix
+    com_heatmap_kws={},  # avoid binning & return_mat already handled by the functn
+    com_col='CoM_sugg', priors_col='norm_allpriors', stim_col='avtrapz',
+    average_across_subjects=False
+):
+    assert side in [0, 1], "side value must be either 0 or 1"
+    assert df[priors_col].abs().max() <= 1,\
+        "prior must be normalized between -1 and 1"
+    assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
+    if pcomlabel is None:
+        if not side:
+            pcomlabel = r'$p(CoM_{R \rightarrow L})$'
+        else:
+            pcomlabel = r'$p(CoM_{L \rightarrow R})$'
+
+    if n_points_marginal is None:
+        n_points_marginal = nbins
+    # ensure some filtering
+    tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
+    tmp['tmp_com'] = False
+    tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
+
+    com_heatmap_kws.update({
+        'return_mat': True,
+        'predefbins': [
+            np.linspace(-1, 1, nbins+1), np.linspace(-1, 1, nbins+1)
+        ]
+    })
+    if not average_across_subjects:
+        mat, nmat = com_heatmap(
+            tmp.norm_allpriors.values,
+            tmp.avtrapz.values,
+            tmp.tmp_com.values,
+            **com_heatmap_kws
+        )
+        # fill nans with 0
+        mat[np.isnan(mat)] = 0
+        nmat[np.isnan(nmat)] = 0
+        # change data to match vertical axis image standards (0,0) ->
+        # in the top left
+    else:
+        com_mat_list, number_mat_list = [], []
+        for subject in tmp.subjid.unique():
+            cmat, cnmat = com_heatmap(
+                tmp.loc[tmp.subjid == subject, 'norm_allpriors'].values,
+                tmp.loc[tmp.subjid == subject, 'avtrapz'].values,
+                tmp.loc[tmp.subjid == subject, 'tmp_com'].values,
+                **com_heatmap_kws
+            )
+            cmat[np.isnan(cmat)] = 0
+            cnmat[np.isnan(cnmat)] = 0
+            com_mat_list += [cmat]
+            number_mat_list += [cnmat]
+
+        mat = np.stack(com_mat_list).mean(axis=0)
+        nmat = np.stack(number_mat_list).mean(axis=0)
+
+    mat = np.flipud(mat)
+    nmat = np.flipud(nmat)
+    return mat
+
+
+def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
+    # plot tachometrics
+    if humans:
+        num = 8
+        rtbins = np.linspace(0, 300, num=num)
+        tachometric(df_data, ax=ax_tach, fill_error=True, rtbins=rtbins,
+                    cmap='gist_yarg')
+    else:
+        tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
+    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
+    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_ylabel('Accuracy')
+    ax_tach.set_ylim(0.3, 1.04)
+    ax_tach.spines['right'].set_visible(False)
+    ax_tach.spines['top'].set_visible(False)
+    ax_tach.legend()
+    # plot Pcoms matrices
+    nbins = 7
+    matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
+    matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
+    # L-> R
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_1)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax_mat[0])
+    plt.colorbar(im, fraction=0.04)
+    # pos = ax_mat.get_position()
+    # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
+    # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
+    #                      pos.width, pos.height])
+    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[1].set_title(pcomlabel_0)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax_mat[1].yaxis.set_ticks_position('none')
+    plt.sca(ax_mat[1])
+    plt.colorbar(im, fraction=0.04)
+    # pright matrix
+    choice = df_data['R_response'].values
+    coh = df_data['coh2'].values
+    prior = df_data['norm_allpriors'].values
+    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
+                                annotate=False)
+    mat_pright = np.flipud(mat_pright)
+    im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
+    plt.sca(ax_pright)
+    plt.colorbar(im_2, fraction=0.04)
+    ax_pright.set_title('Proportion of rightward responses')
+
+    # R -> L
+    for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
+        ax_i.set_xlabel('Prior Evidence')
+        # ax_i.set_yticks(np.arange(nbins))
+        # ax_i.set_xticks(np.arange(nbins))
+        # ax_i.set_xticklabels(['left']+['']*(nbins-2)+['right'])
+        ax_i.set_yticklabels(['']*nbins)
+        ax_i.set_xticklabels(['']*nbins)
+    for ax_i in [ax_pright, ax_mat[0]]:
+        # ax_i.set_yticklabels(['right']+['']*(nbins-2)+['left'])
+        ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
 
 def rm_top_right_lines(ax):
@@ -523,6 +709,20 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
     ax[5].set_title('Pcorrect')
     fig.savefig(SV_FOLDER+'/Fig1.png', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'/Fig1.svg', dpi=400, bbox_inches='tight')
+
+
+def fig_1_def(df_data):
+    f, ax = plt.subplots(nrows=2, ncols=4, figsize=(8, 5))  # figsize=(4, 3))
+    ax = ax.flatten()
+    ax[0].axis('off')
+    ax[1].axis('off')
+    matrix_figure(df_data, ax_tach=ax[3], ax_pright=ax[2],
+                  ax_mat=[ax[6], ax[7]], humans=False)
+    plot_coms(df=df_data, ax=ax[5])
+    # ax_trck = plt.axes([.8, .55, .17, .17])
+    ax_trck = ax[4]
+    tracking_image(ax_trck)
+    f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
 
 def fig_1_mt_weights(df, plot=False):
@@ -1268,6 +1468,7 @@ if __name__ == '__main__':
     trial_index = trial_index[after_correct_id]
     resp_len = np.array(df.resp_len)
     resp_len = resp_len[after_correct_id]
+    df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = True
