@@ -307,91 +307,111 @@ def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.05, marginy=0.05):
     return ax_inset
 
 
-def trajs_cond_on_coh(df, ax, average=False, prior_limit=0.25, rt_lim=25,
-                      after_correct_only=True, trajectory="trajectory_y",
-                      velocity=("traj_d1", 1), acceleration=('traj_d2', 1),
+def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
                       accel=False):
     """median position and velocity in silent trials splitting by prior"""
     # TODO: adapt for mean + sem
+    df_43 = df.loc[df.subjid == 'LE43']
+    ax_zt = ax[0]
+    ax_cohs = ax[1]
+    trajs_cond_on_coh_computation(df=df_43, ax=ax_zt, condition='prior_x_coh',
+                                  prior_limit=1)
+    trajs_cond_on_coh_computation(df=df_43, ax=ax_cohs, condition='choice_x_coh')
+
+
+def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
+                                  prior_limit=0.25, rt_lim=25,
+                                  after_correct_only=True,
+                                  trajectory="trajectory_y",
+                                  velocity=("traj_d1", 1),
+                                  acceleration=('traj_d2', 1), accel=False):
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
+    df['norm_allpriors'] = df.allpriors / np.max(np.abs(df.allpriors))
+    df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
-    bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-
-    # dani_rats: # this is with sound, it can use all sunbjects data
-    for subject in df.subjid.unique():
-        if after_correct_only:
-            ac_cond = df.aftererror == False
-        else:
-            ac_cond = (df.aftererror*1) >= 0
-        # position
-        indx_trajs = (df.subjid == subject) &\
-            (df.allpriors.abs() < prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim)
-        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
-            trajectory_thr(df.loc[indx_trajs], 'choice_x_coh', bins,
-                           collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap='viridis', bintype='categorical',
-                           trajectory=trajectory)
+    if condition == 'choice_x_coh':
+        bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+        xlab = 'ev. towards response'
+        bintype = 'categorical'
+    else:
+        bins = np.array([-1, -0.6, -0.15, 0.15, 0.6, 1])
+        xlab = 'prior towards response'
+        bintype = 'edges'
+    if after_correct_only:
+        ac_cond = df.aftererror == False
+    else:
+        ac_cond = (df.aftererror*1) >= 0
+    # position
+    indx_trajs = (df.allpriors.abs() < prior_limit) &\
+        ac_cond & (df.special_trial == 0) &\
+        (df.sound_len < rt_lim)
+    xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+        trajectory_thr(df.loc[indx_trajs], condition, bins,
+                       collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
+                       return_trash=True, error_kwargs=dict(marker='o'),
+                       cmap='viridis', bintype=bintype,
+                       trajectory=trajectory)
+    if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
                      title='Coherence')
-        ax[1].set_xlim([-50, 500])
-        ax[1].set_xlabel('time from movement onset (MT, ms)')
-        for i in [0, 30]:
-            ax[1].axhline(i, ls=':', c='gray')
-        ax[1].set_ylabel('y coord. (px)')
-        ax[0].set_xlabel('ev. towards response')
-        ax[0].set_ylabel('time to threshold (30px)')
-        ax[0].plot(xpoints, ypoints, color='k', ls=':')
-        ax[1].set_ylim([-10, 80])
-        ax2 = ax[0].twinx()
-        ax2.errorbar(xpoints, mt_time, mt_time_err, color='c', ls=':')
-        ax2.set_label('Motor time')
-        # velocities
-        threshold = .2
+    else:
+        ax[1].legend(labels=['inc. high', 'inc. low', 'zero', 'con. low',
+                             'con. high'], title='Prior')
+    ax[1].set_xlim([-50, 500])
+    ax[1].set_xlabel('time from movement onset (MT, ms)')
+    for i in [0, 30]:
+        ax[1].axhline(i, ls=':', c='gray')
+    ax[1].set_ylabel('y coord. (px)')
+    ax[0].set_xlabel(xlab)
+    ax[0].set_ylabel('Motor time')
+    ax[1].set_ylim([-10, 80])
+    # ax2 = ax[0].twinx()
+    # ax2.errorbar(xpoints, mt_time, mt_time_err, color='c', ls=':')
+    # ax2.set_label('Motor time')
+    # velocities
+    threshold = .2
+    xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
+        df.loc[indx_trajs], condition, bins, collapse_sides=True,
+        thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
+        error_kwargs=dict(marker='o'), cmap='viridis',
+        bintype=bintype, trajectory=velocity)
+    # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
+    #              title='Coherence', loc='upper left')
+    ax[3].set_xlim([-50, 500])
+    ax[3].set_xlabel('time from movement onset (MT, ms)')
+    ax[3].set_ylim([-0.05, 0.5])
+    for i in [0, threshold]:
+        ax[3].axhline(i, ls=':', c='gray')
+    ax[3].set_ylabel('y coord velocity (px/ms)')
+    ax[2].set_xlabel(xlab)
+    ax[2].set_ylabel(f'time to threshold ({threshold} px/ms)')
+    ax[2].plot(xpoints, ypoints, color='k', ls=':')
+    plt.show()
+    if accel:
+        # acceleration
+        threshold = .0015
         xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
-            df.loc[indx_trajs], 'choice_x_coh', bins, collapse_sides=True,
-            thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
+            df.loc[indx_trajs], condition, bins, collapse_sides=True,
+            thr=threshold, ax=ax[4], ax_traj=ax[5], return_trash=True,
             error_kwargs=dict(marker='o'), cmap='viridis',
-            bintype='categorical', trajectory=velocity)
+            bintype=bintype, trajectory=acceleration)
         # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
         #              title='Coherence', loc='upper left')
-        ax[3].set_xlim([-50, 500])
-        ax[3].set_xlabel('time from movement onset (MT, ms)')
-        ax[3].set_ylim([-0.05, 0.5])
+        ax[5].set_xlim([-50, 500])
+        ax[5].set_xlabel('time from movement onset (MT, ms)')
+        ax[5].set_ylim([-0.003, 0.0035])
         for i in [0, threshold]:
-            ax[3].axhline(i, ls=':', c='gray')
-        ax[3].set_ylabel('y coord velocity (px/ms)')
-        ax[2].set_xlabel('ev. towards response')
-        ax[2].set_ylabel(f'time to threshold ({threshold} px/ms)')
-        ax[2].plot(xpoints, ypoints, color='k', ls=':')
+            ax[5].axhline(i, ls=':', c='gray')
+        ax[5].set_ylabel('y coord accelration (px/ms)')
+        ax[4].set_xlabel('ev. towards response')
+        ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
+        ax[4].plot(xpoints, ypoints, color='k', ls=':')
         plt.show()
-        if accel:
-            # acceleration
-            threshold = .0015
-            xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
-                df.loc[indx_trajs], 'choice_x_coh', bins, collapse_sides=True,
-                thr=threshold, ax=ax[4], ax_traj=ax[5], return_trash=True,
-                error_kwargs=dict(marker='o'), cmap='viridis',
-                bintype='categorical', trajectory=acceleration)
-            # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-            #              title='Coherence', loc='upper left')
-            ax[5].set_xlim([-50, 500])
-            ax[5].set_xlabel('time from movement onset (MT, ms)')
-            ax[5].set_ylim([-0.003, 0.0035])
-            for i in [0, threshold]:
-                ax[5].axhline(i, ls=':', c='gray')
-            ax[5].set_ylabel('y coord accelration (px/ms)')
-            ax[4].set_xlabel('ev. towards response')
-            ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
-            ax[4].plot(xpoints, ypoints, color='k', ls=':')
-            plt.show()
 
 
-def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 90, 2)):
+def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 90, 2), subject='LE43'):
     """
     Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
     between 0 and 90.
@@ -416,23 +436,23 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 90, 2)):
     None.
 
     """
-    for subject in df.subjid.unique():
-        lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
-        simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
-                                 collapse_sides=True, ax=ax,
-                                 rtbin=rtbin, rtbins=rtbins,
-                                 plot_kwargs=dict(color='tab:green',
-                                                  label=lbl))
-        ax.set_xlim(-10, 140)
-        ax.set_ylim(-5, 20)
-        ax.set_xlabel('time from movement onset (ms)')
-        ax.set_ylabel('y dimension (px)')
-        ax.set_title(subject)
-        ax.legend()
-        plt.show()
+    subject = subject
+    lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
+    simul.when_did_split_dat(df=df[df.subjid == subject], side=0,
+                             collapse_sides=True, ax=ax,
+                             rtbin=rtbin, rtbins=rtbins,
+                             plot_kwargs=dict(color='tab:green',
+                                              label=lbl))
+    ax.set_xlim(-10, 140)
+    ax.set_ylim(-5, 20)
+    ax.set_xlabel('time from movement onset (ms)')
+    ax.set_ylabel('y dimension (px)')
+    ax.set_title(subject)
+    # ax.legend()
+    plt.show()
 
 
-def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
+def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                           sim=False,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
@@ -498,8 +518,7 @@ def trajs_splitting_point(df, ax, collapse_sides=False, threshold=300,
         for i in range(df.subjid.unique().size):
             for j in range(out_data.shape[2]):
                 ax.plot(
-                    binsize/2 + binsize * np.arange(rtbins.size-1)
-                    + np.random.normal(loc=0, scale=0.2, size=rtbins.size-1),
+                    binsize/2 + binsize * np.arange(rtbins.size-1),
                     out_data[:, i, j],
                     marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                     mew=1, color=(.6, .6, .6, .3)
@@ -747,7 +766,7 @@ def fig_1_def(df_data):
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
 
 
-def fig_1_mt_weights(df, plot=False, means_errs=True):
+def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
     w_coh = []
     w_t_i = []
     w_zt = []
@@ -774,16 +793,12 @@ def fig_1_mt_weights(df, plot=False, means_errs=True):
     means = [mean_1, mean_2, mean_3]
     if plot:
         if means_errs:
-            fig, ax = plt.subplots(figsize=(3, 2))
+            # fig, ax = plt.subplots(figsize=(3, 2))
             # TODO: not the most informative name for a function
             plot_bars(means=means, errors=errors, ax=ax)
             rm_top_right_lines(ax=ax)
-            fig.savefig(SV_FOLDER+'/Fig1_mt_weights.png', dpi=400,
-                        bbox_inches='tight')
-            fig.savefig(SV_FOLDER+'/Fig1_mt_weights.svg', dpi=400,
-                        bbox_inches='tight')
         else:
-            fig, ax = plt.subplots(figsize=(3, 2))
+            # fig, ax = plt.subplots(figsize=(3, 2))
             plot_violins(w_coh=w_coh, w_t_i=w_t_i, w_zt=w_zt, ax=ax)
     if means_errs:
         return means, errors
@@ -1554,9 +1569,9 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = False
-    f3 = True
+    f1 = False
+    f2 = True
+    f3 = False
     f5 = False
     f6 = False
 
@@ -1574,31 +1589,33 @@ if __name__ == '__main__':
         inset_sz = 0.1
         accel = False
         if accel:
-            f, ax = plt.subplots(nrows=3, ncols=2, figsize=fgsz)
+            f, ax = plt.subplots(nrows=4, ncols=2, figsize=fgsz)
             ax = ax.flatten()
-            ax_cohs = np.array([ax[0], ax[2], ax[4]])
+            ax_cohs = np.array([ax[0], ax[2], ax[4], ax[6]])
         else:
-            f, ax = plt.subplots(nrows=2, ncols=2, figsize=fgsz)
+            f, ax = plt.subplots(nrows=2, ncols=4, figsize=fgsz)
             ax = ax.flatten()
-            ax_cohs = np.array([ax[0], ax[2]])
+            ax_cohs = np.array([ax[1], ax[5]])
+            ax_zt = np.array([ax[0], ax[4]])
         ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
         ax_cohs = np.insert(ax_cohs, 0, ax_inset)
-        ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
-                             marginy=0.15)
+        ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz)
         ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-        if accel:
-            ax_inset = add_inset(ax=ax_cohs[4], inset_sz=inset_sz, fgsz=fgsz,
-                                 marginy=0.15)
-            ax_cohs = np.insert(ax_cohs, 4, ax_inset)
+        # if accel:
+        ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz)
+        ax_zt = np.insert(ax_zt, 0, ax_inset)
+        ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz)
+        ax_zt = np.insert(ax_zt, 2, ax_inset)
         for a in ax:
             rm_top_right_lines(a)
-        trajs_cond_on_coh(df=df, ax=ax_cohs, average=True,
+        trajs_cond_on_coh(df=df, ax=[ax_zt, ax_cohs], average=True,
                           acceleration=accel)
         # splits
-        ax_split = np.array([ax[1], ax[3]])
+        ax_split = np.array([ax[2], ax[6]])
         trajs_splitting(df, ax=ax_split[0])
         # XXX: do this panel for all rats?
         trajs_splitting_point(df=df, ax=ax_split[1])
+        fig_1_mt_weights(df, ax=ax[3],plot=True, means_errs=False)
         # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
 
     # fig 3
