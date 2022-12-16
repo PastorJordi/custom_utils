@@ -712,13 +712,32 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
 
 
 def fig_1_def(df_data):
-    f, ax = plt.subplots(nrows=2, ncols=4, figsize=(8, 5))  # figsize=(4, 3))
+    f, ax = plt.subplots(nrows=2, ncols=3, figsize=(8, 5))  # figsize=(4, 3))
     ax = ax.flatten()
     ax[0].axis('off')
     ax[1].axis('off')
-    matrix_figure(df_data, ax_tach=ax[3], ax_pright=ax[2],
-                  ax_mat=[ax[6], ax[7]], humans=False)
-    plot_coms(df=df_data, ax=ax[5])
+    ax[3].axis('off')
+    ax[4].axis('off')
+    ax_tach = ax[2]
+    ax_pright = ax[5]
+    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
+    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
+    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_ylabel('Accuracy')
+    ax_tach.set_ylim(0.3, 1.04)
+    ax_tach.spines['right'].set_visible(False)
+    ax_tach.spines['top'].set_visible(False)
+    ax_tach.legend()
+    choice = df_data['R_response'].values
+    coh = df_data['coh2'].values
+    prior = df_data['norm_allpriors'].values
+    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
+                                annotate=False)
+    mat_pright = np.flipud(mat_pright)
+    im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
+    plt.sca(ax_pright)
+    plt.colorbar(im_2, fraction=0.04)
+    ax_pright.set_title('Proportion of rightward responses')
     # ax_trck = plt.axes([.8, .55, .17, .17])
     ax_trck = ax[4]
     tracking_image(ax_trck)
