@@ -15,19 +15,24 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-from utilsJ.Models.extended_ddm import trial_ev_vectorized, data_augmentation
+from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
-# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+
 BINS = np.arange(1, 320, 20)
 
 
@@ -43,6 +48,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     gt = np.empty((0, ))
     pright = np.empty((0, ))
     sound_len = np.empty((0, ))
+    trial_index = np.empty((0, ))
     for f in files:
         start_1 = time.time()
         df = pd.read_pickle(f)
@@ -74,6 +80,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
         sound_len_tmp = np.array(df.sound_len)
         gt_tmp = np.array(df.rewside) * 2 - 1
         pright_tmp = np.array(df.R_response)
+        trial_index_tmp = np.array(df.origidx)
         prior = np.concatenate((prior, prior_tmp[indx]))
         stim = np.concatenate((stim, stim_tmp[indx, :]))
         coh = np.concatenate((coh, coh_mat[indx]))
@@ -81,6 +88,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
         gt = np.concatenate((gt, gt_tmp[indx]))
         pright = np.concatenate((pright, pright_tmp[indx]))
         sound_len = np.concatenate((sound_len, sound_len_tmp[indx]))
+        trial_index = np.concatenate((trial_index, trial_index_tmp[indx]))
         end = time.time()
         print(f)
         print(end - start_1)
@@ -89,7 +97,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     print('Ended loading data')
     stim = stim.T
     zt = prior
-    return stim, zt, coh, gt, com, pright
+    return stim, zt, coh, gt, com, pright, trial_index
 
 
 def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
@@ -348,9 +356,10 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
     return diff_rms_mat
 
 
-def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
-                   p_com_bound, p_t_aff, p_t_eff, p_t_a, p_w_a, p_a_noise,
-                   p_w_updt, num_times_tr=int(1e3), detect_CoMs_th=5,
+def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
+                   p_w_stim, p_e_noise, p_com_bound, p_t_aff, p_t_eff, p_t_a,
+                   p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
+                   p_2nd_readout, num_times_tr=int(1e3), detect_CoMs_th=5,
                    rms_comparison=False, epsilon=1e-6):
     start_llk = time.time()
     num_tr = stim.shape[1]
@@ -366,11 +375,12 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     coh = coh[:int(num_tr)]
     com = com[:int(num_tr)]
     gt = gt[:int(num_tr)]
-    MT_slope = 0.15
-    MT_intercep = 110
+    trial_index = trial_index[:int(num_tr)]
+    data_augment_factor = 10
+    MT_slope = 0.123
+    MT_intercep = 254
     compute_trajectories = True
     all_trajs = True
-    data_augment_factor = 10
     stim = data_augmentation(stim=stim, daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     global fixation
@@ -382,17 +392,21 @@ def run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim, p_e_noise,
     diff_rms_list = []
     for i in range(num_times_tr):
         # start_simu = time.time()
-        E, A, com_model, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
-            matrix, total_traj, init_trajs, final_trajs, motor_updt_time,\
-            x_val_at_updt, tr_indx_for_coms, xpos_plot, median_pcom,\
+        E, A, com_model, first_ind, second_ind, resp_first, resp_fin,\
+            pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
+            frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
             rt_vals, rt_bins, tr_index =\
             trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
+                                trial_index=trial_index,
                                 MT_slope=MT_slope, MT_intercep=MT_intercep,
                                 p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                 p_e_noise=p_e_noise, p_com_bound=p_com_bound,
                                 p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                num_tr=num_tr, p_w_a=p_w_a,
-                                p_a_noise=p_a_noise, p_w_updt=p_w_updt,
+                                num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+                                p_w_a_slope=p_w_a_slope,
+                                p_a_noise=p_a_noise,
+                                p_1st_readout=p_1st_readout,
+                                p_2nd_readout=p_2nd_readout,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs)
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
@@ -496,43 +510,45 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = False
+    optimization = True
     rms_comparison = False
     plotting = False
     plot_rms_llk = False
-    single_run = False
-    stim, zt, coh, gt, com, pright = get_data(dfpath=DATA_FOLDER,
-                                              after_correct=True,
-                                              num_tr_per_rat=int(2e3),
-                                              all_trials=False)
-    array_params = np.array((10, 6, 35, 0.15, 0.15, 0.05, 0.3, 0.03, 0.06, 0.1))
+    single_run = True
+    stim, zt, coh, gt, com, pright, trial_index =\
+        get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
+                 num_tr_per_rat=int(1e4), all_trials=False)
+    array_params = np.array((0.2, 0.11, 0.02, 0, 8, 8, 14, 0.052, -2.2e-05,
+                             0.04, 10, 10))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
-    bounds = np.array(((5, 20), (3, 10), (20, 60), (0.05, 0.3), (0.05, 0.3),
-                      (0.005, 0.1), (0., 1), (0.005, 0.1), (0.05, 0.1),
-                      (0.05, 60)))
+    bounds = np.array(((0.1, 0.4), (0.02, 0.25), (0.001, 0.04), (0, 1),
+                       (1, 15), (1, 15), (2, 25), (0.01, 0.1), (-1e-04, 0),
+                       (0.01, 0.08), (1, 100), (1, 100)))
     bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
                               enumerate(bounds)])
     if single_run:
-        p_t_aff = 7
-        p_t_eff = 7
-        p_t_a = 35
-        p_w_zt = 0.16
-        p_w_stim = 0.15
-        p_e_noise = 0.05
+        p_t_aff = 8
+        p_t_eff = 8
+        p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+        p_w_zt = 0.2
+        p_w_stim = 0.11
+        p_e_noise = 0.02
         p_com_bound = 0.
-        p_w_a = 0.03
-        p_a_noise = 0.06
-        p_w_updt = 20
-        llk_val, diff_rms = run_likelihood(stim, zt, coh, gt, com, pright,
-                                           p_w_zt, p_w_stim,
-                                           p_e_noise, p_com_bound, p_t_aff,
-                                           p_t_eff, p_t_a, p_w_a, p_a_noise,
-                                           p_w_updt, num_times_tr=int(5e0),
-                                           detect_CoMs_th=5, rms_comparison=False)
+        p_w_a_intercept = 0.052
+        p_w_a_slope = -2.2e-05  # fixed
+        p_a_noise = 0.04  # fixed
+        p_1st_readout = 10
+        p_2nd_readout = 10
+        llk_val, diff_rms =\
+            run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
+                           p_w_stim, p_e_noise, p_com_bound, p_t_aff, p_t_eff,
+                           p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise,
+                           p_1st_readout, p_2nd_readout, num_times_tr=int(1e1))
         print(llk_val)
     # TODO: paralelize different initial points
     if optimization:
+        num_times_tr = 100
         print('Start optimization')
         rms_list = []
         llk_list = []
@@ -544,25 +560,25 @@ if __name__ == '__main__':
                 print('Generation {}, iteration {}'.format(gen+1, it+1))
                 params_init = optimizer.ask()
                 params = params_init * scaling_value
-                p_t_aff = int(params[0])
-                p_t_eff = int(params[1])
-                p_t_a = int(params[2])
-                p_w_zt = params[3]
-                p_w_stim = params[4]
-                p_e_noise = params[5]
-                p_com_bound = params[6]
-                p_w_a = params[7]
-                p_a_noise = params[8]
-                p_w_updt = params[9]
+                p_w_zt = params[0]
+                p_w_stim = params[1]
+                p_e_noise = params[2]
+                p_com_bound = params[3]
+                p_t_aff = int(round(params[4]))
+                p_t_eff = int(round(params[5]))
+                p_t_a = int(round(params[6]))
+                p_w_a_intercept = params[7]
+                p_w_a_slope = params[8]
+                p_a_noise = params[9]
+                p_1st_readout = params[10]
+                p_2nd_readout = params[11]
                 llk_val, diff_rms =\
-                    run_likelihood(stim=stim, zt=zt, coh=coh, gt=gt, com=com,
-                                   pright=pright, p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                   p_e_noise=p_e_noise, p_com_bound=p_com_bound,
-                                   p_t_aff=p_t_aff, p_t_eff=p_t_eff,
-                                   p_t_a=p_t_a, p_w_a=p_w_a, p_a_noise=p_a_noise,
-                                   p_w_updt=p_w_updt,
-                                   num_times_tr=int(1e2), detect_CoMs_th=5,
-                                   rms_comparison=rms_comparison)
+                    run_likelihood(stim, zt, coh, trial_index, gt, com, pright,
+                                   p_w_zt, p_w_stim, p_e_noise, p_com_bound,
+                                   p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                   p_w_a_slope, p_a_noise, p_1st_readout,
+                                   p_2nd_readout, rms_comparison=rms_comparison,
+                                   num_times_tr=num_times_tr)
                 solutions.append((params_init, llk_val))
                 np.save(SV_FOLDER+'last_solutions.npy', solutions)
                 if rms_comparison:

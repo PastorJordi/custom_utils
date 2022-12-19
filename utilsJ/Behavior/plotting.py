@@ -765,6 +765,7 @@ def trajectory_thr(
     bintype="edges",
     xpoints=None,
     raiseerrors=False,
+    plotmt=True,
 ):
     """
     Plot trajectories.
@@ -948,18 +949,31 @@ def trajectory_thr(
                         extra_kw[
                             "label"
                         ] = f"{round(bins[i],2)}<{bincol}<{round(bins[i+1],2)}"
-
-                ax.errorbar(
-                    xpoints[i],
-                    y_points[i] + fixation_delay_offset,
-                    yerr=y_err[i],
-                    **error_kwargs,
-                    color=cmap(i / (niters-1)),
-                    **extra_kw,
-                )
+                if plotmt:
+                    ax.errorbar(
+                        xpoints[i], mt_time[i], yerr=mt_time_err[i],
+                        # y_points[i] + fixation_delay_offset,
+                        # yerr=y_err[i],
+                        **error_kwargs,
+                        color=cmap(i / (niters-1)),
+                        **extra_kw,
+                    )
+                else:
+                    ax.errorbar(
+                        xpoints[i],
+                        y_points[i] + fixation_delay_offset,
+                        yerr=y_err[i],
+                        **error_kwargs,
+                        color=cmap(i / (niters-1)),
+                        **extra_kw,
+                    )
         else:
-            ax.errorbar(xpoints, y_points + fixation_delay_offset, yerr=y_err,
-                        **error_kwargs)
+            if plotmt:
+                ax.errorbar(xpoints, mt_time, yerr=mt_time_err,
+                            **error_kwargs)
+            else:
+                ax.errorbar(xpoints, y_points + fixation_delay_offset,
+                            yerr=y_err, **error_kwargs)
             # add 80ms offset for those new state machine (in other words,
             # this assumes that fixation = 300000us so it takes extra 80ms
             # to reach threshold)
@@ -978,18 +992,31 @@ def trajectory_thr(
                         extra_kw[
                             "label"
                         ] = f"{round(bins[i],2)}<{bincol}<{round(bins[i+1],2)}"
-
-                ax.errorbar(
-                    xpoints[i],
-                    y_points[i] + fixation_delay_offset,
-                    yerr=y_err[i],
-                    **error_kwargs,
-                    color=cmap(i / (niters-1)),
-                    **extra_kw,
-                )
+                if plotmt:
+                    ax.errorbar(
+                        xpoints[i], mt_time[i], yerr=mt_time_err[i],
+                        # y_points[i] + fixation_delay_offset,
+                        # yerr=y_err[i],
+                        **error_kwargs,
+                        color=cmap(i / (niters-1)),
+                        **extra_kw,
+                    )
+                else:
+                    ax.errorbar(
+                        xpoints[i],
+                        y_points[i] + fixation_delay_offset,
+                        yerr=y_err[i],
+                        **error_kwargs,
+                        color=cmap(i / (niters-1)),
+                        **extra_kw,
+                    )
         else:
-            ax.errorbar(xpoints, y_points + fixation_delay_offset, yerr=y_err,
-                        **error_kwargs)
+            if plotmt:
+                ax.errorbar(xpoints, mt_time, yerr=mt_time_err,
+                            **error_kwargs)
+            else:
+                ax.errorbar(xpoints, y_points + fixation_delay_offset,
+                            yerr=y_err, **error_kwargs)
             # add 80ms offset for those new state machine
             # (in other words, this assumes that fixation = 300000us so it
             # takes extra 80ms to reach threshold)

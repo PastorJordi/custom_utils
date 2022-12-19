@@ -14,9 +14,9 @@ from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -38,16 +38,16 @@ matplotlib.rcParams['lines.markersize'] = 3
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 # RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/Figure_3/001965.png'
 # RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
-    'craft_vid/CoM/a/001965.png'
+RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+# RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
+#     'craft_vid/CoM/a/001965.png'
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -336,7 +336,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
         xlab = 'ev. towards response'
         bintype = 'categorical'
     else:
-        bins = np.array([-1, -0.6, -0.15, 0.15, 0.6, 1])
+        bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
         xlab = 'prior towards response'
         bintype = 'edges'
     if after_correct_only:
@@ -344,7 +344,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
     else:
         ac_cond = (df.aftererror*1) >= 0
     # position
-    indx_trajs = (df.allpriors.abs() < prior_limit) &\
+    indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
         ac_cond & (df.special_trial == 0) &\
         (df.sound_len < rt_lim)
     xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
@@ -352,7 +352,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
                        collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
                        return_trash=True, error_kwargs=dict(marker='o'),
                        cmap='viridis', bintype=bintype,
-                       trajectory=trajectory)
+                       trajectory=trajectory, plotmt=True)
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
                      title='Coherence')
@@ -368,7 +368,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
     ax[0].set_ylabel('Motor time')
     ax[1].set_ylim([-10, 80])
     # ax2 = ax[0].twinx()
-    # ax2.errorbar(xpoints, mt_time, mt_time_err, color='c', ls=':')
+    ax[0].plot(xpoints, mt_time, color='k', ls=':')
     # ax2.set_label('Motor time')
     # velocities
     threshold = .2
@@ -376,7 +376,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh',
         df.loc[indx_trajs], condition, bins, collapse_sides=True,
         thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
         error_kwargs=dict(marker='o'), cmap='viridis',
-        bintype=bintype, trajectory=velocity)
+        bintype=bintype, trajectory=velocity, plotmt=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-50, 500])
@@ -770,6 +770,8 @@ def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
     w_coh = []
     w_t_i = []
     w_zt = []
+    if ax is None:
+        fig, ax = plt.subplots(1)
     for subject in df.subjid.unique():
         df_1 = df.loc[df.subjid == subject]
         resp_len = np.array(df_1.resp_len)
@@ -836,6 +838,39 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax, color='grey')
     ax.set_ylabel('Weight (a.u.)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
+
+
+def fig_2(df, fgsz=(8, 8), accel=False):
+    fgsz = fgsz
+    inset_sz = 0.1
+    accel = False
+    if accel:
+        f, ax = plt.subplots(nrows=4, ncols=2, figsize=fgsz)
+        ax = ax.flatten()
+        ax_cohs = np.array([ax[0], ax[2], ax[4], ax[6]])
+    else:
+        f, ax = plt.subplots(nrows=2, ncols=4, figsize=fgsz)
+        ax = ax.flatten()
+        ax_cohs = np.array([ax[1], ax[5]])
+        ax_zt = np.array([ax[0], ax[4]])
+    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+    # if accel:
+    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz)
+    ax_zt = np.insert(ax_zt, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz)
+    ax_zt = np.insert(ax_zt, 2, ax_inset)
+    for a in ax:
+        rm_top_right_lines(a)
+    trajs_cond_on_coh(df=df, ax=[ax_zt, ax_cohs], average=True,
+                      acceleration=accel)
+    # splits
+    ax_split = np.array([ax[2], ax[6]])
+    trajs_splitting(df, ax=ax_split[0])
+    trajs_splitting_point(df=df, ax=ax_split[1])
+    fig_1_mt_weights(df, ax=ax[3], plot=True, means_errs=False)
 
 
 def fig_3(df):
@@ -1470,7 +1505,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_zt = 0.2
     p_w_stim = 0.11
     p_e_noise = 0.02
-    p_com_bound = 0.
+    p_com_bound = 0.001
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
@@ -1569,10 +1604,10 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = True
-    f3 = False
-    f5 = False
+    f3 = True
+    f5 = True
     f6 = False
 
     # fig 1
@@ -1580,43 +1615,12 @@ if __name__ == '__main__':
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
         # fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        fig_1_mt_weights(df, plot=True, means_errs=False)
+        # fig_1_mt_weights(df, plot=True, means_errs=False, ax=None)
         fig_1_def(df_data=df)
 
     # fig 2
     if f2:
-        fgsz = (8, 8)
-        inset_sz = 0.1
-        accel = False
-        if accel:
-            f, ax = plt.subplots(nrows=4, ncols=2, figsize=fgsz)
-            ax = ax.flatten()
-            ax_cohs = np.array([ax[0], ax[2], ax[4], ax[6]])
-        else:
-            f, ax = plt.subplots(nrows=2, ncols=4, figsize=fgsz)
-            ax = ax.flatten()
-            ax_cohs = np.array([ax[1], ax[5]])
-            ax_zt = np.array([ax[0], ax[4]])
-        ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
-        ax_cohs = np.insert(ax_cohs, 0, ax_inset)
-        ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz)
-        ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-        # if accel:
-        ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz)
-        ax_zt = np.insert(ax_zt, 0, ax_inset)
-        ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz)
-        ax_zt = np.insert(ax_zt, 2, ax_inset)
-        for a in ax:
-            rm_top_right_lines(a)
-        trajs_cond_on_coh(df=df, ax=[ax_zt, ax_cohs], average=True,
-                          acceleration=accel)
-        # splits
-        ax_split = np.array([ax[2], ax[6]])
-        trajs_splitting(df, ax=ax_split[0])
-        # XXX: do this panel for all rats?
-        trajs_splitting_point(df=df, ax=ax_split[1])
-        fig_1_mt_weights(df, ax=ax[3],plot=True, means_errs=False)
-        # fig3.trajs_cond_on_prior(df, savpath=SV_FOLDER)
+        fig_2(df, fgsz=(8, 5))
 
     # fig 3
     if f3:
