@@ -45,7 +45,7 @@ DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/Figure_3/001965.png'
 # RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
 # RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
 #     'craft_vid/CoM/a/001965.png'
 FRAME_RATE = 14
@@ -770,7 +770,7 @@ def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
     w_coh = []
     w_t_i = []
     w_zt = []
-    if ax is None:
+    if ax is None and plot:
         fig, ax = plt.subplots(1)
     for subject in df.subjid.unique():
         df_1 = df.loc[df.subjid == subject]
@@ -840,7 +840,7 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_2(df, fgsz=(8, 8), accel=False):
+def fig_2(df, fgsz=(8, 5), accel=False):
     fgsz = fgsz
     inset_sz = 0.1
     accel = False
@@ -1607,7 +1607,7 @@ if __name__ == '__main__':
     f1 = True
     f2 = True
     f3 = True
-    f5 = True
+    f5 = False
     f6 = False
 
     # fig 1
@@ -1658,16 +1658,17 @@ if __name__ == '__main__':
             np.array(df.aftererror)[after_correct_id][:int(num_tr)]
         df_sim['subjid'] = 'simul'
         df_sim['dW_trans'] =\
-            np.array(df.dW_trans)[:int(num_tr)][after_correct_id]
+            np.array(df.dW_trans)[after_correct_id][:int(num_tr)]
         df_sim['origidx'] =\
-            np.array(df.origidx)[:int(num_tr)][after_correct_id]
-        df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)][after_correct_id]
+            np.array(df.origidx)[after_correct_id][:int(num_tr)]
+        df_sim['dW_lat'] = np.array(df.dW_lat)[after_correct_id][:int(num_tr)]
         df_sim['special_trial'] =\
-            np.array(df.special_trial)[:int(num_tr)][after_correct_id]
+            np.array(df.special_trial)[after_correct_id][:int(num_tr)]
         df_sim['traj'] = df_sim['trajectory_y']
         # simulation plots
-        means, errors = fig_1_mt_weights(df, means_errs=True)
-        means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True)
+        means, errors = fig_1_mt_weights(df, means_errs=True, ax=None)
+        means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True,
+                                                     ax=None)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time,
               decision_model=resp_fin, com=com, com_model=com_model,

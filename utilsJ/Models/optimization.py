@@ -518,11 +518,11 @@ if __name__ == '__main__':
     stim, zt, coh, gt, com, pright, trial_index =\
         get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
                  num_tr_per_rat=int(1e4), all_trials=False)
-    array_params = np.array((0.2, 0.11, 0.02, 0, 8, 8, 14, 0.052, -2.2e-05,
+    array_params = np.array((0.2, 0.11, 0.02, 1e-2, 8, 8, 14, 0.052, -2.2e-05,
                              0.04, 10, 10))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
-    bounds = np.array(((0.1, 0.4), (0.02, 0.25), (0.001, 0.04), (0, 1),
+    bounds = np.array(((0.1, 0.4), (0.02, 0.25), (0.001, 0.04), (1e-3, 1),
                        (1, 15), (1, 15), (2, 25), (0.01, 0.1), (-1e-04, 0),
                        (0.01, 0.08), (1, 100), (1, 100)))
     bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
