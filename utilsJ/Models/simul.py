@@ -11,7 +11,7 @@ so the following function can be called to do kind of a grid-search
 from utilsJ.Behavior import plotting, ComPipe
 from utilsJ.Models import traj
 from concurrent.futures import as_completed, ThreadPoolExecutor
-from scipy.stats import ttest_ind, sem
+from scipy.stats import ttest_ind, sem, pearsonr
 from matplotlib import cm
 import seaborn as sns
 from scipy.stats import norm
@@ -83,7 +83,8 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
 
 def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
                        startfrom=700,  ax=None, plot_kwargs={}, align='movement',
-                       collapse_sides=False, trajectory="trajectory_y"):
+                       collapse_sides=False, trajectory="trajectory_y",
+                       coh1=1, color='k', label=''):
     """
     gets when they are statistically different by t_test,
     df= dataframe
@@ -100,9 +101,9 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
     # TODO: addapt to align= sound
     # get matrices
     if side == 0:
-        coh1 = -1
+        coh1 = -coh1
     else:
-        coh1 = 1
+        coh1 = coh1
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
@@ -127,13 +128,13 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
         )
     else:
         mata_0 = np.vstack(
-            dat.loc[dat.coh2 == -1]
+            dat.loc[dat.coh2 == coh1]
             # removed swifter
             .apply(lambda x: plotting.interpolapply(x, **kw), axis=1)
             .values.tolist()
         )
         mata_1 = np.vstack(
-            dat.loc[dat.coh2 == 1]
+            dat.loc[dat.coh2 == -coh1]
             # removed swifter
             .apply(lambda x: plotting.interpolapply(x, **kw), axis=1)
             .values.tolist()
@@ -160,18 +161,15 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
 
     for a in [mata, matb]:  # discard all nan rows
         a = a[~np.isnan(a).all(axis=1)]
-
     ind = get_when_t(mata, matb, startfrom=startfrom)
 
     if ax is not None:
         ax.plot(np.arange(mata.shape[1]) - startfrom,
-                np.nanmedian(mata, axis=0), **plot_kwargs)
+                np.nanmedian(mata, axis=0), color=color, label=label)
         ax.plot(np.arange(matb.shape[1]) - startfrom,
-                np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
-        ax.scatter(ind, np.nanmedian(mata[:, startfrom+ind]), marker='x',
-                   color=plot_kwargs.get('color'),
-                   s=50, zorder=3)
-    return ind  # mata, matb,
+                np.nanmedian(matb, axis=0), color=(0.8, 0.8, 0.8, 1.0),
+                label=label, ls=':')
+    return ind, mata, matb
 
 
 def shortpad(traj, upto=1000, pad_value=np.nan):
