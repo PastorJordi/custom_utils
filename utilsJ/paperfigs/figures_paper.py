@@ -21,7 +21,7 @@ sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
-    com_heatmap_paper_marginal_pcom_side, trajectory_thr, com_heatmap
+    trajectory_thr, com_heatmap
 from utilsJ.Models import analyses_humans as ah
 import fig1, fig3, fig2
 import matplotlib
@@ -33,19 +33,19 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/from_python/'  # Manuel
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/Figure_3/001965.png'
+RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+    'ChangesOfMind/figures/Figure_3/001965.png'
 # RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+# RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
 # RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
 #     'craft_vid/CoM/a/001965.png'
 FRAME_RATE = 14
@@ -299,11 +299,12 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
     ax[1].set_title('Model')
 
 
-def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.05, marginy=0.05):
+def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.01, marginy=0.05):
     ratio = fgsz[0]/fgsz[1]
     pos = ax.get_position()
     ax_inset = plt.axes([pos.x1-inset_sz-marginx, pos.y0+marginy, inset_sz,
                          inset_sz*ratio])
+    rm_top_right_lines(ax_inset)
     return ax_inset
 
 
@@ -755,7 +756,7 @@ def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
 
 def fig_1_def(df_data):
     nbins = 7
-    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 5))  # figsize=(4, 3))
+    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(5, 5))  # figsize=(4, 3))
     ax = ax.flatten()
     ax_tach = ax[0]
     ax_pright = ax[2]
@@ -764,8 +765,7 @@ def fig_1_def(df_data):
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
-    ax_tach.spines['right'].set_visible(False)
-    ax_tach.spines['top'].set_visible(False)
+    rm_top_right_lines(ax_tach)
     ax_tach.legend()
     choice = df_data['R_response'].values
     coh = df_data['coh2'].values
@@ -786,8 +786,9 @@ def fig_1_def(df_data):
     # splitting
     ax_split = np.array([ax[1], ax[3]])
     trajs_splitting(df, ax=ax_split[0])
-    trajs_splitting_point(df=df, ax=ax_split[1])
+    rm_top_right_lines(ax_split[0])
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
+    f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
 
 
 def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
@@ -864,9 +865,9 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_2(df, fgsz=(8, 5), accel=False):
+def fig_2(df, fgsz=(15, 5), accel=False):
     fgsz = fgsz
-    inset_sz = 0.1
+    inset_sz = 0.08
     accel = False
     if accel:
         f, ax = plt.subplots(nrows=4, ncols=2, figsize=fgsz)
@@ -897,6 +898,9 @@ def fig_2(df, fgsz=(8, 5), accel=False):
                       acceleration=accel)
     # splits
     fig_1_mt_weights(df, ax=ax[3], plot=True, means_errs=False)
+    trajs_splitting_point(df=df, ax=ax[7])
+    f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
+    f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
 def fig_3(df):
@@ -1593,7 +1597,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    all_rats = False
+    all_rats = True
     if all_rats:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
@@ -1632,9 +1636,9 @@ if __name__ == '__main__':
     resp_len = resp_len[after_correct_id]
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = True
-    f3 = False
+    f1 = False
+    f2 = False
+    f3 = True
     f5 = False
     f6 = False
 
@@ -1645,6 +1649,7 @@ if __name__ == '__main__':
         # fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
         # fig_1_mt_weights(df, plot=True, means_errs=False, ax=None)
         fig_1_def(df_data=df)
+        fig2.bcd(parentpath='')
 
     # fig 2
     if f2:
