@@ -23,8 +23,8 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -34,14 +34,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
@@ -311,54 +311,54 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
     ax = ax.flatten()
     fig.suptitle('Stim/prior')
     sound_len = data_to_plot['sound_len']
-    window = 50
+    window = [0, 50, 100, 125, 150]
     if data:
         tit = 'Data: '
     else:
         tit = 'Model: '
     for i in range(4):
-        zt = data_to_plot['zt'][(sound_len > window*i) *
-                                (sound_len < window*(i+1))]
-        coh = data_to_plot['avtrapz'][(sound_len > window*i) *
-                                      (sound_len < window*(i+1))]
+        zt = data_to_plot['zt'][(sound_len > window[i]) *
+                                (sound_len < window[i+1])]
+        coh = data_to_plot['avtrapz'][(sound_len > window[i]) *
+                                      (sound_len < window[i+1])]
         if data:
-            com = data_to_plot['CoM'][(sound_len > window*i) *
-                                      (sound_len < window*(i+1))]
+            com = data_to_plot['CoM'][(sound_len > window[i]) *
+                                      (sound_len < window[i+1])]
         if not data:
-            com = data_to_plot['detected_com'][(sound_len > window*i) *
-                                               (sound_len < window*(i+1))]
+            com = data_to_plot['detected_com'][(sound_len > window[i]) *
+                                               (sound_len < window[i+1])]
         com_heatmap_jordi(zt, coh, com, return_mat=False, flip=True, ax=ax[i],
                           annotate=False, cmap='rocket')
-        ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
+        ax[i].set_title('{} {} < RT < {}'.format(tit, window[i], window[i+1]))
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     fig.suptitle('Stim/prior congruent with final decision')
     sound_len = data_to_plot['sound_len']
-    window = 50
+    window = [0, 50, 100, 125, 150]
     if data:
         tit = 'Data: '
     else:
         tit = 'Model: '
     for i in range(4):
-        zt = data_to_plot['zt'][(sound_len > window*i) *
-                                (sound_len < window*(i+1))]
-        zt *= data_to_plot['final_resp'][(sound_len > window*i) *
-                                         (sound_len < window*(i+1))]
-        coh = data_to_plot['avtrapz'][(sound_len > window*i) *
-                                      (sound_len < window*(i+1))]
-        coh *= data_to_plot['final_resp'][(sound_len > window*i) *
-                                          (sound_len < window*(i+1))]
+        zt = data_to_plot['zt'][(sound_len > window[i]) *
+                                (sound_len < window[i+1])]
+        zt *= data_to_plot['final_resp'][(sound_len > window[i]) *
+                                         (sound_len < window[i+1])]
+        coh = data_to_plot['avtrapz'][(sound_len > window[i]) *
+                                      (sound_len < window[i+1])]
+        coh *= data_to_plot['final_resp'][(sound_len > window[i]) *
+                                          (sound_len < window[i+1])]
         if data:
-            com = data_to_plot['CoM'][(sound_len > window*i) *
-                                      (sound_len < window*(i+1))]
+            com = data_to_plot['CoM'][(sound_len > window[i]) *
+                                      (sound_len < window[i+1])]
         if not data:
-            com = data_to_plot['detected_com'][(sound_len > window*i) *
-                                               (sound_len < window*(i+1))]
+            com = data_to_plot['detected_com'][(sound_len > window[i]) *
+                                               (sound_len < window[i+1])]
         com_heatmap_jordi(zt, coh, com, annotate=False,
                           return_mat=False, flip=True, ax=ax[i],
                           xlabel='prior congruency',
                           ylabel='avg stim congruency', cmap='rocket')
-        ax[i].set_title('{} {} < RT < {}'.format(tit, window*i, window*(i+1)))
+        ax[i].set_title('{} {} < RT < {}'.format(tit, window[i], window[i+1]))
     fig, ax = plt.subplots(1)
     zt = data_to_plot['zt'] * data_to_plot['final_resp']
     coh = data_to_plot['avtrapz'] * data_to_plot['final_resp']
@@ -928,7 +928,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
-            init_trajs.append(prior0 + np.random.randn(len(prior0))*0.3)
+            init_trajs.append(prior0 + np.random.randn(len(prior0))*0.2)
             # TRAJ. UPDATE
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
@@ -950,7 +950,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound
-            offset = 140
+            offset = 100
             second_response_len =\
                 float(remaining_m_time + offset*com[i_t] -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
@@ -961,7 +961,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # joined trajectories
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-            traj_updt += np.random.randn(len(traj_updt))*0.3  # noise
+            traj_updt += np.random.randn(len(traj_updt))*0.2  # noise
             total_traj.append(traj_updt)
             if com[i_t]:
                 opp_side_values = traj_updt.copy()
@@ -1212,9 +1212,11 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
                 MT = np.array(MT)*1e-3
                 mean_com_traj_peak(trajectories=None, com=detected_com,
+                                   time_trajs=None,
                                    sound_len=reaction_time,
                                    decision=resp_fin, motor_time=MT,
-                                   val_at_updt=x_val_at_updt, data=False)
+                                   val_at_updt=x_val_at_updt, data=False,
+                                   peak_cond=True)
                 # MT_vs_ev(resp_len=MT, coh=coh[tr_index],
                 #          com=detected_com)
                 if kernels_model:
@@ -2292,6 +2294,24 @@ def coms_tII_tI(first_ind, tr_index, p_t_eff, p_t_aff, stim_res, com,
         ax.set_ylabel('pCoM')
 
 
+def plot_com_methods(time_trajs, traj_y, com, comlist, decision,
+                     first_val=2000, second_val=2200):
+    fig, ax = plt.subplots(ncols=2)
+    for j in range(int(first_val), int(second_val)):
+        if com[j] == 1 and comlist[j] == 0:
+            if traj_y[j][-1] < 0:
+                ax[1].plot(time_trajs[j], -traj_y[j], color='red')
+            else:
+                ax[1].plot(time_trajs[j], traj_y[j], color='red')
+        if com[j] == 0 and comlist[j] == 1:
+            if traj_y[j][-1] < 0:
+                ax[0].plot(time_trajs[j], -traj_y[j], color='blue')
+            else:
+                ax[0].plot(time_trajs[j], traj_y[j], color='blue')
+    ax[1].set_title('Detected by old method - not by alternative', fontsize=8)
+    ax[0].set_title('Detected by alternative method - not by old', fontsize=8)
+
+
 def cdfs(coh, sound_len, title=''):
     plt.figure()
     colors = ['k', 'darkred', 'darkorange', 'gold']
@@ -2308,40 +2328,101 @@ def cdfs(coh, sound_len, title=''):
     plt.title(str(title))
 
 
+def com_detection(trajectories, decision, time_trajs, com_threshold=5):
+    com_trajs = []
+    time_com = []
+    peak_com = []
+    comlist = []
+    for i_t, traj in enumerate(trajectories):
+        if len(traj) > 1 and max(np.abs(traj)) > 100:
+            comlist.append(False)
+        else:
+            if len(traj) > 1 and len(time_trajs[i_t] > 1):
+                traj -= traj[time_trajs[i_t] >= 0][0]
+                signed_traj = traj*decision[i_t]
+                if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
+                    peak = abs(min(signed_traj[time_trajs[i_t] >= 0]))
+                    if peak > com_threshold:
+                        com_trajs.append(traj)
+                        time_com.append(time_trajs[i_t])
+                        peak_com.append(peak)
+                        comlist.append(True)
+                    else:
+                        comlist.append(False)
+                else:
+                    comlist.append(False)
+            else:
+                comlist.append(False)
+    return com_trajs, time_com, peak_com, comlist
+
+
 def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time,
-                       val_at_updt=None, data=True):
+                       time_trajs, val_at_updt=None, data=True, peak_cond=False):
     if data:
         peak_com = []
+        time_com = []
+        sound_com = []
+        mt_com = []
+        time_trajs = time_trajs[com.astype(bool)]
         traj_com = trajectories[com.astype(bool)]
+        decision_com = decision[com.astype(bool)]
         for i_t, traj in enumerate(traj_com):
-            signed_traj = traj*decision[i_t]
-            peak_com.append(abs(min(signed_traj)))
+            signed_traj = traj*decision_com[i_t]
+            if abs(traj[time_trajs[i_t] >= 0][0]) > 15:
+                continue
+            else:
+                peak = abs(min(signed_traj[time_trajs[i_t] >= 0]))
+                if peak < 50:
+                    peak_com.append(peak)
+                    time_com.append(time_trajs[i_t][time_trajs[i_t] >= 0]
+                                    [int(np.argmin(
+                                        signed_traj[time_trajs[i_t] >= 0]))])
+                # else:
+                #     peak = abs(min(signed_traj[time_trajs[i_t] < 300]))
+                #     peak_com.append(peak)
+                #     time_com.append(time_trajs[i_t][time_trajs[i_t] >= 0]
+                #                     [int(np.where(np.abs(signed_traj)
+                #                                   == peak)[0][0])])
+                    sound_com.append(sound_len[i_t])
+                    mt_com.append(resp_len[i_t])
     if not data:
         peak_com = np.array(val_at_updt)[com.astype(bool)]
         motor_time = np.array(motor_time)
+        sound_com = sound_len[com.astype(bool)]
+        mt_com = motor_time[com.astype(bool)]
     fig, ax = plt.subplots(nrows=2, ncols=2)
+    if peak_cond:
+        var = peak_com
+        xlab = 'CoM peak (pixels)'
+    else:
+        var = time_com
+        xlab = 'Time to peak (ms)'
     ax = ax.flatten()
-    ax[0].hist(peak_com, bins=30, range=(0, 120))
-    ax[0].set_xlabel('CoM peak (pixels)')
+    ax[0].hist(var, bins=80)
+    ax[0].set_xlabel(xlab)
     ax[0].set_ylabel('Counts')
-    df_plot = pd.DataFrame({'RT': sound_len[com.astype(bool)],
-                            'ComPeak': peak_com})
-    bins_rt = np.linspace(0, 300, 21)
-    binned_curve(df_plot, 'ComPeak', 'RT', bins=bins_rt,
-                 ax=ax[1], xpos=np.diff(bins_rt)[0])
+    df_plot = pd.DataFrame({'RT': sound_com,
+                            'ComPeak': var})
+    # bins_rt = np.linspace(0, 300, 21)
+    binned_curve(df_plot, 'ComPeak', 'RT', bins=BINS,
+                 ax=ax[1], xpos=np.diff(BINS)[0])
     ax[1].set_xlabel('RT (ms)')
-    ax[1].set_ylabel('CoM peak')
-    com_heatmap_jordi(zt[com.astype(bool)], coh[com.astype(bool)],
-                      (np.array(peak_com) < 50)*1.0, flip=True,
-                      annotate=False, ax=ax[2])
-    ax[2].set_title('Peak < 50 px.')
-    df_plot = pd.DataFrame({'MT': motor_time[com.astype(bool)]*1e3,
-                            'ComPeak': peak_com})
+    ax[1].set_ylabel(xlab)
+    # com_heatmap_jordi(zt[com.astype(bool)], coh[com.astype(bool)],
+    #                   (np.array(peak_com) < 50)*1.0, flip=True,
+    #                   annotate=False, ax=ax[2])
+    # ax[2].set_title('Peak < 50 px.')
+    if data:
+        ax[2].plot(time_com, peak_com, '.', color='k')
+    ax[2].set_xlabel('Time to peak (ms)')
+    ax[2].set_ylabel('CoM peak (pixels)')
+    df_plot = pd.DataFrame({'MT': np.array(mt_com)*1e3,
+                            'ComPeak': var})
     bins_mt = np.linspace(150, 600, 31)
     binned_curve(df_plot, 'ComPeak', 'MT', bins=bins_mt,
                  ax=ax[3], xpos=np.diff(bins_mt)[0])
     ax[3].set_xlabel('MT (ms)')
-    ax[3].set_ylabel('CoM peak')
+    ax[3].set_ylabel(xlab)
 
 
 def pdf_cohs(sound_len, ax, coh, bins=np.linspace(1, 301, 61), yaxis=True):
@@ -2366,6 +2447,24 @@ def pdf_cohs_subjects(subjects, sound_len, coh):
         pdf_cohs(sound_len[subjects == subj], ax[isub], coh[subjects == subj],
                  bins=np.linspace(1, 301, 61), yaxis=True)
         ax[isub].set_title(str(subj))
+
+
+def get_trajs_time(resp_len, traj_stamps, fix_onset, com, sound_len,
+                   com_cond=False):
+    time = []
+    if com_cond:
+        traj_st_com = traj_stamps[com.astype(bool)]
+        fix_onset_com = fix_onset[com.astype(bool)]
+        sound_len_com = sound_len[com.astype(bool)]
+    else:
+        traj_st_com = traj_stamps
+        fix_onset_com = fix_onset
+        sound_len_com = sound_len
+    for j in range(len(traj_st_com)):
+        t = traj_st_com[j] - fix_onset_com[j]
+        t = (t.astype(int) / 1000_000 - 250 - sound_len_com[j])
+        time.append(t)
+    return np.array(time)
 
 
 # --- MAIN
@@ -2457,19 +2556,21 @@ if __name__ == '__main__':
         hit = hit[:int(num_tr)]
         if splitting:
             traj_y = traj_y[:int(num_tr)]
+            fix_onset = fix_onset[:int(num_tr)]
+            traj_stamps = traj_stamps[:int(num_tr)]
         if single_run:  # single run with specific parameters
-            p_t_aff = 7
-            p_t_eff = 7
+            p_t_aff = 8
+            p_t_eff = 8
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-            p_w_zt = 0.2
+            p_w_zt = 0.15
             p_w_stim = 0.11
             p_e_noise = 0.02
             p_com_bound = 0.001
             p_w_a_intercept = 0.052
             p_w_a_slope = -2.2e-05  # fixed
             p_a_noise = 0.04  # fixed
-            p_1st_readout = 5
-            p_2nd_readout = 60
+            p_1st_readout = 30
+            p_2nd_readout = 30
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2480,6 +2581,11 @@ if __name__ == '__main__':
                               p_2nd_readout)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
+            time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
+                                        sound_len=sound_len)
+            _, _, _, comlist = com_detection(
+                traj_y, decision, time_trajs, com_threshold=5)
+            com = np.array(comlist)
             if plot:
                 # left_right_matrix(zt, coh, com, decision)
                 data_to_plot = {'sound_len': sound_len,
@@ -2494,8 +2600,9 @@ if __name__ == '__main__':
                                 'trial_idxs': trial_index}
                 plot_misc(data_to_plot, stim_res=stim_res, data=True)
                 mean_com_traj_peak(trajectories=traj_y, com=com,
-                                    sound_len=sound_len, decision=decision,
-                                    motor_time=resp_len)
+                                   sound_len=sound_len, decision=decision,
+                                   motor_time=resp_len,
+                                   time_trajs=np.array(time_trajs))
             if splitting:
                 traj_y = traj_y[:int(num_tr)]
                 fix_onset = fix_onset[:int(num_tr)]

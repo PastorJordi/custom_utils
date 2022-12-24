@@ -15,8 +15,8 @@ from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -35,17 +35,17 @@ matplotlib.rcParams['lines.markersize'] = 3
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/from_python/'  # Manuel
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/from_python/'  # Manuel
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-    'ChangesOfMind/figures/Figure_3/001965.png'
+# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+#     'ChangesOfMind/figures/Figure_3/001965.png'
 # RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-# RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
 # RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
 #     'craft_vid/CoM/a/001965.png'
 FRAME_RATE = 14
@@ -803,10 +803,12 @@ def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
         decision = np.array(df_1.R_response)*2 - 1
         coh = np.array(df_1.coh2)
         trial_index = np.array(df_1.origidx)
+        com = df.CoM_sugg.values
         zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
         params = mt_linear_reg(mt=resp_len, coh=coh*decision/max(np.abs(coh)),
                                trial_index=trial_index/max(trial_index),
-                               prior=zt*decision/max(np.abs(zt)), plot=False)
+                               prior=zt*decision/max(np.abs(zt)), plot=False,
+                               com=com)
         w_coh.append(params[1])
         w_t_i.append(params[2])
         w_zt.append(params[3])
@@ -1143,36 +1145,36 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_model = com_model[sound_len_model >= 0]
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         ax=ax[2], label='Model')
-    pdf_cohs(sound_len=sound_len, ax=ax[0], coh=coh, yaxis=True)
-    pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[1],
+                         ax=ax[10], label='Model')
+    pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
+    pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
              coh=coh[sound_len_model >= 0], yaxis=False)
-    ax[0].set_title('Data')
-    ax[1].set_title('Model')
+    ax[8].set_title('Data')
+    ax[9].set_title('Model')
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
                             'com_model': com_model,
                             'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[4])
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12])
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[4])
+                                            'color': 'red'}, ax=ax[12])
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[4])
-    ax[4].xaxis.tick_top()
-    ax[4].xaxis.tick_bottom()
-    ax[4].legend()
-    ax[4].set_xlabel('RT (ms)')
-    ax[4].set_ylabel('PCoM')
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[12])
+    ax[12].xaxis.tick_top()
+    ax[12].xaxis.tick_bottom()
+    ax[12].legend()
+    ax[12].set_xlabel('RT (ms)')
+    ax[12].set_ylabel('PCoM')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
-    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[3],
+    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[11],
                            flip=True, annotate=False, xlabel='prior',
                            ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
-    ax[3].set_title('Pright Model')
+    ax[11].set_title('Pright Model')
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
                                  com_model_detected,
@@ -1184,28 +1186,29 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=1)
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax[5].set_title(pcomlabel_1)
-    im = ax[5].imshow(matrix_side_1, vmin=0, vmax=vmax)
-    plt.sca(ax[5])
+    ax[13].set_title(pcomlabel_1)
+    im = ax[13].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax[13])
     plt.colorbar(im, fraction=0.04)
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    ax[6].set_title(pcomlabel_0)
-    im = ax[6].imshow(matrix_side_0, vmin=0, vmax=vmax)
-    ax[6].yaxis.set_ticks_position('none')
-    plt.sca(ax[6])
+    ax[14].set_title(pcomlabel_0)
+    im = ax[14].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax[14].yaxis.set_ticks_position('none')
+    plt.sca(ax[14])
     plt.colorbar(im, fraction=0.04)
-    for ax_i in [ax[5], ax[6]]:
+    for ax_i in [ax[13], ax[14]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
-    ax[5].set_ylabel('Stimulus Evidence')
-    plot_bars(means=means, errors=errors, ax=ax[7], f5=True,
+    ax[13].set_ylabel('Stimulus Evidence')
+    plot_bars(means=means, errors=errors, ax=ax[15], f5=True,
               means_model=means_model, errors_model=errors_model)
-    ax_pr = [ax[i] for i in [8, 12, 9, 13]]
+    ax_pr = [ax[i] for i in [0, 4, 1, 5]]
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=False, prior=True)
-    ax_coh = [ax[i] for i in [10, 14, 11, 15]]
+    ax_coh = [ax[i] for i in [2, 6, 3, 7]]
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=False, prior=False,
                         prior_lim=0.25)
+    # bins_MT = np.linspace(50, 600, num=25, dtype=int)
 
 
 def traj_model_plot(df_sim):
@@ -1477,7 +1480,7 @@ def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
 
 
-def mt_linear_reg(mt, coh, trial_index, prior, plot=False):
+def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
     """
 
     Parameters
@@ -1497,9 +1500,11 @@ def mt_linear_reg(mt, coh, trial_index, prior, plot=False):
         DESCRIPTION.
 
     """
-    trial_index = trial_index.astype(float)
-    xdata = np.array([[coh], [trial_index], [prior]]).reshape(3, len(prior))
-    ydata = np.array(mt*1e3)
+    trial_index = trial_index.astype(float)[~com.astype(bool)]
+    xdata = np.array([[coh[~com.astype(bool)]],
+                      [trial_index],
+                      [prior[~com.astype(bool)]]]).reshape(3, sum(~com))
+    ydata = np.array(mt[~com.astype(bool)]*1e3)
     popt, pcov = curve_fit(f=linear_fun, xdata=xdata, ydata=ydata)
     if plot:
         df = pd.DataFrame({'coh': coh/max(coh), 'prior': prior/max(prior),
@@ -1531,18 +1536,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 6
+    p_t_aff = 8
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.17
+    p_w_zt = 0.15
     p_w_stim = 0.11
     p_e_noise = 0.01
     p_com_bound = 0.001
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 5
-    p_2nd_readout = 50
+    p_1st_readout = 30
+    p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -1597,7 +1602,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    all_rats = True
+    all_rats = False
     if all_rats:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
@@ -1626,6 +1631,10 @@ if __name__ == '__main__':
     com = com[after_correct_id]
     decision = np.array(df.R_response) * 2 - 1
     decision = decision[after_correct_id]
+    traj_stamps = df.trajectory_stamps.values[after_correct_id]
+    traj_y = df.trajectory_y.values[after_correct_id]
+    fix_onset = df.fix_onset_dt.values[after_correct_id]
+
     sound_len = np.array(df.sound_len)
     sound_len = sound_len[after_correct_id]
     gt = np.array(df.rewside) * 2 - 1
@@ -1634,12 +1643,18 @@ if __name__ == '__main__':
     trial_index = trial_index[after_correct_id]
     resp_len = np.array(df.resp_len)
     resp_len = resp_len[after_correct_id]
+    time_trajs = edd2.get_trajs_time(resp_len=resp_len, traj_stamps=traj_stamps,
+                                     fix_onset=fix_onset, com=com,
+                                     sound_len=sound_len)
+    _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
+                                      time_trajs=time_trajs)
+    com = np.array(com)  # new CoM list
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
     f2 = False
-    f3 = True
-    f5 = False
+    f3 = False
+    f5 = True
     f6 = False
 
     # fig 1
@@ -1661,7 +1676,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(3e5)
+        num_tr = int(2e5)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
@@ -1678,7 +1693,7 @@ if __name__ == '__main__':
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=None)
         # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-        # basic_statistics(com, com_model_detected)  # com
+        basic_statistics(com, com_model_detected)  # com
         # basic_statistics(hit, hit_model)  # hit
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
@@ -1686,6 +1701,7 @@ if __name__ == '__main__':
                                'rewside': (gt + 1)/2,
                                'R_response': (resp_fin+1)/2,
                                'resp_len': np.array(MT)*1e-3})
+        df_sim['CoM_sugg'] = com_model
         df_sim['traj_d1'] = [np.diff(t) for t in trajs]
         df_sim['aftererror'] =\
             np.array(df.aftererror)[after_correct_id][:int(num_tr)]
@@ -1703,7 +1719,7 @@ if __name__ == '__main__':
         means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True,
                                                      ax=None)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
-              hit_model=hit_model, sound_len_model=reaction_time,
+              hit_model=hit_model, sound_len_model=reaction_time.astype(int),
               decision_model=resp_fin, com=com, com_model=com_model,
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
               means=means, errors=errors, means_model=means_model,
