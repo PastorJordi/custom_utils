@@ -950,7 +950,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound
-            offset = 100
+            offset = 140
             second_response_len =\
                 float(remaining_m_time + offset*com[i_t] -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
@@ -2559,18 +2559,18 @@ if __name__ == '__main__':
             fix_onset = fix_onset[:int(num_tr)]
             traj_stamps = traj_stamps[:int(num_tr)]
         if single_run:  # single run with specific parameters
-            p_t_aff = 8
-            p_t_eff = 8
+            p_t_aff = 9
+            p_t_eff = 12
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-            p_w_zt = 0.15
+            p_w_zt = 0.2
             p_w_stim = 0.11
-            p_e_noise = 0.02
+            p_e_noise = 0.01
             p_com_bound = 0.001
             p_w_a_intercept = 0.052
             p_w_a_slope = -2.2e-05  # fixed
             p_a_noise = 0.04  # fixed
-            p_1st_readout = 30
-            p_2nd_readout = 30
+            p_1st_readout = 35
+            p_2nd_readout = 35
             compute_trajectories = True
             plot = True
             all_trajs = True
