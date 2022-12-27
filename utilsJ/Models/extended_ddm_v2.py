@@ -23,8 +23,8 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -34,14 +34,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
@@ -1212,7 +1212,7 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                 plot_misc(data_to_plot=data_to_plot, stim_res=stim_res)
                 MT = np.array(MT)*1e-3
                 mean_com_traj_peak(trajectories=None, com=detected_com,
-                                   time_trajs=None,
+                                   time_trajs=None, zt=zt,
                                    sound_len=reaction_time,
                                    decision=resp_fin, motor_time=MT,
                                    val_at_updt=x_val_at_updt, data=False,
@@ -2294,22 +2294,74 @@ def coms_tII_tI(first_ind, tr_index, p_t_eff, p_t_aff, stim_res, com,
         ax.set_ylabel('pCoM')
 
 
-def plot_com_methods(time_trajs, traj_y, com, comlist, decision,
-                     first_val=2000, second_val=2200):
+def plot_com_methods(time_trajs, traj_y, com, comlist, subjname=''):
     fig, ax = plt.subplots(ncols=2)
-    for j in range(int(first_val), int(second_val)):
+    cont1 = 1
+    cont2 = 1
+    j = 0
+    while cont2 <= 10:
         if com[j] == 1 and comlist[j] == 0:
             if traj_y[j][-1] < 0:
                 ax[1].plot(time_trajs[j], -traj_y[j], color='red')
-            else:
+            if traj_y[j][-1] > 0:
                 ax[1].plot(time_trajs[j], traj_y[j], color='red')
+            cont2 += 1
+        j += 1
+    l_com = len([c for i, c in enumerate(com) if c and not comlist[i]])
+    j = 0
+    while cont1 <= 10:
         if com[j] == 0 and comlist[j] == 1:
             if traj_y[j][-1] < 0:
                 ax[0].plot(time_trajs[j], -traj_y[j], color='blue')
-            else:
+            if traj_y[j][-1] > 0:
                 ax[0].plot(time_trajs[j], traj_y[j], color='blue')
-    ax[1].set_title('Detected by old method - not by alternative', fontsize=8)
-    ax[0].set_title('Detected by alternative method - not by old', fontsize=8)
+            cont1 += 1
+        j += 1
+    l_alt = len([c for i, c in enumerate(com) if not c and comlist[i]])
+    ax[1].set_title('Detected by old method - not by alt. {}/{}'.format(
+        l_com, sum(com)), fontsize=10)
+    ax[0].set_title('Detected by alt. method - not by old {}/{}'.format(
+        l_alt, sum(comlist)), fontsize=10)
+    for iax in range(2):
+        ax[iax].set_xlabel('Time (ms)')
+        ax[iax].set_ylim(-15, 95)
+        ax[iax].axhline(-5, linestyle='--', color='k', alpha=0.4)
+        ax[iax].axvline(0, linestyle='--', color='k', alpha=0.4)
+        ax[iax].set_xlim(-50, ax[iax].get_xlim()[1])
+    ax[0].set_ylabel('y-axis (px)')
+    # len([c for i, c in enumerate(com) if c and comlist[i]])
+    fig.suptitle('Rat: {}. Total intersection {}'.format(
+        subjname, sum(com[comlist])), fontsize=10)
+
+
+def plot_prev_traj(time_trajs, traj_y):
+    fig, ax = plt.subplots(1)
+    cont = 0
+    plot = True
+    last_val = []
+    first_val = []
+    for i_traj, traj in enumerate(traj_y):
+        prev_traj = traj_y[i_traj - 1]
+        try:
+            traj[0]
+            prev_traj[-1]
+        except Exception:
+            continue
+        if np.abs(traj[0]) > 30 and plot and traj[-1] > 0 and traj[0] > 0:
+            cont += 1
+            ax.plot(time_trajs[i_traj], traj, color='blue')
+            max_time_prev_traj = min(time_trajs[i_traj])
+            time_prev_traj = time_trajs[i_traj - 1] -\
+                max(time_trajs[i_traj-1]) + max_time_prev_traj
+            ax.plot(time_prev_traj[-5:-1], prev_traj[-5:-1], color='red')
+        last_val.append(prev_traj[-1])
+        first_val.append(traj[0])
+        if cont >= 50:
+            plot = False
+    fig, ax = plt.subplots(1)
+    ax.plot(last_val, first_val, '.', color='k')
+    ax.set_ylabel('First value of trajectory')
+    ax.set_xlabel('Last value of previous trajectory')
 
 
 def cdfs(coh, sound_len, title=''):
@@ -2338,7 +2390,8 @@ def com_detection(trajectories, decision, time_trajs, com_threshold=5):
             comlist.append(False)
         else:
             if len(traj) > 1 and len(time_trajs[i_t] > 1):
-                traj -= traj[time_trajs[i_t] >= 0][0]
+                traj -= np.nanmean(traj[
+                    (time_trajs[i_t] >= -300)*(time_trajs[i_t] <= 0)])
                 signed_traj = traj*decision[i_t]
                 if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
                     peak = abs(min(signed_traj[time_trajs[i_t] >= 0]))
@@ -2356,7 +2409,7 @@ def com_detection(trajectories, decision, time_trajs, com_threshold=5):
     return com_trajs, time_com, peak_com, comlist
 
 
-def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time,
+def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time, zt,
                        time_trajs, val_at_updt=None, data=True, peak_cond=False):
     if data:
         peak_com = []
@@ -2367,7 +2420,7 @@ def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time,
         traj_com = trajectories[com.astype(bool)]
         decision_com = decision[com.astype(bool)]
         for i_t, traj in enumerate(traj_com):
-            signed_traj = traj*decision_com[i_t]
+            signed_traj = traj[6:-1]*decision_com[i_t]
             if abs(traj[time_trajs[i_t] >= 0][0]) > 15:
                 continue
             else:
@@ -2472,7 +2525,7 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(2e5)
     load_data = True
     new_sample = True
     single_run = True
@@ -2490,7 +2543,7 @@ if __name__ == '__main__':
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps,\
                     subjects =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE44',
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2585,7 +2638,9 @@ if __name__ == '__main__':
                                         sound_len=sound_len)
             _, _, _, comlist = com_detection(
                 traj_y, decision, time_trajs, com_threshold=5)
-            com = np.array(comlist)
+            comlist = np.array(comlist)
+            # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
+            com = comlist
             if plot:
                 # left_right_matrix(zt, coh, com, decision)
                 data_to_plot = {'sound_len': sound_len,
@@ -2599,7 +2654,7 @@ if __name__ == '__main__':
                                 'zt': zt, 'decision': decision,
                                 'trial_idxs': trial_index}
                 plot_misc(data_to_plot, stim_res=stim_res, data=True)
-                mean_com_traj_peak(trajectories=traj_y, com=com,
+                mean_com_traj_peak(trajectories=traj_y, com=com, zt=zt,
                                    sound_len=sound_len, decision=decision,
                                    motor_time=resp_len,
                                    time_trajs=np.array(time_trajs))

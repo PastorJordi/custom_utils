@@ -13,10 +13,11 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
+from scipy.stats import pearsonr
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -33,19 +34,19 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/from_python/'  # Manuel
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 # RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
 #     'ChangesOfMind/figures/Figure_3/001965.png'
-# RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+# RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
 # RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
 #     'craft_vid/CoM/a/001965.png'
 FRAME_RATE = 14
@@ -423,6 +424,18 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         plt.show()
 
 
+def get_split_ind_corr(mata, matb, pval=0.001):
+    # plist = []
+    for j in range(5, len(mata)):
+        pop_a = mata[0: j]
+        pop_b = matb[0: j]
+        _, p2 = pearsonr(pop_a, pop_b)
+        # plist.append(p2)
+        if p2 < pval:
+            return j
+    return np.nan
+
+
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 25, 2),
                     subject='LE43', startfrom=700):
     """
@@ -453,7 +466,9 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 25, 2),
     lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
     colors = pl.cm.gist_yarg(np.linspace(0.4, 1, 3))
     evs = [0.25, 0.5, 1]
-    mata = np.empty((0, 1701))
+    mat = np.empty((1701,))
+    evl = np.empty(())
+    appb = True
     for iev, ev in enumerate(evs):
         _, matatmp, matb =\
             simul.when_did_split_dat(df=df[df.subjid == subject],
@@ -461,18 +476,31 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 25, 2),
                                      rtbin=rtbin, rtbins=rtbins,
                                      color=colors[iev], label=lbl,
                                      coh1=ev)
-        mata = np.concatenate((mata, matatmp))
-
-    ind = simul.get_when_t(mata, matb, startfrom=startfrom)
-    ax.scatter(ind, np.nanmedian(mata[:, startfrom+ind]), marker='x',
-               color='red',
-               s=50, zorder=3)
-    ax.set_xlim(-10, 140)
-    ax.set_ylim(-5, 20)
+        if appb:
+            mat = matb
+            evl = np.repeat(0, matb.shape[0])
+            appb = False
+        mat = np.concatenate((mat, matatmp))
+        evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+    # plist = []
+    pval = 0.001
+    max_MT = 400
+    for i in range(max_MT):
+        pop_a = mat[:, startfrom + i]
+        nan_idx = ~np.isnan(pop_a)
+        pop_evidence = evl[nan_idx]
+        pop_a = pop_a[nan_idx]
+        _, p2 = pearsonr(pop_a, pop_evidence)
+        # plist.append(p2)
+        if p2 < pval:
+            ind = i
+            break
+    ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    ax.set_xlim(-10, 100)
+    ax.set_ylim(-2, 5)
     ax.set_xlabel('time from movement onset (ms)')
     ax.set_ylabel('y dimension (px)')
     ax.set_title(subject)
-    # ax.legend()
     plt.show()
 
 
@@ -1651,10 +1679,10 @@ if __name__ == '__main__':
     com = np.array(com)  # new CoM list
     df['norm_allpriors'] = zt/max(abs(zt))
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
-    f5 = True
+    f5 = False
     f6 = False
 
     # fig 1
