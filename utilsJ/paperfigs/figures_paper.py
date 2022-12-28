@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ttest_ind
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -424,15 +424,16 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         plt.show()
 
 
-def get_split_ind_corr(mata, matb, pval=0.001):
-    # plist = []
-    for j in range(5, len(mata)):
-        pop_a = mata[0: j]
-        pop_b = matb[0: j]
-        _, p2 = pearsonr(pop_a, pop_b)
+def get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700):
+    for i in range(max_MT):
+        pop_a = mat[:, startfrom + i]
+        nan_idx = ~np.isnan(pop_a)
+        pop_evidence = evl[nan_idx]
+        pop_a = pop_a[nan_idx]
+        _, p2 = pearsonr(pop_a, pop_evidence)
         # plist.append(p2)
         if p2 < pval:
-            return j
+            return i
     return np.nan
 
 
@@ -482,19 +483,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 25, 2),
             appb = False
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-    # plist = []
-    pval = 0.001
-    max_MT = 400
-    for i in range(max_MT):
-        pop_a = mat[:, startfrom + i]
-        nan_idx = ~np.isnan(pop_a)
-        pop_evidence = evl[nan_idx]
-        pop_a = pop_a[nan_idx]
-        _, p2 = pearsonr(pop_a, pop_evidence)
-        # plist.append(p2)
-        if p2 < pval:
-            ind = i
-            break
+    ind = get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700)
     ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
     ax.set_xlim(-10, 100)
     ax.set_ylim(-2, 5)
@@ -522,12 +511,26 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     for subject in df.subjid.unique():
         for i in range(rtbins.size-1):
             if collapse_sides:
-                current_split_index, _, _ = splitfun(
-                    df=df.loc[(df.special_trial == 0) & (df.subjid == subject)],
-                    side=0,  # side has no effect because this is collapsing_sides
-                    rtbin=i, rtbins=rtbins, collapse_sides=True,
-                    trajectory=trajectory
-                )
+                evs = [0.25, 0.5, 1]
+                mat = np.empty((1701,))
+                evl = np.empty(())
+                appb = True
+                for iev, ev in enumerate(evs):
+                    _, matatmp, matb =\
+                        splitfun(df=df.loc[(df.special_trial == 0)
+                                           & (df.subjid == subject)],
+                                 side=0, collapse_sides=True,
+                                 rtbin=i, rtbins=rtbins, coh1=ev,
+                                 trajectory=trajectory)
+                    if appb:
+                        mat = matb
+                        evl = np.repeat(0, matb.shape[0])
+                        appb = False
+                    mat = np.concatenate((mat, matatmp))
+                    evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+                current_split_index =\
+                    get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
+                                       startfrom=700)
                 out_data += [current_split_index]
             else:
                 for j in [0, 1]:  # side values
@@ -931,6 +934,13 @@ def fig_2(df, fgsz=(15, 5), accel=False):
     trajs_splitting_point(df=df, ax=ax[7])
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
+
+
+def tach_1st_2nd_choice(df, ax):
+    # TODO: end
+    choice = df.R_response.values * 2 - 1
+    ev = df.coh2.values
+    gt = df.rewside.values * 2 - 1
 
 
 def fig_3(df):
@@ -1564,18 +1574,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 9
+    p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.18
-    p_w_stim = 0.11
+    p_w_stim = 0.15
     p_e_noise = 0.01
     p_com_bound = 0.001
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 30
-    p_2nd_readout = 30
+    p_1st_readout = 40
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -1627,10 +1637,62 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
         pro_vs_re, total_traj
 
 
+def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
+    ev_vals = [0, 1]
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, len(ev_vals)))
+    num_subjects = len(df.subjid.unique())
+    density_matrix_0 = np.zeros((num_subjects, len(bins)-1))
+    density_matrix_1 = np.zeros((num_subjects, len(bins)-1))
+    xvals = bins[:-1]+(bins[1]-bins[0])/2
+    subjects = df.subjid.unique()
+    for i_sub, subj in enumerate(subjects):
+        df1 = df.loc[df.subjid == subj]
+        sound_len = df1.sound_len.values
+        coh = df1.coh2.values
+        for i_coh, ev in enumerate(ev_vals):
+            index = np.abs(coh) == ev
+            counts_coh, _ = np.histogram(sound_len[index], bins=bins)
+            norm_counts = counts_coh/sum(counts_coh)
+            if ev == 0:
+                density_matrix_0[i_sub, :] = norm_counts
+            else:
+                density_matrix_1[i_sub, :] = norm_counts
+    # plist = []
+    for i_rt, rt_bin in enumerate(xvals):
+        density_vals_0 = density_matrix_0[:, i_rt+1]
+        density_vals_1 = density_matrix_1[:, i_rt+1]
+        _, p_value = ttest_ind(density_vals_0, density_vals_1)
+        # plist.append(p_value)
+        if p_value < pval_max:
+            ind = rt_bin
+            break
+    fig, ax = plt.subplots(1)
+    # for i_sub in range(num_subjects):
+    #     ax.plot(xvals, density_matrix_0[i_sub, :], color=colormap[0],
+    #             linewidth=.7, alpha=0.2)
+    #     ax.plot(xvals, density_matrix_1[i_sub, :], color=colormap[1],
+    #             linewidth=.7, alpha=0.2)
+    mean_density_0 = np.nanmean(density_matrix_0, axis=0)
+    mean_density_1 = np.nanmean(density_matrix_1, axis=0)
+    std_density_0 = np.nanstd(density_matrix_0, axis=0)/np.sqrt(num_subjects)
+    std_density_1 = np.nanstd(density_matrix_1, axis=0)/np.sqrt(num_subjects)
+    ax.plot(xvals, mean_density_0, color=colormap[0], linewidth=2, label='coh=0')
+    ax.plot(xvals, mean_density_1, color=colormap[1], linewidth=2, label='coh=1')
+    ax.fill_between(xvals, mean_density_0-std_density_0,
+                    mean_density_0+std_density_0, color=colormap[0], alpha=0.5)
+    ax.fill_between(xvals, mean_density_1-std_density_1,
+                    mean_density_1+std_density_1, color=colormap[1], alpha=0.3)
+    ax.axvline(ind, color='r', linestyle='--', alpha=0.8,
+               label='{} ms'.format(ind))
+    ax.legend()
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Density')
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    all_rats = False
+    all_rats = True
     if all_rats:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
@@ -1678,10 +1740,11 @@ if __name__ == '__main__':
                                       time_trajs=time_trajs)
     com = np.array(com)  # new CoM list
     df['norm_allpriors'] = zt/max(abs(zt))
+    df['CoM_sugg'] = com
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = True
-    f2 = False
-    f3 = False
+    f2 = True
+    f3 = True
     f5 = False
     f6 = False
 
@@ -1721,7 +1784,7 @@ if __name__ == '__main__':
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=None)
         # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-        basic_statistics(com, com_model_detected)  # com
+        # basic_statistics(com, com_model_detected)  # com
         # basic_statistics(hit, hit_model)  # hit
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,

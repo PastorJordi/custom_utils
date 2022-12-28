@@ -2299,7 +2299,7 @@ def plot_com_methods(time_trajs, traj_y, com, comlist, subjname=''):
     cont1 = 1
     cont2 = 1
     j = 0
-    while cont2 <= 10:
+    while cont2 <= 100:
         if com[j] == 1 and comlist[j] == 0:
             if traj_y[j][-1] < 0:
                 ax[1].plot(time_trajs[j], -traj_y[j], color='red')
@@ -2309,7 +2309,7 @@ def plot_com_methods(time_trajs, traj_y, com, comlist, subjname=''):
         j += 1
     l_com = len([c for i, c in enumerate(com) if c and not comlist[i]])
     j = 0
-    while cont1 <= 10:
+    while cont1 <= 100:
         if com[j] == 0 and comlist[j] == 1:
             if traj_y[j][-1] < 0:
                 ax[0].plot(time_trajs[j], -traj_y[j], color='blue')
@@ -2389,9 +2389,10 @@ def com_detection(trajectories, decision, time_trajs, com_threshold=5):
         if len(traj) > 1 and max(np.abs(traj)) > 100:
             comlist.append(False)
         else:
-            if len(traj) > 1 and len(time_trajs[i_t] > 1):
+            if len(traj) > 1 and len(time_trajs[i_t]) > 1 and\
+              sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
                 traj -= np.nanmean(traj[
-                    (time_trajs[i_t] >= -300)*(time_trajs[i_t] <= 0)])
+                    (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
                 signed_traj = traj*decision[i_t]
                 if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
                     peak = abs(min(signed_traj[time_trajs[i_t] >= 0]))
@@ -2636,7 +2637,7 @@ if __name__ == '__main__':
             print('Number of trials: ' + str(stim.shape[1]))
             time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
                                         sound_len=sound_len)
-            _, _, _, comlist = com_detection(
+            com_trajs, _, _, comlist = com_detection(
                 traj_y, decision, time_trajs, com_threshold=5)
             comlist = np.array(comlist)
             # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')

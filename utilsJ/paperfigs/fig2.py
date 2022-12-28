@@ -251,14 +251,14 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             yerr=tmp['sem'],
             label='p(CoM)', color='tab:orange'
         )
-    ax.set_ylim(0, 0.08)
+    ax.set_ylim(0, 0.12)
     if dist:
         hist_list = []
         for subject in df.subjid.unique():
             counts, bns = np.histogram(df[(df.subjid == subject) & (
                 df.special_trial == 0)].sound_len.dropna().values, bins=rtbins)
             hist_list += [counts]
-        ax.set_ylim(0, 0.08)
+        ax.set_ylim(0, 0.12)
         _, ymax = ax.get_ylim()
         counts = np.stack(hist_list).mean(axis=0)
         ax.hist(bns[:-1], bns, weights=0.5*ymax * counts /
@@ -267,7 +267,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
     ax.legend(fancybox=False, frameon=False)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_bounds(0, 0.08)
+    ax.spines['left'].set_bounds(0, 0.12)
     ax.spines['bottom'].set_bounds(0, 200)
     plt.gcf().patch.set_facecolor('white')
     plt.gca().set_facecolor('white')
