@@ -1269,6 +1269,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=False, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
+    fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
 
 def traj_model_plot(df_sim):
@@ -1836,6 +1838,8 @@ def fig_7(df, df_sim):
                                ylabel='', cmap='rocket')
     ax_inset_1.set_xlabel('Prior evidence')
     ax_inset_1.set_ylabel('Stimulus evidence')
+    fig.savefig(SV_FOLDER+'fig7.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
 def supp_com_marginal(df):
