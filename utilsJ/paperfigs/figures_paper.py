@@ -34,19 +34,23 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
+pc_name = 'idibaps'  # 'alex'
+if pc_name == 'alex':
+    RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+    SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+    DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+elif pc_name == 'idibaps':
+    DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+    SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/from_python/'  # Manuel
+    RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/Figure_3/001965.png'
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/from_python/'  # Manuel
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-#     'ChangesOfMind/figures/Figure_3/001965.png'
-RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+
 # RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
 # RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
 #     'craft_vid/CoM/a/001965.png'
@@ -1873,8 +1877,10 @@ def supp_com_marginal(df):
         if i_ax == len(df.subjid.unique()) - 1:
             ax[i_ax*2].set_xlabel('Prior evidence')
             ax[i_ax*2+1].set_xlabel('Prior evidence')
-    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.svg', dpi=400, bbox_inches='tight')
-    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.png', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.svg', dpi=400,
+                bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.png', dpi=400,
+                bbox_inches='tight')
 
 
 def norm_allpriors_per_subj(df):
@@ -1941,12 +1947,12 @@ if __name__ == '__main__':
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['CoM_sugg'] = com
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = False
-    f2 = False
+    f1 = True
+    f2 = True
     f3 = True
     f5 = False
     f6 = False
-    f7 = True
+    f7 = False
 
     # fig 1
     if f1:
