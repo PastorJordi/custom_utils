@@ -755,41 +755,6 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 
-def fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='',
-          label='Data'):
-    fig, ax = plt.subplots(ncols=3, nrows=2, figsize=(8, 4))
-    ax = ax.flatten()
-    for i in range(len(ax)):
-        rm_top_right_lines(ax[i])
-    if label == 'Data':
-        color = 'k'
-    if label == 'Model':
-        color = 'red'
-    psych_curve((decision+1)/2, coh, ret_ax=ax[0], kwargs_plot={'color': color},
-                kwargs_error={'label': label, 'color': color})
-    ax[0].set_xlabel('Coherence')
-    ax[0].set_ylabel('Probability of right')
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[1],
-                                   label=label)
-    # reaction_time_histogram(sound_len=sound_len, ax=ax[2], label=label)
-    cdfs(coh=coh, sound_len=sound_len, f5=False, ax=ax[2], title='')
-    express_performance(hit=hit, coh=coh, sound_len=sound_len, label=label,
-                        pos_tach_ax=pos_tach_ax, ax=ax[3])
-    fig.suptitle(supt)
-    # decision_s = decision
-    decision_01 = (decision+1)/2
-    # TODO: fix issue with heatmap: only half of first and last row is displayed
-    edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[4], flip=True,
-                           annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='PRGn_r')
-    ax[4].set_title('Pright')
-    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[5], flip=True, xlabel='prior',
-                           annotate=False, ylabel='avg stim ', cmap='coolwarm')
-    ax[5].set_title('Pcorrect')
-    fig.savefig(SV_FOLDER+'/Fig1.png', dpi=400, bbox_inches='tight')
-    fig.savefig(SV_FOLDER+'/Fig1.svg', dpi=400, bbox_inches='tight')
-
-
 def fig_1_def(df_data):
     nbins = 7
     f, ax = plt.subplots(nrows=2, ncols=2, figsize=(5, 5))  # figsize=(4, 3))
