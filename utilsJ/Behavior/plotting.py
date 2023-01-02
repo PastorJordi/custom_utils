@@ -1877,7 +1877,8 @@ def tachometric(
     error_kws={},
     cmap='inferno',
     subplots_kws={},  # ignored if ax is provided,
-    labels=None
+    labels=None,
+    linestyle='solid'
 ):
     """jeez how it took me so long"""
 
@@ -1910,7 +1911,8 @@ def tachometric(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values, label=clabel, c=cmap(
                     (i+2)/(evidence_bins.size)),
-                marker=error_kws.get('marker', '')
+                marker=error_kws.get('marker', ''),
+                linestyle=linestyle
             )
             ax.fill_between(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,

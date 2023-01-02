@@ -14,6 +14,7 @@ from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 from scipy.stats import pearsonr, ttest_ind
+from matplotlib.lines import Line2D
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -61,10 +62,10 @@ def plot_coms(df, ax, human=False):
         ran_max = 600
         max_val = 600
     if not human:
-        ran_max = 900
+        ran_max = 400
         max_val = 77
     for tr in reversed(range(ran_max)):  # len(df_rat)):
-        if tr > (ran_max/1.06) and not coms[tr] and decision[tr] == 1:
+        if tr > (ran_max/2) and not coms[tr] and decision[tr] == 1:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
@@ -74,7 +75,7 @@ def plot_coms(df, ax, human=False):
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
                     ax.plot(time*1e3, traj, color='tab:cyan', lw=.5)
-        elif tr < (ran_max/1.06-1) and coms[tr] and decision[tr] == 0:
+        elif tr < (ran_max/2-1) and coms[tr] and decision[tr] == 0:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
@@ -834,7 +835,7 @@ def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
         decision = np.array(df_1.R_response)*2 - 1
         coh = np.array(df_1.coh2)
         trial_index = np.array(df_1.origidx)
-        com = df.CoM_sugg.values
+        com = df_1.CoM_sugg.values
         zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
         params = mt_linear_reg(mt=resp_len, coh=coh*decision/max(np.abs(coh)),
                                trial_index=trial_index/max(trial_index),
@@ -937,17 +938,37 @@ def fig_2(df, fgsz=(15, 5), accel=False):
 
 
 def tach_1st_2nd_choice(df, ax):
-    # TODO: end
+    # TODO: average across rats
     choice = df.R_response.values * 2 - 1
-    ev = df.coh2.values
+    coh = df.coh2.values
     gt = df.rewside.values * 2 - 1
+    hit = df.hithistory.values
+    sound_len = df.sound_len.values
+    com = df.CoM_sugg.values
+    choice_com = choice
+    choice_com[com] = -choice[com]
+    hit_com = choice_com == gt
+    df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
+                                 'sound_len': sound_len})
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg')
+    df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
+                                 'sound_len': sound_len})
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg',
+                linestyle='--')
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Accuracy')
+    legendelements = [Line2D([0], [0], linestyle='--', color='k', lw=2,
+                             label='1st resp'),
+                      Line2D([0], [0], color='k', lw=2, label='2nd resp')]
+    ax.legend(handles=legendelements)
 
 
 def fig_3(df):
     fig, ax = plt.subplots(2, 4, figsize=(10, 5))
     ax = ax.flatten()
     ax_mat = [ax[2], ax[3]]
-    ax[5].axis('off')
+    rm_top_right_lines(ax=ax[5])
+    tach_1st_2nd_choice(df=df, ax=ax[5])
     ax[6].axis('off')
     ax[7].axis('off')
     fig2.e(df, sv_folder=SV_FOLDER, ax=ax[4])
@@ -982,6 +1003,7 @@ def fig_3(df):
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig3.png', dpi=400, bbox_inches='tight')
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
