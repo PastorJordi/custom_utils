@@ -438,7 +438,7 @@ def get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700):
     return np.nan
 
 
-def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 25, 2),
+def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                     subject='LE43', startfrom=700):
     """
     Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
@@ -1455,14 +1455,15 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     times = df_data.times.values
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
-    congruent_coh = coh * (decision*2 - 1)
-    fig, ax = plt.subplots(nrows=2, ncols=2)
+    # congruent_coh = coh * (decision*2 - 1)
+    fig, ax = plt.subplots(nrows=2, ncols=4)
     ax = ax.flatten()
-    colormap = pl.cm.viridis(np.linspace(0, 1, len(ev_vals)))
+    colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     vals_thr_traj = []
     vals_thr_vel = []
+    precision = 16
     for i_ev, ev in enumerate(ev_vals):
-        index = np.abs(np.round(congruent_coh, 2)) == ev
+        index = np.abs(np.round(coh, 2)) == ev
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         all_vels = np.empty((sum(index), max_mt))
@@ -1474,53 +1475,133 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
             max_time = max(time)*1e3
             if max_time > max_mt:
                 continue
-            vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
-                                 xp=time*1e3, fp=vals)
-            vels_fin = np.diff(vals_fin)/wanted_precision
-            all_trajs[tr, :len(vals_fin)] = vals_fin - vals_fin[0]
+            # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+            #                      xp=time*1e3, fp=vals)
+            vels_fin = np.diff(vals-vals[0])/precision
+            all_trajs[tr, :len(vals)] = vals  # - vals[0]
             all_vels[tr, :len(vels_fin)] = vels_fin
         mean_traj = np.nanmean(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
-        val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
+        # val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
+        val_traj = np.nanmean(np.array([float(t[-1]) for t in
+                                        df_data.times.values[index]
+                                        if t[-1] != '']))*1e3
         vals_thr_traj.append(val_traj)
-        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
+        ax[1].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
         mean_vel = np.nanmean(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
         for ind_v, velocity in enumerate(mean_vel):
-            if velocity >= vel_thr and ind_v*wanted_precision >= 160:
-                val_vel = ind_v*wanted_precision
+            if velocity >= vel_thr and ind_v*precision >= 160:
+                val_vel = ind_v*precision
                 break
         vals_thr_vel.append(val_vel)
-        ax[3].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
-        ax[0].plot(np.arange(len(mean_traj))*wanted_precision, mean_traj,
+        ax[5].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
+        ax[0].plot(np.arange(len(mean_traj))*precision, mean_traj,
                    color=colormap[i_ev], label='{}'.format(bins[i_ev]))
-        ax[0].fill_between(x=np.arange(len(mean_traj))*wanted_precision,
+        ax[0].fill_between(x=np.arange(len(mean_traj))*precision,
                            y1=mean_traj-std_traj, y2=mean_traj+std_traj,
                            color=colormap[i_ev])
-        ax[1].plot(np.arange(len(mean_vel))*wanted_precision, mean_vel,
+        ax[4].plot(np.arange(len(mean_vel))*precision, mean_vel,
                    color=colormap[i_ev], label='{}'.format(bins[i_ev]))
-        ax[1].fill_between(x=np.arange(len(mean_vel))*wanted_precision,
+        ax[4].fill_between(x=np.arange(len(mean_vel))*precision,
                            y1=mean_vel-std_vel, y2=mean_vel+std_vel,
                            color=colormap[i_ev])
-    ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[3].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+    ax[1].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[5].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
     ax[0].set_xlim(-0.1, 550)
-    ax[1].set_xlim(-0.1, 550)
-    ax[1].set_ylim(1, 4)
-    ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
-    ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    ax[4].set_xlim(-0.1, 550)
+    ax[4].set_ylim(1, 4)
+    # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
+    ax[4].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[0].legend(title='stimulus')
     ax[0].set_ylabel('y-coord (px)')
     ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_title('Mean trajectory')
-    ax[1].legend(title='stimulus')
-    ax[1].set_ylabel('Velocity (px/s)')
-    ax[1].set_xlabel('Time from movement onset (ms)')
-    ax[1].set_title('Mean velocity')
-    ax[2].set_xlabel('Evidence congruency')
-    ax[2].set_ylabel('Time to reach threshold (ms)')
-    ax[3].set_xlabel('Evidence congruency')
-    ax[3].set_ylabel('Time to reach threshold (ms)')
+    ax[4].legend(title='stimulus')
+    ax[4].set_ylabel('Velocity (px/s)')
+    ax[4].set_xlabel('Time from movement onset (ms)')
+    ax[4].set_title('Mean velocity')
+    ax[1].set_xlabel('Evidence')
+    ax[1].set_ylabel('Motor time (ms)')
+    ax[5].set_xlabel('Evidence')
+    ax[5].set_ylabel('Time to reach threshold (ms)')
+    # now for the prior
+    prior = df_data['norm_allpriors'] * (decision*2 - 1)
+    # cong_prior = prior * (decision*2 - 1)
+    bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
+    colormap = pl.cm.copper(np.linspace(0, 1, len(bins)-1))
+    vals_thr_traj = []
+    vals_thr_vel = []
+    labels = ['inc. high', 'inc. low', 'zero', 'con. low', 'con. high']
+    for i_pr, pr_min in enumerate(bins):
+        if pr_min == 1:
+            break
+        index = (prior >= bins[i_pr])*(prior < bins[i_pr+1])
+        all_trajs = np.empty((sum(index), max_mt))
+        all_trajs[:] = np.nan
+        all_vels = np.empty((sum(index), max_mt))
+        all_vels[:] = np.nan
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+            max_time = max(time)*1e3
+            if max_time > max_mt:
+                continue
+            # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+            #                      xp=time*1e3, fp=vals)
+            vels_fin = np.diff(vals-vals[0])/precision
+            all_trajs[tr, :len(vals)] = vals  # - vals[0]
+            all_vels[tr, :len(vels_fin)] = vels_fin
+        mean_traj = np.nanmean(all_trajs, axis=0)
+        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
+        # val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
+        val_traj = np.nanmean(np.array([float(t[-1]) for t in
+                                        df_data.times.values[index]
+                                        if t[-1] != '']))*1e3
+        vals_thr_traj.append(val_traj)
+        ax[3].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=60)
+        mean_vel = np.nanmean(all_vels, axis=0)
+        std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
+        for ind_v, velocity in enumerate(mean_vel):
+            if velocity >= vel_thr and ind_v*precision >= 50:
+                val_vel = ind_v*precision
+                break
+        vals_thr_vel.append(val_vel)
+        ax[7].scatter(i_pr, val_vel, color=colormap[i_pr], marker='D', s=60)
+        ax[2].plot(np.arange(len(mean_traj))*precision, mean_traj,
+                   color=colormap[i_pr], label='{}'.format(labels[i_pr]))
+        ax[2].fill_between(x=np.arange(len(mean_traj))*precision,
+                           y1=mean_traj-std_traj, y2=mean_traj+std_traj,
+                           color=colormap[i_pr])
+        ax[6].plot(np.arange(len(mean_vel))*precision, mean_vel,
+                   color=colormap[i_pr], label='{}'.format(labels[i_pr]))
+        ax[6].fill_between(x=np.arange(len(mean_vel))*precision,
+                           y1=mean_vel-std_vel, y2=mean_vel+std_vel,
+                           color=colormap[i_pr])
+    ax[3].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[7].plot(np.arange(5), vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+    ax[2].set_xlim(-0.1, 550)
+    ax[6].set_xlim(-0.1, 550)
+    ax[6].set_ylim(1, 4)
+    # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
+    ax[6].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    ax[2].legend(title='Prior')
+    ax[2].set_ylabel('y-coord (px)')
+    ax[2].set_xlabel('Time from movement onset (ms)')
+    ax[2].set_title('Mean trajectory')
+    ax[6].legend(title='Prior')
+    ax[6].set_ylabel('Velocity (px/s)')
+    ax[6].set_xlabel('Time from movement onset (ms)')
+    ax[6].set_title('Mean velocity')
+    ax[3].set_xlabel('Prior congruency')
+    ax[3].set_ylabel('Motor time (ms)')
+    ax[7].set_xlabel('Prior congruency')
+    ax[7].set_xticks(np.arange(5))
+    ax[7].set_xticklabels(labels)
+    ax[3].set_xticks(np.arange(5))
+    ax[3].set_xticklabels(labels)
+    ax[7].set_ylabel('Time to reach threshold (ms)')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
@@ -1711,6 +1792,97 @@ def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
     ax.set_ylabel('Density')
 
 
+def fig_7(df, df_sim):
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    coh = df.coh2.values
+    com = df.CoM_sugg.values
+    com_model = df_sim['com_detcted'].values
+    sound_len_model = df_sim.sound_len.values
+    fig, ax = plt.subplots(nrows=3, ncols=3)
+    ax = ax.flatten()
+    fig.suptitle('Stim/prior')
+    sound_len = df.sound_len.values
+    window = [0, 25, 50, 100, 125, 150, 175, 200, 250]
+    for i in range(8):
+        zt_tmp = zt[(sound_len > window[i]) * (sound_len < window[i+1])]
+        coh_tmp = coh[(sound_len > window[i]) * (sound_len < window[i+1])]
+        com_tmp = com[(sound_len > window[i]) * (sound_len < window[i+1])]
+        edd2.com_heatmap_jordi(zt_tmp, coh_tmp, com_tmp, ax=ax[i],
+                               flip=True, annotate=False, xlabel='prior',
+                               ylabel='avg stim', cmap='rocket')
+        ax[i].set_title('{} < RT < {}'.format(window[i], window[i+1]))
+    pos = ax[8].get_position()
+    x, y, w, h = pos.x0, pos.y0, pos.width, pos.height
+    inset_height = h/2
+    inset_width = w/2
+    ax[8].set_title('Model')
+    ax[8].axis('off')
+    ax_inset_1 = plt.axes([x, y, inset_height, inset_width])
+    ax_inset_2 = plt.axes([x+inset_width, y, inset_height, inset_width])
+    ax_inset_3 = plt.axes([x, y+inset_height, inset_height, inset_width])
+    ax_inset_4 = plt.axes([x+inset_width, y+inset_height, inset_height,
+                           inset_width])
+    ax_inset = [ax_inset_3, ax_inset_4, ax_inset_1, ax_inset_2]
+    window = [0, 50, 100, 125, 150]
+    for i in range(4):
+        zt_tmp = zt[(sound_len_model > window[i]) *
+                    (sound_len_model < window[i+1])]
+        coh_tmp = coh[(sound_len_model > window[i]) *
+                      (sound_len_model < window[i+1])]
+        com_model_tmp = com_model[(sound_len_model > window[i]) *
+                                  (sound_len_model < window[i+1])]
+        edd2.com_heatmap_jordi(zt_tmp, coh_tmp, com_model_tmp, ax=ax_inset[i],
+                               flip=True, annotate=False, xlabel='',
+                               ylabel='', cmap='rocket')
+    ax_inset_1.set_xlabel('Prior evidence')
+    ax_inset_1.set_ylabel('Stimulus evidence')
+
+
+def supp_com_marginal(df):
+    fig, ax = plt.subplots(nrows=len(df.subjid.unique()), ncols=2,
+                           figsize=(4, 12))
+    ax = ax.flatten()
+    for i_ax, subj in enumerate(df.subjid.unique()):
+        df_1 = df.loc[df.subjid == subj]
+        nbins = 7
+        matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
+        matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
+        # L-> R
+        vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+        pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+        im = ax[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax)
+        plt.sca(ax[i_ax*2])
+        plt.colorbar(im, fraction=0.04)
+        # R -> L
+        pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+        im = ax[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+        ax[i_ax*2+1].yaxis.set_ticks_position('none')
+        plt.sca(ax[i_ax*2+1])
+        plt.colorbar(im, fraction=0.04)
+        if i_ax == 0:
+            ax[i_ax].set_title(pcomlabel_1)
+            ax[i_ax+1].set_title(pcomlabel_0)
+        for ax_i in [ax[i_ax*2], ax[i_ax*2+1]]:
+            ax_i.set_yticklabels(['']*nbins)
+            ax_i.set_xticklabels(['']*nbins)
+        ax[i_ax*2].set_ylabel('stim. {}'.format(subj))
+        if i_ax == len(df.subjid.unique()) - 1:
+            ax[i_ax*2].set_xlabel('Prior evidence')
+            ax[i_ax*2+1].set_xlabel('Prior evidence')
+    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig_supp_com_marginal.png', dpi=400, bbox_inches='tight')
+
+
+def norm_allpriors_per_subj(df):
+    norm_allpriors = np.empty((0,))
+    for subj in df.subjid.unique():
+        df_1 = df.loc[df.subjid == subj]
+        zt_tmp = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+        norm_allpriors = np.concatenate((norm_allpriors,
+                                         zt_tmp/max(abs(zt_tmp))))
+    return norm_allpriors
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -1719,7 +1891,7 @@ if __name__ == '__main__':
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
     else:
-        subjects = ['LE43']
+        subjects = ['LE44']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -1761,14 +1933,16 @@ if __name__ == '__main__':
     _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                       time_trajs=time_trajs)
     com = np.array(com)  # new CoM list
-    df['norm_allpriors'] = zt/max(abs(zt))
+
+    df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['CoM_sugg'] = com
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = True
+    f1 = False
+    f2 = False
     f3 = True
     f5 = False
     f6 = False
+    f7 = True
 
     # fig 1
     if f1:
@@ -1786,6 +1960,7 @@ if __name__ == '__main__':
     # fig 3
     if f3:
         fig_3(df)
+        supp_com_marginal(df)
 
     # fig 5 (model)
     if f5:
@@ -1827,6 +2002,7 @@ if __name__ == '__main__':
         df_sim['special_trial'] =\
             np.array(df.special_trial)[after_correct_id][:int(num_tr)]
         df_sim['traj'] = df_sim['trajectory_y']
+        df_sim['com_detcted'] = com_model_detected
         # simulation plots
         means, errors = fig_1_mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True,
@@ -1840,8 +2016,10 @@ if __name__ == '__main__':
         supp_trajs_prior_cong(df_sim, ax=None)
         if f6:
             # human traj plots
-            human_trajs(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=600,
-                        wanted_precision=12, traj_thr=250, vel_thr=2.6)
+            human_trajs(user_id='Alex', sv_folder=SV_FOLDER, max_mt=600,
+                        wanted_precision=12, traj_thr=250, vel_thr=2.8)
+        if f7:
+            fig_7(df, df_sim)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
