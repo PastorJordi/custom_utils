@@ -755,19 +755,14 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 
-def fig_1_def(df_data):
+def fig_1(df_data):
     nbins = 7
-    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(5, 5))  # figsize=(4, 3))
+    f, ax = plt.subplots(nrows=3, ncols=4, figsize=(6, 5))  # figsize=(4, 3))
     ax = ax.flatten()
-    ax_tach = ax[0]
-    ax_pright = ax[2]
-    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
-    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
-    ax_tach.set_xlabel('Reaction Time (ms)')
-    ax_tach.set_ylabel('Accuracy')
-    ax_tach.set_ylim(0.3, 1.04)
-    rm_top_right_lines(ax_tach)
-    ax_tach.legend()
+    for i in [0, 1, 2, 4, 5, 6]:
+        ax[i].axis('off')
+    # P_right
+    ax_pright = ax[3]
     choice = df_data['R_response'].values
     coh = df_data['coh2'].values
     prior = df_data['norm_allpriors'].values
@@ -784,15 +779,62 @@ def fig_1_def(df_data):
     ax_pright.set_xticklabels(['']*nbins)
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
-    # splitting
-    ax_split = np.array([ax[1], ax[3]])
-    trajs_splitting(df, ax=ax_split[0])
-    rm_top_right_lines(ax_split[0])
+    # tachometrics
+    ax_tach = ax[7]
+    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
+    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
+    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_ylabel('Accuracy')
+    ax_tach.set_ylim(0.3, 1.04)
+    rm_top_right_lines(ax_tach)
+    ax_tach.legend()
+    # TODO: check legend 
+
+    # TODO: RTs distros conditioned on stim evidence. CHECK
+    ax_rts = ax[8]
+    sound_len = np.array(df.sound_len)
+    pdf_cohs(sound_len=sound_len, ax=ax_rts, coh=coh, yaxis=True)
+
+    # track screenshot
+    rat = plt.imread(RAT_COM_IMG)
+    ax_scrnsht = ax[9]
+    ax_scrnsht.imshow(np.flipud(rat))
+    ax_scrnsht.set_xticklabels([])
+    ax_scrnsht.set_yticklabels([])
+    ax_scrnsht.set_xticks([])
+    ax_scrnsht.set_yticks([])
+    ax_scrnsht.set_xlabel('x dimension (pixels)')  # , fontsize=14)
+    ax_scrnsht.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+    ax_scrnsht.set_xlim(435, 585)
+    ax_scrnsht.set_ylim(100, 360)
+
+    # raw trajectories
+    ax_rawtr = ax[10]
+    ax_ydim = ax[11]
+    ran_max = 100
+    for tr in range(ran_max):  # len(df_rat)):
+        if tr > (ran_max/2):
+            trial = df.iloc[tr]
+            traj_x = trial['trajectory_x']
+            traj_y = trial['trajectory_y']
+            ax_rawtr.plot(traj_x, traj_y, color='k', lw=.5)
+            time = np.arange(len(traj_x))*FRAME_RATE
+            ax_ydim.plot(time, traj_y, color='k', lw=.5)
+
+    ax_rawtr.set_xticklabels([])
+    ax_rawtr.set_yticklabels([])
+    ax_rawtr.set_xticks([])
+    ax_rawtr.set_yticks([])
+    ax_rawtr.set_xlabel('x dimension (pixels)')  # , fontsize=14)
+    # ax_rawtr.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+    ax_ydim.set_xlabel('time (ms)')  # , fontsize=14)
+    # ax_ydim.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
 
 
-def fig_1_mt_weights(df, ax, plot=False, means_errs=True):
+def mt_weights(df, ax, plot=False, means_errs=True):
     w_coh = []
     w_t_i = []
     w_zt = []
@@ -900,7 +942,7 @@ def fig_2(df, fgsz=(15, 5), accel=False):
     trajs_cond_on_coh(df=df, ax=[ax_zt, ax_cohs, ax_ti], average=True,
                       acceleration=accel)
     # splits
-    fig_1_mt_weights(df, ax=ax[3], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[3], plot=True, means_errs=False)
     trajs_splitting_point(df=df, ax=ax[7])
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
@@ -1876,6 +1918,7 @@ if __name__ == '__main__':
             df_all = pd.concat((df_all, df))
     if all_rats:
         df = df_all
+    # XXX: can we remove the code below or move it to the fig5 part?
     after_correct_id = np.where((df.aftererror == 0))
     # *(df.special_trial == 0))[0]
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
@@ -1913,8 +1956,8 @@ if __name__ == '__main__':
     df['CoM_sugg'] = com
     # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = True
-    f2 = True
-    f3 = True
+    f2 = False
+    f3 = False
     f5 = False
     f6 = False
     f7 = False
@@ -1924,10 +1967,9 @@ if __name__ == '__main__':
         # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
         # tachometrics, rt distribution, express performance
         # fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        # fig_1_mt_weights(df, plot=True, means_errs=False, ax=None)
-        fig_1_def(df_data=df)
-        fig2.bcd(parentpath='')
-
+        # mt_weights(df, plot=True, means_errs=False, ax=None)
+        fig_1(df_data=df)
+        # fig2.bcd(parentpath='')
     # fig 2
     if f2:
         fig_2(df, fgsz=(8, 5))
@@ -1979,9 +2021,8 @@ if __name__ == '__main__':
         df_sim['traj'] = df_sim['trajectory_y']
         df_sim['com_detcted'] = com_model_detected
         # simulation plots
-        means, errors = fig_1_mt_weights(df, means_errs=True, ax=None)
-        means_model, errors_model = fig_1_mt_weights(df_sim, means_errs=True,
-                                                     ax=None)
+        means, errors = mt_weights(df, means_errs=True, ax=None)
+        means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
         fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time.astype(int),
               decision_model=resp_fin, com=com, com_model=com_model,
