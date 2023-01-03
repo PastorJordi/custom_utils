@@ -331,7 +331,7 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
-                                  prior_limit=0.25, rt_lim=25,
+                                  prior_limit=0.25, rt_lim=25, 
                                   after_correct_only=True,
                                   trajectory="trajectory_y",
                                   velocity=("traj_d1", 1),
@@ -397,7 +397,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         bintype=bintype, trajectory=velocity, plotmt=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
-    ax[3].set_xlim([-50, 500])
+    ax[3].set_xlim([-200, 500])
     ax[3].set_xlabel('time from movement onset (MT, ms)')
     ax[3].set_ylim([-0.05, 0.5])
     for i in [0, threshold]:
@@ -476,12 +476,12 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     evl = np.empty(())
     appb = True
     for iev, ev in enumerate(evs):
-        _, matatmp, matb =\
-            simul.when_did_split_dat(df=df[df.subjid == subject],
-                                     side=0, collapse_sides=True, ax=ax,
-                                     rtbin=rtbin, rtbins=rtbins,
-                                     color=colors[iev], label=lbl,
-                                     coh1=ev)
+        indx = df.subjid == subject
+        if np.sum(indx) > 0:
+            _, matatmp, matb =\
+                simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=True,
+                                         ax=ax, rtbin=rtbin, rtbins=rtbins,
+                                         color=colors[iev], label=lbl, coh1=ev)
         if appb:
             mat = matb
             evl = np.repeat(0, matb.shape[0])
@@ -755,13 +755,14 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 
-def fig_1(df_data):
+def fig_rats_behav_1(df_data):
     nbins = 7
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=(6, 5))  # figsize=(4, 3))
     ax = ax.flatten()
     for i in [0, 1, 2, 4, 5, 6]:
         ax[i].axis('off')
     # P_right
+    # TODO: check ticks for matrix
     ax_pright = ax[3]
     choice = df_data['R_response'].values
     coh = df_data['coh2'].values
@@ -780,6 +781,7 @@ def fig_1(df_data):
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
     # tachometrics
+    # TODO: check legend
     ax_tach = ax[7]
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
@@ -788,7 +790,6 @@ def fig_1(df_data):
     ax_tach.set_ylim(0.3, 1.04)
     rm_top_right_lines(ax_tach)
     ax_tach.legend()
-    # TODO: check legend 
 
     # TODO: RTs distros conditioned on stim evidence. CHECK
     ax_rts = ax[8]
@@ -910,37 +911,63 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_2(df, fgsz=(15, 5), accel=False):
+def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
+                marginy=0.2):
+    f, ax = plt.subplots(nrows=2, ncols=4, figsize=fgsz)
+    ax = ax.flatten()
+    ax_cohs = np.array([ax[1], ax[5]])
+    ax_zt = np.array([ax[2], ax[6]])
+    # splitting
+    trajs_splitting(df, ax=ax[0])
+    rm_top_right_lines(ax[0])
+    trajs_splitting_point(df=df, ax=ax[4])
+
+    # trajs. conditioned on coh
+    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+    # trajs. conditioned on prior
+    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
+    ax_zt = np.insert(ax_zt, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
+    ax_zt = np.insert(ax_zt, 2, ax_inset)
+    for a in ax:
+        rm_top_right_lines(a)
+    # TODO: the function below does not work with all subjects
+    df = df.loc[df.subjid == 'LE43']
+    trajs_cond_on_coh_computation(df=df, ax=ax_zt, condition='prior_x_coh',
+                                  prior_limit=1, cmap='copper')
+    trajs_cond_on_coh_computation(df=df, ax=ax_cohs, condition='choice_x_coh',
+                                  cmap='coolwarm')
+    # regression weights
+    mt_weights(df, ax=ax[7], plot=True, means_errs=False)
+    f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
+    f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
+
+
+def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01, marginy=0.05):
     fgsz = fgsz
     inset_sz = 0.08
-    accel = False
-    if accel:
-        f, ax = plt.subplots(nrows=4, ncols=2, figsize=fgsz)
-        ax = ax.flatten()
-        ax_cohs = np.array([ax[0], ax[2], ax[4], ax[6]])
-    else:
-        f, ax = plt.subplots(nrows=2, ncols=4, figsize=fgsz)
-        ax = ax.flatten()
-        ax_cohs = np.array([ax[1], ax[5]])
-        ax_zt = np.array([ax[0], ax[4]])
-        ax_ti = np.array([ax[2], ax[6]])
-    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz)
-    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz)
-    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-    # if accel:
-    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz)
-    ax_zt = np.insert(ax_zt, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz)
-    ax_zt = np.insert(ax_zt, 2, ax_inset)
-    ax_inset = add_inset(ax=ax_ti[0], inset_sz=inset_sz, fgsz=fgsz)
+    f, ax = plt.subplots(nrows=2, ncols=1, figsize=fgsz)
+    ax = ax.flatten()
+    ax_ti = np.array([ax[0], ax[1]])
+
+    # trajs. conditioned on trial index
+    ax_inset = add_inset(ax=ax[0], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
     ax_ti = np.insert(ax_ti, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_ti[2], inset_sz=inset_sz, fgsz=fgsz)
+    ax_inset = add_inset(ax=ax[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy)
     ax_ti = np.insert(ax_ti, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
-    trajs_cond_on_coh(df=df, ax=[ax_zt, ax_cohs, ax_ti], average=True,
-                      acceleration=accel)
+    trajs_cond_on_coh_computation(df=df, ax=ax_ti, condition='prior_x_coh',
+                                  prior_limit=1, cmap='copper')
     # splits
     mt_weights(df, ax=ax[3], plot=True, means_errs=False)
     trajs_splitting_point(df=df, ax=ax[7])
@@ -974,7 +1001,7 @@ def tach_1st_2nd_choice(df, ax):
     ax.legend(handles=legendelements)
 
 
-def fig_3(df):
+def fig_CoMs_3(df):
     fig, ax = plt.subplots(2, 4, figsize=(10, 5))
     ax = ax.flatten()
     ax_mat = [ax[2], ax[3]]
@@ -1908,7 +1935,7 @@ if __name__ == '__main__':
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
                     'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
     else:
-        subjects = ['LE44']
+        subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -1955,8 +1982,8 @@ if __name__ == '__main__':
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['CoM_sugg'] = com
     # if we want to use data from all rats, we must use dani_clean.pkl
-    f1 = True
-    f2 = False
+    f1 = False
+    f2 = True
     f3 = False
     f5 = False
     f6 = False
@@ -1964,19 +1991,15 @@ if __name__ == '__main__':
 
     # fig 1
     if f1:
-        # fig1.d(df, savpath=SV_FOLDER, average=True)  # psychometrics
-        # tachometrics, rt distribution, express performance
-        # fig_1(coh, hit, sound_len, decision, zt, resp_len, trial_index, supt='')
-        # mt_weights(df, plot=True, means_errs=False, ax=None)
-        fig_1(df_data=df)
-        # fig2.bcd(parentpath='')
+        fig_rats_behav_1(df_data=df)
+
     # fig 2
     if f2:
-        fig_2(df, fgsz=(8, 5))
+        fig_trajs_2(df=df, fgsz=(10, 5))
 
     # fig 3
     if f3:
-        fig_3(df)
+        fig_CoMs_3(df)
         supp_com_marginal(df)
 
     # fig 5 (model)
