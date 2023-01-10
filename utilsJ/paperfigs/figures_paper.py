@@ -939,10 +939,10 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
     for a in ax:
         rm_top_right_lines(a)
     # TODO: the function below does not work with all subjects
-    df = df.loc[df.subjid == 'LE43']
-    trajs_cond_on_coh_computation(df=df, ax=ax_zt, condition='prior_x_coh',
+    df_trajs = df.loc[df.subjid == 'LE43']
+    trajs_cond_on_coh_computation(df=df_trajs, ax=ax_zt, condition='prior_x_coh',
                                   prior_limit=1, cmap='copper')
-    trajs_cond_on_coh_computation(df=df, ax=ax_cohs, condition='choice_x_coh',
+    trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs, condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
     mt_weights(df, ax=ax[7], plot=True, means_errs=False)
