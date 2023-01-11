@@ -1930,64 +1930,67 @@ def norm_allpriors_per_subj(df):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    all_rats = True
-    if all_rats:
-        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45', 'LE40',
-                    'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36', 'LE44']
-    else:
-        subjects = ['LE43']
-    df_all = pd.DataFrame()
-    for sbj in subjects:
-        df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                      sv_folder=SV_FOLDER, after_correct=True,
-                                      silent=True, all_trials=True)
-        if all_rats:
-            df_all = pd.concat((df_all, df))
-    if all_rats:
-        df = df_all
-    # XXX: can we remove the code below or move it to the fig5 part?
-    after_correct_id = np.where((df.aftererror == 0))
-    # *(df.special_trial == 0))[0]
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    zt = zt[after_correct_id]
-    hit = np.array(df['hithistory'])
-    hit = hit[after_correct_id]
-    stim = np.array([stim for stim in df.res_sound])
-    stim = stim[after_correct_id, :]
-    coh = np.array(df.coh2)
-    coh = coh[after_correct_id]
-    com = df.CoM_sugg.values
-    com = com[after_correct_id]
-    decision = np.array(df.R_response) * 2 - 1
-    decision = decision[after_correct_id]
-    traj_stamps = df.trajectory_stamps.values[after_correct_id]
-    traj_y = df.trajectory_y.values[after_correct_id]
-    fix_onset = df.fix_onset_dt.values[after_correct_id]
-
-    sound_len = np.array(df.sound_len)
-    sound_len = sound_len[after_correct_id]
-    gt = np.array(df.rewside) * 2 - 1
-    gt = gt[after_correct_id]
-    trial_index = np.array(df.origidx)
-    trial_index = trial_index[after_correct_id]
-    resp_len = np.array(df.resp_len)
-    resp_len = resp_len[after_correct_id]
-    time_trajs = edd2.get_trajs_time(resp_len=resp_len, traj_stamps=traj_stamps,
-                                     fix_onset=fix_onset, com=com,
-                                     sound_len=sound_len)
-    _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
-                                      time_trajs=time_trajs)
-    com = np.array(com)  # new CoM list
-
-    df['norm_allpriors'] = norm_allpriors_per_subj(df)
-    df['CoM_sugg'] = com
-    # if we want to use data from all rats, we must use dani_clean.pkl
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
+    if f1 or f2 or f3 or f5:
+        all_rats = True
+        if all_rats:
+            subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                        'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                        'LE44']
+        else:
+            subjects = ['LE43']
+        df_all = pd.DataFrame()
+        for sbj in subjects:
+            df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
+                                          sv_folder=SV_FOLDER, after_correct=True,
+                                          silent=True, all_trials=True)
+            if all_rats:
+                df_all = pd.concat((df_all, df))
+        if all_rats:
+            df = df_all
+        # XXX: can we remove the code below or move it to the fig5 part?
+        after_correct_id = np.where((df.aftererror == 0))
+        # *(df.special_trial == 0))[0]
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        zt = zt[after_correct_id]
+        hit = np.array(df['hithistory'])
+        hit = hit[after_correct_id]
+        stim = np.array([stim for stim in df.res_sound])
+        stim = stim[after_correct_id, :]
+        coh = np.array(df.coh2)
+        coh = coh[after_correct_id]
+        com = df.CoM_sugg.values
+        com = com[after_correct_id]
+        decision = np.array(df.R_response) * 2 - 1
+        decision = decision[after_correct_id]
+        traj_stamps = df.trajectory_stamps.values[after_correct_id]
+        traj_y = df.trajectory_y.values[after_correct_id]
+        fix_onset = df.fix_onset_dt.values[after_correct_id]
+
+        sound_len = np.array(df.sound_len)
+        sound_len = sound_len[after_correct_id]
+        gt = np.array(df.rewside) * 2 - 1
+        gt = gt[after_correct_id]
+        trial_index = np.array(df.origidx)
+        trial_index = trial_index[after_correct_id]
+        resp_len = np.array(df.resp_len)
+        resp_len = resp_len[after_correct_id]
+        time_trajs = edd2.get_trajs_time(resp_len=resp_len,
+                                         traj_stamps=traj_stamps,
+                                         fix_onset=fix_onset, com=com,
+                                         sound_len=sound_len)
+        _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
+                                          time_trajs=time_trajs)
+        com = np.array(com)  # new CoM list
+
+        df['norm_allpriors'] = norm_allpriors_per_subj(df)
+        df['CoM_sugg'] = com
+        # if we want to use data from all rats, we must use dani_clean.pkl
 
     # fig 1
     if f1:
@@ -2053,12 +2056,12 @@ if __name__ == '__main__':
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
         supp_trajs_prior_cong(df_sim, ax=None)
-        if f6:
-            # human traj plots
-            human_trajs(user_id='Alex', sv_folder=SV_FOLDER, max_mt=600,
-                        wanted_precision=12, traj_thr=250, vel_thr=2.8)
-        if f7:
-            fig_7(df, df_sim)
+    if f6:
+        # human traj plots
+        human_trajs(user_id='Manuel', sv_folder=SV_FOLDER, max_mt=600,
+                    wanted_precision=12, traj_thr=250, vel_thr=2.8)
+    if f7:
+        fig_7(df, df_sim)
     # from utilsJ.Models import extended_ddm_v2 as edd2
     # import numpy as np
     # import matplotlib.pyplot as plt
