@@ -16,8 +16,8 @@ from sklearn.metrics import confusion_matrix
 from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -34,7 +34,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps'  # 'alex'
+pc_name = 'idibaps_Jordi'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -45,15 +45,17 @@ elif pc_name == 'idibaps':
         'ChangesOfMind/figures/from_python/'  # Manuel
     RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
         'ChangesOfMind/figures/Figure_3/001965.png'
-
+elif pc_name == 'idibaps_Jordi':
+    SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+    DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+    RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
+        'craft_vid/CoM/a/001965.png'
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+
 
 # RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
-# RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
-#     'craft_vid/CoM/a/001965.png'
+
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -988,10 +990,10 @@ def tach_1st_2nd_choice(df, ax):
     hit_com = choice_com == gt
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len})
-    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg')
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='YlGn')
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
                                  'sound_len': sound_len})
-    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg',
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='Blues',
                 linestyle='--')
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
@@ -1001,8 +1003,14 @@ def tach_1st_2nd_choice(df, ax):
     ax.legend(handles=legendelements)
 
 
-def fig_CoMs_3(df):
-    fig, ax = plt.subplots(2, 4, figsize=(10, 5))
+def fig_CoMs_3(df, inset_sz=.08, marginx=0.005, marginy=0.08, figsize=(10, 5),
+               com_th=5):
+    if com_th != 5:
+        _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
+                                          time_trajs=time_trajs)
+        com = np.array(com)  # new CoM list
+        df['CoM_sugg'] = com
+    fig, ax = plt.subplots(2, 4, figsize=figsize)
     ax = ax.flatten()
     ax_mat = [ax[2], ax[3]]
     rm_top_right_lines(ax=ax[5])
@@ -1040,8 +1048,27 @@ def fig_CoMs_3(df):
         ax_i.set_xticklabels(['']*nbins)
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(4, 6),
+                         marginx=marginx, marginy=marginy)
+    fig_COMs_per_rat_inset_3(df=df, ax_inset=ax_inset)
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig3.png', dpi=400, bbox_inches='tight')
+
+
+def fig_COMs_per_rat_inset_3(df, ax_inset):
+    subjects = df.subjid.unique()
+    comlist_rats = []
+    for subj in subjects:
+        df_1 = df.loc[df.subjid == subj]
+        mean_coms = np.nanmean(df_1.CoM_sugg.values)
+        comlist_rats.append(mean_coms)
+    ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
+    ax_inset.set_ylabel('P(CoM)')
+    ax_inset.set_xlabel('Rat')
+    ax_inset.axhline(np.nanmean(comlist_rats), linestyle='--', color='k',
+                     alpha=0.8)
+    ax_inset.set_xticklabels(subjects, rotation=90)
+    ax_inset.set_ylim(0, 0.125)
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1244,11 +1271,11 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
                          ax=ax[10], label='Model')
-    pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
-    pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
-             coh=coh[sound_len_model >= 0], yaxis=False)
-    ax[8].set_title('Data')
-    ax[9].set_title('Model')
+    # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
+    # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
+    #          coh=coh[sound_len_model >= 0], yaxis=False)
+    # ax[8].set_title('Data')
+    # ax[9].set_title('Model')
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
@@ -1307,6 +1334,11 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=False, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
+    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
+                          sim=True,
+                          rtbins=np.linspace(0, 150, 16), connect_points=True,
+                          draw_line=((0, 90), (90, 0)),
+                          trajectory="trajectory_y")
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
@@ -1364,14 +1396,14 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             index = (df_sim.choice_x_coh.values == ev) *\
                 (df_sim.R_response.values == 1) *\
                 (df_sim.allpriors.abs() <= prior_lim)
-            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_coh)))
+            colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
         if prior:
             if ev == 1:
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
                 (df_sim.R_response.values == 1)
-            colormap = pl.cm.viridis(np.linspace(0, 1, len(bins_zt)-1))
+            colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
         traj_all = np.empty((sum(index), max(lens)))
@@ -1717,11 +1749,11 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.123
     MT_intercep = 254
     detect_CoMs_th = 5
-    p_t_aff = 9
-    p_t_eff = 9
+    p_t_aff = 8
+    p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.18
-    p_w_stim = 0.15
+    p_w_zt = 0.2
+    p_w_stim = 0.11
     p_e_noise = 0.01
     p_com_bound = 0.001
     p_w_a_intercept = 0.052
@@ -1927,14 +1959,91 @@ def norm_allpriors_per_subj(df):
     return norm_allpriors
 
 
+def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
+                                  com_th_list=np.linspace(0, 10, 21)):
+    fig, ax = plt.subplots(1)
+    colormap = colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, len(ev_vals)))
+    for com_th in com_th_list:
+        print('Com threshold = ' + str(com_th))
+        _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
+                                          time_trajs=time_trajs,
+                                          com_threshold=com_th)
+        df_plot = pd.DataFrame({'sound_len': sound_len, 'com': com})
+        binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                     errorbar_kw={'color': 'k', 'label': str(com_th)}, ax=ax)
+    ax.legend()
+    ax.set_xlabel('RT(ms)')
+    ax.set_ylabel('P(CoM)')
+
+
+def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
+                      bins_coh=[-1, -0.5, -0.25, 0, 0.25, 0.5, 1]):
+    fig, ax = plt.subplots(2, 2)
+    ax = ax.flatten()
+    for a in ax:
+        rm_top_right_lines(ax=a)
+    subjects = df.subjid.unique()
+    for j in [0, 2]:
+        com_vs_zt = np.zeros((len(subjects), len(bins_zt)-1))
+        error_com_vs_zt = np.zeros((len(subjects), len(bins_zt)-1))
+        for i_sub, subj in enumerate(subjects):
+            df_1 = df.loc[df.subjid == subj]
+            zt_tmp = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+            if j != 0:
+                zt_tmp *= (df_1.R_response.values*2-1)
+                ax[j].set_xlabel('Prior Congruency')
+            if j == 0:
+                ax[j].set_xlabel('Prior')
+            ax[j].set_ylabel('P(CoM)')
+            norm_zt = zt_tmp/max(abs(zt_tmp))
+            for i_b, bin_zt in enumerate(bins_zt[:-1]):
+                index_zt = (norm_zt >= bin_zt)*(norm_zt < bins_zt[i_b+1])
+                com_binned = np.nanmean(df_1.CoM_sugg.values[index_zt])
+                error_com = np.nanstd(df_1.CoM_sugg.values[index_zt]) /\
+                    np.sqrt(sum(index_zt))
+                com_vs_zt[i_sub, i_b] = com_binned
+                error_com_vs_zt[i_sub, i_b] = error_com
+            ax[j].errorbar(bins_zt[:-1], com_vs_zt[i_sub, :],
+                           error_com_vs_zt[i_sub, :],
+                           color='k', alpha=0.5)
+        total_mean_com_zt = np.nanmean(com_vs_zt, axis=0)
+        total_error_com_zt = np.nanstd(com_vs_zt, axis=0)/np.sqrt(len(subjects))
+        ax[j].errorbar(bins_zt[:-1], total_mean_com_zt, total_error_com_zt,
+                       color='k', alpha=1, linewidth=3)
+    for j in [1, 3]:
+        com_vs_coh = np.zeros((len(subjects), len(bins_coh)))
+        error_com_vs_coh = np.zeros((len(subjects), len(bins_coh)))
+        for i_sub, subj in enumerate(subjects):
+            df_1 = df.loc[df.subjid == subj]
+            coh = df_1.coh2.values
+            if j != 1:
+                coh *= (df_1.R_response.values*2-1)
+                ax[j].set_xlabel('Stimulus Congruency')
+            if j == 1:
+                ax[j].set_xlabel('Stimulus')
+            for i_b, bin_coh in enumerate(bins_coh):
+                index_coh = coh == bin_coh
+                com_binned = np.nanmean(df_1.CoM_sugg.values[index_coh])
+                error_com = np.nanstd(df_1.CoM_sugg.values[index_coh]) /\
+                    np.sqrt(sum(index_coh))
+                com_vs_coh[i_sub, i_b] = com_binned
+                error_com_vs_coh[i_sub, i_b] = error_com
+            ax[j].errorbar(bins_coh, com_vs_coh[i_sub, :],
+                           error_com_vs_coh[i_sub, :], color='k', alpha=0.5)
+        total_mean_com_coh = np.nanmean(com_vs_coh, axis=0)
+        total_error_com_coh = np.nanstd(com_vs_coh, axis=0)/np.sqrt(len(subjects))
+        ax[j].errorbar(bins_coh, total_mean_com_coh, total_error_com_coh,
+                       color='k', alpha=1, linewidth=3)
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
-    f2 = False
+    f1 = True
+    f2 = True
     f3 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     if f1 or f2 or f3 or f5:
         all_rats = True
@@ -1984,8 +2093,10 @@ if __name__ == '__main__':
                                          traj_stamps=traj_stamps,
                                          fix_onset=fix_onset, com=com,
                                          sound_len=sound_len)
+        print('Computing CoMs')
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                           time_trajs=time_trajs)
+        print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
 
         df['norm_allpriors'] = norm_allpriors_per_subj(df)
