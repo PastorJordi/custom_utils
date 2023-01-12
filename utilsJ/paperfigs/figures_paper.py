@@ -1966,13 +1966,13 @@ def norm_allpriors_per_subj(df):
 
 
 def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
-                                  coh, zt, after_correct_id,
-                                  com_th_list=np.linspace(0.5, 10, 20)):
+                                  coh, zt, com_th_list=np.linspace(0.5, 10, 20)):
     fig, ax = plt.subplots(1)
     rm_top_right_lines(ax=ax)
     colormap = pl.cm.Reds(np.linspace(0.2, 1, len(com_th_list)))
     com_d = {}
     fig1_th, ax1 = plt.subplots(4, 2)
+    ax1 = ax1.flatten()
     cont = 0
     for i_th, com_th in enumerate(com_th_list):
         print('Com threshold = ' + str(com_th))
@@ -1983,7 +1983,8 @@ def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
         binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                      errorbar_kw={'color': colormap[i_th], 'label': str(com_th)},
                      ax=ax)
-        com_d['com_'+str(com_th)] = com[after_correct_id]
+        com = np.array(com)
+        com_d['com_'+str(com_th)] = com
         if com_th == 1 or com_th == 2.5 or com_th == 5 or com_th == 8:
             i_ax = cont
             df_1 = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
