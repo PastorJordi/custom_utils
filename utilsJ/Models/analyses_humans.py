@@ -13,6 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
+from numpy import concatenate as conc
+from numpy import logical_and as and_
 import sys
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
 from utilsJ.Behavior.plotting import binned_curve,\
@@ -29,6 +31,8 @@ RESP_W = 0.3
 START_ANALYSIS = 0  # trials to ignore
 GREEN = np.array((77, 175, 74))/255
 PURPLE = np.array((152, 78, 163))/255
+model_cols = ['evidence',
+              'L+', 'L-', 'T+-', 'T-+', 'T--', 'T++', 'intercept']
 
 
 def get_data(subj, main_folder):
@@ -252,9 +256,12 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
         extract_vars_from_dict(data_tr, steps=None)
     choice_12 = choice + 1
     choice_12[~valid] = 0
-    # data = {'signed_evidence': ev, 'choice': choice_12,
-    #         'performance': perf}
-    df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
+    data = {'signed_evidence': ev, 'choice': choice_12,
+            'performance': perf}
+    if rgrss_folder is None:
+        df_regressors = get_GLM_regressors(data, tau=2)
+    else:
+        df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
     ind_af_er = df_regressors['aftererror'] == 0
     ev = ev[ind_af_er]
     perf = perf[ind_af_er]
@@ -502,6 +509,165 @@ def get_data_traj(folder, plot=False):
         k = 'answer_times'
         data_trj[k] = np.concatenate((data_trj[k], values))
     return data_tls, data_trj
+
+
+def get_repetitions(mat):
+    """
+    Return mask indicating the repetitions in mat.
+    Makes diff of the input vector, mat, to obtain the repetition vector X,
+    i.e. X will be 1 at t if the value of mat at t is equal to that at t-1
+    Parameters
+    ----------
+    mat : array
+        array of elements.
+    Returns
+    -------
+    repeats : array
+        mask indicating the repetitions in mat.
+    """
+    mat = mat.flatten()
+    values = np.unique(mat)
+    # We need to account for size reduction of np.diff()
+    rand_ch = np.array(np.random.choice(values, size=(1,)))
+    repeat_choice = conc((rand_ch, mat))
+    diff = np.diff(repeat_choice)
+    repeats = (diff == 0)*1.
+    repeats[np.isnan(diff)] = np.nan
+    return repeats
+
+
+def nanconv(vec_1, vec_2):
+    """
+    This function returns a convolution result of two vectors without
+    considering nans
+    """
+    mask = ~np.isnan(vec_1)
+    return np.nansum(np.multiply(vec_2[mask], vec_1[mask]))
+
+
+def get_GLM_regressors(data, tau, chck_corr=False):
+    """
+    Compute regressors.
+    Parameters
+    ----------
+    data : dict
+        dictionary containing behavioral data.
+    chck_corr : bool, optional
+        whether to check correlations (False)
+    Returns
+    -------
+    df: dataframe
+        dataframe containg evidence, lateral and transition regressors.
+    """
+    ev = data['signed_evidence'][START_ANALYSIS::]  # coherence/evidence with sign
+    perf = data['performance'].astype(float)  # performance (0/1)
+    ch = data['choice'][START_ANALYSIS::].astype(float)  # choice (1, 2)
+    # discard (make nan) non-standard-2afc task periods
+    if 'std_2afc' in data.keys():
+        std_2afc = data['std_2afc'][START_ANALYSIS::]
+    else:
+        std_2afc = np.ones_like(ch)
+    inv_choice = and_(ch != 1., ch != 2.)
+    nan_indx = np.logical_or.reduce((std_2afc == 0, inv_choice))
+
+    ev[nan_indx] = np.nan
+    perf[nan_indx] = np.nan
+    ch[nan_indx] = np.nan
+    ch = ch-1  # choices should belong to {0, 1}
+    prev_perf = ~ (conc((np.array([True]), data['performance'][:-1])) == 1)
+    prev_perf = prev_perf.astype('int')
+    prevprev_perf = (conc((np.array([False]), prev_perf[:-1])) == 1)
+    ev /= np.nanmax(ev)
+    rep_ch_ = get_repetitions(ch)
+    # variables:
+    # 'origidx': trial index within session
+    # 'rewside': ground truth
+    # 'hithistory': performance
+    # 'R_response': choice (right == 1, left == 0, invalid == nan)
+    # 'subjid': subject
+    # 'sessid': session
+    # 'res_sound': stimulus (left - right) [frame_i, .., frame_i+n]
+    # 'sound_len': stim duration
+    # 'frames_listened'
+    # 'aftererror': not(performance) shifted
+    # 'rep_response'
+    df = {'origidx': np.arange(ch.shape[0]),
+          'R_response': ch,
+          'hit': perf,
+          'evidence': ev,
+          'aftererror': prev_perf,
+          'rep_response': rep_ch_,
+          'prevprev_perf': prevprev_perf}
+    df = pd.DataFrame(df)
+
+    # Lateral module
+    df['L+1'] = np.nan  # np.nan considering invalids as errors
+    df.loc[(df.R_response == 1) & (df.hit == 1), 'L+1'] = 1
+    df.loc[(df.R_response == 0) & (df.hit == 1), 'L+1'] = -1
+    df.loc[df.hit == 0, 'L+1'] = 0
+    df['L+1'] = df['L+1'].shift(1)
+    df.loc[df.origidx == 1, 'L+1'] = np.nan
+    # L-
+    df['L-1'] = np.nan
+    df.loc[(df.R_response == 1) & (df.hit == 0), 'L-1'] = 1
+    df.loc[(df.R_response == 0) & (df.hit == 0), 'L-1'] = -1
+    df.loc[df.hit == 1, 'L-1'] = 0
+    df['L-1'] = df['L-1'].shift(1)
+    df.loc[df.origidx == 1, 'L-1'] = np.nan
+
+    # pre transition module
+    df.loc[df.origidx == 1, 'rep_response'] = np.nan
+    df['rep_response_11'] = df.rep_response
+    df.loc[df.rep_response == 0, 'rep_response_11'] = -1
+    df.rep_response_11.fillna(value=0, inplace=True)
+    df.loc[df.origidx == 1, 'aftererror'] = np.nan
+
+    # transition module
+    df['T++1'] = np.nan  # np.nan
+    df.loc[(df.aftererror == 0) & (df.hit == 1), 'T++1'] =\
+        df.loc[(df.aftererror == 0) & (df.hit == 1), 'rep_response_11']
+    df.loc[(df.aftererror == 1) | (df.hit == 0), 'T++1'] = 0
+    df['T++1'] = df['T++1'].shift(1)
+
+    df['T+-1'] = np.nan  # np.nan
+    df.loc[(df.aftererror == 0) & (df.hit == 0), 'T+-1'] =\
+        df.loc[(df.aftererror == 0) & (df.hit == 0), 'rep_response_11']
+    df.loc[(df.aftererror == 1) | (df.hit == 1), 'T+-1'] = 0
+    df['T+-1'] = df['T+-1'].shift(1)
+
+    df['T-+1'] = np.nan  # np.nan
+    df.loc[(df.aftererror == 1) & (df.hit == 1), 'T-+1'] =\
+        df.loc[(df.aftererror == 1) & (df.hit == 1), 'rep_response_11']
+    df.loc[(df.aftererror == 0) | (df.hit == 0), 'T-+1'] = 0
+    df['T-+1'] = df['T-+1'].shift(1)
+
+    df['T--1'] = np.nan  # np.nan
+    df.loc[(df.aftererror == 1) & (df.hit == 0), 'T--1'] =\
+        df.loc[(df.aftererror == 1) & (df.hit == 0), 'rep_response_11']
+    df.loc[(df.aftererror == 0) | (df.hit == 1), 'T--1'] = 0
+    df['T--1'] = df['T--1'].shift(1)
+
+    # exponential fit for T++
+    decay_tr = np.exp(-np.arange(10)/tau)  # exp(-x/tau)
+    regs = [x for x in model_cols if x != 'intercept' and x != 'evidence']
+    N = len(decay_tr)
+    for reg in regs:  # all regressors (T and L)
+        df[reg] = df[reg+str(1)]
+        for j in range(N, len(df[reg+str(1)])):
+            df[reg][j-1] = nanconv(df[reg+str(1)][j-N:j], decay_tr[::-1])
+            # its j-1 for shifting purposes
+
+    # transforming transitions to left/right space
+    for col in [x for x in df.columns if x.startswith('T')]:
+        df[col] = df[col] * (df.R_response.shift(1)*2-1)
+        # {-1 = Left; 1 = Right, nan=invalid}
+
+    df['intercept'] = 1
+
+    df.loc[:, model_cols].fillna(value=0, inplace=True)
+    # check correlation between regressors
+
+    return df  # resulting df with lateralized T
 
 
 def copy_files(ori_f, fin_f):
