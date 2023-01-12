@@ -1966,11 +1966,14 @@ def norm_allpriors_per_subj(df):
 
 
 def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
+                                  coh, zt, after_correct_id,
                                   com_th_list=np.linspace(0.5, 10, 20)):
     fig, ax = plt.subplots(1)
     rm_top_right_lines(ax=ax)
     colormap = pl.cm.Reds(np.linspace(0.2, 1, len(com_th_list)))
     com_d = {}
+    fig1_th, ax1 = plt.subplots(4, 2)
+    cont = 0
     for i_th, com_th in enumerate(com_th_list):
         print('Com threshold = ' + str(com_th))
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -1980,7 +1983,38 @@ def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
         binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                      errorbar_kw={'color': colormap[i_th], 'label': str(com_th)},
                      ax=ax)
-        com_d['com_'+str(com_th)] = com
+        com_d['com_'+str(com_th)] = com[after_correct_id]
+        if com_th == 1 or com_th == 2.5 or com_th == 5 or com_th == 8:
+            i_ax = cont
+            df_1 = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                                 'norm_allpriors': zt/max(abs(zt)),
+                                 'R_response': (decision+1)/2})
+            nbins = 7
+            matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
+            matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
+            # L-> R
+            vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+            pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+            im = ax1[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax)
+            plt.sca(ax1[i_ax*2])
+            plt.colorbar(im, fraction=0.04)
+            # R -> L
+            pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+            im = ax1[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+            ax1[i_ax*2+1].yaxis.set_ticks_position('none')
+            plt.sca(ax1[i_ax*2+1])
+            plt.colorbar(im, fraction=0.04)
+            if i_ax == 0:
+                ax1[i_ax].set_title(pcomlabel_1)
+                ax1[i_ax+1].set_title(pcomlabel_0)
+            for ax_i in [ax1[i_ax*2], ax1[i_ax*2+1]]:
+                ax_i.set_yticklabels(['']*nbins)
+                ax_i.set_xticklabels(['']*nbins)
+            ax1[i_ax*2].set_ylabel('stim, th = {} px'.format(com_th))
+            if i_ax == len(ax1) - 1:
+                ax1[i_ax*2].set_xlabel('Prior evidence')
+                ax1[i_ax*2+1].set_xlabel('Prior evidence')
+            cont += 1
     # ax.legend()
     ax.set_xlabel('RT(ms)')
     ax.set_ylabel('P(CoM)')
