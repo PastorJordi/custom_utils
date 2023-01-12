@@ -1962,16 +1962,17 @@ def norm_allpriors_per_subj(df):
 def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
                                   com_th_list=np.linspace(0, 10, 21)):
     fig, ax = plt.subplots(1)
-    colormap = colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, len(ev_vals)))
-    for com_th in com_th_list:
+    colormap = pl.cm.Reds(np.linspace(0.2, 1, len(com_th_list)))
+    for i_th, com_th in enumerate(com_th_list):
         print('Com threshold = ' + str(com_th))
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                           time_trajs=time_trajs,
                                           com_threshold=com_th)
         df_plot = pd.DataFrame({'sound_len': sound_len, 'com': com})
         binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                     errorbar_kw={'color': 'k', 'label': str(com_th)}, ax=ax)
-    ax.legend()
+                     errorbar_kw={'color': colormap[i_th], 'label': str(com_th)},
+                     ax=ax)
+    # ax.legend()
     ax.set_xlabel('RT(ms)')
     ax.set_ylabel('P(CoM)')
 
