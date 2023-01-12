@@ -322,41 +322,41 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                                xlabel='Normalized prior')
         plt.title('pRight')
 
-        f, ax = plt.subplots(ncols=5, nrows=3, figsize=(6, 3),
-                             gridspec_kw={'width_ratios': [12, 3, 3, 12, 3],
-                                          'height_ratios': [12, 3, 12],
-                                          'top': 0.969, 'bottom': 0.081,
-                                          'left': 0.081, 'right': 0.88,
-                                          'hspace': 0.215, 'wspace': 0.25})
+        # f, ax = plt.subplots(ncols=5, nrows=3, figsize=(6, 3),
+        #                      gridspec_kw={'width_ratios': [12, 3, 3, 12, 3],
+        #                                   'height_ratios': [12, 3, 12],
+        #                                   'top': 0.969, 'bottom': 0.081,
+        #                                   'left': 0.081, 'right': 0.88,
+        #                                   'hspace': 0.215, 'wspace': 0.25})
 
-        ax_side1 = ax[1:3, 0:2]
-        com_heatmap_paper_marginal_pcom_side(df_data, f=f, ax=ax_side1, side=1,
-                                             hide_marginal_axis=True)
-        ax_side1[1, 0].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$',
-                                  labelpad=15)
-        ax_side1[1, 0].set_ylabel(
-            r'$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-5)
-        ax_side0 = ax[1:3, 3:5]
-        com_heatmap_paper_marginal_pcom_side(df_data, f=f, ax=ax_side0, side=0,
-                                             hide_marginal_axis=True)
-        for j in range(3):
-            ax[j, 2].axis('off')
-        ax_side0[1, 0].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$',
-                                  labelpad=15)
-        ax_side0[1, 0].set_ylabel(
-            r'$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=15)
-        # edd2.com_heatmap_jordi(prior[indx], ev[indx], com_list[indx],
-        #                        annotate=False, flip=True, ax=ax[0, 0],
-        #                        cbar_location='left')
-        # ax[0, 0].set_title('pCoM')
-        ax[0, 1].axis('off')
-        ax[0, 4].axis('off')
-        ax[0, 0].axis('off')
-        edd2.com_heatmap_jordi(prior[indx], ev[indx], choice[indx],
-                               annotate=False, flip=True, ax=ax[0, 3],
-                               cbar_location='left', cmap='rocket')
-        ax[0, 3].set_title('pRight')
-        f.savefig(sv_folder + '\\figure_3_cosyne.svg')
+        # ax_side1 = ax[1:3, 0:2]
+        # com_heatmap_paper_marginal_pcom_side(df_data, f=f, ax=ax_side1, side=1,
+        #                                      hide_marginal_axis=True)
+        # ax_side1[1, 0].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$',
+        #                           labelpad=15)
+        # ax_side1[1, 0].set_ylabel(
+        #     r'$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=-5)
+        # ax_side0 = ax[1:3, 3:5]
+        # com_heatmap_paper_marginal_pcom_side(df_data, f=f, ax=ax_side0, side=0,
+        #                                      hide_marginal_axis=True)
+        # for j in range(3):
+        #     ax[j, 2].axis('off')
+        # ax_side0[1, 0].set_xlabel(r'$\longleftarrow$Prior$\longrightarrow$',
+        #                           labelpad=15)
+        # ax_side0[1, 0].set_ylabel(
+        #     r'$\longleftarrow$Average stimulus$\longrightarrow$', labelpad=15)
+        # # edd2.com_heatmap_jordi(prior[indx], ev[indx], com_list[indx],
+        # #                        annotate=False, flip=True, ax=ax[0, 0],
+        # #                        cbar_location='left')
+        # # ax[0, 0].set_title('pCoM')
+        # ax[0, 1].axis('off')
+        # ax[0, 4].axis('off')
+        # ax[0, 0].axis('off')
+        # edd2.com_heatmap_jordi(prior[indx], ev[indx], choice[indx],
+        #                        annotate=False, flip=True, ax=ax[0, 3],
+        #                        cbar_location='left', cmap='rocket')
+        # ax[0, 3].set_title('pRight')
+        # f.savefig(sv_folder + '\\figure_3_cosyne.svg')
         plot_coms(com_list=com_list, pos_x=pos_x, answer_times=answer_times,
                   com_threshold=com_threshold)
         plot_init_point_prior(pos_x, prior, choice, com_list)
@@ -423,7 +423,7 @@ def traj_analysis(data_folder, sv_folder, subjects, steps=[None], name=''):
         for i_stp, stp in enumerate(steps):
             data_tr, data_traj = get_data_traj(folder=folder)
             df_data = change_of_mind(data_tr, data_traj, com_threshold=100,
-                                     plot=False, rgrss_folder=data_folder,
+                                     plot=True, rgrss_folder=data_folder,
                                      sv_folder=sv_folder)
     return df_data
 
