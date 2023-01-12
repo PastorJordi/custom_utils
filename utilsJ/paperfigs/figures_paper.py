@@ -1521,6 +1521,7 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
 
+
 def human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                 wanted_precision=8, traj_thr=240, vel_thr=2):
     
@@ -1965,9 +1966,11 @@ def norm_allpriors_per_subj(df):
 
 
 def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
-                                  com_th_list=np.linspace(0, 10, 21)):
+                                  com_th_list=np.linspace(0.5, 10, 20)):
     fig, ax = plt.subplots(1)
+    rm_top_right_lines(ax=ax)
     colormap = pl.cm.Reds(np.linspace(0.2, 1, len(com_th_list)))
+    com_d = {}
     for i_th, com_th in enumerate(com_th_list):
         print('Com threshold = ' + str(com_th))
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -1977,9 +1980,12 @@ def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
         binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
                      errorbar_kw={'color': colormap[i_th], 'label': str(com_th)},
                      ax=ax)
+        com_d['com_'+str(com_th)] = com
     # ax.legend()
     ax.set_xlabel('RT(ms)')
     ax.set_ylabel('P(CoM)')
+    com_dframe = pd.DataFrame(com_d)
+    com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
 
 
 def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
@@ -2009,6 +2015,7 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
                     np.sqrt(sum(index_zt))
                 com_vs_zt[i_sub, i_b] = com_binned
                 error_com_vs_zt[i_sub, i_b] = error_com
+            com_vs_zt[i_sub, :] /= np.max(com_vs_zt[i_sub, :])
             ax[j].errorbar(bins_zt[:-1], com_vs_zt[i_sub, :],
                            error_com_vs_zt[i_sub, :],
                            color='k', alpha=0.5)
@@ -2034,6 +2041,7 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
                     np.sqrt(sum(index_coh))
                 com_vs_coh[i_sub, i_b] = com_binned
                 error_com_vs_coh[i_sub, i_b] = error_com
+            com_vs_coh[i_sub, :] /= np.max(com_vs_coh[i_sub, :])
             ax[j].errorbar(bins_coh, com_vs_coh[i_sub, :],
                            error_com_vs_coh[i_sub, :], color='k', alpha=0.5)
         total_mean_com_coh = np.nanmean(com_vs_coh, axis=0)
