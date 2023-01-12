@@ -1506,7 +1506,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
     ax.set_xlabel('Time from movement onset (ms)', fontsize=10)
 
 
-def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
+def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                 wanted_precision=8, traj_thr=240, vel_thr=2):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
@@ -1520,6 +1520,11 @@ def human_trajs(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
+
+def human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
+                wanted_precision=8, traj_thr=240, vel_thr=2):
+    
+    # TRAJECTORIES
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     coh = df_data.avtrapz.values
     decision = df_data.R_response.values
@@ -2171,7 +2176,7 @@ if __name__ == '__main__':
     if f6:
         # human traj plots
         human_trajs(user_id='Manuel', sv_folder=SV_FOLDER, max_mt=600,
-                    wanted_precision=12, traj_thr=250, vel_thr=2.8)
+                    wanted_precision=12, traj_thr=250, vel_thr=2.8, nm='300')
     if f7:
         fig_7(df, df_sim)
     # from utilsJ.Models import extended_ddm_v2 as edd2
