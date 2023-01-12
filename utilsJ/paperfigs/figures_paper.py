@@ -1048,7 +1048,7 @@ def fig_CoMs_3(df, inset_sz=.08, marginx=0.005, marginy=0.08, figsize=(10, 5),
         ax_i.set_xticklabels(['']*nbins)
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(4, 6),
+    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(4, 2),
                          marginx=marginx, marginy=marginy)
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax_inset)
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
@@ -1062,12 +1062,18 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         df_1 = df.loc[df.subjid == subj]
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
-    ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
+    # ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
+    ax_inset.boxplot(comlist_rats)
+    ax_inset.plot(np.repeat(1, len(comlist_rats)) +
+                  0.1*np.random.randn(len(comlist_rats)),
+                  comlist_rats, color='k', linestyle='',
+                  marker='o', alpha=0.5)
     ax_inset.set_ylabel('P(CoM)')
-    ax_inset.set_xlabel('Rat')
+    # ax_inset.set_xlabel('Rat')
+    ax_inset.set_xticklabels([''])
     ax_inset.axhline(np.nanmean(comlist_rats), linestyle='--', color='k',
                      alpha=0.8)
-    ax_inset.set_xticklabels(subjects, rotation=90)
+    # ax_inset.set_xticklabels(subjects, rotation=90)
     ax_inset.set_ylim(0, 0.125)
 
 
