@@ -333,7 +333,7 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
-                                  prior_limit=0.25, rt_lim=25, 
+                                  prior_limit=0.25, rt_lim=25,
                                   after_correct_only=True,
                                   trajectory="trajectory_y",
                                   velocity=("traj_d1", 1),
@@ -478,7 +478,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     evl = np.empty(())
     appb = True
     for iev, ev in enumerate(evs):
-        indx = df.subjid == subject
+        indx = (df.special_trial == 0) & (df.subjid == subject)
         if np.sum(indx) > 0:
             _, matatmp, matb =\
                 simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=True,
@@ -491,7 +491,8 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700)
-    ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    # ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.05)
     ax.set_xlim(-10, 100)
     ax.set_ylim(-2, 5)
     ax.set_xlabel('time from movement onset (ms)')
@@ -597,8 +598,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                  axis=1, nan_policy='omit'),
         **error_kws
     )
-    if draw_line is not None:
-        ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
+    # if draw_line is not None:
+    #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
 
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('time to split (ms)')
@@ -1527,7 +1528,7 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                wanted_precision=8, traj_thr=240, vel_thr=2)
+                wanted_precision=8, traj_thr=240, vel_thr=2.8)
 
 
 def human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
@@ -2211,12 +2212,12 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = True
     f2 = True
-    f3 = False
+    f3 = True
     f5 = False
     f6 = False
     f7 = False
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -2265,7 +2266,7 @@ if __name__ == '__main__':
                                          sound_len=sound_len)
         print('Computing CoMs')
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
-                                          time_trajs=time_trajs)
+                                          time_trajs=time_trajs, com_threshold=8)
         print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
 
