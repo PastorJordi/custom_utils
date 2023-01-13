@@ -34,7 +34,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps_Jordi'  # 'alex'
+pc_name = 'idibaps'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -941,6 +941,7 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
     for a in ax:
         rm_top_right_lines(a)
     # TODO: the function below does not work with all subjects
+    # (see line 805 in function trajectory_thr in plotting.py)
     df_trajs = df.loc[df.subjid == 'LE43']
     trajs_cond_on_coh_computation(df=df_trajs, ax=ax_zt, condition='prior_x_coh',
                                   prior_limit=1, cmap='copper')
@@ -1513,7 +1514,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                wanted_precision=8, traj_thr=240, vel_thr=2):
+                 wanted_precision=8, traj_thr=240, vel_thr=2):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -1526,11 +1527,13 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
+    human_trajs(df_data, sv_folder, max_mt=max_mt, jitter=jitter,
+                wanted_precision=wanted_precision, traj_thr=traj_thr,
+                vel_thr=vel_thr)
 
 
-def human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
+def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
                 wanted_precision=8, traj_thr=240, vel_thr=2):
-    
     # TRAJECTORIES
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     coh = df_data.avtrapz.values
@@ -2094,11 +2097,11 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
-    f2 = True
+    f1 = False
+    f2 = False
     f3 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
     if f1 or f2 or f3 or f5:
         all_rats = True
@@ -2224,8 +2227,8 @@ if __name__ == '__main__':
         supp_trajs_prior_cong(df_sim, ax=None)
     if f6:
         # human traj plots
-        human_trajs(user_id='Manuel', sv_folder=SV_FOLDER, max_mt=600,
-                    wanted_precision=12, traj_thr=250, vel_thr=2.8, nm='300')
+        fig_humans_6(user_id='Manuel', sv_folder=SV_FOLDER, max_mt=600,
+                     wanted_precision=12, traj_thr=250, vel_thr=2.8, nm='300')
     if f7:
         fig_7(df, df_sim)
     # from utilsJ.Models import extended_ddm_v2 as edd2
