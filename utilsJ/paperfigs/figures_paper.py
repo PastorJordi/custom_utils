@@ -1513,7 +1513,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                wanted_precision=8, traj_thr=240, vel_thr=2):
+                 wanted_precision=8, traj_thr=240, vel_thr=2):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -1526,11 +1526,12 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
+    human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
+                wanted_precision=8, traj_thr=240, vel_thr=2)
 
 
 def human_trajs(df_data, user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                 wanted_precision=8, traj_thr=240, vel_thr=2):
-    
     # TRAJECTORIES
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     coh = df_data.avtrapz.values
@@ -2029,6 +2030,120 @@ def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
     com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
 
 
+def com_threshold_matrices(df):
+    dfth = pd.read_csv(SV_FOLDER + 'com_diff_thresholds.csv')
+    fig, ax = plt.subplots(nrows=3, ncols=10, figsize=(15, 6))
+    ax = ax.flatten()
+    thlist = np.linspace(1, 10, 10)
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    coh = df.coh2.values
+    decision = df.R_response.values*2 - 1
+    nbins = 7
+    for i_th, threshold in enumerate(thlist):
+        com = dfth['com_'+str(threshold)]
+        df_1 = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+                             'norm_allpriors': zt/max(abs(zt)),
+                             'R_response': (decision+1)/2})
+        matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
+        matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
+        # L-> R
+        vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+        pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+        im = ax[i_th].imshow(matrix_side_1, vmin=0, vmax=vmax)
+        plt.sca(ax[i_th])
+        plt.colorbar(im, fraction=0.04)
+        # R -> L
+        pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+        im = ax[i_th+len(thlist)].imshow(matrix_side_0, vmin=0, vmax=vmax)
+        ax[i_th+len(thlist)].yaxis.set_ticks_position('none')
+        plt.sca(ax[i_th+len(thlist)])
+        plt.colorbar(im, fraction=0.04)
+        ax[i_th].set_title('stim, th = {} px'.format(threshold))
+        ax[i_th+len(thlist)].set_xlabel('Prior evidence')
+        if i_th == 0:
+            ax[i_th].set_ylabel(pcomlabel_1 + ', avg. stim.')
+            ax[i_th+len(thlist)].set_ylabel(pcomlabel_0 + ', avg. stim.')
+            ax[i_th + 2*len(thlist)].set_ylabel('Position (px)')
+        for ax_i in [ax[i_th], ax[i_th+len(thlist)]]:
+            ax_i.set_yticklabels(['']*nbins)
+            ax_i.set_xticklabels(['']*nbins)
+        cont = 1
+        j = 1000
+        while cont <= 10:
+            if threshold < 10:
+                if com[j] and df.trajectory_y.values[j][-1] > 1 and\
+                  df.R_response.values[j] == 1 and\
+                  not dfth['com_'+str(threshold+0.5)][j] and\
+                  df.trajectory_y.values[j][-0] >= -2 and\
+                  df.trajectory_y.values[j][-0] <= 10:
+                    traj = df.trajectory_y.values[j]
+                    time_trajs = df.time_trajs.values[j]
+                    traj -= np.nanmean(traj[
+                        (time_trajs >= -100)*(time_trajs <= 0)])
+                    ax[i_th + 2*len(thlist)].plot(time_trajs,
+                                                  traj,
+                                                  color='k', alpha=0.7)
+                    cont += 1
+            if threshold == 10:
+                if com[j] and df.trajectory_y.values[j][-1] > 1 and\
+                  df.R_response.values[j] == 1 and\
+                  df.trajectory_y.values[j][-0] >= -2 and\
+                  df.trajectory_y.values[j][-0] <= 10:
+                    traj = df.trajectory_y.values[j]
+                    time_trajs = df.time_trajs.values[j]
+                    traj -= np.nanmean(traj[
+                        (time_trajs >= -100)*(time_trajs <= 0)])
+                    ax[i_th + 2*len(thlist)].plot(time_trajs,
+                                                  traj,
+                                                  color='k', alpha=0.7)
+                    cont += 1
+            j += 1
+        ax[i_th + 2*len(thlist)].set_xlabel('Time')
+        ax[i_th + 2*len(thlist)].set_ylim(-25, 25)
+        ax[i_th + 2*len(thlist)].set_xlim(-100, 500)
+        ax[i_th + 2*len(thlist)].axhline(-threshold, color='r', linestyle='--',
+                                         alpha=0.5)
+        ax[i_th + 2*len(thlist)].axvline(0, color='r', linestyle='--',
+                                         alpha=0.5)
+    thlist = np.linspace(0.5, 10, 20)
+    mean_com = []
+    fig2, ax2 = plt.subplots(1)
+    for i_th, threshold in enumerate(thlist):
+        com = dfth['com_'+str(threshold)]
+        mean_com.append(np.nanmean(com))
+    ax2.plot(thlist, mean_com, color='k', marker='o')
+    ax2.set_xlabel('Threshold (px)')
+    ax2.set_ylabel('P(CoM)')
+
+
+def check_traj_decision(df):
+    # plt.figure()
+    # for j in range(200):
+    #     inde = np.random.randint(1e5)
+    #     if df.R_response.values[inde] > 0:
+    #         color = 'red'
+    #     else:
+    #         color = 'blue'
+    #     plt.plot(df.time_trajs.values[inde], df.trajectory_y.values[inde],
+    #              color=color)
+    incongruent = []
+    absurd_trajs = []
+    n = len(df.R_response.values)
+    for j, ch in enumerate(df.R_response.values*2 - 1):
+        traj = df.trajectory_y.values[j]
+        if len(traj) > 1:
+            if max(traj) > 100:
+                absurd_trajs.append(j)
+            elif np.sign(traj[-1]) != np.sign(ch):
+                incongruent.append(j)
+        else:
+            incongruent.append(j)
+    print('Incongruent trajs percentage:')
+    print(str(len(incongruent)*100/n)+'%')
+    print('"Absurd" trajs percentage:')
+    print(str(len(absurd_trajs)*100/n)+'%')
+
+
 def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
                       bins_coh=[-1, -0.5, -0.25, 0, 0.25, 0.5, 1]):
     fig, ax = plt.subplots(2, 2)
@@ -2156,6 +2271,7 @@ if __name__ == '__main__':
 
         df['norm_allpriors'] = norm_allpriors_per_subj(df)
         df['CoM_sugg'] = com
+        df['time_trajs'] = time_trajs
         # if we want to use data from all rats, we must use dani_clean.pkl
 
     # fig 1
