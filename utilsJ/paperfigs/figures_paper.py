@@ -15,9 +15,10 @@ from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
 from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
+from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -34,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps'  # 'alex'
+pc_name = 'alex'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -75,8 +76,9 @@ def plot_coms(df, ax, human=False):
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
-                time = np.arange(len(traj))*FRAME_RATE
+                time = df.time_trajs.values[tr]
                 ax.plot(time, traj, color='tab:cyan', lw=.5)
+                ax.set_xlim(-100, 800)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
@@ -85,8 +87,9 @@ def plot_coms(df, ax, human=False):
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
-                time = np.arange(len(traj))*FRAME_RATE
+                time = df.time_trajs.values[tr]
                 ax.plot(time, traj, color='tab:olive', lw=2)
+                ax.set_xlim(-100, 800)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.2:
@@ -491,8 +494,9 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700)
-    # ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
-    ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.05)
+    ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
+    #          head_length=0.3)
     ax.set_xlim(-10, 100)
     ax.set_ylim(-2, 5)
     ax.set_xlabel('time from movement onset (ms)')
@@ -822,9 +826,9 @@ def fig_rats_behav_1(df_data):
             traj_x = trial['trajectory_x']
             traj_y = trial['trajectory_y']
             ax_rawtr.plot(traj_x, traj_y, color='k', lw=.5)
-            time = np.arange(len(traj_x))*FRAME_RATE
+            time = trial['time_trajs']
             ax_ydim.plot(time, traj_y, color='k', lw=.5)
-
+    ax_ydim.set_xlim(-100, 800)
     ax_rawtr.set_xticklabels([])
     ax_rawtr.set_yticklabels([])
     ax_rawtr.set_xticks([])
@@ -836,6 +840,32 @@ def fig_rats_behav_1(df_data):
 
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
+
+
+def groupby_binom_ci(x, method="beta"):
+    # so we can plot groupby with errorbars in binomial vars in 2 lines
+    return [abs(x.mean() - ci) for ci in
+            proportion_confint(x.sum(), len(x), method=method)]
+
+
+def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
+                 rtbins=np.arange(0, 151, 3), rt='sound_len',
+                 evidence='avtrapz', hits='hithistory'):
+    rtbinsize = rtbinsize = rtbins[1]-rtbins[0]
+    tmp_df = df
+    tmp_df['rtbin'] = pd.cut(
+        tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1),
+        retbins=False, include_lowest=True, right=True).astype(float)
+    xvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
+    yvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
+    for i in range(evidence_bins.size-1):
+        tmp = (tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
+               tmp_df[evidence].abs() < evidence_bins[i+1])]
+               .groupby('rtbin')[hits].agg(['mean',
+                                            groupby_binom_ci]).reset_index())
+        xvals[:, i] = tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize
+        yvals[:, i] = tmp['mean'].values
+    return xvals, yvals
 
 
 def mt_weights(df, ax, plot=False, means_errs=True):
@@ -993,11 +1023,18 @@ def tach_1st_2nd_choice(df, ax):
     hit_com = choice_com == gt
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len})
-    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='YlGn')
+    xvals, yvals1 = tachs_values(df=df_plot_data)
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    for j in range(4):
+        ax.plot(xvals[:, j], yvals1[:, j], color=colormap[j], linewidth=3)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
                                  'sound_len': sound_len})
-    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='Blues',
-                linestyle='--')
+    xvals, yvals2 = tachs_values(df=df_plot_data)
+    for j in range(4):
+        ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
+                linewidth=3)
+        ax.fill_between(xvals[:, j], yvals1[:, j], yvals2[:, j],
+                        color=colormap[j], alpha=0.4)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     legendelements = [Line2D([0], [0], linestyle='--', color='k', lw=2,
@@ -1066,7 +1103,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
     # ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
-    ax_inset.boxplot(comlist_rats)
+    ax_inset.violinplt(comlist_rats, color='olive', alpha=0.6)
     ax_inset.plot(np.repeat(1, len(comlist_rats)) +
                   0.1*np.random.randn(len(comlist_rats)),
                   comlist_rats, color='k', linestyle='',
@@ -2217,8 +2254,9 @@ if __name__ == '__main__':
     f2 = True
     f3 = True
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
+    com_threshold = 8
     if f1 or f2 or f3 or f5:
         all_rats = False
         if all_rats:
@@ -2269,7 +2307,8 @@ if __name__ == '__main__':
                                          sound_len=sound_len)
         print('Computing CoMs')
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
-                                          time_trajs=time_trajs, com_threshold=8)
+                                          time_trajs=time_trajs,
+                                          com_threshold=com_threshold)
         print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
 
