@@ -269,6 +269,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
     prior = np.nansum((df_regressors['T++'], df_regressors['T++']), axis=0)/2
     prior = prior[ind_af_er]
     pos_x = data_traj['answer_positionsX']
+    pos_y = data_traj['answer_positionsY']
     answer_times = [x for x in data_traj['answer_times']
                     if x not in [np.nan]]
     for inde in range(len(choice_12)):
@@ -281,6 +282,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
     answer_times = np.array(answer_times, dtype=object)[ind_af_er]
     pos_x = pos_x[ind_af_er]
     choice = choice[ind_af_er]
+    pos_y = pos_y[ind_af_er]
     choice_signed = choice*2 - 1
     reaction_time = reaction_time[ind_af_er]
     com_list = []
@@ -307,7 +309,8 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                             'sound_len': reaction_time[indx]*1e3,
                             'hithistory': perf[indx],
                             'trajectory_y': pos_x[indx],
-                            'times': answer_times[indx]})
+                            'times': answer_times[indx],
+                            'traj_y': pos_y[indx]})
     if plot:
         fig, ax = plt.subplots(1)
         bins = np.linspace(0, 350, 8)  # rt bins
