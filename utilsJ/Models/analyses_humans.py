@@ -433,7 +433,7 @@ def traj_analysis(data_folder, sv_folder, subjects, steps=[None], name=''):
         for i_stp, stp in enumerate(steps):
             data_tr, data_traj = get_data_traj(folder=folder)
             df_data = change_of_mind(data_tr, data_traj, com_threshold=100,
-                                     plot=True, rgrss_folder=data_folder,
+                                     plot=False, rgrss_folder=data_folder,
                                      sv_folder=sv_folder)
     return df_data
 
@@ -473,44 +473,51 @@ def get_data_traj(folder, plot=False):
         # read file
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        for k in data_tls.keys():
-            values = df1[k].values[START_ANALYSIS:]
-            if k == 'soundPlay_object1_leftRightBalance':
-                values = values-.5
-                values[np.abs(values) < 0.01] = 0
-            data_tls[k] = np.concatenate((data_tls[k], values))
+        if np.mean(df1['correct']) < 0.65:
+            continue
+        else:
+            for k in data_tls.keys():
+                values = df1[k].values[START_ANALYSIS:]
+                if k == 'soundPlay_object1_leftRightBalance':
+                    values = values-.5
+                    values[np.abs(values) < 0.01] = 0
+                data_tls[k] = np.concatenate((data_tls[k], values))
     num_tr = len(data_tls['correct'])
     data_trj = {'answer_positionsX': np.empty((0,)),
                 'answer_positionsY': np.empty((0,)),
                 'answer_times': np.empty((0,))}
     if plot:
         _, ax = plt.subplots()
-    for f in sorted_list_trj:
+    for i_f, f in enumerate(sorted_list_trj):
         # read file
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
+        df2 = pd.read_csv(folder+'/'+sorted_list_tls[i_f], sep=',')
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        pos_x = df1['answer_positionsX'].dropna().values[:num_tr]
-        pos_y = df1['answer_positionsY'].dropna().values[:num_tr]
-        cont = 0
-        for ind_trl in range(len(pos_x)):
-            if cont == 1 and df1['trial'][ind_trl] == 1:
-                break
-            if df1['trial'][ind_trl] == 1:
-                cont = 1
-            pos_x[ind_trl] = [float(x) for x in pos_x[ind_trl].split(';')]
-            pos_y[ind_trl] = [float(x) for x in pos_y[ind_trl].split(';')]
-            if plot:
-                color = PURPLE if data_tls['answer_response'][ind_trl] == 1\
-                    else GREEN
-                ax.plot(pos_x[ind_trl], pos_y[ind_trl], color=color)
-        k = 'answer_positionsX'
-        data_trj[k] = np.concatenate((data_trj[k], pos_x))
-        k = 'answer_positionsY'
-        data_trj[k] = np.concatenate((data_trj[k], pos_y))
-        k = df1.columns[-1]
-        values = df1[k].dropna().values
-        k = 'answer_times'
-        data_trj[k] = np.concatenate((data_trj[k], values))
+        if np.mean(df2['correct']) < 0.65:
+            continue
+        else:
+            pos_x = df1['answer_positionsX'].dropna().values[:num_tr]
+            pos_y = df1['answer_positionsY'].dropna().values[:num_tr]
+            cont = 0
+            for ind_trl in range(len(pos_x)):
+                if cont == 1 and df1['trial'][ind_trl] == 1:
+                    break
+                if df1['trial'][ind_trl] == 1:
+                    cont = 1
+                pos_x[ind_trl] = [float(x) for x in pos_x[ind_trl].split(';')]
+                pos_y[ind_trl] = [float(x) for x in pos_y[ind_trl].split(';')]
+                if plot:
+                    color = PURPLE if data_tls['answer_response'][ind_trl] == 1\
+                        else GREEN
+                    ax.plot(pos_x[ind_trl], pos_y[ind_trl], color=color)
+            k = 'answer_positionsX'
+            data_trj[k] = np.concatenate((data_trj[k], pos_x))
+            k = 'answer_positionsY'
+            data_trj[k] = np.concatenate((data_trj[k], pos_y))
+            k = df1.columns[-1]
+            values = df1[k].dropna().values
+            k = 'answer_times'
+            data_trj[k] = np.concatenate((data_trj[k], values))
     return data_tls, data_trj
 
 

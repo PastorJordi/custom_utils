@@ -1594,7 +1594,7 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
     # congruent_coh = coh * (decision*2 - 1)
-    fig, ax = plt.subplots(nrows=2, ncols=4)
+    fig, ax = plt.subplots(nrows=2, ncols=5)
     ax = ax.flatten()
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     vals_thr_traj = []
@@ -1625,7 +1625,7 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
                                         df_data.times.values[index]
                                         if t[-1] != '']))*1e3
         vals_thr_traj.append(val_traj)
-        ax[1].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
+        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
         mean_vel = np.nanmean(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
         for ind_v, velocity in enumerate(mean_vel):
@@ -1633,36 +1633,36 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
                 val_vel = ind_v*precision
                 break
         vals_thr_vel.append(val_vel)
-        ax[5].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
-        ax[0].plot(np.arange(len(mean_traj))*precision, mean_traj,
+        ax[7].scatter(ev, val_vel, color=colormap[i_ev], marker='D', s=60)
+        ax[1].plot(np.arange(len(mean_traj))*precision, mean_traj,
                    color=colormap[i_ev], label='{}'.format(bins[i_ev]))
-        ax[0].fill_between(x=np.arange(len(mean_traj))*precision,
+        ax[1].fill_between(x=np.arange(len(mean_traj))*precision,
                            y1=mean_traj-std_traj, y2=mean_traj+std_traj,
                            color=colormap[i_ev])
-        ax[4].plot(np.arange(len(mean_vel))*precision, mean_vel,
+        ax[6].plot(np.arange(len(mean_vel))*precision, mean_vel,
                    color=colormap[i_ev], label='{}'.format(bins[i_ev]))
-        ax[4].fill_between(x=np.arange(len(mean_vel))*precision,
+        ax[6].fill_between(x=np.arange(len(mean_vel))*precision,
                            y1=mean_vel-std_vel, y2=mean_vel+std_vel,
                            color=colormap[i_ev])
-    ax[1].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[5].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
-    ax[0].set_xlim(-0.1, 550)
-    ax[4].set_xlim(-0.1, 550)
-    ax[4].set_ylim(1, 4)
+    ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[7].plot(bins, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+    ax[1].set_xlim(-0.1, 550)
+    ax[6].set_xlim(-0.1, 550)
+    ax[6].set_ylim(1, 4)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
-    ax[4].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
-    ax[0].legend(title='stimulus')
-    ax[0].set_ylabel('x-coord (px)')
-    ax[0].set_xlabel('Time from movement onset (ms)')
-    ax[0].set_title('Mean trajectory')
-    ax[4].legend(title='stimulus')
-    ax[4].set_ylabel('Velocity (px/s)')
-    ax[4].set_xlabel('Time from movement onset (ms)')
-    ax[4].set_title('Mean velocity')
-    ax[1].set_xlabel('Evidence')
-    ax[1].set_ylabel('Motor time (ms)')
-    ax[5].set_xlabel('Evidence')
-    ax[5].set_ylabel('Time to reach threshold (ms)')
+    ax[6].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    ax[1].legend(title='stimulus')
+    ax[1].set_ylabel('x-coord (px)')
+    ax[1].set_xlabel('Time from movement onset (ms)')
+    ax[1].set_title('Mean trajectory')
+    ax[6].legend(title='stimulus')
+    ax[6].set_ylabel('Velocity (px/s)')
+    ax[6].set_xlabel('Time from movement onset (ms)')
+    ax[6].set_title('Mean velocity')
+    ax[2].set_xlabel('Evidence')
+    ax[2].set_ylabel('Motor time (ms)')
+    ax[7].set_xlabel('Evidence')
+    ax[7].set_ylabel('Time to reach threshold (ms)')
     # now for the prior
     prior = df_data['norm_allpriors'] * (decision*2 - 1)
     # cong_prior = prior * (decision*2 - 1)
@@ -1698,7 +1698,7 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
                                         df_data.times.values[index]
                                         if t[-1] != '']))*1e3
         vals_thr_traj.append(val_traj)
-        ax[3].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=60)
+        ax[4].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=60)
         mean_vel = np.nanmean(all_vels, axis=0)
         std_vel = np.sqrt(np.nanstd(all_vels, axis=0) / sum(index))
         for ind_v, velocity in enumerate(mean_vel):
@@ -1706,40 +1706,60 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
                 val_vel = ind_v*precision
                 break
         vals_thr_vel.append(val_vel)
-        ax[7].scatter(i_pr, val_vel, color=colormap[i_pr], marker='D', s=60)
-        ax[2].plot(np.arange(len(mean_traj))*precision, mean_traj,
+        ax[9].scatter(i_pr, val_vel, color=colormap[i_pr], marker='D', s=60)
+        ax[3].plot(np.arange(len(mean_traj))*precision, mean_traj,
                    color=colormap[i_pr], label='{}'.format(labels[i_pr]))
-        ax[2].fill_between(x=np.arange(len(mean_traj))*precision,
+        ax[3].fill_between(x=np.arange(len(mean_traj))*precision,
                            y1=mean_traj-std_traj, y2=mean_traj+std_traj,
                            color=colormap[i_pr])
-        ax[6].plot(np.arange(len(mean_vel))*precision, mean_vel,
+        ax[8].plot(np.arange(len(mean_vel))*precision, mean_vel,
                    color=colormap[i_pr], label='{}'.format(labels[i_pr]))
-        ax[6].fill_between(x=np.arange(len(mean_vel))*precision,
+        ax[8].fill_between(x=np.arange(len(mean_vel))*precision,
                            y1=mean_vel-std_vel, y2=mean_vel+std_vel,
                            color=colormap[i_pr])
-    ax[3].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[7].plot(np.arange(5), vals_thr_vel, color='k', linestyle='--', alpha=0.6)
-    ax[2].set_xlim(-0.1, 550)
-    ax[6].set_xlim(-0.1, 550)
-    ax[6].set_ylim(1, 4)
+    ax[4].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[9].plot(np.arange(5), vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+    ax[3].set_xlim(-0.1, 550)
+    ax[8].set_xlim(-0.1, 550)
+    ax[8].set_ylim(1, 4)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
-    ax[6].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
-    ax[2].legend(title='Prior')
-    ax[2].set_ylabel('x-coord (px)')
-    ax[2].set_xlabel('Time from movement onset (ms)')
-    ax[2].set_title('Mean trajectory')
-    ax[6].legend(title='Prior')
-    ax[6].set_ylabel('Velocity (px/s)')
-    ax[6].set_xlabel('Time from movement onset (ms)')
-    ax[6].set_title('Mean velocity')
-    ax[3].set_xlabel('Prior congruency')
-    ax[3].set_ylabel('Motor time (ms)')
-    ax[7].set_xlabel('Prior congruency')
-    ax[7].set_xticks(np.arange(5))
-    ax[7].set_xticklabels(labels)
-    ax[3].set_xticks(np.arange(5))
-    ax[3].set_xticklabels(labels)
-    ax[7].set_ylabel('Time to reach threshold (ms)')
+    ax[8].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    ax[3].legend(title='Prior')
+    ax[3].set_ylabel('x-coord (px)')
+    ax[3].set_xlabel('Time from movement onset (ms)')
+    ax[3].set_title('Mean trajectory')
+    ax[8].legend(title='Prior')
+    ax[8].set_ylabel('Velocity (px/s)')
+    ax[8].set_xlabel('Time from movement onset (ms)')
+    ax[8].set_title('Mean velocity')
+    ax[4].set_xlabel('Prior congruency')
+    ax[4].set_ylabel('Motor time (ms)')
+    ax[9].set_xlabel('Prior congruency')
+    ax[9].set_xticks(np.arange(5))
+    ax[9].set_xticklabels(labels)
+    ax[4].set_xticks(np.arange(5))
+    ax[4].set_xticklabels(labels)
+    ax[9].set_ylabel('Time to reach threshold (ms)')
+    cont = 0
+    for traj in range(1000):
+        tr_ind = np.random.randint(0, 25000)
+        x_coord = df_data['trajectory_y'][tr_ind]
+        y_coord = df_data['traj_y'][tr_ind]
+        time_max = df_data['times'][tr_ind][-1]
+        if time_max != '':
+            if time_max < 0.3 and time_max > 0.1:
+                time = df_data['times'][tr_ind]
+                ind_time = [True if t != '' else False for t in time]
+                time = np.array(time)[np.array(ind_time)]
+                ax[0].plot(x_coord, y_coord, color='k', linewidth=0.5)
+                ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
+                cont += 1
+        if cont == 50:
+            break
+    ax[0].set_xlabel('x-coord (px)')
+    ax[0].set_ylabel('y-coord (px)')
+    ax[5].set_xlabel('Time (ms)')
+    ax[5].set_ylabel('x-coord (px)')
 
 
 def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
