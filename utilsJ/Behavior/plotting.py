@@ -930,7 +930,10 @@ def trajectory_thr(
             else:
                 ytoplot = np.nanmedian(matrix_dic[b], axis=0)
             ax_traj.plot((interpolatespace) / 1000,
-                         ytoplot, **traj_kws, **extra_kw)
+                         ytoplot-np.nanmean(
+                             ytoplot[(interpolatespace > -100000) *
+                                     (interpolatespace < 0)]), **traj_kws,
+                         **extra_kw)
             # trigger legend outside of the function
 
     y_points = np.array(y_points)

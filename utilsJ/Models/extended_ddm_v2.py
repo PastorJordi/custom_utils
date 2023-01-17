@@ -2398,7 +2398,9 @@ def com_detection(trajectories, decision, time_trajs, com_threshold=5):
                     peak = min(signed_traj[time_trajs[i_t] >= 0])
                     if peak < -com_threshold:
                         com_trajs.append(traj)
-                        time_com.append(time_trajs[i_t])
+                        time_com.append(
+                            time_trajs[i_t]
+                            [np.where(signed_traj == peak)[0]][0])
                         peak_com.append(peak)
                         comlist.append(True)
                     else:

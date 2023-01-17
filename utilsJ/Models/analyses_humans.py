@@ -254,6 +254,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
     """
     ev, choice, perf, valid, reaction_time, blocks, answ_rt, sound_dur =\
         extract_vars_from_dict(data_tr, steps=None)
+    subjid = data_tr['subjid']
     choice_12 = choice + 1
     choice_12[~valid] = 0
     data = {'signed_evidence': ev, 'choice': choice_12,
@@ -263,6 +264,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
     else:
         df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
     ind_af_er = df_regressors['aftererror'] == 0
+    subjid = subjid[ind_af_er]
     ev = ev[ind_af_er]
     perf = perf[ind_af_er]
     valid = valid[ind_af_er]
@@ -310,7 +312,8 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                             'hithistory': perf[indx],
                             'trajectory_y': pos_x[indx],
                             'times': answer_times[indx],
-                            'traj_y': pos_y[indx]})
+                            'traj_y': pos_y[indx],
+                            'subjid': subjid[indx]})
     if plot:
         fig, ax = plt.subplots(1)
         bins = np.linspace(0, 350, 8)  # rt bins
@@ -469,11 +472,12 @@ def get_data_traj(folder, plot=False):
                 'soundPlay_duration': np.empty((0,)),
                 'answer_responseTime': np.empty((0,))}
     # go over all files
-    for f in sorted_list_tls:
+    subjid = np.empty((0,))
+    for i_f, f in enumerate(sorted_list_tls):
         # read file
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        if np.mean(df1['correct']) < 0.65:
+        if np.mean(df1['correct']) < 0.7:
             continue
         else:
             for k in data_tls.keys():
@@ -482,6 +486,8 @@ def get_data_traj(folder, plot=False):
                     values = values-.5
                     values[np.abs(values) < 0.01] = 0
                 data_tls[k] = np.concatenate((data_tls[k], values))
+            subjid = np.concatenate((subjid, np.repeat(i_f+1, len(values))))
+    data_tls['subjid'] = subjid
     num_tr = len(data_tls['correct'])
     data_trj = {'answer_positionsX': np.empty((0,)),
                 'answer_positionsY': np.empty((0,)),
@@ -493,7 +499,7 @@ def get_data_traj(folder, plot=False):
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
         df2 = pd.read_csv(folder+'/'+sorted_list_tls[i_f], sep=',')
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        if np.mean(df2['correct']) < 0.65:
+        if np.mean(df2['correct']) < 0.7:
             continue
         else:
             pos_x = df1['answer_positionsX'].dropna().values[:num_tr]
