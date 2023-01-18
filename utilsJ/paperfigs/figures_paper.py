@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -51,8 +51,8 @@ elif pc_name == 'idibaps_Jordi':
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
     RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
         'craft_vid/CoM/a/001965.png'
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 
 # RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
@@ -1634,7 +1634,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                 wanted_precision=8, traj_thr=240, vel_thr=2):
+                 wanted_precision=8, traj_thr=240, vel_thr=2.8):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -1682,46 +1682,76 @@ def plot_human_trajs_per_subject(df_data):
         ax[i_s].set_ylabel('y-coord')
 
 
-def traj_mean_human(df_data):
-    max_mt = 600
-    index1 = (df_data.subjid != 5) & (df_data.subjid != 12)\
-        & (df_data.subjid != 13)\
-        & (~df_data.CoM_sugg)\
-        & (df_data.subjid != 1) & (df_data.subjid != 11)\
-        & (df_data.subjid != 8) & (df_data.subjid != 14)
+def mt_distro_per_subject_human(df_data):
+    fig, axh = plt.subplots(4, 4)
+    axh = axh.flatten()
+    index1 = ~df_data.CoM_sugg
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    decision = df_data.R_response.values[index1]
-    trajs = df_data.trajectory_y.values[index1]
-    times = df_data.times.values[index1]
-    fig, ax = plt.subplots(1)
+    times = df_data.times.values
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        index = index1 & (df_data.subjid == subj)
+        mt = []
+        for tr in range(sum(index)):
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            mt.append(max(np.array(times[index][tr])
+                          [ind_time]).astype(float)*1e3)
+
+        axh[i_s].hist(mt, bins=40, range=(0, 800))
+        axh[i_s].set_xlabel('MT (ms)')
+        axh[i_s].set_ylabel('Counts')
+        axh[i_s].set_title('Subject ' + str(subj))
+
+
+def traj_mean_human_per_subject(df_data, mean=True):
+    max_mt = 600
+    fig, axh = plt.subplots(4, 4)
+    axh = axh.flatten()
+    index1 = ~df_data.CoM_sugg
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    decision = df_data.R_response.values
+    trajs = df_data.trajectory_y.values
+    times = df_data.times.values
+    # fig, ax = plt.subplots(1)
     all_trajs = np.empty((sum(index1), max_mt))
     all_trajs[:] = np.nan
     cont1 = 0
     cont2 = 0
     precision = 16
-    for tr in range(sum(index1)):
-        vals = np.array(trajs[tr]) * (decision[tr]*2 - 1)
-        ind_time = [True if t != '' else False for t in times[tr]]
-        time = np.array(times[tr])[np.array(ind_time)].astype(float)
-        max_time = max(time)*1e3
-        if max_time > 300:
-            ax.plot(np.arange(len(vals))*precision, vals, color='r', linewidth=0.4)
-            cont1 += 1
-        if max_time <= 300:
-            ax.plot(np.arange(len(vals))*precision, vals, color='b', linewidth=0.4)
-            cont2 += 1
-        if max_time > max_mt:
-            continue
-        # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
-        #                      xp=time*1e3, fp=vals)
-        all_trajs[tr, :len(vals)] = vals  # - vals[0]
-    mean_traj = np.nanmean(all_trajs, axis=0)
-    # std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index1))
-    ax.plot(np.arange(len(mean_traj))*precision, mean_traj, color='k', linewidth=2)
-    ax.set_ylabel('x-coord (px)')
-    ax.set_xlabel('Time (ms)')
-    ax.set_xlim(-5, 605)
-    print(cont1/cont2)
+    if mean:
+        fun = np.nanmean
+    else:
+        fun = np.nanmedian
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        ax = axh[i_s]
+        index = index1 & (df_data.subjid == subj)
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+            max_time = max(time)*1e3
+            if max_time > 300:
+                ax.plot(np.arange(len(vals))*precision, vals,
+                        color='r', linewidth=0.4)
+                cont1 += 1
+            if max_time <= 300:
+                ax.plot(np.arange(len(vals))*precision, vals,
+                        color='b', linewidth=0.4)
+                cont2 += 1
+            if max_time > max_mt:
+                continue
+            # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+            #                      xp=time*1e3, fp=vals)
+            all_trajs[tr, :len(vals)] = vals  # - vals[0]
+        mean_traj = fun(all_trajs, axis=0)
+        # std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index1))
+        ax.plot(np.arange(len(mean_traj))*precision, mean_traj,
+                color='k', linewidth=2)
+        ax.set_ylabel('x-coord (px)')
+        ax.set_xlabel('Time (ms)')
+        ax.set_xlim(-5, 605)
+        ax.set_ylim(-125, 780)
+        ax.set_title('Subject '+str(int(subj)))
+    # print(cont1/cont2)
 
 
 def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,

@@ -261,6 +261,7 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
             'performance': perf}
     if rgrss_folder is None:
         df_regressors = get_GLM_regressors(data, tau=2)
+        df_regressors.to_csv(sv_folder + 'df_regressors.csv')
     else:
         df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
     ind_af_er = df_regressors['aftererror'] == 0
