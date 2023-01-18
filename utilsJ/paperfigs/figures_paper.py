@@ -999,7 +999,7 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax, color='grey')
     arr_weights = np.array((w_coh, w_zt, w_t_i))
     for i in range(len(labels)):
-        ax.plot(i, np.repeat(1, len(arr_weights[i])) +
+        ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='grey', marker='o', linestyle='')
     ax.set_ylabel('Weight (a.u.)')
