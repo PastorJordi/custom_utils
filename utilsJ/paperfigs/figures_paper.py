@@ -18,13 +18,13 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
-    trajectory_thr, com_heatmap
+    trajectory_thr, com_heatmap, interpolapply
 from utilsJ.Models import analyses_humans as ah
 import fig1, fig3, fig2
 import matplotlib
@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'alex'  # 'alex'
+pc_name = 'alex_CRM'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -558,6 +558,74 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     plt.show()
 
 
+def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
+                          trajectory='trajectory_y', threshold=300):
+    ztbins = [0.1, 0.4, 1.1]
+    kw = {"trajectory": trajectory, "align": "action"}
+    out_data = []
+    for subject in df.subjid.unique():
+        for i in range(rtbins.size-1):
+            dat = df.loc[(df.special_trial == 0) &
+                         (df.subjid == subject) &
+                         (df.sound_len < rtbins[i + 1]) &
+                         (df.sound_len >= rtbins[i])]
+            matb_0 = np.vstack(
+                dat.loc[(dat.norm_allpriors <= 0.1) &
+                        (dat.norm_allpriors > 0)]
+                .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+            matb_1 = np.vstack(
+                dat.loc[(dat.norm_allpriors > -0.1) &
+                        (dat.norm_allpriors <= 0)]
+                .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+            matb = np.vstack([matb_0*-1, matb_1])
+            mat = matb
+            ztl = np.repeat(0, matb.shape[0])
+            for i_z, zt1 in enumerate(ztbins[:-1]):
+                mata_0 = np.vstack(
+                    dat.loc[(dat.norm_allpriors > zt1) &
+                            (dat.norm_allpriors < ztbins[i_z+1])]
+                    .apply(lambda x: interpolapply(x, **kw),
+                           axis=1).values.tolist())
+                mata_1 = np.vstack(
+                    dat.loc[(dat.norm_allpriors < -zt1) &
+                            (dat.norm_allpriors > -ztbins[i_z+1])]
+                    .apply(lambda x: interpolapply(x, **kw),
+                           axis=1).values.tolist())
+                mata = np.vstack([mata_0*-1, mata_1])
+                for a in [mata, matb]:  # discard all nan rows
+                    a = a[~np.isnan(a).all(axis=1)]
+                ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
+                mat = np.concatenate((mat, mata))
+
+            current_split_index =\
+                get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
+                                   startfrom=700)
+            out_data += [current_split_index]
+    out_data = np.array(out_data).reshape(
+        df.subjid.unique().size, rtbins.size-1, -1)
+    out_data = np.swapaxes(out_data, 0, 1)
+    out_data = out_data.astype(float)
+    out_data[out_data > threshold] = np.nan
+    binsize = rtbins[1]-rtbins[0]
+    for i in range(df.subjid.unique().size):
+        for j in range(out_data.shape[2]):
+            ax.plot(
+                binsize/2 + binsize * np.arange(rtbins.size-1),
+                out_data[:, i, j],
+                marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                mew=1, color=(.6, .6, .6, .3))
+    error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='k', marker='o', label='mean & SEM')
+    ax.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
+                np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
+                yerr=sem(out_data.reshape(rtbins.size-1, -1),
+                         axis=1, nan_policy='omit'), **error_kws)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('time to split (ms)')
+    ax.legend()
+    plt.show()
+
+
 def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                           sim=False,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
@@ -1001,7 +1069,8 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
-                arr_weights[i], color='grey', marker='o', linestyle='')
+                arr_weights[i], color='k', marker='o', linestyle='',
+                markersize=1.2)
     ax.set_ylabel('Weight (a.u.)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
@@ -1010,10 +1079,11 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
                 marginy=0.2):
     f, ax = plt.subplots(nrows=2, ncols=5, figsize=fgsz)
     ax = ax.flatten()
-    for i in [5, 8]:
-        ax[i].axis('off')
-    ax_cohs = np.array([ax[2], ax[7]])
-    ax_zt = np.array([ax[1], ax[6]])
+    trajs_splitting_prior(df=df, ax=ax[8])
+    # for i in [5, 8]:
+    ax[7].axis('off')
+    ax_cohs = np.array([ax[1], ax[6]])
+    ax_zt = np.array([ax[0], ax[5]])
     # splitting
     trajs_splitting(df, ax=ax[3], rtbins=np.linspace(0, 50, 2))
     rm_top_right_lines(ax[3])
@@ -1047,7 +1117,7 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
-    mt_weights(df, ax=ax[0], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[2], plot=True, means_errs=False)
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -1433,7 +1503,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[12].xaxis.tick_bottom()
     ax[12].legend()
     ax[12].set_xlabel('RT (ms)')
-    ax[12].set_ylabel('PCoM')
+    ax[12].set_ylabel('P(CoM)')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
@@ -1467,7 +1537,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
     ax[13].set_ylabel('Stimulus Evidence')
-    plot_bars(means=means, errors=errors, ax=ax[15], f5=True,
+    plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
               means_model=means_model, errors_model=errors_model)
     ax_pr = [ax[i] for i in [0, 4, 1, 5]]
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=True, prior=True)
@@ -1480,6 +1550,13 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
                           trajectory="trajectory_y")
+    peak_com = df_sim['peak_com']
+    peak_com = -peak_com[peak_com > 0]
+    ax[15].hist(peak_com, bins=80, range=(-50, 0), color='k')
+    ax[15].axvline(-8, color='r', linestyle='--')
+    ax[15].set_yscale('log')
+    ax[15].set_xlabel('CoM peak (px)')
+    ax[15].set_ylabel('Counts')
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
@@ -1587,8 +1664,9 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
                            color=colormap[i_ev])
-    ax[0].axhline(y=30, linestyle='--', color='k', alpha=0.4)
+    ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 460)
+    ax[0].set_ylim(-10, 85)
     ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[1].set_ylim(-0.08, 0.5)
     ax[1].set_xlim(-5, 460)
@@ -1971,21 +2049,21 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     else:
         num_tr = int(len(zt))
     data_augment_factor = 10
-    MT_slope = 0.123
-    MT_intercep = 254
+    MT_slope = 0.11
+    MT_intercep = 260
     detect_CoMs_th = 8
-    p_t_aff = 8
+    p_t_aff = 9
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.16
-    p_w_stim = 0.11
+    p_w_stim = 0.08
     p_e_noise = 0.01
-    p_com_bound = 0.1
+    p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 30
-    p_2nd_readout = 30
+    p_1st_readout = 40
+    p_2nd_readout = 5
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -2034,7 +2112,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
-        pro_vs_re, total_traj
+        pro_vs_re, total_traj, x_val_at_updt
 
 
 def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
@@ -2418,18 +2496,36 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
                        color='k', alpha=1, linewidth=3)
 
 
+def model_vs_data_traj(trajs_model, df_data):
+    fig, ax = plt.subplots(5, 5)
+    ax = ax.flatten()
+    j = 0
+    for t in range(1000):
+        ind = np.random.randint(0, len(trajs_model)-1)
+        time_traj = df_data.time_trajs.values[ind]
+        traj_data = df_data.trajectory_y.values[ind]
+        if abs(len(trajs_model[ind]) - time_traj[-1]) < 20 and\
+                np.sign(traj_data[-1]) == np.sign(trajs_model[ind][-1]):
+            ax[j].plot(np.arange(len(trajs_model[ind])), trajs_model[ind],
+                       color='r')
+            ax[j].plot(time_traj, traj_data, color='k')
+            j += 1
+        if j == len(ax):
+            break
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -2517,7 +2613,7 @@ if __name__ == '__main__':
             stim = stim.T
         stim = stim[:, :int(num_tr)]
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            pro_vs_re, trajs =\
+            pro_vs_re, trajs, x_val_at_updt =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
                       num_tr=None)
         # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
@@ -2543,6 +2639,7 @@ if __name__ == '__main__':
             np.array(df.special_trial)[after_correct_id][:int(num_tr)]
         df_sim['traj'] = df_sim['trajectory_y']
         df_sim['com_detcted'] = com_model_detected
+        df_sim['peak_com'] = np.array(x_val_at_updt)
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
@@ -2553,6 +2650,7 @@ if __name__ == '__main__':
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
         supp_trajs_prior_cong(df_sim, ax=None)
+        model_vs_data_traj(trajs_model=trajs, df_data=df)
     if f6:
         # human traj plots
         fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
