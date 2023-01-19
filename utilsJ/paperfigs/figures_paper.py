@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'alex_CRM'  # 'alex'
+pc_name = 'alex'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1470,9 +1470,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     plot_bars(means=means, errors=errors, ax=ax[15], f5=True,
               means_model=means_model, errors_model=errors_model)
     ax_pr = [ax[i] for i in [0, 4, 1, 5]]
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=False, prior=True)
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=True, prior=True)
     ax_coh = [ax[i] for i in [2, 6, 3, 7]]
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=False, prior=False,
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=True, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
     trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
@@ -1588,7 +1588,10 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
                            color=colormap[i_ev])
     ax[0].axhline(y=30, linestyle='--', color='k', alpha=0.4)
-    ax[1].axhline(y=0.2, linestyle='--', color='k', alpha=0.4)
+    ax[0].set_xlim(-5, 460)
+    ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    ax[1].set_ylim(-0.08, 0.5)
+    ax[1].set_xlim(-5, 460)
     if prior:
         leg_title = 'prior congruency'
         ax[2].plot(xvals_zt, vals_thr_traj, color='k', linestyle='--',
@@ -1970,19 +1973,19 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     data_augment_factor = 10
     MT_slope = 0.123
     MT_intercep = 254
-    detect_CoMs_th = 5
+    detect_CoMs_th = 8
     p_t_aff = 8
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
+    p_w_zt = 0.16
     p_w_stim = 0.11
     p_e_noise = 0.01
-    p_com_bound = 0.001
+    p_com_bound = 0.1
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 40
-    p_2nd_readout = 40
+    p_1st_readout = 30
+    p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -2419,14 +2422,14 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
