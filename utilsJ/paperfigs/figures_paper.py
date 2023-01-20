@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps_Jordi'  # 'alex'
+pc_name = 'idibaps'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -44,6 +44,8 @@ elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
         'ChangesOfMind/figures/from_python/'  # Manuel
+    RAT_noCOM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/Figure_1/screenShot230120.png'
     RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
         'ChangesOfMind/figures/Figure_3/001965.png'
 elif pc_name == 'idibaps_Jordi':
@@ -883,15 +885,15 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 
-def fig_rats_behav_1(df_data):
+def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     nbins = 7
-    f, ax = plt.subplots(nrows=3, ncols=4, figsize=(6, 5))  # figsize=(4, 3))
+    f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
-    for i in [0, 1, 2, 4, 8, 5]:
+    for i in [0, 1, 3]:
         ax[i].axis('off')
     # P_right
     # TODO: check ticks for matrix
-    ax_pright = ax[6]
+    ax_pright = ax[4]
     choice = df_data['R_response'].values
     coh = df_data['coh2'].values
     prior = df_data['norm_allpriors'].values
@@ -899,36 +901,45 @@ def fig_rats_behav_1(df_data):
                                 annotate=False)
     mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
-    plt.sca(ax_pright)
-    plt.colorbar(im_2, fraction=0.04)
-    ax_pright.set_title('Proportion of rightward responses')
+    pos = ax_pright.get_position()
+    ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/2, pos.width*.9,
+                            pos.height*.9])
+    cbar_ax = f.add_axes([pos.x0+pos.width/2.3, pos.y0+margin/2,
+                          pos.width/10, pos.height/2])
+    f.colorbar(im_2, cax=cbar_ax)
 
+    ax_pright.set_title('Proportion of \n right responses', fontsize=8)
+
+    ax_pright.set_yticks([0, 3, 6])
+    ax_pright.set_ylim([-0.5, 6.5])
+    ax_pright.set_yticklabels(['L', '', 'R'])
+    ax_pright.set_xticks([0, 3, 6])
+    ax_pright.set_xlim([-0.5, 6.5])
+    ax_pright.set_xticklabels(['Left', '', 'Right'])
     ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_yticklabels(['']*nbins)
-    ax_pright.set_xticklabels(['']*nbins)
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
     # tachometrics
     # TODO: check legend
-    ax_tach = ax[7]
+    ax_tach = ax[5]
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
     rm_top_right_lines(ax_tach)
-    ax_tach.legend()
+    # ax_tach.legend()
 
     # TODO: RTs distros conditioned on stim evidence. CHECK
-    ax_rts = ax[3]
+    ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
     sound_len = np.array(df.sound_len)
     pdf_cohs(sound_len=sound_len, ax=ax_rts, coh=coh, yaxis=True)
     ax_rts.set_xlabel('')
 
     # track screenshot
-    rat = plt.imread(RAT_COM_IMG)
-    ax_scrnsht = ax[9]
+    rat = plt.imread(RAT_noCOM_IMG)
+    ax_scrnsht = ax[6]
     ax_scrnsht.imshow(np.flipud(rat))
     ax_scrnsht.set_xticklabels([])
     ax_scrnsht.set_yticklabels([])
@@ -936,12 +947,10 @@ def fig_rats_behav_1(df_data):
     ax_scrnsht.set_yticks([])
     ax_scrnsht.set_xlabel('x dimension (pixels)')  # , fontsize=14)
     ax_scrnsht.set_ylabel('y dimension (pixels)')  # , fontsize=14)
-    ax_scrnsht.set_xlim(435, 585)
-    ax_scrnsht.set_ylim(100, 360)
 
     # raw trajectories
-    ax_rawtr = ax[10]
-    ax_ydim = ax[11]
+    ax_rawtr = ax[7]
+    ax_ydim = ax[8]
     ran_max = 100
     for tr in range(ran_max):  # len(df_rat)):
         if tr > (ran_max/2):
@@ -952,16 +961,44 @@ def fig_rats_behav_1(df_data):
             time = trial['time_trajs']
             ax_ydim.plot(time, traj_y, color='k', lw=.5)
     ax_ydim.set_xlim(-100, 800)
-    ax_rawtr.set_xlim(-85, 85)
-    ax_rawtr.set_ylim(-85, 85)
+    ax_rawtr.set_xlim(-80, 20)
+    ax_rawtr.set_ylim(-100, 100)
     ax_rawtr.set_xticklabels([])
     ax_rawtr.set_yticklabels([])
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')  # , fontsize=14)
-    # ax_rawtr.set_ylabel('y dimension (pixels)')  # , fontsize=14)
     ax_ydim.set_xlabel('time (ms)')  # , fontsize=14)
-    # ax_ydim.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+
+    # adjust panels positions
+    pos = ax_rawtr.get_position()
+    factor = figsize[1]/figsize[0]
+    width = pos.height*factor/2
+    ax_rawtr.set_position([pos.x0+width*0.9, pos.y0-margin, width,
+                           pos.height])
+    pos = ax_ydim.get_position()
+    ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
+    pos = ax_scrnsht.get_position()
+    ax_scrnsht.set_position([pos.x0+width*1.1, pos.y0-margin, pos.width,
+                             pos.height])
+    # add colorbar for screenshot
+    n_stps = 100
+    ax_clbr = plt.axes([pos.x0+width*1.1, pos.y0+pos.height-margin*0.9,
+                        pos.width*0.7, pos.height/15])
+    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
+    ax_clbr.set_xticks([0, n_stps-1])
+    ax_clbr.set_xticklabels(['0', '400ms'])
+    ax_clbr.tick_params(labelsize=6)
+    # ax_clbr.set_title('$N_{max}$', fontsize=6)
+    ax_clbr.set_yticks([])
+    ax_clbr.xaxis.set_ticks_position("top")
+    # ax_clbr.yaxis.tick_right()
+    # plot dashed lines
+    for i_a in [7, 8]:
+        ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(y=-85, linestyle='--', color='k', lw=.5)
+    ax[6].axhline(y=200, linestyle='--', color='k', lw=.5)
+    ax[6].axhline(y=600, linestyle='--', color='k', lw=.5)
 
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
@@ -2550,16 +2587,16 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
-    f4 = True
-    f5 = True
+    f4 = False
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
