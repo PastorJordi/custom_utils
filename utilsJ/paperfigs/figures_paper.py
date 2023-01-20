@@ -17,9 +17,9 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'alex_CRM'  # 'alex'
+pc_name = 'idibaps_Jordi'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -498,7 +498,7 @@ def get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700):
 
 
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                    subject='LE38', startfrom=700):
+                    subject='LE36', startfrom=700):
     """
     Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
     between 0 and 90.
@@ -1079,7 +1079,7 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
                 marginy=0.2):
     f, ax = plt.subplots(nrows=2, ncols=5, figsize=fgsz)
     ax = ax.flatten()
-    trajs_splitting_prior(df=df, ax=ax[8])
+    trajs_splitting_prior(df=df, ax=ax[9])
     # for i in [5, 8]:
     ax[7].axis('off')
     ax_cohs = np.array([ax[1], ax[6]])
@@ -1087,9 +1087,9 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
     # splitting
     trajs_splitting(df, ax=ax[3], rtbins=np.linspace(0, 50, 2))
     rm_top_right_lines(ax[3])
-    rm_top_right_lines(ax[4])
-    trajs_splitting(df, ax=ax[4], rtbins=np.linspace(100, 200, 2))
-    trajs_splitting_point(df=df, ax=ax[9])
+    rm_top_right_lines(ax[8])
+    trajs_splitting(df, ax=ax[8], rtbins=np.linspace(100, 200, 2))
+    trajs_splitting_point(df=df, ax=ax[4])
 
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
@@ -1268,18 +1268,20 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
     # ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
-    ax_inset.violinplot(comlist_rats)
-    ax_inset.plot(np.repeat(1, len(comlist_rats)) +
-                  0.1*np.random.randn(len(comlist_rats)),
-                  comlist_rats, color='k', linestyle='',
-                  marker='o', alpha=0.5)
-    ax_inset.set_ylabel('P(CoM)')
+    # ax_inset.violinplot(comlist_rats)
+    # ax_inset.plot(np.repeat(1, len(comlist_rats)) +
+    #               0.1*np.random.randn(len(comlist_rats)),
+    #               comlist_rats, color='k', linestyle='',
+    #               marker='o', alpha=0.5)
+    ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k')
+    ax_inset.set_xlabel('P(CoM)')
+    ax_inset.set_ylabel('Counts')
     # ax_inset.set_xlabel('Rat')
-    ax_inset.set_xticklabels([''])
+    # ax_inset.set_xticklabels([''])
     # ax_inset.axhline(np.nanmean(comlist_rats), linestyle='--', color='k',
     #                  alpha=0.8)
     # ax_inset.set_xticklabels(subjects, rotation=90)
-    ax_inset.set_ylim(0, 0.05)
+    # ax_inset.set_xlim(0, 0.05)
 
 
 def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1861,7 +1863,7 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
     # congruent_coh = coh * (decision*2 - 1)
-    fig, ax = plt.subplots(nrows=1, ncols=5)
+    fig, ax = plt.subplots(nrows=2, ncols=5)
     ax = ax.flatten()
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     vals_thr_traj = []
@@ -2262,8 +2264,8 @@ def norm_allpriors_per_subj(df):
     return norm_allpriors
 
 
-def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
-                                  coh, zt, com_th_list=np.linspace(0.5, 10, 20)):
+def different_com_thresholds(traj_y, time_trajs, decision, sound_len,
+                             coh, zt, com_th_list=np.linspace(0.5, 10, 20)):
     fig, ax = plt.subplots(1)
     rm_top_right_lines(ax=ax)
     colormap = pl.cm.Reds(np.linspace(0.2, 1, len(com_th_list)))
@@ -2320,7 +2322,7 @@ def supp_different_com_thresholds(traj_y, time_trajs, decision, sound_len,
     com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
 
 
-def com_threshold_matrices(df):
+def supp_com_threshold_matrices(df):
     dfth = pd.read_csv(SV_FOLDER + 'com_diff_thresholds.csv')
     fig, ax = plt.subplots(nrows=3, ncols=10, figsize=(15, 6))
     ax = ax.flatten()
@@ -2514,18 +2516,50 @@ def model_vs_data_traj(trajs_model, df_data):
             break
 
 
+def fig_trajs_model_4(trajs_model, df_data, reaction_time):
+    fig, ax = plt.subplots(4, 4)
+    ax = ax.flatten()
+    ev_vals = [0, 0.25, 0.5, 1]
+    norm_zt_vals = [0, 0.1, 0.4, 0.7, 1]
+    j = 0
+    trajs_model = np.array(trajs_model)
+    for i_ev, ev in enumerate(ev_vals):
+        for izt, ztbin in enumerate(norm_zt_vals):
+            if ztbin == 1:
+                break
+            indx = (df_data.coh2.values == ev) & (df.norm_allpriors.values > ztbin)\
+                & (df.norm_allpriors.values < norm_zt_vals[izt+1])
+            pl = True
+            while pl:
+                ind = np.random.randint(0, sum(indx)-1)
+                time_traj = df_data.time_trajs.values[indx][ind]
+                traj_data = df_data.trajectory_y.values[indx][ind]
+                rt_rat = df_data.sound_len.values[indx][ind]
+                if abs(rt_rat - reaction_time[indx][ind]) < 30:
+                    ax[j].plot(np.arange(len(trajs_model[indx][ind])),
+                               trajs_model[indx][ind], color='r')
+                    ax[j].plot(time_traj, traj_data, color='k')
+                    ax[j].set_title('ev: {}, {} < zt < {} '
+                                    .format(ev, ztbin, norm_zt_vals[izt+1]))
+                    ax[j].set_xlim(-10, max(len(trajs_model[indx][ind]),
+                                            time_traj[-1]))
+                    j += 1
+                    pl = False
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
-    f5 = False
+    f4 = True
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -2651,6 +2685,8 @@ if __name__ == '__main__':
               errors_model=errors_model, df_sim=df_sim)
         supp_trajs_prior_cong(df_sim, ax=None)
         model_vs_data_traj(trajs_model=trajs, df_data=df)
+        if f4:
+            fig_trajs_model_4(trajs_model=trajs, df_data=df)
     if f6:
         # human traj plots
         fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
