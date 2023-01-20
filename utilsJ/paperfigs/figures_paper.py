@@ -1489,23 +1489,25 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     #          coh=coh[sound_len_model >= 0], yaxis=False)
     # ax[8].set_title('Data')
     # ax[9].set_title('Model')
+    ax2 = ax[12].twinx()
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
                             'com_model': com_model,
                             'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12])
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax2)
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[12])
+                                            'color': 'red'}, ax=ax2)
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
                  errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[12])
     ax[12].xaxis.tick_top()
     ax[12].xaxis.tick_bottom()
     ax[12].legend()
     ax[12].set_xlabel('RT (ms)')
-    ax[12].set_ylabel('P(CoM)')
+    ax[12].set_ylabel('P(CoM), model', color='green')
+    ax2.set_ylabel('P(CoM), data & model detected')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
@@ -2055,10 +2057,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_intercep = 260
     detect_CoMs_th = 8
     p_t_aff = 9
-    p_t_eff = 8
+    p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.16
-    p_w_stim = 0.08
+    p_w_zt = 0.15
+    p_w_stim = 0.06
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
@@ -2686,7 +2688,8 @@ if __name__ == '__main__':
         supp_trajs_prior_cong(df_sim, ax=None)
         model_vs_data_traj(trajs_model=trajs, df_data=df)
         if f4:
-            fig_trajs_model_4(trajs_model=trajs, df_data=df)
+            fig_trajs_model_4(trajs_model=trajs, df_data=df,
+                              reaction_time=reaction_time)
     if f6:
         # human traj plots
         fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
