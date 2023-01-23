@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'alex_CRM'  # 'alex'
+pc_name = 'idibaps'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -900,7 +900,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     prior = df_data['norm_allpriors'].values
     mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
                                 annotate=False)
-    mat_pright = np.flipud(mat_pright)
+    # mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     pos = ax_pright.get_position()
     ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/2, pos.width*.9,
@@ -919,7 +919,6 @@ def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     ax_pright.set_xticklabels(['Left', '', 'Right'])
     ax_pright.set_xlabel('Prior Evidence')
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-
     # tachometrics
     # TODO: check legend
     ax_tach = ax[5]
@@ -2604,13 +2603,13 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
-    f4 = True
-    f5 = True
+    f4 = False
+    f5 = False
     f6 = False
-    f7 = True
+    f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
         all_rats = False
