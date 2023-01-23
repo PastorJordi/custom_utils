@@ -17,9 +17,9 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -35,7 +35,7 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps'  # 'alex'
+pc_name = 'alex_CRM'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -57,6 +57,7 @@ elif pc_name == 'alex_CRM':
     SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
     DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
     RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+    RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
 
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
@@ -1676,8 +1677,15 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
                 (signed_response[index][tr]*2 - 1)
             traj_all[tr, :len(vals_traj)] = vals_traj
             vel_all[tr, :len(vals_vel)] = vals_vel
-        mean_traj = func_final(traj_all, axis=0)
-        std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
+        try:
+            index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
+                                 > traj_all.shape[0] - 50)[0][0]
+            mean_traj = func_final(traj_all[:, :index_vel], axis=0)
+            std_traj = np.nanstd(traj_all[:, :index_vel],
+                                 axis=0) / np.sqrt(sum(index))
+        except Exception:
+            mean_traj = func_final(traj_all, axis=0)
+            std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
         # val_traj = np.argmax(mean_traj >= traj_thr)
         val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
         if prior:
@@ -1686,8 +1694,15 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             xval = ev
         ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=60)
         vals_thr_traj.append(val_traj)
-        mean_vel = func_final(vel_all, axis=0)
-        std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
+        try:
+            index_vel = np.where(np.sum(np.isnan(vel_all), axis=0)
+                                 > traj_all.shape[0] - 50)[0][0]
+            mean_vel = func_final(vel_all[:, :index_vel], axis=0)
+            std_vel = np.nanstd(vel_all[:, :index_vel],
+                                axis=0) / np.sqrt(sum(index))
+        except Exception:
+            mean_vel = func_final(vel_all, axis=0)
+            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
         val_vel = np.argmax(mean_vel >= vel_thr)
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=60)
         vals_thr_vel.append(val_vel)
@@ -2093,18 +2108,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.11
     MT_intercep = 260
     detect_CoMs_th = 8
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 9
+    p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
-    p_w_stim = 0.06
+    p_w_zt = 0.12
+    p_w_stim = 0.04
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 30
-    p_2nd_readout = 60
+    p_1st_readout = 50
+    p_2nd_readout = 10
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -2589,22 +2604,23 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
-    f4 = False
-    f5 = False
+    f4 = True
+    f5 = True
     f6 = False
-    f7 = False
+    f7 = True
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
         else:
             subjects = ['LE38']
+            # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
