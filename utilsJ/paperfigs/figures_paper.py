@@ -886,7 +886,7 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 
-def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
+def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     nbins = 7
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
@@ -903,13 +903,13 @@ def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     # mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     pos = ax_pright.get_position()
-    ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/2, pos.width*.9,
+    ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/1.5, pos.width*.9,
                             pos.height*.9])
     cbar_ax = f.add_axes([pos.x0+pos.width/2.3, pos.y0+margin/2,
                           pos.width/10, pos.height/2])
     f.colorbar(im_2, cax=cbar_ax)
 
-    ax_pright.set_title('Proportion of \n right responses', fontsize=8)
+    # ax_pright.set_title('Proportion of \n right responses', fontsize=8)
 
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
@@ -919,6 +919,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     ax_pright.set_xticklabels(['Left', '', 'Right'])
     ax_pright.set_xlabel('Prior Evidence')
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+
     # tachometrics
     # TODO: check legend
     ax_tach = ax[5]
@@ -928,14 +929,19 @@ def fig_rats_behav_1(df_data, figsize=(6, 5), margin=.05):
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
     rm_top_right_lines(ax_tach)
+    pos = ax_tach.get_position()
+    ax_tach.set_position([pos.x0, pos.y0+margin/2, pos.width, pos.height])
+
     # ax_tach.legend()
 
-    # TODO: RTs distros conditioned on stim evidence. CHECK
+    # RTs
     ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
     sound_len = np.array(df.sound_len)
     pdf_cohs(sound_len=sound_len, ax=ax_rts, coh=coh, yaxis=True)
     ax_rts.set_xlabel('')
+    pos = ax_rts.get_position()
+    ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
 
     # track screenshot
     rat = plt.imread(RAT_noCOM_IMG)
@@ -2612,7 +2618,7 @@ if __name__ == '__main__':
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
