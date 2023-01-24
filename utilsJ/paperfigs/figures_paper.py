@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -35,11 +35,12 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'idibaps'  # 'alex'
+pc_name = 'alex'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
     DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+    RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
@@ -339,46 +340,44 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
 
 
 def supp_mean_com_traj(df, condition='prior_x_coh', cmap='copper', prior_limit=1,
-                       after_correct_only=True, rt_lim=120,
-                       trajectory='trajectory_y'):
-    fig, ax_com = plt.subplots(ncols=2, nrows=2)
-    ax_com = ax_com.flatten()
-    ax = ax_com[0]
+                       after_correct_only=True, rt_lim=300,
+                       trajectory='trajectory_y',
+                       interpolatespace=np.linspace(-700000, 1000000, 1700)):
+    fig, ax_com = plt.subplots(ncols=1, nrows=1)
+    ax = ax_com
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
     df['norm_allpriors'] = df.allpriors / np.max(np.abs(df.allpriors))
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
-    bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
+    bins = np.array([-1.1, 1.1])
     # xlab = 'prior towards response'
     bintype = 'edges'
-    if after_correct_only:
-        ac_cond = df.aftererror == False
-    else:
-        ac_cond = (df.aftererror*1) >= 0
-    indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-        ac_cond & (df.special_trial == 0) &\
-        (df.sound_len < rt_lim) & (df.CoM_sugg == True)
-    xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
-        trajectory_thr(df.loc[indx_trajs], condition, bins,
-                       collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
-                       return_trash=True, error_kwargs=dict(marker='o'),
-                       cmap=cmap, bintype=bintype,
-                       trajectory=trajectory, plotmt=False)
-    ax.legend(labels=['inc. high', 'inc. low', 'zero', 'con. low',
-                      'con. high'], title='Prior')
+    all_trajs = np.empty((len(df.subjid.unique()), 1700))
+    all_trajs[:] = np.nan
+    for i_s, subj in enumerate(df.subjid.unique()):
+        if after_correct_only:
+            ac_cond = df.aftererror == False
+        else:
+            ac_cond = (df.aftererror*1) >= 0
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim) & (df.CoM_sugg == True)
+        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+            trajectory_thr(df.loc[indx_trajs], condition, bins,
+                           collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=None, bintype=bintype,
+                           trajectory=trajectory, plotmt=False)
+        all_trajs[i_s, :] = np.nanmean(mat[0], axis=0)
+    mean_traj = np.nanmean(all_trajs, axis=0)
+    ax.plot((interpolatespace)/1000, mean_traj, color='k', linewidth=2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (px)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
-    trajs_splitting(df=df.loc[df.CoM_sugg == True], ax=ax_com[2], rtbin=0,
-                    rtbins=np.linspace(0, 50, 2),
-                    subject='LE43', startfrom=700)
-    trajs_splitting(df=df.loc[df.CoM_sugg == True], ax=ax_com[3], rtbin=0,
-                    rtbins=np.linspace(50, 300, 2),
-                    subject='LE43', startfrom=700)
-    trajs_splitting_point(df=df.loc[df.CoM_sugg == True], ax=ax_com[1])
+    ax.set_title('Mean CoM trajectory')
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',

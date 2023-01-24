@@ -15,21 +15,21 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized, data_augmentation
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
-SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+# SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
@@ -100,21 +100,21 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com, pright, trial_index
 
 
-def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
+def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
             results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
-            metrics='mse', objective='curve', bin_size=30, det_th=5,
+            metrics='mse', objective='curve', bin_size=30, det_th=8,
             plot=False, stim_res=5):
     data_mat = np.load(data_path + 'CoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
     data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
     tmp_data = data_curve['tmp_bin']
     data_curve_norm = data_curve['pcom'] / np.max(data_curve['pcom'])
-    nan_penalty = 0.
+    nan_penalty = 0.2
     w_rms = 0.5
     if results:
-        files = glob.glob(res_path+'*180.npz')
+        files = glob.glob(res_path+'*.npz')
         diff_mn = []
         diff_rms_mat = []
         diff_norm_mat = []
@@ -211,15 +211,18 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE43/',
                     max_ssim = False
         if plot:
             plt.figure()
-            plt.plot(curve_total[np.argmin(diff_rms_mat)],
+            plt.plot(rt_vals[np.argmin(diff_rms_mat)],
+                     curve_total[np.argmin(diff_rms_mat)],
                      label='min rms')
             # plt.plot(data_curve_norm, label='norm data')
             if objective == 'curve':
-                plt.plot(curve_total[np.argmin(diff_norm_mat)],
+                plt.plot(rt_vals[np.argmin(diff_norm_mat)],
+                         curve_total[np.argmin(diff_norm_mat)],
                          label='min norm')
-                plt.plot(curve_total[np.argmin(diff_mn)],
+                plt.plot(rt_vals[np.argmin(diff_mn)],
+                         curve_total[np.argmin(diff_mn)],
                          label='min joined')
-                plt.plot(data_curve['pcom'], label='data')
+                plt.plot(data_curve['rt'], data_curve['pcom'], label='data')
                 plt.ylabel('pCoM')
             if objective == 'RT':
                 plt.plot(data_rt_dist_norm, label='data')
