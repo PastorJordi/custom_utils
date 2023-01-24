@@ -929,6 +929,8 @@ def trajectory_thr(
                 )
             else:
                 ytoplot = np.nanmedian(matrix_dic[b], axis=0)
+                traj_kws["color"] = 'grey'
+                traj_kws["alpha"] = 0.6
             ax_traj.plot((interpolatespace) / 1000,
                          ytoplot-np.nanmean(
                              ytoplot[(interpolatespace > -100000) *
