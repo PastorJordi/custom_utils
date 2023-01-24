@@ -216,7 +216,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             legend=False,
             xpos=10,  # np.arange(5,201,10),
             xoffset=5,
-            errorbar_kw={'color': 'tab:orange',
+            errorbar_kw={'color': 'k',
                          'label': 'p(CoM)', 'zorder': 3},
             traces='subjid',
             traces_kw=dict(alpha=0.3), ax=ax
@@ -249,7 +249,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             tmp.index * rtbinsize + 0.5 * rtbinsize,
             tmp['mean'],
             yerr=tmp['sem'],
-            label='p(CoM)', color='tab:orange'
+            label='p(CoM)', color='k'
         )
     ax.set_ylim(0, 0.075)
     if dist:
