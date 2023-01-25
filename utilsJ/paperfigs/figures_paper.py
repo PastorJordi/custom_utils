@@ -17,8 +17,8 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -389,7 +389,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False, plot_traj=False)
         all_trajs_nocom[i_s, :] = np.nanmean(mat[0], axis=0)
-    mean_traj = np.nanmean(all_trajs, axis=0)
+    mean_traj = np.nanmedian(all_trajs, axis=0)
     mean_traj_nocom = np.nanmean(all_trajs_nocom, axis=0)
     ax.plot((interpolatespace)/1000, mean_traj, color='olive', linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color='cyan', linewidth=2,
@@ -979,7 +979,6 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
 
-
     # raw trajectories
     ax_rawtr = ax[7]
     ax_ydim = ax[8]
@@ -1045,7 +1044,7 @@ def groupby_binom_ci(x, method="beta"):
 def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
                  rtbins=np.arange(0, 151, 3), rt='sound_len',
                  evidence='avtrapz', hits='hithistory'):
-    rtbinsize = rtbinsize = rtbins[1]-rtbins[0]
+    rtbinsize = rtbins[1]-rtbins[0]
     tmp_df = df
     tmp_df['rtbin'] = pd.cut(
         tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1),
@@ -1057,8 +1056,11 @@ def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
                tmp_df[evidence].abs() < evidence_bins[i+1])]
                .groupby('rtbin')[hits].agg(['mean',
                                             groupby_binom_ci]).reset_index())
-        xvals[:, i] = tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize
-        yvals[:, i] = tmp['mean'].values
+        xvals[:len(tmp.rtbin.values), i] =\
+            tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize
+        yvals[:len(tmp['mean'].values), i] = tmp['mean'].values
+    xvals = xvals[:len(tmp['mean'].values), :]
+    yvals = yvals[:len(tmp['mean'].values), :]
     return xvals, yvals
 
 
@@ -1217,26 +1219,29 @@ def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
-def tach_1st_2nd_choice(df, ax):
+def tach_1st_2nd_choice(df, ax, model=False):
     # TODO: average across rats
     choice = df.R_response.values * 2 - 1
     coh = df.coh2.values
     gt = df.rewside.values * 2 - 1
     hit = df.hithistory.values
     sound_len = df.sound_len.values
-    com = df.CoM_sugg.values
+    if not model:
+        com = df.CoM_sugg.values
+    if model:
+        com = df.com_detected.values
     choice_com = choice
     choice_com[com] = -choice[com]
     hit_com = choice_com == gt
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len})
-    xvals, yvals1 = tachs_values(df=df_plot_data)
+    xvals, yvals1 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for j in range(4):
         ax.plot(xvals[:, j], yvals1[:, j], color=colormap[j], linewidth=1.5)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
                                  'sound_len': sound_len})
-    xvals, yvals2 = tachs_values(df=df_plot_data)
+    xvals, yvals2 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
     for j in range(4):
         ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
                 linewidth=1.5)
@@ -1257,7 +1262,7 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     ax1, ax2 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com, bins=80, range=(-600, 0), color='k')
+    ax1.hist(peak_com, bins=80, range=(-60, 0), color='k')
     ax1.set_yscale('log')
     ax1.axvline(-8, linestyle='--', color='r')
     ax1.set_xlim(-50, 5)
@@ -1547,6 +1552,53 @@ def com_heatmap_marginal_pcom_side_mat(
     return mat
 
 
+def mean_com_traj_simul(df_sim, ax):
+    raw_com = df_sim.CoM_sugg.values
+    index_com = df_sim.com_detected.values
+    trajs_all = df_sim.trajectory_y.values
+    dec = df_sim.R_response.values*2-1
+    max_ind = max([len(tr) for tr in trajs_all])
+    matrix_com_tr = np.empty((sum(index_com), max_ind))
+    matrix_com_tr[:] = np.nan
+    matrix_com_und_tr = np.empty((sum(~index_com), max_ind))
+    matrix_com_und_tr[:] = np.nan
+    matrix_nocom_tr = np.empty((sum(~(index_com & raw_com)), max_ind))
+    matrix_nocom_tr[:] = np.nan
+    i_com = 0
+    i_nocom = 0
+    i_und_com = 0
+    for i_t, traj in enumerate(trajs_all):
+        if index_com[i_t]:
+            matrix_com_tr[i_com, :len(traj)] = traj*dec[i_t]
+            i_com += 1
+        if not index_com[i_t] and not raw_com[i_t]:
+            matrix_nocom_tr[i_nocom, :len(traj)] = traj*dec[i_t]
+            i_nocom += 1
+        if raw_com[i_t]:
+            matrix_com_und_tr[i_und_com, :len(traj)] = traj*dec[i_t]
+            i_und_com += 1
+    mean_com_traj = np.nanmean(matrix_com_tr, axis=0)
+    mean_nocom_traj = np.nanmean(matrix_nocom_tr, axis=0)
+    mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
+    ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='olive',
+            linewidth=2)
+    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='olive',
+            linewidth=1.4, linestyle='--')
+    ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color='cyan',
+            linewidth=2, linestyle='--')
+    legendelements = [Line2D([0], [0], color='olive', lw=2,
+                             label='Avg. detected CoM traj.'),
+                      Line2D([0], [0], color='olive', lw=1.5,  linestyle='--',
+                             label='Avg. all CoM traj.'),
+                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
+                             label='Avg. No-CoM traj.')]
+    ax.legend(handles=legendelements)
+    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('y_coord. (px)')
+    ax.set_xlim(-25, 450)
+    ax.axhline(-8, color='r', linestyle='--', alpha=0.6)
+
+
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected, pro_vs_re,
           df_sim, means, errors, means_model, errors_model):
@@ -1636,13 +1688,15 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
                           trajectory="trajectory_y")
-    peak_com = df_sim['peak_com']
-    peak_com = -peak_com[peak_com > 0]
-    ax[15].hist(peak_com, bins=80, range=(-50, 0), color='k')
-    ax[15].axvline(-8, color='r', linestyle='--')
-    ax[15].set_yscale('log')
-    ax[15].set_xlabel('CoM peak (px)')
-    ax[15].set_ylabel('Counts')
+    # peak com distro
+    # peak_com = df_sim['peak_com']
+    # peak_com = -peak_com[peak_com > 0]
+    # ax[15].hist(peak_com, bins=80, range=(-50, 0), color='k')
+    # ax[15].axvline(-8, color='r', linestyle='--')
+    # ax[15].set_yscale('log')
+    # ax[15].set_xlabel('CoM peak (px)')
+    # ax[15].set_ylabel('Counts')
+    mean_com_traj_simul(df_sim, ax=ax[15])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
@@ -2184,21 +2238,21 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     else:
         num_tr = int(len(zt))
     data_augment_factor = 10
-    MT_slope = 0.11
-    MT_intercep = 260
+    MT_slope = 0.12
+    MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 9
-    p_t_eff = 9
+    p_t_aff = 8
+    p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.12
-    p_w_stim = 0.04
+    p_w_zt = 0.14
+    p_w_stim = 0.07
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 50
-    p_2nd_readout = 10
+    p_1st_readout = 40
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -2660,7 +2714,8 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
         for izt, ztbin in enumerate(norm_zt_vals):
             if ztbin == 1:
                 break
-            indx = (df_data.coh2.values == ev) & (df.norm_allpriors.values > ztbin)\
+            indx = (df_data.coh2.values == ev) &\
+                (df.norm_allpriors.values > ztbin)\
                 & (df.norm_allpriors.values < norm_zt_vals[izt+1])
             pl = True
             while pl:
@@ -2692,14 +2747,13 @@ if __name__ == '__main__':
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE38', 'LE39', 'LE85', 'LE84', 'LE86']
         else:
-            subjects = ['LE38']
+            subjects = ['LE42']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
@@ -2789,7 +2843,7 @@ if __name__ == '__main__':
         # basic_statistics(com, com_model_detected)  # com
         # basic_statistics(hit, hit_model)  # hit
         MT = [len(t) for t in trajs]
-        df_sim = pd.DataFrame({'coh2': coh, 'trajectory_y': trajs,
+        df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
                                'sound_len': reaction_time,
                                'rewside': (gt + 1)/2,
                                'R_response': (resp_fin+1)/2,
@@ -2807,8 +2861,9 @@ if __name__ == '__main__':
         df_sim['special_trial'] =\
             np.array(df.special_trial)[after_correct_id][:int(num_tr)]
         df_sim['traj'] = df_sim['trajectory_y']
-        df_sim['com_detcted'] = com_model_detected
+        df_sim['com_detected'] = com_model_detected
         df_sim['peak_com'] = np.array(x_val_at_updt)
+        df_sim['hithistory'] = np.array(resp_fin == gt)
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
