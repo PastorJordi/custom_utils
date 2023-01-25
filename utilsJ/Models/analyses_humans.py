@@ -299,10 +299,17 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
             com_peak.append(max_val)
         else:
             com_peak.append(0)
-        if answer_times[i][-1] != '':
-            time_com.append(answer_times[traj == max_val])
+        if answer_times[i][-1] != '' and max_val > com_threshold:
+            time_com_ind = np.array(answer_times[i])[traj == max_val]
+            try:
+                if len(time_com_ind) >= 1:
+                    time_com.append(time_com_ind[0])
+                else:
+                    time_com.append(-1)
+            except Exception:
+                time_com.append(time_com_ind)
         else:
-            time_com.append(0)
+            time_com.append(-1)
     df_plot = pd.DataFrame({'sound_len': reaction_time*1e3, 'CoM': com_list,
                             'ev': ev})
     indx = ~np.isnan(ev)
@@ -323,7 +330,8 @@ def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
                             'times': answer_times[indx],
                             'traj_y': pos_y[indx],
                             'subjid': subjid[indx],
-                            'com_peak': com_peak[indx]})
+                            'com_peak': np.array(com_peak)[indx],
+                            'time_com': np.array(time_com)[indx]})
     if plot:
         fig, ax = plt.subplots(1)
         bins = np.linspace(0, 350, 8)  # rt bins

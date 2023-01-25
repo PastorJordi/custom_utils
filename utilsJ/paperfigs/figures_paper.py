@@ -63,6 +63,8 @@ elif pc_name == 'alex_CRM':
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
+COLOR_COM = 'olive'
+COLOR_NO_COM = 'cyan'
 
 
 def plot_coms(df, ax, human=False):
@@ -223,8 +225,11 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     plt.sca(ax_mat[1])
     plt.colorbar(im, fraction=0.04)
     # pright matrix
+    if humans:
+        coh = df_data['avtrapz'].values
+    else:
+        coh = df_data['coh2'].values
     choice = df_data['R_response'].values
-    coh = df_data['coh2'].values
     prior = df_data['norm_allpriors'].values
     mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
                                 annotate=False)
@@ -339,12 +344,10 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
                                   cmap='jet', prior_limit=1)
 
 
-def supp_mean_com_traj(df, condition='prior_x_coh', cmap='copper', prior_limit=1,
-                       after_correct_only=True, rt_lim=300,
-                       trajectory='trajectory_y',
-                       interpolatespace=np.linspace(-700000, 1000000, 1700)):
-    fig, ax_com = plt.subplots(ncols=1, nrows=1)
-    ax = ax_com
+def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
+                  after_correct_only=True, rt_lim=300,
+                  trajectory='trajectory_y',
+                  interpolatespace=np.linspace(-700000, 1000000, 1700)):
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
@@ -356,6 +359,8 @@ def supp_mean_com_traj(df, condition='prior_x_coh', cmap='copper', prior_limit=1
     bintype = 'edges'
     all_trajs = np.empty((len(df.subjid.unique()), 1700))
     all_trajs[:] = np.nan
+    all_trajs_nocom = np.empty((len(df.subjid.unique()), 1700))
+    all_trajs_nocom[:] = np.nan
     for i_s, subj in enumerate(df.subjid.unique()):
         if after_correct_only:
             ac_cond = df.aftererror == False
@@ -363,21 +368,41 @@ def supp_mean_com_traj(df, condition='prior_x_coh', cmap='copper', prior_limit=1
             ac_cond = (df.aftererror*1) >= 0
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim) & (df.CoM_sugg == True)
+            (df.sound_len < rt_lim) & (df.CoM_sugg == True) & (df.subjid == subj)
         xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
             trajectory_thr(df.loc[indx_trajs], condition, bins,
                            collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
-                           trajectory=trajectory, plotmt=False)
+                           trajectory=trajectory, plotmt=False,
+                           color_tr='olive')
         all_trajs[i_s, :] = np.nanmean(mat[0], axis=0)
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
+        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+            trajectory_thr(df.loc[indx_trajs], condition, bins,
+                           collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=None, bintype=bintype,
+                           trajectory=trajectory, plotmt=False, plot_traj=False)
+        all_trajs_nocom[i_s, :] = np.nanmean(mat[0], axis=0)
     mean_traj = np.nanmean(all_trajs, axis=0)
-    ax.plot((interpolatespace)/1000, mean_traj, color='k', linewidth=2)
+    mean_traj_nocom = np.nanmean(all_trajs_nocom, axis=0)
+    ax.plot((interpolatespace)/1000, mean_traj, color='olive', linewidth=2)
+    ax.plot((interpolatespace)/1000, mean_traj_nocom, color='cyan', linewidth=2,
+            linestyle='--', label='Avg. No-CoM traj.')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (px)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
-    ax.set_title('Mean CoM trajectory')
+    # ax.set_title('Mean CoM trajectory')
+    legendelements = [Line2D([0], [0], color='olive', lw=2,
+                             label='Avg. CoM traj.'),
+                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
+                             label='Avg. No-CoM traj.')]
+    ax.legend(handles=legendelements)
+    ax.axhline(-8, color='r', linestyle='--', alpha=0.5)
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
@@ -1230,12 +1255,13 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     ax1, ax2 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com, bins=80, range=(-50, 0), color='k')
+    ax1.hist(peak_com, bins=80, range=(-600, 0), color='k')
     ax1.set_yscale('log')
     ax1.axvline(-8, linestyle='--', color='r')
     ax1.set_xlim(-50, 5)
     ax1.set_xlabel('Peak CoM (px)')
     ax1.set_ylabel('Counts')
+    ax2.set_ylabel('Counts')
     ax2.hist(time_com, bins=80, range=(0, 500), color='k')
     ax2.set_xlabel('Time to CoM (ms)')
     # bins_rt_com = np.linspace(0, 150, num=16)
@@ -1267,7 +1293,19 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
-    com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax[2], ax[3]])
+    ax_com_stat = ax[3]
+    pos = ax_com_stat.get_position()
+    ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
+                              pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                         pos.height*2/5])
+    ax_coms = [ax_com_stat, ax_inset]
+    com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
+                                                             ax_coms[1]])
+    mean_com_traj(df=df, ax=ax[2], condition='prior_x_coh', cmap='copper',
+                  prior_limit=1, after_correct_only=True, rt_lim=400,
+                  trajectory='trajectory_y',
+                  interpolatespace=np.linspace(-700000, 1000000, 1700))
     # plot Pcoms matrices
     nbins = 7
     matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df, side=0)
@@ -1799,11 +1837,48 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     subj = ['general_traj']
     steps = [None]
+    humans = True
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
-    human_trajs(df_data, sv_folder, max_mt=max_mt, jitter=jitter,
-                wanted_precision=wanted_precision)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    fig, ax = plt.subplots(nrows=3, ncols=5, figsize=(10, 6))
+    ax = ax.flatten()
+    for i in [0, 1, 5]:
+        ax[i].axis('off')
+    ax_tach = ax[2]
+    ax_pright = ax[4]
+    ax_mat = [ax[6], ax[7]]
+    ax_traj = ax[3]
+    matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
+                  ax_mat=ax_mat, humans=humans)
+    plot_coms(df=df_data, ax=ax_traj, human=humans)
+    axes_trajs = [ax[10], ax[11], ax[12], ax[13], ax[14]]
+    human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt,
+                jitter=jitter, wanted_precision=wanted_precision)
+    peak_com = -df_data.com_peak.values
+    time_com = df_data.time_com.values
+    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax[8], ax[9]])
+    fig.savefig(SV_FOLDER+'fig6.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig6.png', dpi=400, bbox_inches='tight')
+
+
+def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
+    # sound_len_com = sound_len[com]
+    # df2 = pd.DataFrame({'sound_len': sound_len_com, 'time_com': time_com,
+    #                     'peak_com': peak_com})
+    ax1, ax2 = ax  # , ax3, ax4
+    rm_top_right_lines(ax1)
+    rm_top_right_lines(ax2)
+    ax1.hist(peak_com[peak_com != 0], bins=80, range=(-600, 0), color='k')
+    ax1.set_yscale('log')
+    ax1.axvline(-100, linestyle='--', color='r')
+    ax1.set_xlim(-600, 5)
+    ax1.set_xlabel('Peak CoM (px)')
+    ax1.set_ylabel('Counts')
+    ax2.set_ylabel('Counts')
+    ax2.hist(time_com[time_com != -1]*1e3, bins=50, range=(0, 800), color='k')
+    ax2.set_xlabel('Time to CoM (ms)')
 
 
 def plot_human_trajs_per_subject(df_data):
@@ -1908,7 +1983,7 @@ def traj_mean_human_per_subject(df_data, mean=True):
     # print(cont1/cont2)
 
 
-def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
+def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
                 wanted_precision=8, max_px=500):
     # TRAJECTORIES
     index1 = (df_data.subjid != 5) & (df_data.subjid != 6)\
@@ -1921,8 +1996,6 @@ def human_trajs(df_data, sv_folder, max_mt=600, jitter=0.003,
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
     # congruent_coh = coh * (decision*2 - 1)
-    fig, ax = plt.subplots(nrows=2, ncols=5)
-    ax = ax.flatten()
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     vals_thr_traj = []
     precision = 16
@@ -2608,12 +2681,12 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
     f4 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
@@ -2622,6 +2695,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
+            subjects = ['LE38', 'LE39', 'LE85', 'LE84', 'LE86']
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
@@ -2749,7 +2823,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)

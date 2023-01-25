@@ -766,6 +766,8 @@ def trajectory_thr(
     xpoints=None,
     raiseerrors=False,
     plotmt=True,
+    plot_traj=True,
+    color_tr='olive',
 ):
     """
     Plot trajectories.
@@ -929,13 +931,14 @@ def trajectory_thr(
                 )
             else:
                 ytoplot = np.nanmedian(matrix_dic[b], axis=0)
-                traj_kws["color"] = 'grey'
-                traj_kws["alpha"] = 0.6
-            ax_traj.plot((interpolatespace) / 1000,
-                         ytoplot-np.nanmean(
-                             ytoplot[(interpolatespace > -100000) *
-                                     (interpolatespace < 0)]), **traj_kws,
-                         **extra_kw)
+                traj_kws["color"] = color_tr
+                traj_kws["alpha"] = 0.08
+            if plot_traj:
+                ax_traj.plot((interpolatespace) / 1000,
+                             ytoplot-np.nanmean(
+                                 ytoplot[(interpolatespace > -100000) *
+                                         (interpolatespace < 0)]), **traj_kws,
+                             **extra_kw)
             # trigger legend outside of the function
 
     y_points = np.array(y_points)
