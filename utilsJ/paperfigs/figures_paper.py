@@ -35,7 +35,9 @@ matplotlib.rcParams['font.size'] = 8
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
-pc_name = 'alex'  # 'alex'
+
+# ---GLOBAL VARIABLES
+pc_name = 'idibaps'  # 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -912,18 +914,32 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     nbins = 7
+    for subject in df_data.subjid.unique():
+        df_sbj = df_data.loc[(df_data.special_trial == 0) &
+                             (df_data.subjid == subject)]
+        choice = df_sbj['R_response'].values
+        coh = df_sbj['coh2'].values
+        prior = df_sbj['norm_allpriors'].values
+        mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
+                                    annotate=False)
+
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
     for i in [0, 1, 3]:
         ax[i].axis('off')
+    # tracking screenshot
+    rat = plt.imread(RAT_noCOM_IMG)
+    ax_scrnsht = ax[6]
+    ax_scrnsht.imshow(np.flipud(rat))
+    ax_scrnsht.set_xticklabels([])
+    ax_scrnsht.set_yticklabels([])
+    ax_scrnsht.set_xticks([])
+    ax_scrnsht.set_yticks([])
+    ax_scrnsht.set_xlabel('x dimension (pixels)')  # , fontsize=14)
+    ax_scrnsht.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+
     # P_right
-    # TODO: check ticks for matrix
     ax_pright = ax[4]
-    choice = df_data['R_response'].values
-    coh = df_data['coh2'].values
-    prior = df_data['norm_allpriors'].values
-    mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
-                                annotate=False)
     # mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     pos = ax_pright.get_position()
@@ -932,9 +948,6 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     cbar_ax = f.add_axes([pos.x0+pos.width/2.3, pos.y0+margin/2,
                           pos.width/10, pos.height/2])
     f.colorbar(im_2, cax=cbar_ax)
-
-    # ax_pright.set_title('Proportion of \n right responses', fontsize=8)
-
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
     ax_pright.set_yticklabels(['L', '', 'R'])
@@ -945,7 +958,6 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
     # tachometrics
-    # TODO: check legend
     ax_tach = ax[5]
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
@@ -967,16 +979,6 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
 
-    # track screenshot
-    rat = plt.imread(RAT_noCOM_IMG)
-    ax_scrnsht = ax[6]
-    ax_scrnsht.imshow(np.flipud(rat))
-    ax_scrnsht.set_xticklabels([])
-    ax_scrnsht.set_yticklabels([])
-    ax_scrnsht.set_xticks([])
-    ax_scrnsht.set_yticks([])
-    ax_scrnsht.set_xlabel('x dimension (pixels)')  # , fontsize=14)
-    ax_scrnsht.set_ylabel('y dimension (pixels)')  # , fontsize=14)
 
     # raw trajectories
     ax_rawtr = ax[7]
@@ -2681,12 +2683,12 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f4 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
