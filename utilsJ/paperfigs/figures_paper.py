@@ -795,10 +795,10 @@ def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
     ax[1].plot(mean_vel)
 
 
-def tachometric_data(coh, hit, sound_len, ax, label='Data'):
+def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
-                                 'sound_len': sound_len})
+                                 'sound_len': sound_len, 'subjid': subjid})
     tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg')
     ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax.set_xlabel('RT (ms)')
@@ -1448,11 +1448,13 @@ def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
     com_model = com_model[sound_len_model >= 0]
+    subjid = df_sim.subjid.values[sound_len_model >= 0]
     psych_curve((decision_model+1)/2, coh[sound_len_model >= 0], ret_ax=ax[1],
                 kwargs_error={'label': 'Model', 'color': 'red'},
                 kwargs_plot={'color': 'red'})
     ax[1].legend()
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len, ax=ax[2])
+    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len,
+                                   subjid=subjid, ax=ax[2])
     ax[2].set_title('Data')
     pos_tach_ax_model = tachometric_data(coh=coh[sound_len_model >= 0],
                                          hit=hit_model,
@@ -1670,9 +1672,10 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
     com_model = com_model[sound_len_model >= 0]
+    subjid = df_sim.subjid.values[sound_len_model >= 0]
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         ax=ax[10], label='Model')
+                         subjid=subjid, ax=ax[10], label='Model')
     # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
     # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
     #          coh=coh[sound_len_model >= 0], yaxis=False)
@@ -2794,22 +2797,21 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE84', 'LE37']
         else:
-            subjects = ['LE37']
+            subjects = ['LE42']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:

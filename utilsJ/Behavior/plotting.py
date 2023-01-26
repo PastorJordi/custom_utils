@@ -1905,6 +1905,7 @@ def tachometric(
         f, ax = plt.subplots(**subplots_kws)
     n_subs = len(df.subjid.unique())
     vals_tach_per_sub = np.empty((len(rtbins)-1, n_subs))
+    vals_tach_per_sub[:] = np.nan
     for i in range(evidence_bins.size-1):
         for i_s, subj in enumerate(df.subjid.unique()):
             tmp = (
@@ -1913,8 +1914,9 @@ def tachometric(
                     (df.subjid == subj)]  # select stim str
                 .groupby('rtbin')[hits].agg(['mean',
                                              groupby_binom_ci]).reset_index())
-            vals_tach_per_sub[:, i_s] = tmp['mean'].values
-        tmp['mean'] = np.nanmean(vals_tach_per_sub, axis=1)
+            vals_tach_per_sub[:len(tmp['mean'].values), i_s] = tmp['mean'].values
+        vals_total = np.nanmean(vals_tach_per_sub, axis=1)            
+        error_total = np.nanstd(vals_tach_per_sub, axis=1)/np.sqrt(n_subs)
         if labels is None:
             clabel = f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}'
         else:
@@ -1922,18 +1924,28 @@ def tachometric(
         if fill_error and plot:
             ax.plot(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                tmp['mean'].values, label=clabel, c=cmap(
+                vals_total[:len(tmp.rtbin.values)], label=clabel, c=cmap(
                     (i+2)/(evidence_bins.size)),
                 marker=error_kws.get('marker', ''),
                 linestyle=linestyle)
-            ax.fill_between(
-                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                tmp['mean'].values +
-                tmp.groupby_binom_ci.apply(lambda x: x[1]),
-                y2=tmp['mean'].values -
-                tmp.groupby_binom_ci.apply(lambda x: x[0]),
-                color=cmap(i+2/(evidence_bins.size)),
-                alpha=error_kws.get('alpha', 0.3))
+            if n_subs > 1:
+                ax.fill_between(
+                    tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                    vals_total[:len(tmp.rtbin.values)] +
+                    error_total[:len(tmp.rtbin.values)],
+                    y2=vals_total[:len(tmp.rtbin.values)] -
+                    error_total[:len(tmp.rtbin.values)],
+                    color=cmap(i+2/(evidence_bins.size)),
+                    alpha=error_kws.get('alpha', 0.3))
+            else:
+                ax.fill_between(
+                    tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                    tmp['mean'].values +
+                    tmp.groupby_binom_ci.apply(lambda x: x[1]),
+                    y2=tmp['mean'].values -
+                    tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                    color=cmap(i+2/(evidence_bins.size)),
+                    alpha=error_kws.get('alpha', 0.3))
         if not fill_error and plot:
             ax.errorbar(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
