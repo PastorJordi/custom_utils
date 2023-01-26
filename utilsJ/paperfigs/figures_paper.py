@@ -17,8 +17,8 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -37,7 +37,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'  # 'alex'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -513,7 +513,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         plt.show()
 
 
-def get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700):
+def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
     for i in range(max_MT):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
@@ -527,7 +527,7 @@ def get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700):
 
 
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                    subject='LE36', startfrom=700):
+                    subject='LE37', startfrom=700):
     """
     Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
     between 0 and 90.
@@ -572,18 +572,18 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             appb = False
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-    ind = get_split_ind_corr(mat, evl, pval=0.001, max_MT=400, startfrom=700)
+    ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
     ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
     # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
     #          head_length=0.3)
     ax.set_xlim(-10, 100)
-    ax.set_ylim(-2, 5)
+    ax.set_ylim(-0.6, 3.2)
     ax.set_xlabel('time from movement onset (ms)')
     ax.set_ylabel('y dimension (px)')
-    if rtbins[-1] > 50:
-        ax.set_title(subject+' , RT > 100 ms')
+    if rtbins[-1] > 25:
+        ax.set_title(subject+' , RT > 150 ms')
     else:
-        ax.set_title(subject+' , RT < 50 ms')
+        ax.set_title(subject+' , RT < 25 ms')
     plt.show()
 
 
@@ -627,7 +627,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                 mat = np.concatenate((mat, mata))
 
             current_split_index =\
-                get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
+                get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
             out_data += [current_split_index]
     out_data = np.array(out_data).reshape(
@@ -691,7 +691,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                     mat = np.concatenate((mat, matatmp))
                     evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                 current_split_index =\
-                    get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
+                    get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                        startfrom=700)
                 out_data += [current_split_index]
             else:
@@ -832,15 +832,25 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
     # ax.set_xlim(0, max(bins))
 
 
-def pdf_cohs(sound_len, ax, coh, bins=np.linspace(0, 150, 31), yaxis=True):
+def pdf_cohs(df, ax, bins=np.linspace(0, 150, 31), yaxis=True):
     # ev_vals = np.unique(np.abs(coh))
+    sound_len = df.sound_len.values
+    coh = df.coh2.values
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 2))
+    num_subjs = len(df.subjid.unique())
     for i_coh, ev in enumerate([0, 1]):
-        index = np.abs(coh) == ev
-        counts_coh, bins_coh = np.histogram(sound_len[index], bins=bins)
-        norm_counts = counts_coh/sum(counts_coh)
+        counts_all_rats = np.zeros((30, num_subjs))
+        for i_s, subj in enumerate(df.subjid.unique()):
+            index = (np.abs(coh) == ev) & (df.subjid == subj)
+            counts_coh, bins_coh = np.histogram(sound_len[index], bins=bins)
+            norm_counts = counts_coh/sum(counts_coh)
+            counts_all_rats[:, i_s] = norm_counts
+        norm_counts = np.nanmean(counts_all_rats, axis=1)
+        error = np.nanstd(counts_all_rats, axis=1)/np.sqrt(num_subjs)
         xvals = bins_coh[:-1]+(bins_coh[1]-bins_coh[0])/2
         ax.plot(xvals, norm_counts, color=colormap[i_coh])
+        ax.fill_between(xvals, norm_counts-error, norm_counts+error,
+                        color=colormap[i_coh])
     ax.set_xlabel('Reaction time (ms)')
     if yaxis:
         ax.set_ylabel('Density')
@@ -914,15 +924,18 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     nbins = 7
+    mat_pright_all = np.zeros((7, 7))
     for subject in df_data.subjid.unique():
         df_sbj = df_data.loc[(df_data.special_trial == 0) &
                              (df_data.subjid == subject)]
         choice = df_sbj['R_response'].values
         coh = df_sbj['coh2'].values
         prior = df_sbj['norm_allpriors'].values
-        mat_pright, _ = com_heatmap(prior, coh, choice, return_mat=True,
-                                    annotate=False)
-
+        indx = ~np.isnan(prior)
+        mat_pright, _ = com_heatmap(prior[indx], coh[indx], choice[indx],
+                                    return_mat=True, annotate=False)
+        mat_pright_all += mat_pright
+    mat_pright = mat_pright_all / len(df_data.subjid.unique())
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
     for i in [0, 1, 3]:
@@ -973,8 +986,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     # RTs
     ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
-    sound_len = np.array(df.sound_len)
-    pdf_cohs(sound_len=sound_len, ax=ax_rts, coh=coh, yaxis=True)
+    pdf_cohs(df=df, ax=ax_rts, yaxis=True)
     ax_rts.set_xlabel('')
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
@@ -1051,14 +1063,19 @@ def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
         retbins=False, include_lowest=True, right=True).astype(float)
     xvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
     yvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
+    n_subjs = len(df.subjid.unique())
+    vals_all_rats = np.zeros((len(rtbins)-1, n_subjs))
     for i in range(evidence_bins.size-1):
-        tmp = (tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
-               tmp_df[evidence].abs() < evidence_bins[i+1])]
-               .groupby('rtbin')[hits].agg(['mean',
-                                            groupby_binom_ci]).reset_index())
+        for i_s, subj in enumerate(df.subjid.unique()):
+            tmp = (tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
+                   tmp_df[evidence].abs() < evidence_bins[i+1]) &
+                   (tmp_df.subjid == subj)]
+                   .groupby('rtbin')[hits].agg(['mean',
+                                                groupby_binom_ci]).reset_index())
+            vals_all_rats[:len(tmp['mean'].values), i_s] = tmp['mean'].values
         xvals[:len(tmp.rtbin.values), i] =\
             tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize
-        yvals[:len(tmp['mean'].values), i] = tmp['mean'].values
+        yvals[:, i] = np.nanmean(vals_all_rats, axis=1)
     xvals = xvals[:len(tmp['mean'].values), :]
     yvals = yvals[:len(tmp['mean'].values), :]
     return xvals, yvals
@@ -1156,10 +1173,10 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
     ax_cohs = np.array([ax[1], ax[6]])
     ax_zt = np.array([ax[0], ax[5]])
     # splitting
-    trajs_splitting(df, ax=ax[3], rtbins=np.linspace(0, 50, 2))
+    trajs_splitting(df, ax=ax[3], rtbins=np.linspace(0, 25, 2))
     rm_top_right_lines(ax[3])
     rm_top_right_lines(ax[8])
-    trajs_splitting(df, ax=ax[8], rtbins=np.linspace(100, 200, 2))
+    trajs_splitting(df, ax=ax[8], rtbins=np.linspace(150, 300, 2))
     trajs_splitting_point(df=df, ax=ax[4])
 
     # trajs. conditioned on coh
@@ -1226,6 +1243,7 @@ def tach_1st_2nd_choice(df, ax, model=False):
     gt = df.rewside.values * 2 - 1
     hit = df.hithistory.values
     sound_len = df.sound_len.values
+    subj = df.subjid.values
     if not model:
         com = df.CoM_sugg.values
     if model:
@@ -1234,13 +1252,13 @@ def tach_1st_2nd_choice(df, ax, model=False):
     choice_com[com] = -choice[com]
     hit_com = choice_com == gt
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
-                                 'sound_len': sound_len})
+                                 'sound_len': sound_len, 'subjid': subj})
     xvals, yvals1 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for j in range(4):
         ax.plot(xvals[:, j], yvals1[:, j], color=colormap[j], linewidth=1.5)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
-                                 'sound_len': sound_len})
+                                 'sound_len': sound_len, 'subjid': subj})
     xvals, yvals2 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
     for j in range(4):
         ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
@@ -1315,8 +1333,20 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
                   interpolatespace=np.linspace(-700000, 1000000, 1700))
     # plot Pcoms matrices
     nbins = 7
-    matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df, side=0)
-    matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df, side=1)
+    mat_side_0_all = np.zeros((7, 7))
+    mat_side_1_all = np.zeros((7, 7))
+    n_subjs = len(df.subjid.unique())
+    for i_s, subj in enumerate(df.subjid.unique()):
+        matrix_side_0 =\
+            com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
+                                               side=0)
+        matrix_side_1 =\
+            com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
+                                               side=1)
+        mat_side_0_all += matrix_side_0
+        mat_side_1_all += matrix_side_1
+    matrix_side_0 = matrix_side_0_all / n_subjs
+    matrix_side_1 = matrix_side_1_all / n_subjs
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
@@ -2740,20 +2770,21 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = True
     f2 = False
-    f3 = False
+    f3 = True
     f4 = False
     f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
+            subjects = ['LE84', 'LE44']
         else:
-            subjects = ['LE42']
+            subjects = ['LE37']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:

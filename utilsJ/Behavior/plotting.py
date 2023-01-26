@@ -760,7 +760,7 @@ def trajectory_thr(
     align="action",
     interp_extend=False,
     discarded_tstamp=0,
-    cmap=None,
+    cmap='viridis',
     rollingmeanwindow=0,
     bintype="edges",
     xpoints=None,
@@ -929,10 +929,10 @@ def trajectory_thr(
                     .mean()
                     .values
                 )
-            else:
-                ytoplot = np.nanmedian(matrix_dic[b], axis=0)
+            if cmap is None:
                 traj_kws["color"] = color_tr
                 traj_kws["alpha"] = 0.08
+            ytoplot = np.nanmedian(matrix_dic[b], axis=0)
             if plot_traj:
                 ax_traj.plot((interpolatespace) / 1000,
                              ytoplot-np.nanmean(
@@ -1886,7 +1886,8 @@ def tachometric(
     cmap='inferno',
     subplots_kws={},  # ignored if ax is provided,
     labels=None,
-    linestyle='solid'
+    linestyle='solid',
+    plot=True
 ):
     """jeez how it took me so long"""
 
@@ -1900,28 +1901,31 @@ def tachometric(
         tmp_df[rt], rtbins, labels=np.arange(rtbins.size-1),
         retbins=False, include_lowest=True, right=True
     ).astype(float)
-    if ax is None:
+    if ax is None and plot:
         f, ax = plt.subplots(**subplots_kws)
-
+    n_subs = len(df.subjid.unique())
+    vals_tach_per_sub = np.empty((len(rtbins)-1, n_subs))
     for i in range(evidence_bins.size-1):
-        tmp = (
-            tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
-                tmp_df[evidence].abs() < evidence_bins[i+1])]  # select stim str
-            .groupby('rtbin')[hits].agg(['mean', groupby_binom_ci]).reset_index()
-        )
-
+        for i_s, subj in enumerate(df.subjid.unique()):
+            tmp = (
+                tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
+                    tmp_df[evidence].abs() < evidence_bins[i+1]) &
+                    (df.subjid == subj)]  # select stim str
+                .groupby('rtbin')[hits].agg(['mean',
+                                             groupby_binom_ci]).reset_index())
+            vals_tach_per_sub[:, i_s] = tmp['mean'].values
+        tmp['mean'] = np.nanmean(vals_tach_per_sub, axis=1)
         if labels is None:
             clabel = f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}'
         else:
             clabel = labels[i]
-        if fill_error:
+        if fill_error and plot:
             ax.plot(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values, label=clabel, c=cmap(
                     (i+2)/(evidence_bins.size)),
                 marker=error_kws.get('marker', ''),
-                linestyle=linestyle
-            )
+                linestyle=linestyle)
             ax.fill_between(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values +
@@ -1929,9 +1933,8 @@ def tachometric(
                 y2=tmp['mean'].values -
                 tmp.groupby_binom_ci.apply(lambda x: x[0]),
                 color=cmap(i+2/(evidence_bins.size)),
-                alpha=error_kws.get('alpha', 0.3)
-            )
-        else:
+                alpha=error_kws.get('alpha', 0.3))
+        if not fill_error and plot:
             ax.errorbar(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values,
@@ -1940,8 +1943,9 @@ def tachometric(
                     tmp.groupby_binom_ci.apply(lambda x: x[1])
                 ],
                 label=clabel,
-                c=cmap(i/(evidence_bins.size-1)), **error_kws_
-            )
+                c=cmap(i/(evidence_bins.size-1)), **error_kws_)
+        if not plot:
+            return
 
 
 def com_heatmap_paper_marginal_pcom_side(
