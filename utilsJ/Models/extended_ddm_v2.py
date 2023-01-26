@@ -969,6 +969,8 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
             traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
+            traj_updt = np.concatenate((np.random.randn(
+                np.random.randint(15, 60))*0.2, traj_updt))
             total_traj.append(traj_updt)
             if com[i_t]:
                 opp_side_values = traj_updt.copy()

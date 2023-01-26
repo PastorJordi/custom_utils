@@ -1972,9 +1972,67 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
                 jitter=jitter, wanted_precision=wanted_precision)
     peak_com = -df_data.com_peak.values
     time_com = df_data.time_com.values
-    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax[8], ax[9]])
+    ax_com_stat = ax[8]
+    pos = ax_com_stat.get_position()
+    ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
+                              pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                         pos.height*2/5])
+    ax_coms = [ax_com_stat, ax_inset]
+    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
+                                                                    ax_coms[1]])
+    mean_com_traj_human(df_data=df_data, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig6.png', dpi=400, bbox_inches='tight')
+
+
+def mean_com_traj_human(df_data, ax, max_mt=400):
+    # TRAJECTORIES
+    index1 = (df_data.subjid != 5) & (df_data.subjid != 6)\
+        & (~df_data.CoM_sugg)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    decision = df_data.R_response.values[index1]
+    trajs = df_data.trajectory_y.values[index1]
+    times = df_data.times.values[index1]
+    com = df_data.CoM_sugg.values[index1]
+    # congruent_coh = coh * (decision*2 - 1)
+    precision = 16
+    all_trajs = np.empty((sum(com), max_mt))
+    all_trajs[:] = np.nan
+    for tr in range(sum(com)):
+        vals = np.array(trajs[com][tr]) * (decision[com][tr]*2 - 1)
+        ind_time = [True if t != '' else False for t in times[com][tr]]
+        time = np.array(times[com][tr])[np.array(ind_time)].astype(float)
+        max_time = max(time)*1e3
+        if max_time > max_mt:
+            continue
+        all_trajs[tr, :len(vals)] = vals
+    mean_traj = np.nanmean(all_trajs, axis=0)
+    xvals = np.arange(len(mean_traj))*precision
+    yvals = mean_traj
+    ax.plot(xvals, yvals, color='olive', linewidth=2)
+    index = ~com
+    all_trajs = np.empty((sum(index), max_mt))
+    all_trajs[:] = np.nan
+    for tr in range(sum(index)):
+        vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+        ind_time = [True if t != '' else False for t in times[index][tr]]
+        time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+        max_time = max(time)*1e3
+        if max_time > max_mt:
+            continue
+        all_trajs[tr, :len(vals)] = vals
+    mean_traj = np.nanmean(all_trajs, axis=0)
+    xvals = np.arange(len(mean_traj))*precision
+    yvals = mean_traj
+    ax.plot(xvals, yvals, color='cyan', linestyle='--', linewidth=2)
+    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('x-coord. (px)')
+    legendelements = [Line2D([0], [0], color='olive', lw=2,
+                             label='Avg. CoM traj.'),
+                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
+                             label='Avg. No-CoM traj.')]
+    ax.legend(handles=legendelements)
 
 
 def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
@@ -2302,15 +2360,15 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_aff = 8
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.14
-    p_w_stim = 0.07
+    p_w_zt = 0.18
+    p_w_stim = 0.1
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 40
-    p_2nd_readout = 40
+    p_1st_readout = 70
+    p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -2800,8 +2858,8 @@ if __name__ == '__main__':
     f2 = False
     f3 = False
     f4 = False
-    f5 = True
-    f6 = False
+    f5 = False
+    f6 = True
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
@@ -2811,7 +2869,7 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
         else:
-            subjects = ['LE42']
+            subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
