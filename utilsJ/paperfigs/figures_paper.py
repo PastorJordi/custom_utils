@@ -636,6 +636,12 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
     out_data = out_data.astype(float)
     out_data[out_data > threshold] = np.nan
     binsize = rtbins[1]-rtbins[0]
+    for i in range(df.subjid.unique().size):
+        for j in range(out_data.shape[2]):
+            ax.plot(binsize/2 + binsize * np.arange(rtbins.size-1),
+                    out_data[:, i, j],
+                    marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                    mew=1, color=(.6, .6, .6, .3))
     error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='k', marker='o', label='mean & SEM')
     ax.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
@@ -716,23 +722,23 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
         nrepeats = df.subjid.unique().size * 2  # two responses per subject
     # because we might want to plot each subject connecting lines, lets iterate
     # draw  datapoints
-    # if not connect_points:
-    #     ax.scatter(  # add some offset/shift on x axis based on binsize
-    #         binsize/2 + binsize * (np.repeat(
-    #             np.arange(rtbins.size-1), nrepeats
-    #         ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
-    #         out_data.flatten(),
-    #         **scatter_kws,
-    #     )
-    # else:
-    #     for i in range(df.subjid.unique().size):
-    #         for j in range(out_data.shape[2]):
-    #             ax.plot(
-    #                 binsize/2 + binsize * np.arange(rtbins.size-1),
-    #                 out_data[:, i, j],
-    #                 marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
-    #                 mew=1, color=(.6, .6, .6, .3)
-    #             )
+    if not connect_points:
+        ax.scatter(  # add some offset/shift on x axis based on binsize
+            binsize/2 + binsize * (np.repeat(
+                np.arange(rtbins.size-1), nrepeats
+            ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
+            out_data.flatten(),
+            **scatter_kws,
+        )
+    else:
+        for i in range(df.subjid.unique().size):
+            for j in range(out_data.shape[2]):
+                ax.plot(
+                    binsize/2 + binsize * np.arange(rtbins.size-1),
+                    out_data[:, i, j],
+                    marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                    mew=1, color=(.6, .6, .6, .3)
+                )
 
     error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='k', marker='o', label='mean & SEM')
@@ -877,6 +883,33 @@ def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
     ax.legend()
 
 
+def stimulus_reversals_vs_com(df):
+    sound_len = df.sound_len.values
+    idx = sound_len > 100
+    sound_len = sound_len[idx]
+    stim = np.array([stim for stim in df.res_sound[idx]])
+    com = df.CoM_sugg.values[idx]
+    rev_list = []
+    rev_list_nocom = []
+    for i_rt, rt in enumerate(sound_len):
+        vals = stim[i_rt][:int(rt//50 + 1)]
+        if sum(np.abs(np.diff(np.sign(vals)))) > 0:
+            if com[i_rt]:
+                rev_list.append(True)
+            if not com[i_rt]:
+                rev_list_nocom.append(True)
+        else:
+            if com[i_rt]:
+                rev_list.append(False)
+            if not com[i_rt]:
+                rev_list_nocom.append(False)
+    print('RT > 100 ms')
+    print('Stimulus reversals in CoM trials: {} %'
+          .format(round(np.mean(rev_list), 3)*100))
+    print('Stimulus reversals in NO-CoM trials: {} %'
+          .format(round(np.mean(rev_list_nocom), 3)*100))
+
+
 def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
          model=False):
     colors = ['k', 'darkred', 'darkorange', 'gold']
@@ -916,7 +949,6 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
 
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
-    nbins = 7
     mat_pright_all = np.zeros((7, 7))
     for subject in df_data.subjid.unique():
         df_sbj = df_data.loc[(df_data.special_trial == 0) &
