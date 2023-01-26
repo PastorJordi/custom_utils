@@ -636,13 +636,6 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
     out_data = out_data.astype(float)
     out_data[out_data > threshold] = np.nan
     binsize = rtbins[1]-rtbins[0]
-    for i in range(df.subjid.unique().size):
-        for j in range(out_data.shape[2]):
-            ax.plot(
-                binsize/2 + binsize * np.arange(rtbins.size-1),
-                out_data[:, i, j],
-                marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
-                mew=1, color=(.6, .6, .6, .3))
     error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='k', marker='o', label='mean & SEM')
     ax.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
@@ -657,7 +650,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
 
 def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                           sim=False,
-                          rtbins=np.linspace(0, 150, 16), connect_points=True,
+                          rtbins=np.linspace(0, 150, 16), connect_points=False,
                           draw_line=((0, 90), (90, 0)),
                           trajectory="trajectory_y"):
 
@@ -723,23 +716,23 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
         nrepeats = df.subjid.unique().size * 2  # two responses per subject
     # because we might want to plot each subject connecting lines, lets iterate
     # draw  datapoints
-    if not connect_points:
-        ax.scatter(  # add some offset/shift on x axis based on binsize
-            binsize/2 + binsize * (np.repeat(
-                np.arange(rtbins.size-1), nrepeats
-            ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
-            out_data.flatten(),
-            **scatter_kws,
-        )
-    else:
-        for i in range(df.subjid.unique().size):
-            for j in range(out_data.shape[2]):
-                ax.plot(
-                    binsize/2 + binsize * np.arange(rtbins.size-1),
-                    out_data[:, i, j],
-                    marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
-                    mew=1, color=(.6, .6, .6, .3)
-                )
+    # if not connect_points:
+    #     ax.scatter(  # add some offset/shift on x axis based on binsize
+    #         binsize/2 + binsize * (np.repeat(
+    #             np.arange(rtbins.size-1), nrepeats
+    #         ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
+    #         out_data.flatten(),
+    #         **scatter_kws,
+    #     )
+    # else:
+    #     for i in range(df.subjid.unique().size):
+    #         for j in range(out_data.shape[2]):
+    #             ax.plot(
+    #                 binsize/2 + binsize * np.arange(rtbins.size-1),
+    #                 out_data[:, i, j],
+    #                 marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+    #                 mew=1, color=(.6, .6, .6, .3)
+    #             )
 
     error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='k', marker='o', label='mean & SEM')
@@ -1345,8 +1338,8 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
                                                side=1)
         mat_side_0_all += matrix_side_0
         mat_side_1_all += matrix_side_1
-    matrix_side_0 = matrix_side_0_all / n_subjs
-    matrix_side_1 = matrix_side_1_all / n_subjs
+    matrix_side_0 = mat_side_0_all / n_subjs
+    matrix_side_1 = mat_side_1_all / n_subjs
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
@@ -2768,9 +2761,9 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
-    f2 = False
-    f3 = True
+    f1 = False
+    f2 = True
+    f3 = False
     f4 = False
     f5 = False
     f6 = False
@@ -2782,7 +2775,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE84', 'LE44']
+            subjects = ['LE84', 'LE37']
         else:
             subjects = ['LE37']
             # good ones for fitting: 42, 43, 38
