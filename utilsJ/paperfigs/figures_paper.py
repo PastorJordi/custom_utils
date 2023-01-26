@@ -1988,8 +1988,8 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
 
 def mean_com_traj_human(df_data, ax, max_mt=400):
     # TRAJECTORIES
-    index1 = (df_data.subjid != 5) & (df_data.subjid != 6)\
-        & (~df_data.CoM_sugg)
+    rm_top_right_lines(ax=ax)
+    index1 = (df_data.subjid != 5) & (df_data.subjid != 6)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     decision = df_data.R_response.values[index1]
     trajs = df_data.trajectory_y.values[index1]
@@ -1997,20 +1997,27 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     com = df_data.CoM_sugg.values[index1]
     # congruent_coh = coh * (decision*2 - 1)
     precision = 16
-    all_trajs = np.empty((sum(com), max_mt))
-    all_trajs[:] = np.nan
-    for tr in range(sum(com)):
-        vals = np.array(trajs[com][tr]) * (decision[com][tr]*2 - 1)
-        ind_time = [True if t != '' else False for t in times[com][tr]]
-        time = np.array(times[com][tr])[np.array(ind_time)].astype(float)
-        max_time = max(time)*1e3
-        if max_time > max_mt:
-            continue
-        all_trajs[tr, :len(vals)] = vals
-    mean_traj = np.nanmean(all_trajs, axis=0)
-    xvals = np.arange(len(mean_traj))*precision
-    yvals = mean_traj
-    ax.plot(xvals, yvals, color='olive', linewidth=2)
+    mat_mean_trajs_subjs = np.empty((len(df_data.subjid.unique()), max_mt))
+    mat_mean_trajs_subjs[:] = np.nan
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        index = com & (df_data.subjid.values[index1] == subj)
+        all_trajs = np.empty((sum(index), max_mt))
+        all_trajs[:] = np.nan
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+            max_time = max(time)*1e3
+            if max_time > max_mt:
+                continue
+            all_trajs[tr, :len(vals)] = vals
+        mean_traj = np.nanmean(all_trajs, axis=0)
+        xvals = np.arange(len(mean_traj))*precision
+        yvals = mean_traj
+        ax.plot(xvals, yvals, color='olive', alpha=0.1)
+        mat_mean_trajs_subjs[i_s, :] = yvals
+    mean_traj_across_subjs = np.nanmean(mat_mean_trajs_subjs, axis=0)
+    ax.plot(xvals, mean_traj_across_subjs, color='olive', linewidth=2)
     index = ~com
     all_trajs = np.empty((sum(index), max_mt))
     all_trajs[:] = np.nan
@@ -2033,6 +2040,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
                       Line2D([0], [0], color='cyan', lw=2, linestyle='--',
                              label='Avg. No-CoM traj.')]
     ax.legend(handles=legendelements)
+    ax.axhline(-100, color='r', linestyle='--', alpha=0.5)
 
 
 def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
