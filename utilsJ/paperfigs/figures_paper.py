@@ -30,7 +30,7 @@ import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
 
-matplotlib.rcParams['font.size'] = 10
+matplotlib.rcParams['font.size'] = 9
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -662,9 +662,9 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     ax.set_ylim(-0.6, 5.2)
     if xlab:
         ax.set_xlabel('Time from movement onset (ms)')
-    ax.set_ylabel('y dimension (px)')
     if rtbins[-1] > 25 and xlab:
         ax.set_title('\n RT > 150 ms', fontsize=8)
+        ax.set_ylabel('y dimension (px)')
     else:
         ax.set_title(subject+',\n RT < 25 ms', fontsize=8)
     plt.show()
@@ -1272,7 +1272,7 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(15, 7), accel=False, inset_sz=.03, marginx=0.012,
+def fig_trajs_2(df, fgsz=(12, 6), accel=False, inset_sz=.03, marginx=0.012,
                 marginy=0.25):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
@@ -1280,28 +1280,28 @@ def fig_trajs_2(df, fgsz=(15, 7), accel=False, inset_sz=.03, marginx=0.012,
     ax_label = f.add_subplot(2, 4, 1)
     # pos = ax_label.get_position()
     # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
-    ax_label.text(-0.1, 1.15, 'a', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 2)
-    ax_label.text(-0.1, 1.15, 'c', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 3)
-    ax_label.text(-0.1, 2.85, 'e', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 2.95, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 4)
-    ax_label.text(-0.1, 1.15, 'g', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'g', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 5)
-    ax_label.text(-0.1, 1.15, 'b', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'b', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 6)
-    ax_label.text(-0.1, 1.15, 'd', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 7)
-    ax_label.text(-0.1, 1.15, 'f', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'e', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 8)
-    ax_label.text(-0.1, 1.15, 'h', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.25, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
     ax = f.axes
