@@ -256,8 +256,11 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
 
-def rm_top_right_lines(ax):
-    ax.spines['right'].set_visible(False)
+def rm_top_right_lines(ax, right=True):
+    if right:
+        ax.spines['right'].set_visible(False)
+    else:
+        ax.spines['left'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
 
@@ -322,12 +325,13 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
     ax[1].set_title('Model')
 
 
-def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.01, marginy=0.05):
+def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.01, marginy=0.05,
+              right=True):
     ratio = fgsz[0]/fgsz[1]
     pos = ax.get_position()
     ax_inset = plt.axes([pos.x1-inset_sz-marginx, pos.y0+marginy, inset_sz,
                          inset_sz*ratio])
-    rm_top_right_lines(ax_inset)
+    rm_top_right_lines(ax_inset, right=right)
     return ax_inset
 
 
@@ -431,14 +435,14 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ac_cond = (df.aftererror*1) >= 0
     if condition == 'choice_x_coh':
         bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-        xlab = 'ev. towards response'
+        xlab = 'ev. resp.'
         bintype = 'categorical'
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
             (df.sound_len < rt_lim)
     if condition == 'prior_x_coh':
         bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
-        xlab = 'prior towards response'
+        xlab = 'prior resp.'
         bintype = 'edges'
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 2) &\
@@ -460,23 +464,53 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                        trajectory=trajectory, plotmt=True, alpha_low=False)
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-                     title='Coherence')
+                     title='Stim.', loc='upper left')
+        ax[0].set_yticklabels('')
+        ax[0].set_yticks([])
+        ax[0].set_ylim(240, 295)
+        ax_twin = ax[0].twinx()
+        rm_top_right_lines(ax=ax_twin, right=False)
+        ax_twin.set_xticks([-1, 0, 1])
+        ax_twin.set_ylim(240, 295)
+        ax_twin.set_xticklabels(['-1', '0', '1'])
+        ax_twin.set_yticks([250, 275])
+        ax_twin.set_yticklabels(['250', '275'])
+        ax[2].set_ylim(115, 135)
+        ax[2].set_yticks([120, 130])
+        ax[2].set_yticklabels(['120', '130'])
     if condition == 'prior_x_coh':
+        ax[0].set_yticklabels('')
+        ax[0].set_ylim(240, 340)
+        ax[0].set_yticks([])
         ax[1].legend(labels=['inc. high', 'inc. low', 'zero', 'con. low',
-                             'con. high'], title='Prior')
+                             'con. high'], title='Prior', loc='upper left')
+        xpoints = (bins[:-1] + bins[1:]) / 2
+        ax_twin = ax[0].twinx()
+        rm_top_right_lines(ax=ax_twin, right=False)
+        ax_twin.set_xticks([-0.65, xpoints[2], 0.65])
+        ax_twin.set_xticklabels(['inc.', '\n zero', 'con.'])
+        ax_twin.set_ylim(240, 340)
+        ax_twin.set_yticks([250, 300])
+        ax_twin.set_yticklabels(['250', '300'])
+        ax[2].set_xticks([-0.65, xpoints[2], 0.65])
+        ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
+        ax[2].set_ylim(95, 155)
+        ax[2].set_yticks([100, 150])
+        ax[2].set_yticklabels(['100', '150'])
     if condition == 'origidx':
         ax[1].legend(labels=['100', '300', '500', '700', '900'],
                      title='Trial index')
-    ax[1].set_xlim([-150, 500])
-    ax[1].set_xlabel('time from movement onset (MT, ms)')
+    ax[1].set_xlim([-200, 520])
+    ax[1].set_xticklabels('')
+    # ax[1].set_xlabel('Time from movement onset (MT, ms)')
     ax[1].axhline(0, ls=':', c='gray')
     ax[1].set_ylabel('y coord. (px)')
-    ax[0].set_xlabel(xlab)
-    ax[0].set_ylabel('Motor time')
+    # ax[0].set_xlabel(xlab)
+    ax_twin.set_title('MT (ms)', fontsize=8)
     ax[1].set_ylim([-10, 85])
     ax[1].axhline(78, color='gray', linestyle=':')
     # ax2 = ax[0].twinx()
-    ax[0].plot(xpoints, mt_time, color='k', ls=':')
+    ax_twin.plot(xpoints, mt_time, color='k', ls=':')
     # ax2.set_label('Motor time')
     # velocities
     threshold = .2
@@ -487,14 +521,14 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
-    ax[3].set_xlim([-200, 500])
-    ax[3].set_xlabel('time from movement onset (MT, ms)')
+    ax[3].set_xlim([-200, 520])
+    ax[3].set_xlabel('Time from movement onset (ms)')
     ax[3].set_ylim([-0.05, 0.5])
     for i in [0, threshold]:
         ax[3].axhline(i, ls=':', c='gray')
-    ax[3].set_ylabel('y coord velocity (px/ms)')
-    ax[2].set_xlabel(xlab)
-    ax[2].set_ylabel(f'time to threshold ({threshold} px/ms)')
+    ax[3].set_ylabel('y-coord velocity (px/ms)')
+    # ax[2].set_xlabel(xlab)
+    ax[2].set_title('Time th. (ms)', fontsize=8)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
@@ -575,7 +609,7 @@ def traj_offset_computation(df, rtbin=0, rtbins=np.linspace(0, 400, 2),
 
 
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                    subject='LE37', startfrom=700):
+                    subject='LE37', startfrom=700, xlab=False):
     """
     Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
     between 0 and 90.
@@ -624,14 +658,15 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
     # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
     #          head_length=0.3)
-    ax.set_xlim(-10, 100)
-    ax.set_ylim(-0.6, 3.2)
-    ax.set_xlabel('time from movement onset (ms)')
+    ax.set_xlim(-10, 155)
+    ax.set_ylim(-0.6, 5.2)
+    if xlab:
+        ax.set_xlabel('Time from movement onset (ms)')
     ax.set_ylabel('y dimension (px)')
-    if rtbins[-1] > 25:
-        ax.set_title(subject+' , RT > 150 ms')
+    if rtbins[-1] > 25 and xlab:
+        ax.set_title('\n RT > 150 ms', fontsize=8)
     else:
-        ax.set_title(subject+' , RT < 25 ms')
+        ax.set_title(subject+',\n RT < 25 ms', fontsize=8)
     plt.show()
 
 
@@ -697,7 +732,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
                          axis=1, nan_policy='omit'), **error_kws)
     ax.set_xlabel('RT (ms)')
-    ax.set_ylabel('time to split (ms)')
+    ax.set_ylabel('Time to split (ms)')
     ax.legend()
     plt.show()
 
@@ -802,8 +837,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
 
-    ax.set_xlabel('RT (ms)')
-    ax.set_ylabel('time to split (ms)')
+    # ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Time to split (ms)')
     ax.legend()
     plt.show()
 # 3d histogram-like*?
@@ -1232,55 +1267,78 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=1.2)
+    ax.set_xticklabels([labels[0], '\n' + labels[1], labels[2]])
     ax.set_ylabel('Weight (a.u.)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.04, marginx=0.05,
-                marginy=0.2):
-    f, ax = plt.subplots(nrows=2, ncols=5, figsize=fgsz)
+def fig_trajs_2(df, fgsz=(15, 7), accel=False, inset_sz=.03, marginx=0.012,
+                marginy=0.25):
+    f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
-    ax = ax.flatten()
-    ax_label = f.add_subplot(2, 5, 1)
+    # ax = ax.flatten()
+    ax_label = f.add_subplot(2, 4, 1)
+    # pos = ax_label.get_position()
+    # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
     ax_label.text(-0.1, 1.15, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 5, 6)
-    ax_label.text(-0.1, 1.15, 'a', transform=ax_label.transAxes,
+    ax_label = f.add_subplot(2, 4, 2)
+    ax_label.text(-0.1, 1.15, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    for i, label in enumerate(('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h')):
-        ax_label = f.add_subplot(2, 5, i+1)
-        ax_label.text(-0.1, 1.15, label, transform=ax_label.transAxes,
-                      fontsize=16, fontweight='bold', va='top', ha='right')
-    plt.tight_layout()
-    trajs_splitting_prior(df=df, ax=ax[9])
-    # for i in [5, 8]:
-    ax[7].axis('off')
-    ax_cohs = np.array([ax[1], ax[6]])
-    ax_zt = np.array([ax[0], ax[5]])
+    ax_label = f.add_subplot(2, 4, 3)
+    ax_label.text(-0.1, 2.85, 'e', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 4, 4)
+    ax_label.text(-0.1, 1.15, 'g', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 4, 5)
+    ax_label.text(-0.1, 1.15, 'b', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 4, 6)
+    ax_label.text(-0.1, 1.15, 'd', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 4, 7)
+    ax_label.text(-0.1, 1.15, 'f', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 4, 8)
+    ax_label.text(-0.1, 1.15, 'h', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    # plt.tight_layout()
+    ax = f.axes
+    plt.subplots_adjust(top=0.885, bottom=0.13, left=0.085, right=0.93,
+                        hspace=0.35, wspace=0.4)
+    ax_cohs = np.array([ax[1], ax[5]])
+    ax_zt = np.array([ax[0], ax[4]])
     # splitting
-    trajs_splitting(df, ax=ax[3], rtbins=np.linspace(0, 25, 2))
-    rm_top_right_lines(ax[3])
-    rm_top_right_lines(ax[8])
-    trajs_splitting(df, ax=ax[8], rtbins=np.linspace(150, 300, 2))
-    trajs_splitting_point(df=df, ax=ax[4], connect_points=True)
+    ax_split = ax[2]
+    pos = ax_split.get_position()
+    ax_split.set_position([pos.x0, pos.y0, pos.width,
+                           pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                         pos.height*2/5])
+    axes_split = [ax_split, ax_inset]
+    trajs_splitting(df, ax=axes_split[1], rtbins=np.linspace(0, 25, 2), xlab=False)
+    rm_top_right_lines(axes_split[1])
+    rm_top_right_lines(axes_split[0])
+    trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2), xlab=True)
 
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
+                         marginx=marginx, marginy=0.095, right=False)
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
+                         marginx=0.1, marginy=marginy, right=True)
     ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
     ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
+                         marginx=marginx, marginy=0.095, right=False)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
     ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
+                         marginx=0.1, marginy=marginy, right=True)
     ax_zt = np.insert(ax_zt, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
-    # TODO: the function below does not work with all subjects
+    # TODO: the function below does not work with all subSjects
     # (see line 805 in function trajectory_thr in plotting.py)
     df_trajs = df  # df.loc[df.subjid == 'LE38']
     trajs_cond_on_coh_computation(df=df_trajs.loc[df_trajs.special_trial == 2],
@@ -1290,7 +1348,12 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.04, marginx=0.05,
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
-    mt_weights(df, ax=ax[2], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[6], plot=True, means_errs=False)
+    # traj splitting prior
+    trajs_splitting_prior(df=df, ax=ax[7])
+    # traj splitting ev
+    trajs_splitting_point(df=df, ax=ax[3], connect_points=True)
+
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -1395,11 +1458,11 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
         df['CoM_sugg'] = com
     fig, ax = plt.subplots(2, 4, figsize=figsize)
     ax = ax.flatten()
-    ax_mat = [ax[6], ax[7]]
+    ax_mat = [ax[5], ax[6]]
     rm_top_right_lines(ax=ax[4])
     tach_1st_2nd_choice(df=df, ax=ax[4])
-    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[5])
-    ax[5].set_ylim(0, 0.075)
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[7])
+    ax[7].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
