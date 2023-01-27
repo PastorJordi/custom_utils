@@ -37,7 +37,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_Jordi'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -51,6 +51,8 @@ elif pc_name == 'idibaps':
         'ChangesOfMind/figures/Figure_1/screenShot230120.png'
     RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
         'ChangesOfMind/figures/Figure_3/001965.png'
+    TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
+        'figures/Figure_1/panel_a.png'
 elif pc_name == 'idibaps_Jordi':
     SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
@@ -930,12 +932,13 @@ def pdf_cohs(df, ax, bins=np.linspace(0, 150, 31), yaxis=True):
         norm_counts = np.nanmean(counts_all_rats, axis=1)
         error = np.nanstd(counts_all_rats, axis=1)/np.sqrt(num_subjs)
         xvals = bins_coh[:-1]+(bins_coh[1]-bins_coh[0])/2
-        ax.plot(xvals, norm_counts, color=colormap[i_coh])
+        ax.plot(xvals, norm_counts, color=colormap[i_coh], label=str(ev))
         ax.fill_between(xvals, norm_counts-error, norm_counts+error,
                         color=colormap[i_coh], alpha=0.4)
     ax.set_xlabel('Reaction time (ms)')
     if yaxis:
         ax.set_ylabel('Density')
+    ax.legend()
 
 
 def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
@@ -1048,6 +1051,13 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax = ax.flatten()
     for i in [0, 1, 3]:
         ax[i].axis('off')
+
+    # task panel
+    ax_task = ax[0]
+    pos = ax_task.get_position()
+    ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
+    task = plt.imread(TASK_IMG)
+    ax_task.imshow(task)
     # tracking screenshot
     rat = plt.imread(RAT_noCOM_IMG)
     ax_scrnsht = ax[6]
@@ -1080,7 +1090,9 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
 
     # tachometrics
     ax_tach = ax[5]
-    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
+    labels = ['0', '0.25', '0.5', '1']
+    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
+                labels=labels)
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
@@ -1088,8 +1100,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0+margin/2, pos.width, pos.height])
-
-    # ax_tach.legend()
+    ax_tach.legend()
 
     # RTs
     ax_rts = ax[2]
@@ -2985,16 +2996,16 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
-    f2 = True
+    f1 = True
+    f2 = False
     f3 = False
-    f4 = True
+    f4 = False
     f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
