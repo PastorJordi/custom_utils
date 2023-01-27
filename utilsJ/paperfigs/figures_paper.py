@@ -30,7 +30,7 @@ import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
 
-matplotlib.rcParams['font.size'] = 8
+matplotlib.rcParams['font.size'] = 10
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -506,7 +506,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[1].axhline(0, ls=':', c='gray')
     ax[1].set_ylabel('y coord. (px)')
     # ax[0].set_xlabel(xlab)
-    ax_twin.set_title('MT (ms)', fontsize=8)
+    ax_twin.set_title('MT (ms)', fontsize=9)
     ax[1].set_ylim([-10, 85])
     ax[1].axhline(78, color='gray', linestyle=':')
     # ax2 = ax[0].twinx()
@@ -528,7 +528,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[3].axhline(i, ls=':', c='gray')
     ax[3].set_ylabel('y-coord velocity (px/ms)')
     # ax[2].set_xlabel(xlab)
-    ax[2].set_title('Time th. (ms)', fontsize=8)
+    ax[2].set_title('Time th. (ms)', fontsize=9)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
