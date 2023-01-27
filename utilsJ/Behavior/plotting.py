@@ -768,6 +768,7 @@ def trajectory_thr(
     plotmt=True,
     plot_traj=True,
     color_tr='olive',
+    alpha_low=True
 ):
     """
     Plot trajectories.
@@ -929,9 +930,9 @@ def trajectory_thr(
                     .mean()
                     .values
                 )
-            if cmap is None:
+            if cmap is None and alpha_low:
                 traj_kws["color"] = color_tr
-                traj_kws["alpha"] = 0.08
+                traj_kws["alpha"] = 0.15
             ytoplot = np.nanmedian(matrix_dic[b], axis=0)
             if plot_traj:
                 ax_traj.plot((interpolatespace) / 1000,

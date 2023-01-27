@@ -17,8 +17,8 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -37,7 +37,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'idibaps_Jordi'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -56,6 +56,8 @@ elif pc_name == 'idibaps_Jordi':
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
     RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
         'craft_vid/CoM/a/001965.png'
+    RAT_noCOM_IMG = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/' +\
+        'screenShot230120.png'
 elif pc_name == 'alex_CRM':
     SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
     DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
@@ -389,8 +391,12 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False, plot_traj=False)
         all_trajs_nocom[i_s, :] = np.nanmean(mat[0], axis=0)
-    mean_traj = np.nanmedian(all_trajs, axis=0)
+    mean_traj = np.nanmean(all_trajs, axis=0)
+    mean_traj += -np.nanmean(mean_traj[(interpolatespace > -100000) &
+                                       (interpolatespace < 0)])
     mean_traj_nocom = np.nanmean(all_trajs_nocom, axis=0)
+    mean_traj_nocom += -np.nanmean(mean_traj_nocom[(interpolatespace > -100000) &
+                                                   (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color='olive', linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color='cyan', linewidth=2,
             linestyle='--', label='Avg. No-CoM traj.')
@@ -451,7 +457,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                        collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
                        return_trash=True, error_kwargs=dict(marker='o'),
                        cmap=cmap, bintype=bintype,
-                       trajectory=trajectory, plotmt=True)
+                       trajectory=trajectory, plotmt=True, alpha_low=False)
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
                      title='Coherence')
@@ -461,7 +467,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     if condition == 'origidx':
         ax[1].legend(labels=['100', '300', '500', '700', '900'],
                      title='Trial index')
-    ax[1].set_xlim([-50, 500])
+    ax[1].set_xlim([-150, 500])
     ax[1].set_xlabel('time from movement onset (MT, ms)')
     ax[1].axhline(0, ls=':', c='gray')
     ax[1].set_ylabel('y coord. (px)')
@@ -478,7 +484,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         df.loc[indx_trajs], condition, bins, collapse_sides=True,
         thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
         error_kwargs=dict(marker='o'), cmap=cmap,
-        bintype=bintype, trajectory=velocity, plotmt=False)
+        bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-200, 500])
@@ -524,6 +530,48 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
         if p2 < pval:
             return i
     return np.nan
+
+
+def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.01, nan_policy="omit"):
+    """a and b are traj matrices.
+    returns ms after motor onset when they split
+    startfrom: matrix index to start from (should be 0th position in ms
+    tot_iter= remaining)
+    if ax, it plots medians + splittime"""
+    # n = 0
+    # plist = []
+    for i in range(tot_iter):
+        pop_a = a[:, startfrom + i]
+        pop_b = b[:, startfrom + i]
+        _, p2 = ttest_ind(pop_a, pop_b, nan_policy=nan_policy)
+        # plist.append(p2)
+        if p2 < pval:
+            return i
+
+
+def traj_offset_computation(df, rtbin=0, rtbins=np.linspace(0, 400, 2),
+                            subject='LE37', startfrom=700):
+    subject = subject
+    lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
+    colors = pl.cm.gist_yarg(np.linspace(0.4, 1, 3))
+    mat0 = np.empty((1701,))
+    mat1 = np.empty((1701,))
+    fig, ax = plt.subplots(1)
+    indx = (df.special_trial == 0) & (df.subjid == subject)
+    if np.sum(indx) > 0:
+        _, mat0, _ =\
+            simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=False,
+                                     ax=ax, rtbin=rtbin, rtbins=rtbins,
+                                     color=colors[2], label=lbl, coh1=1)
+        _, mat1, _ =\
+            simul.when_did_split_dat(df=df[indx], side=1, collapse_sides=False,
+                                     ax=ax, rtbin=rtbin, rtbins=rtbins,
+                                     color=colors[2], label=lbl, coh1=1)
+    ind = get_when_t(a=mat0, b=mat1, pval=0.001)
+    if ax is not None:
+        ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+        ax.set_xlim(-170, 355)
+    return ind
 
 
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
@@ -849,7 +897,7 @@ def pdf_cohs(df, ax, bins=np.linspace(0, 150, 31), yaxis=True):
         xvals = bins_coh[:-1]+(bins_coh[1]-bins_coh[0])/2
         ax.plot(xvals, norm_counts, color=colormap[i_coh])
         ax.fill_between(xvals, norm_counts-error, norm_counts+error,
-                        color=colormap[i_coh])
+                        color=colormap[i_coh], alpha=0.4)
     ax.set_xlabel('Reaction time (ms)')
     if yaxis:
         ax.set_ylabel('Density')
@@ -1188,10 +1236,22 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
+def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.04, marginx=0.05,
                 marginy=0.2):
     f, ax = plt.subplots(nrows=2, ncols=5, figsize=fgsz)
+    # plt.tight_layout()
     ax = ax.flatten()
+    ax_label = f.add_subplot(2, 5, 1)
+    ax_label.text(-0.1, 1.15, 'a', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(2, 5, 6)
+    ax_label.text(-0.1, 1.15, 'a', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    for i, label in enumerate(('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h')):
+        ax_label = f.add_subplot(2, 5, i+1)
+        ax_label.text(-0.1, 1.15, label, transform=ax_label.transAxes,
+                      fontsize=16, fontweight='bold', va='top', ha='right')
+    plt.tight_layout()
     trajs_splitting_prior(df=df, ax=ax[9])
     # for i in [5, 8]:
     ax[7].axis('off')
@@ -1202,7 +1262,7 @@ def fig_trajs_2(df, fgsz=(15, 5), accel=False, inset_sz=.06, marginx=0.06,
     rm_top_right_lines(ax[3])
     rm_top_right_lines(ax[8])
     trajs_splitting(df, ax=ax[8], rtbins=np.linspace(150, 300, 2))
-    trajs_splitting_point(df=df, ax=ax[4])
+    trajs_splitting_point(df=df, ax=ax[4], connect_points=True)
 
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
@@ -1335,11 +1395,11 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
         df['CoM_sugg'] = com
     fig, ax = plt.subplots(2, 4, figsize=figsize)
     ax = ax.flatten()
-    ax_mat = [ax[4], ax[5]]
-    rm_top_right_lines(ax=ax[7])
-    tach_1st_2nd_choice(df=df, ax=ax[7])
-    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[6])
-    ax[6].set_ylim(0, 0.075)
+    ax_mat = [ax[6], ax[7]]
+    rm_top_right_lines(ax=ax[4])
+    tach_1st_2nd_choice(df=df, ax=ax[4])
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[5])
+    ax[5].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
@@ -2863,15 +2923,15 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
-    f4 = False
+    f4 = True
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
