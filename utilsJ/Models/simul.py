@@ -168,7 +168,7 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
                 np.nanmedian(mata, axis=0), color=color, label=label)
         ax.plot(np.arange(matb.shape[1]) - startfrom,
                 np.nanmedian(matb, axis=0), color=(0.8, 0.8, 0.8, 1.0),
-                label=label, ls=':')
+                label=label)
     return ind, mata, matb
 
 

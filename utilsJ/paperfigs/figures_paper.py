@@ -17,8 +17,8 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -37,12 +37,13 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
     DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
+    TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
@@ -466,7 +467,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                        trajectory=trajectory, plotmt=True, alpha_low=False)
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-                     title='Stim.', loc='upper left')
+                     title='Stimulus \n evidence', loc='upper left')
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
@@ -484,8 +485,16 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[0].set_yticklabels('')
         ax[0].set_ylim(240, 340)
         ax[0].set_yticks([])
-        ax[1].legend(labels=['inc. high', 'inc. low', 'zero', 'con. low',
-                             'con. high'], title='Prior', loc='upper left')
+        colormap = pl.cm.copper_r(np.linspace(0., 1, 3))
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                                 label='congruent'),
+                          Line2D([0], [0], color=colormap[1], lw=2,
+                                 label='0'),
+                          Line2D([0], [0], color=colormap[2], lw=2,
+                                 label='incongruent')]
+        ax[1].legend(handles=legendelements, title='Prior', loc='upper left')
+        # ax[1].legend(labels=['incongruent', 'inc. low', '0', 'con. low',
+        #                      'congruent'], title='Prior', loc='upper left')
         xpoints = (bins[:-1] + bins[1:]) / 2
         ax_twin = ax[0].twinx()
         rm_top_right_lines(ax=ax_twin, right=False)
@@ -502,11 +511,11 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     if condition == 'origidx':
         ax[1].legend(labels=['100', '300', '500', '700', '900'],
                      title='Trial index')
-    ax[1].set_xlim([-200, 520])
+    ax[1].set_xlim([-20, 450])
     ax[1].set_xticklabels('')
     # ax[1].set_xlabel('Time from movement onset (MT, ms)')
     ax[1].axhline(0, ls=':', c='gray')
-    ax[1].set_ylabel('y coord. (px)')
+    ax[1].set_ylabel('y coord. (pixels)')
     # ax[0].set_xlabel(xlab)
     ax_twin.set_title('MT (ms)', fontsize=9)
     ax[1].set_ylim([-10, 85])
@@ -523,14 +532,14 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
-    ax[3].set_xlim([-200, 520])
+    ax[3].set_xlim([-20, 450])
     ax[3].set_xlabel('Time from movement onset (ms)')
     ax[3].set_ylim([-0.05, 0.5])
     for i in [0, threshold]:
         ax[3].axhline(i, ls=':', c='gray')
     ax[3].set_ylabel('y-coord velocity (px/ms)')
     # ax[2].set_xlabel(xlab)
-    ax[2].set_title('Time th. (ms)', fontsize=9)
+    ax[2].set_title('Time to threshold (ms)', fontsize=9)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
@@ -657,7 +666,8 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
-    ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    # ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
+    ax.text(ind-23, 3.3, 'Splitting Time', fontsize=8)
     # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
     #          head_length=0.3)
     ax.set_xlim(-10, 155)
@@ -667,8 +677,19 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     if rtbins[-1] > 25 and xlab:
         ax.set_title('\n RT > 150 ms', fontsize=8)
         ax.set_ylabel('y dimension (px)')
+        ax.arrow(ind, 3, 0, -1.75, color='k', width=1, head_width=5,
+                 head_length=0.08)
     else:
-        ax.set_title(subject+',\n RT < 25 ms', fontsize=8)
+        ax.set_title(subject+',\n RT < 15 ms', fontsize=8)
+        ax.arrow(ind, 2.85, 0, -1.9, color='k', width=1, head_width=5,
+                 head_length=0.08)
+        colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+        labels = ['0', '0.25', '0.5', '1']
+        legendelements = []
+        for i_l, lab in enumerate(labels):
+            legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+                                  label=lab))
+        ax.legend(handles=legendelements)
     plt.show()
 
 
@@ -727,15 +748,15 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                     out_data[:, i, j],
                     marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                     mew=1, color=(.6, .6, .6, .3))
-    error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='k', marker='o', label='mean & SEM')
+    error_kws = dict(ecolor='gold', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='gold', marker='o', label='mean & SEM')
     ax.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
                 np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
                          axis=1, nan_policy='omit'), **error_kws)
     ax.set_xlabel('RT (ms)')
-    ax.set_ylabel('Time to split (ms)')
-    ax.legend()
+    ax.set_title('Impact of prior')
+    ax.set_ylabel('Splitting time (ms)')
     plt.show()
 
 
@@ -825,8 +846,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                     mew=1, color=(.6, .6, .6, .3)
                 )
 
-    error_kws = dict(ecolor='k', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='k', marker='o', label='mean & SEM')
+    error_kws = dict(ecolor='r', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='r', marker='o', label='mean & SEM')
     ax.errorbar(
         binsize/2 + binsize * np.arange(rtbins.size-1),
         # we do the mean across rtbin axis
@@ -840,8 +861,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
 
     # ax.set_xlabel('RT (ms)')
-    ax.set_ylabel('Time to split (ms)')
-    ax.legend()
+    ax.set_ylabel('Splitting time (ms)')
+    ax.set_title('Impact of stimulus')
     plt.show()
 # 3d histogram-like*?
 
@@ -1264,7 +1285,7 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
 
 
 def plot_violins(w_coh, w_t_i, w_zt, ax):
-    labels = ['Stimulus Congruency', 'Prior Congruency', 'Trial index']
+    labels = ['Stimulus', 'Prior', 'Trial index']
     arr_weights = np.concatenate((w_coh, w_zt, w_t_i))
     label_1 = []
     for j in range(len(labels)):
@@ -1279,11 +1300,11 @@ def plot_violins(w_coh, w_t_i, w_zt, ax):
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=1.2)
     ax.set_xticklabels([labels[0], '\n' + labels[1], labels[2]])
-    ax.set_ylabel('Weight (a.u.)')
+    ax.set_ylabel('Impact on MT (weights, a.u)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(12, 6), accel=False, inset_sz=.03, marginx=0.012,
+def fig_trajs_2(df, fgsz=(12, 7), accel=False, inset_sz=.03, marginx=0.012,
                 marginy=0.25):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
@@ -1291,28 +1312,28 @@ def fig_trajs_2(df, fgsz=(12, 6), accel=False, inset_sz=.03, marginx=0.012,
     ax_label = f.add_subplot(2, 4, 1)
     # pos = ax_label.get_position()
     # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
-    ax_label.text(-0.1, 1.25, 'a', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 2)
-    ax_label.text(-0.1, 1.25, 'c', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 3)
-    ax_label.text(-0.1, 2.95, 'f', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 3.2, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 4)
-    ax_label.text(-0.1, 1.25, 'g', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 5)
-    ax_label.text(-0.1, 1.25, 'b', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'b', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 6)
-    ax_label.text(-0.1, 1.25, 'd', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 7)
-    ax_label.text(-0.1, 1.25, 'e', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'e', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 8)
-    ax_label.text(-0.1, 1.25, 'h', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
     ax = f.axes
@@ -1328,11 +1349,11 @@ def fig_trajs_2(df, fgsz=(12, 6), accel=False, inset_sz=.03, marginx=0.012,
     ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
                          pos.height*2/5])
     axes_split = [ax_split, ax_inset]
-    trajs_splitting(df, ax=axes_split[1], rtbins=np.linspace(0, 25, 2), xlab=False)
+    trajs_splitting(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2), xlab=False)
     rm_top_right_lines(axes_split[1])
     rm_top_right_lines(axes_split[0])
-    trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2), xlab=True)
-
+    trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
+                    xlab=True)
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=0.095, right=False)
@@ -2996,8 +3017,8 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
-    f2 = False
+    f1 = False
+    f2 = True
     f3 = False
     f4 = False
     f5 = False
@@ -3005,11 +3026,12 @@ if __name__ == '__main__':
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
+            subjects = ['LE37', 'LE84']
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
