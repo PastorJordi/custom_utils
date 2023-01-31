@@ -17,9 +17,9 @@ from scipy.stats import pearsonr, ttest_ind
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -30,7 +30,7 @@ import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
 
-matplotlib.rcParams['font.size'] = 10
+matplotlib.rcParams['font.size'] = 9
 plt.rcParams['legend.title_fontsize'] = 8
 plt.rcParams['xtick.labelsize']= 8
 plt.rcParams['ytick.labelsize']= 8
@@ -40,7 +40,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps_Jordi'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -112,11 +112,9 @@ def plot_coms(df, ax, human=False):
     rm_top_right_lines(ax)
     if human:
         var = 'x'
-        sp = 'Subject'
     if not human:
         var = 'y'
-        sp = 'Rats'
-    ax.set_ylabel('{} position {}-axis (pixels)'.format(sp, var))
+    ax.set_ylabel('{}-coord (pixels)'.format(var))
     ax.set_xlabel('Time from movement onset (ms)')
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
@@ -389,7 +387,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False,
-                           color_tr='olive')
+                           color_tr='tab:olive', alpha_low=True)
         all_trajs[i_s, :] = np.nanmean(mat[0], axis=0)
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
@@ -399,7 +397,8 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                            collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
-                           trajectory=trajectory, plotmt=False, plot_traj=False)
+                           trajectory=trajectory, plotmt=False, plot_traj=False,
+                           alpha_low=True)
         all_trajs_nocom[i_s, :] = np.nanmean(mat[0], axis=0)
     mean_traj = np.nanmean(all_trajs, axis=0)
     mean_traj += -np.nanmean(mean_traj[(interpolatespace > -100000) &
@@ -407,20 +406,21 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
     mean_traj_nocom = np.nanmean(all_trajs_nocom, axis=0)
     mean_traj_nocom += -np.nanmean(mean_traj_nocom[(interpolatespace > -100000) &
                                                    (interpolatespace < 0)])
-    ax.plot((interpolatespace)/1000, mean_traj, color='olive', linewidth=2)
-    ax.plot((interpolatespace)/1000, mean_traj_nocom, color='cyan', linewidth=2,
-            linestyle='--', label='Avg. No-CoM traj.')
+    ax.plot((interpolatespace)/1000, mean_traj, color='tab:olive', linewidth=2)
+    ax.plot((interpolatespace)/1000, mean_traj_nocom, color='tab:cyan', linewidth=2,
+            label='No-CoM')
     ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('y-coord (px)')
+    ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
     # ax.set_title('Mean CoM trajectory')
-    legendelements = [Line2D([0], [0], color='olive', lw=2,
-                             label='Avg. CoM traj.'),
-                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
-                             label='Avg. No-CoM traj.')]
+    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+                             label='Detected CoM'),
+                      Line2D([0], [0], color='tab:cyan', lw=2,
+                             label='No-CoM')]
     ax.legend(handles=legendelements)
-    ax.axhline(-8, color='r', linestyle='--', alpha=0.5)
+    ax.axhline(-8, color='r', linestyle=':')
+    ax.text(200, -20, "Detection threshold", color='r')
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
@@ -469,9 +469,9 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                        cmap=cmap, bintype=bintype,
                        trajectory=trajectory, plotmt=True, alpha_low=False)
     if condition == 'choice_x_coh':
-        ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-                      title='Stimulus \n evidence', loc='upper left',
-                      fontsize=7)
+        ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
+                     title='Stimulus \n evidence', loc='upper left',
+                     fontsize=6)
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
@@ -487,12 +487,16 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[0].set_yticklabels('')
         ax[0].set_ylim(240, 340)
         ax[0].set_yticks([])
-        colormap = pl.cm.copper_r(np.linspace(0., 1, 3))
+        colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
                                  label='congruent'),
                           Line2D([0], [0], color=colormap[1], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2,
                                  label='0'),
                           Line2D([0], [0], color=colormap[2], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[4], lw=2,
                                  label='incongruent')]
         ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
@@ -511,6 +515,8 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[2].set_ylim(95, 155)
         ax[2].set_yticks([100, 150])
         ax[2].set_yticklabels(['100', '150'])
+        ax[2].set_xticks([0])
+        ax[2].set_xticklabels(['Prior'], fontsize=9)
     if condition == 'origidx':
         ax[1].legend(labels=['100', '300', '500', '700', '900'],
                      title='Trial index')
@@ -520,7 +526,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[1].axhline(0, c='gray')
     ax[1].set_ylabel('y coord. (pixels)')
     # ax[0].set_xlabel(xlab)
-    ax[0].set_title('MT (ms)', fontsize=9)
+    ax[0].set_ylabel('MT (ms)', fontsize=9)
     ax[1].set_ylim([-10, 85])
     ax[1].axhline(78, color='gray', linestyle=':')
     # ax2 = ax[0].twinx()
@@ -530,21 +536,20 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     threshold = .2
     xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
         df.loc[indx_trajs], condition, bins, collapse_sides=True,
-        thr=threshold, ax=ax[2], ax_traj=ax[2], return_trash=True,
+        thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
         error_kwargs=dict(marker='o'), cmap=cmap,
         bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
-    ax[2].set_xlim([-20, 450])
-    ax[2].set_xlabel('Time from movement \n  onset (ms)')
-    ax[2].set_ylim([-0.05, 0.5])
-    ax[2].axhline(0, c='gray')
-    ax[2].axhline(threshold, ls=':', c='gray')
-    ax[2].set_ylabel('y-coord velocity (px/ms)')
-    
+    ax[3].set_xlim([-20, 450])
+    ax[3].set_xlabel('Time from movement onset (ms)')
+    ax[3].set_ylim([-0.05, 0.5])
+    ax[3].axhline(0, c='gray')
+    ax[3].axhline(threshold, ls=':', c='gray')
+    ax[3].set_ylabel('y-coord velocity (px/ms)')
     # ax[2].set_xlabel(xlab)
-    # ax[2].set_title('Time to threshold (ms)', fontsize=9)
-    # ax[2].plot(xpoints, ypoints, color='k', ls=':')
+    ax[2].set_ylabel('  Time to \n      threshold (ms)', fontsize=8)
+    ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
         # acceleration
@@ -677,17 +682,17 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     #          head_length=0.3)
     ax.set_xlim(-10, 155)
     ax.set_ylim(-0.6, 5.2)
-    ax.set_ylabel('y dimension (px)')
     if xlab:
-        ax.set_xlabel('Time from movement \n  onset (ms)')
+        ax.set_xlabel('Time from movement onset (ms)')
     if rtbins[-1] > 25 and xlab:
-        ax.set_title('\n RT > 150 ms', fontsize=9)
+        ax.set_title('\n RT > 150 ms', fontsize=8)
         ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
                  head_length=0.4)
-        ax.text(ind-23, 3.3, 'Splitting \n  Time', fontsize=8)
+        ax.text(ind-15, 3.4, 'Splitting Time', fontsize=8)
+        ax.set_ylabel("{}y dimension (px)".format("       "))
     else:
-        ax.set_title(subject+',\n RT < 15 ms', fontsize=9)
-        ax.text(ind-5, 3.3, 'Splitting \nTime', fontsize=8)
+        ax.set_title('RT < 15 ms', fontsize=8)
+        ax.text(ind-15, 3.3, 'Splitting Time', fontsize=8)
         ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
                  head_length=0.4)
         labels = ['0', '0.25', '0.5', '1']
@@ -763,7 +768,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
                          axis=1, nan_policy='omit'), **error_kws)
     ax.set_xlabel('RT (ms)')
-    ax.set_title('Impact of prior')
+    ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
     plt.show()
 
@@ -868,9 +873,9 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
 
-    # ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
-    ax.set_title('Impact of stimulus')
+    ax.set_title('Impact of stimulus', fontsize=9)
     plt.show()
 # 3d histogram-like*?
 
@@ -1293,68 +1298,68 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
 
 
 def plot_violins(w_coh, w_t_i, w_zt, ax):
-    labels = ['Stimulus', 'Prior']  # , 'Trial index']
-    arr_weights = np.concatenate((w_coh, w_zt))  # , w_t_i
+    labels = ['Prior', 'Stimulus']  # , 'Trial index']
+    arr_weights = np.concatenate((w_zt, w_coh))  # , w_t_i
     label_1 = []
     for j in range(len(labels)):
         for i in range(len(w_coh)):
             label_1.append(labels[j])
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=['firebrick', 'goldenrod'],
+                   palette=['goldenrod', 'firebrick'],
                    linewidth=0.8)
-    edge_colors = ['firebrick', 'goldenrod']  # , 'gray'
-    arr_weights = np.array((w_coh, w_zt))  # , w_t_i
+    arr_weights = np.array((w_zt, w_coh))
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=1.2)
-        ax.collections[0].set_edgecolor(edge_colors[i])
+        ax.collections[0].set_edgecolor('k')
+    ax.set_xlim(-0.5, 1.5)
     ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
     ax.set_ylabel('Impact on MT (weights, a.u)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(9, 7), accel=False, inset_sz=.04, marginx=0.006,
-                marginy=0.21):
+def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
+                marginy=0.12):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
     # ax = ax.flatten()
-    ax_label = f.add_subplot(2, 4, 1)
+    ax_label = f.add_subplot(4, 2, 1)
     # pos = ax_label.get_position()
     # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
     ax_label.text(-0.1, 1.2, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 2)
+    ax_label = f.add_subplot(4, 2, 2)
     ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 3)
-    ax_label.text(-0.1, 3., 'e', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 4)
-    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 5)
+    ax_label = f.add_subplot(4, 2, 3)
     ax_label.text(-0.1, 1.2, 'b', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 6)
+    ax_label = f.add_subplot(4, 2, 4)
     ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 7)
+    ax_label = f.add_subplot(4, 2, 5)
+    ax_label.text(-0.1, 3., 'e', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(4, 2, 6)
     ax_label.text(-0.1, 1.2, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(2, 4, 8)
+    ax_label = f.add_subplot(4, 2, 7)
+    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(4, 2, 8)
     ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
     ax = f.axes
-    plt.subplots_adjust(top=0.9, bottom=0.09, left=0.09, right=0.95,
-                        hspace=0.5, wspace=0.55)
-    ax_cohs = np.array([ax[1], ax[5]])
-    ax_zt = np.array([ax[0], ax[4]])
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.4)
+    ax_cohs = np.array([ax[1], ax[3]])
+    ax_zt = np.array([ax[0], ax[2]])
     # splitting
-    ax_split = ax[2]
+    ax_split = ax[4]
     pos = ax_split.get_position()
     ax_split.set_position([pos.x0, pos.y0, pos.width,
                            pos.height*2/5])
@@ -1368,12 +1373,18 @@ def fig_trajs_2(df, fgsz=(9, 7), accel=False, inset_sz=.04, marginx=0.006,
                     xlab=True)
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.07, right=True)
+                         marginx=marginx, marginy=0.04, right=True)
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
     ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.07, right=True)
+                         marginx=marginx, marginy=0.04, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_zt = np.insert(ax_zt, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
@@ -1386,11 +1397,11 @@ def fig_trajs_2(df, fgsz=(9, 7), accel=False, inset_sz=.04, marginx=0.006,
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
-    mt_weights(df, ax=ax[6], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[5], plot=True, means_errs=False)
     # traj splitting prior
     trajs_splitting_prior(df=df, ax=ax[7])
     # traj splitting ev
-    trajs_splitting_point(df=df, ax=ax[3], connect_points=True)
+    trajs_splitting_point(df=df, ax=ax[6], connect_points=True)
 
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
@@ -1453,9 +1464,10 @@ def tach_1st_2nd_choice(df, ax, model=False):
                         color=colormap[j], alpha=0.4)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
+    ax.set_ylim(0.3, 1)
     legendelements = [Line2D([0], [0], linestyle='--', color='k', lw=2,
-                             label='1st resp'),
-                      Line2D([0], [0], color='k', lw=2, label='2nd resp')]
+                             label='initial trajectory'),
+                      Line2D([0], [0], color='k', lw=2, label='final response')]
     ax.legend(handles=legendelements)
 
 
@@ -1466,15 +1478,15 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     ax1, ax2 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com, bins=80, range=(-60, 0), color='k')
+    ax1.hist(peak_com, bins=80, range=(-60, 0), color='dimgray')
     ax1.set_yscale('log')
-    ax1.axvline(-8, linestyle='--', color='r')
+    ax1.axvline(-8, linestyle=':', color='r')
     ax1.set_xlim(-50, 5)
     ax1.set_xlabel('Peak CoM (px)')
-    ax1.set_ylabel('Counts')
-    ax2.set_ylabel('Counts')
-    ax2.hist(time_com, bins=80, range=(0, 500), color='k')
-    ax2.set_xlabel('Time to CoM (ms)')
+    ax1.set_ylabel('# Trials')
+    ax2.set_ylabel('# Trials')
+    ax2.hist(time_com, bins=80, range=(0, 500), color='dimgray')
+    ax2.set_xlabel('Deflection time (ms)')
     # bins_rt_com = np.linspace(0, 150, num=16)
     # xpos_com = np.diff(bins_rt_com)[0]
     # binned_curve(df2, 'peak_com', 'sound_len', bins=bins_rt_com, xpos=xpos_com,
@@ -1487,20 +1499,30 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     # ax4.set_ylabel('Time to CoM (ms)')
 
 
-def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
-               marginy=0.08, figsize=(10, 5), com_th=8):
+def fig_CoMs_3(df, peak_com, time_com, inset_sz=.04, marginx=0.005,
+               marginy=0.04, figsize=(8, 12), com_th=8):
     if com_th != 8:
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                           time_trajs=time_trajs)
         com = np.array(com)  # new CoM list
         df['CoM_sugg'] = com
-    fig, ax = plt.subplots(2, 4, figsize=figsize)
+    fig, ax = plt.subplots(4, 2, figsize=figsize)
     ax = ax.flatten()
-    ax_mat = [ax[5], ax[6]]
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.4)
+    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', '']
+    for n, axis in enumerate(ax):
+        if n == 3:
+            axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        else:
+            axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+    ax_mat = [ax[6], ax[7]]
     rm_top_right_lines(ax=ax[4])
     tach_1st_2nd_choice(df=df, ax=ax[4])
-    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[7])
-    ax[7].set_ylim(0, 0.075)
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[5])
+    ax[5].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
@@ -1513,6 +1535,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
     ax_coms = [ax_com_stat, ax_inset]
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
                                                              ax_coms[1]])
+    rm_top_right_lines(ax=ax[2])
     mean_com_traj(df=df, ax=ax[2], condition='prior_x_coh', cmap='copper',
                   prior_limit=1, after_correct_only=True, rt_lim=400,
                   trajectory='trajectory_y',
@@ -1552,11 +1575,13 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.08, marginx=0.005,
     plt.colorbar(im, fraction=0.04)
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticklabels(['']*nbins)
-        ax_i.set_xticklabels(['']*nbins)
+        ax_i.set_yticks(np.arange(7))
+        ax_i.set_xticks(np.arange(7))
+        ax_i.set_yticklabels(['L', '', '', '0', '', '', 'R'])
+        ax_i.set_xticklabels(['L', '', '', '0', '', '', 'R'])
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(4, 2),
+    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
                          marginx=marginx, marginy=marginy)
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax_inset)
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
@@ -1578,7 +1603,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
     #               marker='o', alpha=0.5)
     ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k')
     ax_inset.set_xlabel('P(CoM)')
-    ax_inset.set_ylabel('Counts')
+    ax_inset.set_ylabel('# Rats')
     # ax_inset.set_xlabel('Rat')
     # ax_inset.set_xticklabels([''])
     # ax_inset.axhline(np.nanmean(comlist_rats), linestyle='--', color='k',
@@ -1798,23 +1823,24 @@ def mean_com_traj_simul(df_sim, ax):
     mean_com_traj = np.nanmean(matrix_com_tr, axis=0)
     mean_nocom_traj = np.nanmean(matrix_nocom_tr, axis=0)
     mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
-    ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='olive',
+    ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='tab:olive',
             linewidth=2)
-    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='olive',
+    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='tab:olive',
             linewidth=1.4, linestyle='--')
-    ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color='cyan',
+    ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color='tab:cyan',
             linewidth=2, linestyle='--')
-    legendelements = [Line2D([0], [0], color='olive', lw=2,
-                             label='Avg. detected CoM traj.'),
-                      Line2D([0], [0], color='olive', lw=1.5,  linestyle='--',
-                             label='Avg. all CoM traj.'),
-                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
-                             label='Avg. No-CoM traj.')]
+    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+                             label='Detected CoM'),
+                      Line2D([0], [0], color='tab:olive', lw=1.5,  linestyle='--',
+                             label='All CoM'),
+                      Line2D([0], [0], color='tab:cyan', lw=2, linestyle='--',
+                             label='No-CoM')]
     ax.legend(handles=legendelements)
     ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('y_coord. (px)')
+    ax.set_ylabel('y_coord. (pixels)')
     ax.set_xlim(-25, 450)
-    ax.axhline(-8, color='r', linestyle='--', alpha=0.6)
+    ax.axhline(-8, color='r', linestyle=':')
+    ax.text(200, -20, "Detection threshold", color='r')
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
@@ -1825,10 +1851,19 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                                                           'left': 0.055,
                                                           'right': 0.975,
                                                           'hspace': 0.38,
-                                                          'wspace': 0.225})
+                                                          'wspace': 0.225},
+                           figsize=(9, 9))
     ax = ax.flatten()
-    for ax_1 in ax:
+    labs = ['a', '', 'c', '', 'b', '', 'd', '', 'e', 'f', 'g', 'h', 'i',
+            'j', '', 'k']
+    for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
+        if n == 3:
+            ax_1.text(-0.1, 3, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        else:
+            ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
     hit_model = hit_model[sound_len_model >= 0]
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
@@ -1963,7 +1998,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         ax = ax.flatten()
     vals_thr_traj = []
     vals_thr_vel = []
-    labels_zt = ['inc. high', 'inc. low', 'zero', 'con. low', 'con. high']
+    labels_zt = ['incongruent', '', '0', '', 'congruent']
     if prior:
         bins_ref = bins_zt
     else:
@@ -2058,11 +2093,11 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         ax[2].set_xlabel('Evidence congruency', fontsize=10)
         ax[3].set_xlabel('Evidence congruency', fontsize=10)
     ax[0].legend(title=leg_title)
-    ax[0].set_ylabel('y-coord (px)', fontsize=10)
+    ax[0].set_ylabel('y-coord (pixels)', fontsize=10)
     ax[0].set_xlabel('Time from movement onset (ms)', fontsize=10)
     ax[0].set_title('Mean trajectory', fontsize=10)
     ax[1].legend(title=leg_title)
-    ax[1].set_ylabel('Velocity (px/s)', fontsize=10)
+    ax[1].set_ylabel('Velocity (pixels/s)', fontsize=10)
     ax[1].set_xlabel('Time from movement onset (ms)', fontsize=10)
     ax[1].set_title('Mean velocity', fontsize=10)
     ax[2].set_ylabel('MT (ms)', fontsize=10)
@@ -2121,6 +2156,11 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
     ax = ax.flatten()
     for i in [0, 1, 5]:
         ax[i].axis('off')
+    pos_ax_0 = ax[0].get_position()
+    pos_ax_1 = ax[1].get_position()
+    # setting ax0 a bit bigger
+    ax[0].set_position(pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width+pos_ax_1.width,
+                       pos_ax_0.height+pos_ax_1.height)
     ax_tach = ax[2]
     ax_pright = ax[4]
     ax_mat = [ax[6], ax[7]]
@@ -2219,7 +2259,7 @@ def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
     ax1.set_ylabel('Counts')
     ax2.set_ylabel('Counts')
     ax2.hist(time_com[time_com != -1]*1e3, bins=50, range=(0, 800), color='k')
-    ax2.set_xlabel('Time to CoM (ms)')
+    ax2.set_xlabel('Deflection time (ms)')
 
 
 def plot_human_trajs_per_subject(df_data):
@@ -3027,12 +3067,12 @@ if __name__ == '__main__':
     f2 = True
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -3100,7 +3140,7 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
-        fig_trajs_2(df=df)  # , fgsz=(10, 5)
+        fig_trajs_2(df=df)
 
     # fig 3
     if f3:

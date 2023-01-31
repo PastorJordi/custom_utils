@@ -768,7 +768,7 @@ def trajectory_thr(
     plotmt=True,
     plot_traj=True,
     color_tr='olive',
-    alpha_low=True
+    alpha_low=False
 ):
     """
     Plot trajectories.
@@ -966,10 +966,10 @@ def trajectory_thr(
                         **extra_kw,
                     )
                 else:
-                    ax_traj.errorbar(
+                    ax.errorbar(
+                        xpoints[i],
                         y_points[i] + fixation_delay_offset,
-                        cthr,
-                        xerr=y_err[i], markersize=6, elinewidth=3,
+                        yerr=y_err[i],
                         **error_kwargs,
                         color=cmap(i / (niters-1)),
                         **extra_kw,
@@ -979,9 +979,8 @@ def trajectory_thr(
                 ax.errorbar(xpoints, mt_time, yerr=mt_time_err,
                                  **error_kwargs)
             else:
-                ax_traj.errorbar(y_points + fixation_delay_offset, cthr,
-                                 xerr=y_err, **error_kwargs, elinewidth=3,
-                                 markersize=6)
+                ax.errorbar(xpoints, y_points + fixation_delay_offset,
+                            yerr=y_err, **error_kwargs)
             # add 80ms offset for those new state machine (in other words,
             # this assumes that fixation = 300000us so it takes extra 80ms
             # to reach threshold)

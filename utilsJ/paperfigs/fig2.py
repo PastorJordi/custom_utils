@@ -216,7 +216,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             legend=False,
             xpos=10,  # np.arange(5,201,10),
             xoffset=5,
-            errorbar_kw={'color': 'k',
+            errorbar_kw={'color': 'tab:blue',
                          'label': 'p(CoM)', 'zorder': 3},
             traces='subjid',
             traces_kw=dict(alpha=0.3), ax=ax
@@ -249,7 +249,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             tmp.index * rtbinsize + 0.5 * rtbinsize,
             tmp['mean'],
             yerr=tmp['sem'],
-            label='p(CoM)', color='k'
+            label='p(CoM)', color='tab:blue'
         )
     ax.set_ylim(0, 0.075)
     if dist:
@@ -264,7 +264,8 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
         ax.hist(bns[:-1], bns, weights=0.5*ymax * counts /
                 counts.max(), alpha=.4, label='RT distribution')
     ax.set_xlabel('Reaction Time (ms)')
-    ax.legend(fancybox=False, frameon=False)
+    ax.set_ylabel('p(detected CoM)')
+    # ax.legend(fancybox=False, frameon=False)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_bounds(0, 0.075)
