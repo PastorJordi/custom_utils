@@ -753,7 +753,7 @@ def trajectory_thr(
     interpolatespace=np.linspace(-700000, 1000000, 1700),
     zeropos_interp=700,
     fixation_delay_offset=0,
-    error_kwargs={"ls": "none"},
+    error_kwargs={"ls": "none", 'markersize': 12},
     ax_traj=None,
     traj_kws={},
     ts_fix_onset="fix_onset_dt",
@@ -902,7 +902,6 @@ def trajectory_thr(
         y_point = np.median(c[idxes])
         y_points += [y_point]
         y_err += [sem(c[idxes], nan_policy="omit")]
-
         extra_kw = {}
 
         # get motor time
@@ -944,7 +943,6 @@ def trajectory_thr(
 
     y_points = np.array(y_points)
     y_err = np.array(y_err)
-
     if (ax is not None) & return_trash:
         if cmap is not None:
             extra_kw = {}
@@ -968,10 +966,10 @@ def trajectory_thr(
                         **extra_kw,
                     )
                 else:
-                    ax.errorbar(
-                        xpoints[i],
+                    ax_traj.errorbar(
                         y_points[i] + fixation_delay_offset,
-                        yerr=y_err[i],
+                        cthr,
+                        xerr=y_err[i], markersize=6, elinewidth=3,
                         **error_kwargs,
                         color=cmap(i / (niters-1)),
                         **extra_kw,
@@ -979,10 +977,11 @@ def trajectory_thr(
         else:
             if plotmt:
                 ax.errorbar(xpoints, mt_time, yerr=mt_time_err,
-                            **error_kwargs)
+                                 **error_kwargs)
             else:
-                ax.errorbar(xpoints, y_points + fixation_delay_offset,
-                            yerr=y_err, **error_kwargs)
+                ax_traj.errorbar(y_points + fixation_delay_offset, cthr,
+                                 xerr=y_err, **error_kwargs, elinewidth=3,
+                                 markersize=6)
             # add 80ms offset for those new state machine (in other words,
             # this assumes that fixation = 300000us so it takes extra 80ms
             # to reach threshold)

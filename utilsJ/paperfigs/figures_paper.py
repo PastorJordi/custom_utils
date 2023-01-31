@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -30,14 +30,17 @@ import fig1, fig3, fig2
 import matplotlib
 import matplotlib.pylab as pl
 
-matplotlib.rcParams['font.size'] = 9
+matplotlib.rcParams['font.size'] = 10
+plt.rcParams['legend.title_fontsize'] = 8
+plt.rcParams['xtick.labelsize']= 8
+plt.rcParams['ytick.labelsize']= 8
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -467,17 +470,16 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                        trajectory=trajectory, plotmt=True, alpha_low=False)
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-                     title='Stimulus \n evidence', loc='upper left')
+                      title='Stimulus \n evidence', loc='upper left',
+                      fontsize=7)
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
-        ax_twin = ax[0].twinx()
-        rm_top_right_lines(ax=ax_twin, right=False)
-        ax_twin.set_xticks([-1, 0, 1])
-        ax_twin.set_ylim(240, 295)
-        ax_twin.set_xticklabels(['-1', '0', '1'])
-        ax_twin.set_yticks([250, 275])
-        ax_twin.set_yticklabels(['250', '275'])
+        ax[0].set_xticks([-1, 0, 1])
+        ax[0].set_ylim(240, 295)
+        ax[0].set_xticklabels(['-1', '0', '1'])
+        ax[0].set_yticks([250, 275])
+        ax[0].set_yticklabels(['250', '275'])
         ax[2].set_ylim(115, 135)
         ax[2].set_yticks([120, 130])
         ax[2].set_yticklabels(['120', '130'])
@@ -492,19 +494,20 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                                  label='0'),
                           Line2D([0], [0], color=colormap[2], lw=2,
                                  label='incongruent')]
-        ax[1].legend(handles=legendelements, title='Prior', loc='upper left')
+        ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
+                     fontsize=7)
         # ax[1].legend(labels=['incongruent', 'inc. low', '0', 'con. low',
         #                      'congruent'], title='Prior', loc='upper left')
         xpoints = (bins[:-1] + bins[1:]) / 2
-        ax_twin = ax[0].twinx()
-        rm_top_right_lines(ax=ax_twin, right=False)
-        ax_twin.set_xticks([-0.65, xpoints[2], 0.65])
-        ax_twin.set_xticklabels(['inc.', '\n zero', 'con.'])
-        ax_twin.set_ylim(240, 340)
-        ax_twin.set_yticks([250, 300])
-        ax_twin.set_yticklabels(['250', '300'])
-        ax[2].set_xticks([-0.65, xpoints[2], 0.65])
-        ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
+        # ax[0].set_xticks([-0.65, xpoints[2], 0.65])
+        # ax[0].set_xticklabels(['inc.', '\n zero', 'con.'])
+        ax[0].set_ylim(240, 340)
+        ax[0].set_yticks([250, 300])
+        ax[0].set_yticklabels(['250', '300'])
+        ax[0].set_xticks([0])
+        ax[0].set_xticklabels(['Prior'], fontsize=9)
+        # ax[2].set_xticks([-0.65, xpoints[2], 0.65])
+        # ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
         ax[2].set_ylim(95, 155)
         ax[2].set_yticks([100, 150])
         ax[2].set_yticklabels(['100', '150'])
@@ -514,33 +517,34 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[1].set_xlim([-20, 450])
     ax[1].set_xticklabels('')
     # ax[1].set_xlabel('Time from movement onset (MT, ms)')
-    ax[1].axhline(0, ls=':', c='gray')
+    ax[1].axhline(0, c='gray')
     ax[1].set_ylabel('y coord. (pixels)')
     # ax[0].set_xlabel(xlab)
-    ax_twin.set_title('MT (ms)', fontsize=9)
+    ax[0].set_title('MT (ms)', fontsize=9)
     ax[1].set_ylim([-10, 85])
     ax[1].axhline(78, color='gray', linestyle=':')
     # ax2 = ax[0].twinx()
-    ax_twin.plot(xpoints, mt_time, color='k', ls=':')
+    ax[0].plot(xpoints, mt_time, color='k', ls=':')
     # ax2.set_label('Motor time')
     # velocities
     threshold = .2
     xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
         df.loc[indx_trajs], condition, bins, collapse_sides=True,
-        thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
+        thr=threshold, ax=ax[2], ax_traj=ax[2], return_trash=True,
         error_kwargs=dict(marker='o'), cmap=cmap,
         bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
-    ax[3].set_xlim([-20, 450])
-    ax[3].set_xlabel('Time from movement onset (ms)')
-    ax[3].set_ylim([-0.05, 0.5])
-    for i in [0, threshold]:
-        ax[3].axhline(i, ls=':', c='gray')
-    ax[3].set_ylabel('y-coord velocity (px/ms)')
+    ax[2].set_xlim([-20, 450])
+    ax[2].set_xlabel('Time from movement \n  onset (ms)')
+    ax[2].set_ylim([-0.05, 0.5])
+    ax[2].axhline(0, c='gray')
+    ax[2].axhline(threshold, ls=':', c='gray')
+    ax[2].set_ylabel('y-coord velocity (px/ms)')
+    
     # ax[2].set_xlabel(xlab)
-    ax[2].set_title('Time to threshold (ms)', fontsize=9)
-    ax[2].plot(xpoints, ypoints, color='k', ls=':')
+    # ax[2].set_title('Time to threshold (ms)', fontsize=9)
+    # ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
         # acceleration
@@ -652,6 +656,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     mat = np.empty((1701,))
     evl = np.empty(())
     appb = True
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate(evs):
         indx = (df.special_trial == 0) & (df.subjid == subject)
         if np.sum(indx) > 0:
@@ -667,29 +672,32 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
     # ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
-    ax.text(ind-23, 3.3, 'Splitting Time', fontsize=8)
+
     # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
     #          head_length=0.3)
     ax.set_xlim(-10, 155)
     ax.set_ylim(-0.6, 5.2)
+    ax.set_ylabel('y dimension (px)')
     if xlab:
-        ax.set_xlabel('Time from movement onset (ms)')
+        ax.set_xlabel('Time from movement \n  onset (ms)')
     if rtbins[-1] > 25 and xlab:
-        ax.set_title('\n RT > 150 ms', fontsize=8)
-        ax.set_ylabel('y dimension (px)')
-        ax.arrow(ind, 3, 0, -1.75, color='k', width=1, head_width=5,
-                 head_length=0.08)
+        ax.set_title('\n RT > 150 ms', fontsize=9)
+        ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
+                 head_length=0.4)
+        ax.text(ind-23, 3.3, 'Splitting \n  Time', fontsize=8)
     else:
-        ax.set_title(subject+',\n RT < 15 ms', fontsize=8)
-        ax.arrow(ind, 2.85, 0, -1.9, color='k', width=1, head_width=5,
-                 head_length=0.08)
-        colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+        ax.set_title(subject+',\n RT < 15 ms', fontsize=9)
+        ax.text(ind-5, 3.3, 'Splitting \nTime', fontsize=8)
+        ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
+                 head_length=0.4)
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
         for i_l, lab in enumerate(labels):
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
-        ax.legend(handles=legendelements)
+        ax.legend(handles=legendelements, fontsize=7)
+        ax.set_xticklabels([''])
+        # ax.xaxis.set_ticks_position('none')
     plt.show()
 
 
@@ -748,8 +756,8 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                     out_data[:, i, j],
                     marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                     mew=1, color=(.6, .6, .6, .3))
-    error_kws = dict(ecolor='gold', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='gold', marker='o', label='mean & SEM')
+    error_kws = dict(ecolor='goldenrod', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='goldenrod', marker='o', label='mean & SEM')
     ax.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
                 np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
@@ -846,8 +854,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                     mew=1, color=(.6, .6, .6, .3)
                 )
 
-    error_kws = dict(ecolor='r', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='r', marker='o', label='mean & SEM')
+    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='firebrick', marker='o', label='mean & SEM')
     ax.errorbar(
         binsize/2 + binsize * np.arange(rtbins.size-1),
         # we do the mean across rtbin axis
@@ -1285,27 +1293,31 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
 
 
 def plot_violins(w_coh, w_t_i, w_zt, ax):
-    labels = ['Stimulus', 'Prior', 'Trial index']
-    arr_weights = np.concatenate((w_coh, w_zt, w_t_i))
+    labels = ['Stimulus', 'Prior']  # , 'Trial index']
+    arr_weights = np.concatenate((w_coh, w_zt))  # , w_t_i
     label_1 = []
     for j in range(len(labels)):
         for i in range(len(w_coh)):
             label_1.append(labels[j])
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
-    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax, color='grey')
-    arr_weights = np.array((w_coh, w_zt, w_t_i))
+    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
+                   palette=['firebrick', 'goldenrod'],
+                   linewidth=0.8)
+    edge_colors = ['firebrick', 'goldenrod']  # , 'gray'
+    arr_weights = np.array((w_coh, w_zt))  # , w_t_i
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=1.2)
-    ax.set_xticklabels([labels[0], '\n' + labels[1], labels[2]])
+        ax.collections[0].set_edgecolor(edge_colors[i])
+    ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
     ax.set_ylabel('Impact on MT (weights, a.u)')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(12, 7), accel=False, inset_sz=.03, marginx=0.012,
-                marginy=0.25):
+def fig_trajs_2(df, fgsz=(9, 7), accel=False, inset_sz=.04, marginx=0.006,
+                marginy=0.21):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
     # ax = ax.flatten()
@@ -1318,7 +1330,7 @@ def fig_trajs_2(df, fgsz=(12, 7), accel=False, inset_sz=.03, marginx=0.012,
     ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 3)
-    ax_label.text(-0.1, 3.2, 'f', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 3., 'e', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 4)
     ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
@@ -1330,15 +1342,15 @@ def fig_trajs_2(df, fgsz=(12, 7), accel=False, inset_sz=.03, marginx=0.012,
     ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 7)
-    ax_label.text(-0.1, 1.2, 'e', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 1.2, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(2, 4, 8)
     ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
     ax = f.axes
-    plt.subplots_adjust(top=0.885, bottom=0.13, left=0.085, right=0.93,
-                        hspace=0.35, wspace=0.4)
+    plt.subplots_adjust(top=0.9, bottom=0.09, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.55)
     ax_cohs = np.array([ax[1], ax[5]])
     ax_zt = np.array([ax[0], ax[4]])
     # splitting
@@ -1356,18 +1368,12 @@ def fig_trajs_2(df, fgsz=(12, 7), accel=False, inset_sz=.03, marginx=0.012,
                     xlab=True)
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.095, right=False)
+                         marginx=marginx, marginy=0.07, right=True)
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=0.1, marginy=marginy, right=True)
-    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
     ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.095, right=False)
+                         marginx=marginx, marginy=0.07, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=0.1, marginy=marginy, right=True)
-    ax_zt = np.insert(ax_zt, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
@@ -3031,7 +3037,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE84']
+            # subjects = ['LE37', 'LE84']
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
@@ -3094,7 +3100,7 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
-        fig_trajs_2(df=df, fgsz=(10, 5))
+        fig_trajs_2(df=df)  # , fgsz=(10, 5)
 
     # fig 3
     if f3:
