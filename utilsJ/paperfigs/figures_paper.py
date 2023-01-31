@@ -1846,11 +1846,11 @@ def mean_com_traj_simul(df_sim, ax):
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected, pro_vs_re,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-          marginx=0.006, marginy=0.12, fgsz=(10, 9)):
+          marginx=0.006, marginy=0.12, fgsz=(8, 10)):
     fig, ax = plt.subplots(ncols=2, nrows=6, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
-                                                          'left': 0.055,
-                                                          'right': 0.975,
+                                                          'left': 0.07,
+                                                          'right': 0.95,
                                                           'hspace': 0.38,
                                                           'wspace': 0.4},
                            figsize=fgsz)
@@ -1872,13 +1872,14 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     subjid = df_sim.subjid.values[sound_len_model >= 0]
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid, ax=ax[10], label='Model')
+                         subjid=subjid, ax=ax[6], label='Model')
     # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
     # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
     #          coh=coh[sound_len_model >= 0], yaxis=False)
     # ax[8].set_title('Data')
     # ax[9].set_title('Model')
-    ax2 = ax[12].twinx()
+    ax2 = ax[10].twinx()
+    rm_top_right_lines(ax2)
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
@@ -1890,20 +1891,20 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
                                             'color': 'red'}, ax=ax2)
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[12])
-    ax[12].xaxis.tick_top()
-    ax[12].xaxis.tick_bottom()
-    ax[12].legend()
-    ax[12].set_xlabel('RT (ms)')
-    ax[12].set_ylabel('P(CoM), model', color='green')
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[10])
+    ax[10].xaxis.tick_top()
+    ax[10].xaxis.tick_bottom()
+    ax[10].legend()
+    ax[10].set_xlabel('RT (ms)')
+    ax[10].set_ylabel('P(CoM), model', color='green')
     ax2.set_ylabel('P(CoM), data & model detected')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
-    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[11],
+    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[7],
                            flip=True, annotate=False, xlabel='prior',
                            ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
-    ax[11].set_title('Pright Model')
+    ax[7].set_title('Pright Model')
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
                                  com_model_detected,
@@ -1915,22 +1916,22 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=1)
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax[13].set_title(pcomlabel_1)
-    im = ax[13].imshow(matrix_side_1, vmin=0, vmax=vmax)
-    plt.sca(ax[13])
+    ax[8].set_title(pcomlabel_1)
+    im = ax[8].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax[8])
     plt.colorbar(im, fraction=0.04)
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    ax[14].set_title(pcomlabel_0)
-    im = ax[14].imshow(matrix_side_0, vmin=0, vmax=vmax)
-    ax[14].yaxis.set_ticks_position('none')
-    plt.sca(ax[14])
+    ax[9].set_title(pcomlabel_0)
+    im = ax[9].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax[9].yaxis.set_ticks_position('none')
+    plt.sca(ax[9])
     plt.colorbar(im, fraction=0.04)
-    for ax_i in [ax[13], ax[14]]:
+    for ax_i in [ax[8], ax[9]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
-    ax[13].set_ylabel('Stimulus Evidence')
-    plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
+    ax[8].set_ylabel('Stimulus Evidence')
+    plot_bars(means=means, errors=errors, ax=ax[5], f5=True,
               means_model=means_model, errors_model=errors_model)
     ax_cohs = np.array([ax[1], ax[3]])
     ax_zt = np.array([ax[0], ax[2]])
@@ -1948,12 +1949,13 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_zt = np.insert(ax_zt, 2, ax_inset)
-
+    ax_cohs = [ax_cohs[1], ax_cohs[3], ax_cohs[0], ax_cohs[2]]
+    ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
-    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
+    trajs_splitting_point(df_sim, ax=ax[4], collapse_sides=False, threshold=300,
                           sim=True,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
@@ -1966,7 +1968,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     # ax[15].set_yscale('log')
     # ax[15].set_xlabel('CoM peak (px)')
     # ax[15].set_ylabel('Counts')
-    mean_com_traj_simul(df_sim, ax=ax[15])
+    mean_com_traj_simul(df_sim, ax=ax[11])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
