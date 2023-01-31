@@ -1856,7 +1856,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                            figsize=fgsz)
     ax = ax.flatten()
     labs = ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h', 'i',
-            'j', '', 'k']
+            '', 'j', 'k']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
         if n == 3:
