@@ -546,9 +546,9 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[3].set_ylim([-0.05, 0.5])
     ax[3].axhline(0, c='gray')
     ax[3].axhline(threshold, ls=':', c='gray')
-    ax[3].set_ylabel('y-coord velocity (px/ms)')
+    ax[3].set_ylabel('y-coord velocity (pixels/ms)')
     # ax[2].set_xlabel(xlab)
-    ax[2].set_ylabel('  Time to \n      threshold (ms)', fontsize=8)
+    ax[2].set_ylabel('  Time to \n        threshold (ms)', fontsize=8)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
@@ -566,7 +566,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[5].set_ylim([-0.003, 0.0035])
         for i in [0, threshold]:
             ax[5].axhline(i, ls=':', c='gray')
-        ax[5].set_ylabel('y coord accelration (px/ms)')
+        ax[5].set_ylabel('y coord accelration (pixels/ms)')
         ax[4].set_xlabel('ev. towards response')
         ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
         ax[4].plot(xpoints, ypoints, color='k', ls=':')
@@ -1845,16 +1845,17 @@ def mean_com_traj_simul(df_sim, ax):
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected, pro_vs_re,
-          df_sim, means, errors, means_model, errors_model):
-    fig, ax = plt.subplots(ncols=4, nrows=4, gridspec_kw={'top': 0.95,
+          df_sim, means, errors, means_model, errors_model, inset_sz=.06,
+          marginx=0.006, marginy=0.12, fgsz=(10, 9)):
+    fig, ax = plt.subplots(ncols=2, nrows=6, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.055,
                                                           'right': 0.975,
                                                           'hspace': 0.38,
-                                                          'wspace': 0.225},
-                           figsize=(9, 9))
+                                                          'wspace': 0.4},
+                           figsize=fgsz)
     ax = ax.flatten()
-    labs = ['a', '', 'c', '', 'b', '', 'd', '', 'e', 'f', 'g', 'h', 'i',
+    labs = ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h', 'i',
             'j', '', 'k']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
@@ -1931,10 +1932,25 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[13].set_ylabel('Stimulus Evidence')
     plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
               means_model=means_model, errors_model=errors_model)
-    ax_pr = [ax[i] for i in [0, 4, 1, 5]]
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_pr, median=True, prior=True)
-    ax_coh = [ax[i] for i in [2, 6, 3, 7]]
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_coh, median=True, prior=False,
+    ax_cohs = np.array([ax[1], ax[3]])
+    ax_zt = np.array([ax[0], ax[2]])
+    # trajs. conditioned on coh
+    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=0.04, right=True)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+    # trajs. conditioned on prior
+    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=0.04, right=True)
+    ax_zt = np.insert(ax_zt, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_zt = np.insert(ax_zt, 2, ax_inset)
+
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, median=True, prior=True)
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
     trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
@@ -2215,10 +2231,10 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
         mean_traj = np.nanmean(all_trajs, axis=0)
         xvals = np.arange(len(mean_traj))*precision
         yvals = mean_traj
-        ax.plot(xvals, yvals, color='olive', alpha=0.1)
+        ax.plot(xvals, yvals, color='tab:olive', alpha=0.1)
         mat_mean_trajs_subjs[i_s, :] = yvals
     mean_traj_across_subjs = np.nanmean(mat_mean_trajs_subjs, axis=0)
-    ax.plot(xvals, mean_traj_across_subjs, color='olive', linewidth=2)
+    ax.plot(xvals, mean_traj_across_subjs, color='tab:olive', linewidth=2)
     index = ~com
     all_trajs = np.empty((sum(index), max_mt))
     all_trajs[:] = np.nan
@@ -2233,15 +2249,16 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     mean_traj = np.nanmean(all_trajs, axis=0)
     xvals = np.arange(len(mean_traj))*precision
     yvals = mean_traj
-    ax.plot(xvals, yvals, color='cyan', linestyle='--', linewidth=2)
+    ax.plot(xvals, yvals, color='tab:cyan', linewidth=2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('x-coord. (px)')
-    legendelements = [Line2D([0], [0], color='olive', lw=2,
-                             label='Avg. CoM traj.'),
-                      Line2D([0], [0], color='cyan', lw=2, linestyle='--',
-                             label='Avg. No-CoM traj.')]
+    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+                             label='CoM'),
+                      Line2D([0], [0], color='tab:cyan', lw=2,
+                             label='No-CoM')]
     ax.legend(handles=legendelements)
-    ax.axhline(-100, color='r', linestyle='--', alpha=0.5)
+    ax.axhline(-100, color='r', linestyle=':', alpha=0.5)
+    ax.text(200, -100, 'Detection threshold', color='r')
 
 
 def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
@@ -2916,7 +2933,7 @@ def supp_com_threshold_matrices(df):
         com = dfth['com_'+str(threshold)]
         mean_com.append(np.nanmean(com))
     ax2.plot(thlist, mean_com, color='k', marker='o')
-    ax2.set_xlabel('Threshold (px)')
+    ax2.set_xlabel('Threshold (pixels)')
     ax2.set_ylabel('P(CoM)')
 
 
@@ -3064,7 +3081,7 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
     f5 = True
