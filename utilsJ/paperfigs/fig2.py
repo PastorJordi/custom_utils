@@ -216,8 +216,9 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             legend=False,
             xpos=10,  # np.arange(5,201,10),
             xoffset=5,
-            errorbar_kw={'color': 'tab:blue',
-                         'label': 'p(CoM)', 'zorder': 3},
+            errorbar_kw={'color': 'tab:olive',
+                         'label': 'p(CoM)', 'zorder': 3,
+                         'lw': 2},
             traces='subjid',
             traces_kw=dict(alpha=0.3), ax=ax
         )
@@ -241,7 +242,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
                 tmp.loc[tmp.subjid == subject, 'rtbin'] *
                 rtbinsize + 0.5 * rtbinsize,
                 tmp.loc[tmp.subjid == subject, 'CoM_sugg'],
-                ls=':', color='gray'
+                ls=':', color='gray', alpha=0.6
             )
         # average
         tmp = tmp.groupby(['rtbin'])['CoM_sugg'].agg(['mean', sem])
@@ -249,7 +250,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
             tmp.index * rtbinsize + 0.5 * rtbinsize,
             tmp['mean'],
             yerr=tmp['sem'],
-            label='p(CoM)', color='tab:blue'
+            label='p(CoM)', color='tab:olive', lw=2
         )
     ax.set_ylim(0, 0.075)
     if dist:

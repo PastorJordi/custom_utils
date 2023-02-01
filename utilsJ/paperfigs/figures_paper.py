@@ -64,6 +64,7 @@ elif pc_name == 'idibaps_Jordi':
         'craft_vid/CoM/a/001965.png'
     RAT_noCOM_IMG = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/' +\
         'screenShot230120.png'
+    HUMAN_TASK_IMG = '/home/jordi/DATA/Documents/changes_of_mind/humans/g41085.png'
 elif pc_name == 'alex_CRM':
     SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
     DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
@@ -121,7 +122,24 @@ def plot_coms(df, ax, human=False):
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
-def tracking_image(ax):
+def tracking_image(ax, figsize=(8, 12), margin=.01):
+    ax.axhline(y=50, linestyle='--', color='k', lw=.5)
+    ax.axhline(y=210, linestyle='--', color='k', lw=.5)
+    ax_scrnsht = ax
+    pos = ax_scrnsht.get_position()
+    ax_scrnsht.set_position([pos.x0, pos.y0, pos.width,
+                             pos.height])
+    # add colorbar for screenshot
+    n_stps = 100
+    ax_clbr = plt.axes([pos.x0+pos.width*2/7, pos.y0+pos.height+margin,
+                        pos.width*0.4, pos.height/15])
+    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
+    ax_clbr.set_xticks([0, n_stps-1])
+    ax_clbr.set_xticklabels(['0', '400ms'])
+    ax_clbr.tick_params(labelsize=6)
+    # ax_clbr.set_title('$N_{max}$', fontsize=6)
+    ax_clbr.set_yticks([])
+    ax_clbr.xaxis.set_ticks_position("top")
     rat = plt.imread(RAT_COM_IMG)
     ax.set_facecolor('white')
     ax.imshow(np.flipud(rat[100:-100, 350:-50, :]))
@@ -210,7 +228,16 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_tach.set_ylim(0.3, 1.04)
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
-    ax_tach.legend()
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                             label='0'),
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label='0.25'),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label='0.5'),
+                      Line2D([0], [0], color=colormap[3], lw=2,
+                             label='1')]
+    ax_tach.legend(handles=legendelements, fontsize=7)
     # plot Pcoms matrices
     nbins = 7
     matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
@@ -245,7 +272,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
-    ax_pright.set_title('Proportion of rightward responses')
+    # ax_pright.set_title('Proportion of rightward responses')
 
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
@@ -923,7 +950,17 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
-    ax.set_ylim(0.4, 1.04)
+    ax.set_ylim(0.24, 1.04)
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                             label='0'),
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label='0.25'),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label='0.5'),
+                      Line2D([0], [0], color=colormap[3], lw=2,
+                             label='1')]
+    ax.legend(handles=legendelements, fontsize=7)
     # ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
@@ -1255,14 +1292,14 @@ def mt_weights(df, ax, plot=False, means_errs=True):
         w_coh.append(params[1])
         w_t_i.append(params[2])
         w_zt.append(params[3])
-    mean_1 = np.nanmean(w_coh)
-    mean_2 = np.nanmean(w_t_i)
-    mean_3 = np.nanmean(w_zt)
-    std_1 = np.nanstd(w_coh)/np.sqrt(len(w_coh))
-    std_2 = np.nanstd(w_t_i)/np.sqrt(len(w_t_i))
-    std_3 = np.nanstd(w_zt)/np.sqrt(len(w_zt))
-    errors = [std_1, std_2, std_3]
-    means = [mean_1, mean_2, mean_3]
+    mean_2 = np.nanmean(w_coh)
+    # mean_3 = np.nanmean(w_t_i)
+    mean_1 = np.nanmean(w_zt)
+    std_2 = np.nanstd(w_coh)/np.sqrt(len(w_coh))
+    # std_3 = np.nanstd(w_t_i)/np.sqrt(len(w_t_i))
+    std_1 = np.nanstd(w_zt)/np.sqrt(len(w_zt))
+    errors = [std_1, std_2]
+    means = [mean_1, mean_2]
     if plot:
         if means_errs:
             # fig, ax = plt.subplots(figsize=(3, 2))
@@ -1280,21 +1317,21 @@ def mt_weights(df, ax, plot=False, means_errs=True):
 
 def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
               width=0.35):
-    labels = ['Stimulus Congruency', 'Trial index', 'Prior Congruency']
+    labels = ['Prior', 'Stimulus']  # 'Trial index',]
     if not f5:
         ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='k',
                ecolor='blue')
-        ax.set_ylabel('Weight (a.u.)')
+        ax.set_ylabel('Impact on MT (weights, a.u)')
     if f5:
         x = np.arange(len(labels))
         ax.bar(x=x-width/2, height=means, yerr=errors, width=width,
                capsize=3, color='k', label='Data', ecolor='blue')
         ax.bar(x=x+width/2, height=means_model, yerr=errors_model, width=width,
                capsize=3, color='red', label='Model')
-        ax.set_ylabel('Weight (a.u.)')
+        ax.set_ylabel('Impact on MT (weights, a.u)')
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.legend()
+        ax.legend(fontsize=8)
 
 
 def plot_violins(w_coh, w_t_i, w_zt, ax):
@@ -1461,7 +1498,7 @@ def tach_1st_2nd_choice(df, ax, model=False):
         ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
                 linewidth=1.5)
         ax.fill_between(xvals[:, j], yvals1[:, j], yvals2[:, j],
-                        color=colormap[j], alpha=0.4)
+                        color='tab:olive', alpha=0.8)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_ylim(0.3, 1)
@@ -1475,18 +1512,19 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     # sound_len_com = sound_len[com]
     # df2 = pd.DataFrame({'sound_len': sound_len_com, 'time_com': time_com,
     #                     'peak_com': peak_com})
-    ax1, ax2 = ax  # , ax3, ax4
+    ax2, ax1 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com, bins=80, range=(-60, 0), color='dimgray')
+    ax1.hist(peak_com, bins=70, range=(-60, -8), color='tab:olive')
+    ax1.hist(peak_com, bins=10, range=(-8, -0), color='tab:cyan')
     ax1.set_yscale('log')
     ax1.axvline(-8, linestyle=':', color='r')
     ax1.set_xlim(-50, 5)
-    ax1.set_xlabel('Peak CoM (px)')
+    ax1.set_xlabel('Deflection point (px)', fontsize=8)
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
-    ax2.hist(time_com, bins=80, range=(0, 500), color='dimgray')
-    ax2.set_xlabel('Deflection time (ms)')
+    ax2.hist(time_com, bins=80, range=(0, 500), color='tab:olive')
+    ax2.set_xlabel('Deflection time (ms)', fontsize=8)
     # bins_rt_com = np.linspace(0, 150, num=16)
     # xpos_com = np.diff(bins_rt_com)[0]
     # binned_curve(df2, 'peak_com', 'sound_len', bins=bins_rt_com, xpos=xpos_com,
@@ -1499,7 +1537,7 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     # ax4.set_ylabel('Time to CoM (ms)')
 
 
-def fig_CoMs_3(df, peak_com, time_com, inset_sz=.04, marginx=0.005,
+def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.1,
                marginy=0.04, figsize=(8, 12), com_th=8):
     if com_th != 8:
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -1541,7 +1579,6 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.04, marginx=0.005,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700))
     # plot Pcoms matrices
-    nbins = 7
     mat_side_0_all = np.zeros((7, 7))
     mat_side_1_all = np.zeros((7, 7))
     n_subjs = len(df.subjid.unique())
@@ -1828,43 +1865,64 @@ def mean_com_traj_simul(df_sim, ax):
     ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='tab:olive',
             linewidth=1.4, linestyle='--')
     ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color='tab:cyan',
-            linewidth=2, linestyle='--')
+            linewidth=2)
     legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
                              label='Detected CoM'),
                       Line2D([0], [0], color='tab:olive', lw=1.5,  linestyle='--',
                              label='All CoM'),
-                      Line2D([0], [0], color='tab:cyan', lw=2, linestyle='--',
+                      Line2D([0], [0], color='tab:cyan', lw=2,
                              label='No-CoM')]
-    ax.legend(handles=legendelements)
+    ax.legend(handles=legendelements, loc='upper left')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y_coord. (pixels)')
     ax.set_xlim(-25, 450)
     ax.axhline(-8, color='r', linestyle=':')
-    ax.text(200, -20, "Detection threshold", color='r')
+    ax.text(200, -2, "Detection threshold", color='r')
 
 
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected, pro_vs_re,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-          marginx=0.006, marginy=0.12, fgsz=(8, 10)):
-    fig, ax = plt.subplots(ncols=2, nrows=6, gridspec_kw={'top': 0.95,
+          marginx=0.006, marginy=0.07, fgsz=(8, 10)):
+    fig, ax = plt.subplots(ncols=3, nrows=5, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.07,
                                                           'right': 0.95,
-                                                          'hspace': 0.38,
+                                                          'hspace': 0.5,
                                                           'wspace': 0.4},
                            figsize=fgsz)
     ax = ax.flatten()
-    labs = ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h', 'i',
-            '', 'j', 'k']
+    labs = ['a', 'c', '', 'b', 'd', '', 'e', 'f', 'g', 'h', 'i',
+            '', 'j', 'k', '']
+    ax[2].axis('off')
+    ax[5].axis('off')
+    ax[14].axis('off')
+    # set correct size for traj and velocity axis
+    pos_ax_0 = ax[0].get_position()
+    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
+                        pos_ax_0.height])
+    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
+                        pos_ax_0.width*1.6, pos_ax_0.height])
+    pos_ax_3 = ax[3].get_position()
+    ax[3].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
+                        pos_ax_3.height])
+    ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
+                        pos_ax_3.width*1.6, pos_ax_3.height])
+    pos_ax_12 = ax[12].get_position()
+    ax[12].set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.4,
+                        pos_ax_12.height])
+    ax[13].set_position([pos_ax_12.x0 + pos_ax_12.width*2.4, pos_ax_12.y0,
+                        pos_ax_12.width*1.4, pos_ax_12.height])
+    # letters for panels
     for n, ax_1 in enumerate(ax):
-        rm_top_right_lines(ax_1)
-        if n == 3:
-            ax_1.text(-0.1, 3, labs[n], transform=ax_1.transAxes, fontsize=16,
-                      fontweight='bold', va='top', ha='right')
-        else:
-            ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
-                      fontweight='bold', va='top', ha='right')
+        if n != 12:
+            rm_top_right_lines(ax_1)
+        if n == 12:
+            ax_1.spines['top'].set_visible(False)
+        ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                  fontweight='bold', va='top', ha='right')
+
+    # select RT > 0 (no FB, as in data)
     hit_model = hit_model[sound_len_model >= 0]
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
@@ -1872,13 +1930,15 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     subjid = df_sim.subjid.values[sound_len_model >= 0]
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid, ax=ax[6], label='Model')
+                         subjid=subjid, ax=ax[6], label='')
     # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
     # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
     #          coh=coh[sound_len_model >= 0], yaxis=False)
     # ax[8].set_title('Data')
     # ax[9].set_title('Model')
-    ax2 = ax[10].twinx()
+    ax2 = ax[12].twinx()
+    ax2.set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.6,
+                      pos_ax_12.height])
     rm_top_right_lines(ax2)
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
@@ -1886,25 +1946,34 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                             'com_model': com_model,
                             'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax2)
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax2,
+                 legend=False)
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax2)
+                                            'color': 'red'}, ax=ax2,
+                 legend=False)
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[10])
-    ax[10].xaxis.tick_top()
-    ax[10].xaxis.tick_bottom()
-    ax[10].legend()
-    ax[10].set_xlabel('RT (ms)')
-    ax[10].set_ylabel('P(CoM), model', color='green')
-    ax2.set_ylabel('P(CoM), data & model detected')
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[12],
+                 legend=False)
+    ax[12].xaxis.tick_top()
+    ax[12].xaxis.tick_bottom()
+    legendelements = [Line2D([0], [0], color='k', lw=2,
+                             label='Data'),
+                      Line2D([0], [0], color='r', lw=2,
+                             label='Model Detected'),
+                      Line2D([0], [0], color='green', lw=2,
+                             label='Model All')]
+    ax[12].legend(handles=legendelements)
+    ax[12].set_xlabel('RT (ms)')
+    ax[12].set_ylabel('P(CoM), model', color='green')
+    ax2.set_ylabel('P(CoM), data & \n model detected')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
     edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[7],
                            flip=True, annotate=False, xlabel='prior',
                            ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
-    ax[7].set_title('Pright Model')
+    # ax[7].set_title('Pright Model')
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
                                  com_model_detected,
@@ -1916,25 +1985,26 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=1)
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax[8].set_title(pcomlabel_1)
-    im = ax[8].imshow(matrix_side_1, vmin=0, vmax=vmax)
-    plt.sca(ax[8])
+    ax[10].set_title(pcomlabel_1, fontsize=8)
+    im = ax[10].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax[10])
     plt.colorbar(im, fraction=0.04)
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    ax[9].set_title(pcomlabel_0)
-    im = ax[9].imshow(matrix_side_0, vmin=0, vmax=vmax)
-    ax[9].yaxis.set_ticks_position('none')
-    plt.sca(ax[9])
+    ax[11].set_title(pcomlabel_0, fontsize=8)
+    im = ax[11].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax[11].yaxis.set_ticks_position('none')
+    plt.sca(ax[11])
     plt.colorbar(im, fraction=0.04)
-    for ax_i in [ax[8], ax[9]]:
+    for ax_i in [ax[10], ax[11], ax[7]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
-    ax[8].set_ylabel('Stimulus Evidence')
-    plot_bars(means=means, errors=errors, ax=ax[5], f5=True,
+    ax[10].set_ylabel('Stimulus Evidence')
+    ax[7].set_ylabel('Stimulus Evidence')
+    plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
               means_model=means_model, errors_model=errors_model)
-    ax_cohs = np.array([ax[1], ax[3]])
-    ax_zt = np.array([ax[0], ax[2]])
+    ax_cohs = np.array([ax[1], ax[4]])
+    ax_zt = np.array([ax[0], ax[3]])
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=0.04, right=True)
@@ -1955,7 +2025,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=0.25)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
-    trajs_splitting_point(df_sim, ax=ax[4], collapse_sides=False, threshold=300,
+    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
                           sim=True,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
@@ -1968,7 +2038,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     # ax[15].set_yscale('log')
     # ax[15].set_xlabel('CoM peak (px)')
     # ax[15].set_ylabel('Counts')
-    mean_com_traj_simul(df_sim, ax=ax[11])
+    mean_com_traj_simul(df_sim, ax=ax[13])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
@@ -2016,7 +2086,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         ax = ax.flatten()
     vals_thr_traj = []
     vals_thr_vel = []
-    labels_zt = ['incongruent', '', '0', '', 'congruent']
+    labels_zt = ['incongruent', ' ', '0', ' ', 'congruent']
+    labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     if prior:
         bins_ref = bins_zt
     else:
@@ -2062,7 +2133,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             xval = xvals_zt[i_ev]
         else:
             xval = ev
-        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=60)
+        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=30)
         vals_thr_traj.append(val_traj)
         try:
             index_vel = np.where(np.sum(np.isnan(vel_all), axis=0)
@@ -2074,10 +2145,10 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             mean_vel = func_final(vel_all, axis=0)
             std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
         val_vel = np.argmax(mean_vel >= vel_thr)
-        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=60)
+        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=30)
         vals_thr_vel.append(val_vel)
         if not prior:
-            label = '{}'.format(ev)
+            label = labels_coh[i_ev]
         if prior:
             label = labels_zt[i_ev]
         ax[0].plot(np.arange(len(mean_traj)), mean_traj, label=label,
@@ -2094,32 +2165,32 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
     ax[0].set_xlim(-5, 460)
     ax[0].set_ylim(-10, 85)
     ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
-    ax[1].set_ylim(-0.08, 0.5)
+    ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 460)
     if prior:
-        leg_title = 'prior congruency'
+        leg_title = 'Prior'
         ax[2].plot(xvals_zt, vals_thr_traj, color='k', linestyle='--',
                    alpha=0.6)
         ax[3].plot(xvals_zt, vals_thr_vel, color='k', linestyle='--',
                    alpha=0.6)
-        ax[2].set_xlabel('Prior congruency', fontsize=10)
-        ax[3].set_xlabel('Prior congruency', fontsize=10)
+        ax[2].set_xlabel('Prior', fontsize=8)
+        ax[3].set_xlabel('Prior', fontsize=8)
     if not prior:
-        leg_title = 'stim congruency'
+        leg_title = 'Stimulus\n evidence'
         ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
         ax[3].plot(bins_coh, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Evidence congruency', fontsize=10)
-        ax[3].set_xlabel('Evidence congruency', fontsize=10)
-    ax[0].legend(title=leg_title)
-    ax[0].set_ylabel('y-coord (pixels)', fontsize=10)
-    ax[0].set_xlabel('Time from movement onset (ms)', fontsize=10)
-    ax[0].set_title('Mean trajectory', fontsize=10)
-    ax[1].legend(title=leg_title)
-    ax[1].set_ylabel('Velocity (pixels/s)', fontsize=10)
-    ax[1].set_xlabel('Time from movement onset (ms)', fontsize=10)
-    ax[1].set_title('Mean velocity', fontsize=10)
-    ax[2].set_ylabel('MT (ms)', fontsize=10)
-    ax[3].set_ylabel('Time to reach threshold (ms)', fontsize=10)
+        ax[2].set_xlabel('Evidence', fontsize=8)
+        ax[3].set_xlabel('Evidence', fontsize=8)
+    ax[0].legend(title=leg_title, fontsize=7, loc='upper left')
+    ax[0].set_ylabel('y-coord (pixels)', fontsize=8)
+    ax[0].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    # ax[0].set_title('Mean trajectory', fontsize=10)
+    # ax[1].legend(title=leg_title)
+    ax[1].set_ylabel('Velocity (pixels/s)', fontsize=8)
+    ax[1].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    # ax[1].set_title('Mean velocity', fontsize=8)
+    ax[2].set_ylabel('MT (ms)', fontsize=8)
+    ax[3].set_ylabel('  Time to \n        threshold (ms)', fontsize=8)
 
 
 def supp_trajs_prior_cong(df_sim, ax=None):
@@ -2155,7 +2226,8 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
-                 wanted_precision=8):
+                 wanted_precision=8, inset_sz=.06,
+                 marginx=0.006, marginy=0.12, fgsz=(8, 10)):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -2163,6 +2235,8 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
     if user_id == 'Manuel':
         folder =\
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
     subj = ['general_traj']
     steps = [None]
     humans = True
@@ -2170,28 +2244,62 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    fig, ax = plt.subplots(nrows=3, ncols=5, figsize=(10, 6))
+    fig, ax = plt.subplots(nrows=4, ncols=3, figsize=fgsz)
     ax = ax.flatten()
-    for i in [0, 1, 5]:
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.6)
+    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '']
+    for n, ax_1 in enumerate(ax):
+        rm_top_right_lines(ax_1)
+        if n == 9:
+            ax_1.text(-0.1, 3, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        elif n == 0:
+            ax_1.text(-0.1, 1.15, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        else:
+            ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+    for i in [0, 1]:
         ax[i].axis('off')
+    # task panel
     pos_ax_0 = ax[0].get_position()
-    pos_ax_1 = ax[1].get_position()
     # setting ax0 a bit bigger
-    ax[0].set_position(pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width+pos_ax_1.width,
-                       pos_ax_0.height+pos_ax_1.height)
-    ax_tach = ax[2]
+    ax[0].set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
+                        pos_ax_0.width+pos_ax_0.width*2/3, pos_ax_0.height+0.025])
+    ax_task = ax[0]
+    pos = ax_task.get_position()
+    ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
+    task = plt.imread(HUMAN_TASK_IMG)
+    ax_task.imshow(task, aspect='auto')
+    # changing ax x-y plot width
+    pos_ax_1 = ax[1].get_position()
+    ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width*4/5, pos_ax_1.y0,
+                        pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
+    # tachs and pright
+    ax_tach = ax[3]
     ax_pright = ax[4]
-    ax_mat = [ax[6], ax[7]]
-    ax_traj = ax[3]
+    ax_mat = [ax[10], ax[11]]
+    ax_traj = ax[5]
     matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
     plot_coms(df=df_data, ax=ax_traj, human=humans)
-    axes_trajs = [ax[10], ax[11], ax[12], ax[13], ax[14]]
+    ax_cohs = ax[6]
+    ax_zt = ax[7]
+    # trajs. conditioned on coh
+    ax_inset = add_inset(ax=ax_cohs, inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=0.04, right=True)
+    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    # trajs. conditioned on zt
+    ax_inset = add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=0.04, right=True)
+    ax_zt = np.insert(ax_zt, 0, ax_inset)
+    axes_trajs = [ax[2], ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0]]
     human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt,
-                jitter=jitter, wanted_precision=wanted_precision)
+                jitter=jitter, wanted_precision=wanted_precision, plotxy=True)
     peak_com = -df_data.com_peak.values
     time_com = df_data.time_com.values
-    ax_com_stat = ax[8]
+    ax_com_stat = ax[9]
     pos = ax_com_stat.get_position()
     ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
                               pos.height*2/5])
@@ -2200,7 +2308,7 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
     ax_coms = [ax_com_stat, ax_inset]
     com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
                                                                     ax_coms[1]])
-    mean_com_traj_human(df_data=df_data, ax=ax[9])
+    mean_com_traj_human(df_data=df_data, ax=ax[8])
     fig.savefig(SV_FOLDER+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig6.png', dpi=400, bbox_inches='tight')
 
@@ -2258,9 +2366,9 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
                              label='CoM'),
                       Line2D([0], [0], color='tab:cyan', lw=2,
                              label='No-CoM')]
-    ax.legend(handles=legendelements)
-    ax.axhline(-100, color='r', linestyle=':', alpha=0.5)
-    ax.text(200, -100, 'Detection threshold', color='r')
+    ax.legend(handles=legendelements, loc='upper left')
+    ax.axhline(-100, color='r', linestyle=':')
+    ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
 
 
 def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
@@ -2270,14 +2378,16 @@ def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
     ax1, ax2 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com[peak_com != 0], bins=80, range=(-600, 0), color='k')
+    ax1.hist(peak_com[peak_com != 0], bins=67, range=(-600, -100), color='tab:olive')
+    ax1.hist(peak_com[peak_com != 0], bins=14, range=(-100, 0), color='tab:cyan')
     ax1.set_yscale('log')
-    ax1.axvline(-100, linestyle='--', color='r')
+    ax1.axvline(-100, linestyle=':', color='r')
     ax1.set_xlim(-600, 5)
     ax1.set_xlabel('Peak CoM (px)')
     ax1.set_ylabel('Counts')
     ax2.set_ylabel('Counts')
-    ax2.hist(time_com[time_com != -1]*1e3, bins=50, range=(0, 800), color='k')
+    ax2.hist(time_com[time_com != -1]*1e3, bins=50, range=(0, 800),
+             color='tab:olive')
     ax2.set_xlabel('Deflection time (ms)')
 
 
@@ -2384,7 +2494,7 @@ def traj_mean_human_per_subject(df_data, mean=True):
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
-                wanted_precision=8, max_px=500):
+                wanted_precision=8, max_px=500, plotxy=False):
     # TRAJECTORIES
     index1 = (df_data.subjid != 5) & (df_data.subjid != 6)\
         & (~df_data.CoM_sugg)
@@ -2399,6 +2509,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     vals_thr_traj = []
     precision = 16
+    labels_stim = ['0', ' ', ' ', '1']
     for i_ev, ev in enumerate(ev_vals):
         index = np.abs(np.round(coh, 2)) == ev
         all_trajs = np.empty((sum(index), max_mt))
@@ -2420,11 +2531,11 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
                                         times[index]
                                         if t[-1] != '']))*1e3
         vals_thr_traj.append(val_traj)
-        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=60)
+        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=40)
         xvals = np.arange(len(mean_traj))*precision
         yvals = mean_traj
         ax[1].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
-                   color=colormap[i_ev], label='{}'.format(bins[i_ev]))
+                   color=colormap[i_ev], label='{}'.format(labels_stim[i_ev]))
         ax[1].fill_between(x=xvals[yvals <= max_px],
                            y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
@@ -2433,19 +2544,21 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     ax[1].set_xlim(-0.1, 360)
     ax[1].set_ylim(-1, 520)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
-    ax[1].legend(title='stimulus')
+    # ax[1].legend(labels=['0', '', '', '1'],
+    #              title='Stimulus \n evidence', loc='upper left',
+    #              fontsize=6)
+    ax[1].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
     ax[1].set_ylabel('x-coord (px)')
     ax[1].set_xlabel('Time from movement onset (ms)')
-    ax[1].set_title('Mean trajectory')
     ax[2].set_xlabel('Evidence')
-    ax[2].set_ylabel('Motor time (ms)')
+    ax[2].set_ylabel('MT (ms)')
     # now for the prior
     prior = df_data['norm_allpriors'][index1] * (decision*2 - 1)
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     colormap = pl.cm.copper(np.linspace(0, 1, len(bins)-1))
     vals_thr_traj = []
-    labels = ['inc. high', 'inc. low', 'zero', 'con. low', 'con. high']
+    labels = ['', '', '', '', '']
     for i_pr, pr_min in enumerate(bins):
         if pr_min == 1:
             break
@@ -2469,7 +2582,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
                                         times[index]
                                         if t[-1] != '']))*1e3
         vals_thr_traj.append(val_traj)
-        ax[4].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=60)
+        ax[4].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=40)
         xvals = np.arange(len(mean_traj))*precision
         yvals = mean_traj
         ax[3].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
@@ -2482,32 +2595,44 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     ax[3].set_xlim(-0.1, 360)
     ax[3].set_ylim(-1, 520)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
-    ax[3].legend(title='Prior')
+    colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
+    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                             label='cong.'),
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label=''),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label='0'),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label=''),
+                      Line2D([0], [0], color=colormap[4], lw=2,
+                             label='inc.')]
+    ax[3].legend(handles=legendelements, title='Prior', loc='upper left',
+                 fontsize=7)
     ax[3].set_ylabel('x-coord (px)')
     ax[3].set_xlabel('Time from movement onset (ms)')
-    ax[3].set_title('Mean trajectory')
-    ax[4].set_xlabel('Prior congruency')
-    ax[4].set_ylabel('Motor time (ms)')
+    ax[4].set_xlabel('Prior')
+    ax[4].set_ylabel('MT (ms)')
     ax[4].set_xticks(np.arange(5))
     ax[4].set_xticklabels(labels)
-    cont = 0
-    for traj in range(1000):
-        tr_ind = np.random.randint(0, len(df_data['trajectory_y'])-1)
-        x_coord = df_data['trajectory_y'][tr_ind]
-        y_coord = df_data['traj_y'][tr_ind]
-        time_max = df_data['times'][tr_ind][-1]
-        if time_max != '':
-            if time_max < 0.3 and time_max > 0.1:
-                time = df_data['times'][tr_ind]
-                ind_time = [True if t != '' else False for t in time]
-                time = np.array(time)[np.array(ind_time)]
-                ax[0].plot(x_coord, y_coord, color='k', linewidth=0.5)
-                # ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
-                cont += 1
-        if cont == 50:
-            break
-    ax[0].set_xlabel('x-coord (px)')
-    ax[0].set_ylabel('y-coord (px)')
+    if plotxy:
+        cont = 0
+        for traj in range(1000):
+            tr_ind = np.random.randint(0, len(df_data['trajectory_y'])-1)
+            x_coord = df_data['trajectory_y'][tr_ind]
+            y_coord = df_data['traj_y'][tr_ind]
+            time_max = df_data['times'][tr_ind][-1]
+            if time_max != '':
+                if time_max < 0.3 and time_max > 0.1:
+                    time = df_data['times'][tr_ind]
+                    ind_time = [True if t != '' else False for t in time]
+                    time = np.array(time)[np.array(ind_time)]
+                    ax[0].plot(x_coord, y_coord, color='k', linewidth=0.5)
+                    # ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
+                    cont += 1
+            if cont == 50:
+                break
+        ax[0].set_xlabel('x-coord (px)')
+        ax[0].set_ylabel('y-coord (px)')
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
 
@@ -2585,17 +2710,17 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 9
+    p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.18
-    p_w_stim = 0.1
+    p_w_zt = 0.2
+    p_w_stim = 0.11
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 70
+    p_1st_readout = 80
     p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
@@ -3098,7 +3223,7 @@ if __name__ == '__main__':
                         'LE44']
             # subjects = ['LE37', 'LE84']
         else:
-            subjects = ['LE38']
+            subjects = ['LE43']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
@@ -3109,6 +3234,7 @@ if __name__ == '__main__':
                 df_all = pd.concat((df_all, df), ignore_index=True)
         if all_rats:
             df = df_all
+            df_all = []
         # XXX: can we remove the code below or move it to the fig5 part?
         after_correct_id = np.where((df.aftererror == 0))
         # *(df.special_trial == 0))[0]
@@ -3225,7 +3351,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
