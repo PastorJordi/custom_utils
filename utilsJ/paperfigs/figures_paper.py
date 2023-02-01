@@ -2713,14 +2713,14 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_aff = 8
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.15
-    p_w_stim = 0.08
+    p_w_zt = 0.2
+    p_w_stim = 0.07
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 60
+    p_1st_readout = 70
     p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
