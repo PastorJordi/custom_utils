@@ -1537,7 +1537,7 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     # ax4.set_ylabel('Time to CoM (ms)')
 
 
-def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.1,
+def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
                marginy=0.04, figsize=(8, 12), com_th=8):
     if com_th != 8:
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -1883,7 +1883,7 @@ def mean_com_traj_simul(df_sim, ax):
 def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected, pro_vs_re,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-          marginx=0.006, marginy=0.07, fgsz=(8, 10)):
+          marginx=0.006, marginy=0.07, fgsz=(8, 12)):
     fig, ax = plt.subplots(ncols=3, nrows=5, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.07,
@@ -2086,7 +2086,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         ax = ax.flatten()
     vals_thr_traj = []
     vals_thr_vel = []
-    labels_zt = ['incongruent', ' ', '0', ' ', 'congruent']
+    labels_zt = ['inc.', ' ', '0', ' ', 'cong.']
     labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     if prior:
         bins_ref = bins_zt
@@ -2375,7 +2375,7 @@ def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
     # sound_len_com = sound_len[com]
     # df2 = pd.DataFrame({'sound_len': sound_len_com, 'time_com': time_com,
     #                     'peak_com': peak_com})
-    ax1, ax2 = ax  # , ax3, ax4
+    ax2, ax1 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     ax1.hist(peak_com[peak_com != 0], bins=67, range=(-600, -100), color='tab:olive')
@@ -2710,17 +2710,17 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 9
-    p_t_eff = 9
+    p_t_aff = 8
+    p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
-    p_w_stim = 0.11
+    p_w_zt = 0.15
+    p_w_stim = 0.08
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 80
+    p_1st_readout = 60
     p_2nd_readout = 30
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
@@ -3223,7 +3223,7 @@ if __name__ == '__main__':
                         'LE44']
             # subjects = ['LE37', 'LE84']
         else:
-            subjects = ['LE43']
+            subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
