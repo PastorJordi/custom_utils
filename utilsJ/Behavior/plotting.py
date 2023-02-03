@@ -899,7 +899,7 @@ def trajectory_thr(
             r, c = np.where(tmp_mat < cthr)
 
         _, idxes = np.unique(r, return_index=True)
-        y_point = np.median(c[idxes])
+        y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
         y_points += [y_point]
         y_err += [sem(c[idxes], nan_policy="omit")]
         extra_kw = {}
