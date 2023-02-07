@@ -901,7 +901,9 @@ def trajectory_thr(
         _, idxes = np.unique(r, return_index=True)
         y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
         y_points += [y_point]
-        y_err += [sem(c[idxes], nan_policy="omit")]
+        # y_err += [sem(c[idxes], nan_policy="omit")]
+        y_err += np.nanstd(np.nanmax(tmp_mat, axis=1))/\
+            np.sqrt(len(np.nanmax(tmp_mat, axis=1)))
         extra_kw = {}
 
         # get motor time

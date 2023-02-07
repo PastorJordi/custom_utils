@@ -935,7 +935,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
-            init_trajs.append(prior0 + np.random.randn(len(prior0))*0.15)
+            init_trajs.append(prior0)  # + np.random.randn(len(prior0))*0.15)
             # TRAJ. UPDATE
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
@@ -968,7 +968,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # joined trajectories
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-            traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
+            # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
             # traj_updt = np.concatenate((np.random.randn(
             #     np.random.randint(15, 60))*0.2, traj_updt))
             total_traj.append(traj_updt)
