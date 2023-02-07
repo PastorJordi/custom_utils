@@ -47,6 +47,7 @@ if pc_name == 'alex':
     DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
     TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
+    HUMAN_TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/g41085.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
@@ -2462,6 +2463,8 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
             if max_time > max_mt:
                 continue
             all_trajs[tr, :len(vals)] = vals
+            all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
+                                                    int(max_mt-len(vals)-1))
         mean_traj = np.nanmean(all_trajs, axis=0)
         xvals = np.arange(len(mean_traj))*precision
         yvals = mean_traj
@@ -2480,6 +2483,8 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
         if max_time > max_mt:
             continue
         all_trajs[tr, :len(vals)] = vals
+        all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
+                                                    int(max_mt-len(vals)-1))
     mean_traj = np.nanmean(all_trajs, axis=0)
     xvals = np.arange(len(mean_traj))*precision
     yvals = mean_traj
@@ -2492,6 +2497,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
                              label='No-CoM')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-100, color='r', linestyle=':')
+    ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
 
 
@@ -2502,17 +2508,17 @@ def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
     ax2, ax1 = ax  # , ax3, ax4
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
-    ax1.hist(peak_com[peak_com != 0]/75*100, bins=67, range=(-600, -100),
+    ax1.hist(peak_com[peak_com != 0]/600*100, bins=67, range=(-100, -16.667),
              color='tab:olive')
-    ax1.hist(peak_com[peak_com != 0]/75*100, bins=14, range=(-100, 0),
+    ax1.hist(peak_com[peak_com != 0]/600*100, bins=14, range=(-16.667, 0),
              color='tab:cyan')
     ax1.set_yscale('log')
-    ax1.axvline(-100, linestyle=':', color='r')
-    ax1.set_xlim(-600, 5)
+    ax1.axvline(-100/6, linestyle=':', color='r')
+    ax1.set_xlim(-100, 1)
     ax1.set_xlabel('Deflection point (%)')
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
-    ax2.hist(time_com[time_com != -1]*1e3, bins=50, range=(0, 800),
+    ax2.hist(time_com[time_com != -1]*1e3, bins=30, range=(0, 510),
              color='tab:olive')
     ax2.set_xlabel('Deflection time (ms)')
 
@@ -2650,7 +2656,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
             # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
             #                      xp=time*1e3, fp=vals)
             all_trajs[tr, :len(vals)] = vals  # - vals[0]
-            all_trajs[tr, len(vals):-1] = np.repeat(vals[-1], int(max_mt-len(vals)))
+            all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
+                                                    int(max_mt-len(vals)-1))
         mean_traj = np.nanmean(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
         # val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
@@ -2668,8 +2675,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
     ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[1].set_xlim(-0.1, 360)
-    ax[1].set_ylim(-1, 520)
+    ax[1].set_xlim(-0.1, 200)
+    ax[1].set_ylim(-1, 610)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     # ax[1].legend(labels=['0', '', '', '1'],
     #              title='Stimulus \n evidence', loc='upper left',
@@ -2702,7 +2709,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
             # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
             #                      xp=time*1e3, fp=vals)
             all_trajs[tr, :len(vals)] = vals  # - vals[0]
-            all_trajs[tr, len(vals):-1] = np.repeat(vals[-1], int(max_mt-len(vals)))
+            all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
+                                                    int(max_mt-len(vals)-1))
         mean_traj = np.nanmean(all_trajs, axis=0)
         std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
         # val_traj = np.where(mean_traj >= traj_thr)[0][2]*wanted_precision
@@ -2720,7 +2728,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_pr])
     ax[4].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[3].set_xlim(-0.1, 360)
+    # ax[3].set_xlim(-0.1, 360)
+    ax[1].set_xlim(-0.1, 200)
     ax[3].set_ylim(-1, 520)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
@@ -2744,7 +2753,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     ax[4].set_xticklabels(labels)
     if plotxy:
         cont = 0
-        for traj in range(1000):
+        for traj in range(800):
             tr_ind = np.random.randint(0, len(df_data['trajectory_y'])-1)
             x_coord = df_data['trajectory_y'][tr_ind]
             y_coord = df_data['traj_y'][tr_ind]
