@@ -899,11 +899,15 @@ def trajectory_thr(
             r, c = np.where(tmp_mat < cthr)
 
         _, idxes = np.unique(r, return_index=True)
-        y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
+        if alpha_low:
+            y_point = np.median(c[idxes])
+            y_err += [sem(c[idxes], nan_policy="omit")]
+        else:
+            y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
+            y_err += np.nanstd(np.nanmax(tmp_mat, axis=1)) /\
+                np.sqrt(len(np.nanmax(tmp_mat, axis=1)))
         y_points += [y_point]
-        # y_err += [sem(c[idxes], nan_policy="omit")]
-        y_err += np.nanstd(np.nanmax(tmp_mat, axis=1))/\
-            np.sqrt(len(np.nanmax(tmp_mat, axis=1)))
+
         extra_kw = {}
 
         # get motor time
@@ -980,7 +984,10 @@ def trajectory_thr(
             if plotmt:
                 ax.errorbar(xpoints, mt_time, yerr=mt_time_err,
                                  **error_kwargs)
-            else:
+            if not plotmt and not alpha_low:
+                ax.errorbar(xpoints, y_points + fixation_delay_offset,
+                            yerr=y_err, **error_kwargs)
+            if alpha_low:
                 ax.errorbar(xpoints, y_points + fixation_delay_offset,
                             yerr=y_err, **error_kwargs)
             # add 80ms offset for those new state machine (in other words,

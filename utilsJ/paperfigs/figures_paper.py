@@ -1618,11 +1618,11 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     peak_com = np.array(peak_com)
-    ax1.hist(peak_com/75*100, bins=70, range=(-60, -8), color='tab:olive')
-    ax1.hist(peak_com/75*100, bins=10, range=(-8, -0), color='tab:cyan')
+    ax1.hist(peak_com/75*100, bins=70, range=(-100, -8/75*100), color='tab:olive')
+    ax1.hist(peak_com/75*100, bins=10, range=(-8/75*100, -0), color='tab:cyan')
     ax1.set_yscale('log')
-    ax1.axvline(-8, linestyle=':', color='r')
-    ax1.set_xlim(-50, 5)
+    ax1.axvline(-8/75*100, linestyle=':', color='r')
+    ax1.set_xlim(-100, 5)
     ax1.set_xlabel('Deflection point (%)', fontsize=8)
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
@@ -2110,7 +2110,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax[10].set_title(pcomlabel_1, fontsize=8)
     im = ax[10].imshow(matrix_side_1, vmin=0, vmax=vmax)
     plt.sca(ax[10])
-    plt.colorbar(im, fraction=0.04)
+    cbar_0 = plt.colorbar(im, fraction=0.04)
+    cbar_0.ax.set_title('p(CoM)')
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     ax[11].set_title(pcomlabel_0, fontsize=8)
     im = ax[11].imshow(matrix_side_0, vmin=0, vmax=vmax)
@@ -2123,8 +2124,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
         ax_i.set_xticklabels(['']*nbins)
     ax[10].set_ylabel('Stimulus Evidence')
     ax[7].set_ylabel('Stimulus Evidence')
-    plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
-              means_model=means_model, errors_model=errors_model)
+    # plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
+    #           means_model=means_model, errors_model=errors_model)
+    mt_distros(df=df_sim, ax=ax[9])
     ax_cohs = np.array([ax[1], ax[4]])
     ax_zt = np.array([ax[0], ax[3]])
     # trajs. conditioned on coh
@@ -2851,7 +2853,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
-    p_w_stim = 0.07
+    p_w_stim = 0.08
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
@@ -3411,10 +3413,10 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = False
-    f3 = False
+    f3 = True
     f4 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
@@ -3430,7 +3432,7 @@ if __name__ == '__main__':
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=False,
+                                          sv_folder=SV_FOLDER, after_correct=True,
                                           silent=True, all_trials=True)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
