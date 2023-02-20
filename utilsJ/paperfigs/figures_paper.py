@@ -505,12 +505,14 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
                      title='Stimulus \n evidence', loc='upper left',
                      fontsize=6)
+        ax[1].set_xticks([0, 25, 50, 75])
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
-        ax[0].set_xticks([-1, 0, 1])
+        ax[0].set_xticks([0])
+        ax[0].set_xticklabels(['Stimulus'], fontsize=9)
+        ax[0].xaxis.set_ticks_position('none')
         ax[0].set_ylim(240, 295)
-        ax[0].set_xticklabels(['-1', '0', '1'])
         ax[0].set_yticks([250, 275])
         ax[0].set_yticklabels(['250', '275'])
         ax[2].set_ylim([0.5, 0.8])
@@ -533,6 +535,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                                  label='incongruent')]
         ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
+        ax[1].set_xticks([0, 25, 50, 75])
         # ax[1].legend(labels=['incongruent', 'inc. low', '0', 'con. low',
         #                      'congruent'], title='Prior', loc='upper left')
         xpoints = (bins[:-1] + bins[1:]) / 2
@@ -543,6 +546,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[0].set_yticklabels(['250', '300'])
         ax[0].set_xticks([0])
         ax[0].set_xticklabels(['Prior'], fontsize=9)
+        ax[0].xaxis.set_ticks_position('none')
         # ax[2].set_xticks([-0.65, xpoints[2], 0.65])
         # ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
         ax[2].set_ylim([0.5, 0.8])
@@ -613,7 +617,11 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = evl[nan_idx]
         pop_a = pop_a[nan_idx]
-        _, p2 = pearsonr(pop_a, pop_evidence)
+        try:
+            _, p2 = pearsonr(pop_a, pop_evidence)
+        except Exception:
+            continue
+            # return np.nan
         # plist.append(p2)
         if p2 < pval:
             return i
@@ -1587,15 +1595,26 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
         err_nocom = []
         nsubs = len(df.subjid.unique())
         ev_vals = [0, 0.25, 0.5, 1]
+        pvals = [1e-2, 1e-3, 1e-4]
         for i_ev, ev in enumerate(ev_vals):
             mean_x_subj_com = []
             mean_x_subj_nocom = []
+            pv_per_sub = []
             for i_s, subj in enumerate(df.subjid.unique()):
                 indx = (coh == ev) & (df.subjid == subj)
                 h_nocom = hit_com[indx]
                 h_com = hit[indx]
                 mean_x_subj_com.append(np.nanmean(h_com))
                 mean_x_subj_nocom.append(np.nanmean(h_nocom))
+                _, pv = ttest_ind(h_com, h_nocom)
+                pv_per_sub.append(pv)
+            pv = np.nanmax(pv_per_sub)
+            if pv < pvals[0] and pv > pvals[1]:
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '*')
+            if pv < pvals[1] and pv > pvals[2]:
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '**')
+            if pv < pvals[2]:
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '***')
             mean_com.append(np.nanmean(mean_x_subj_com))
             mean_nocom.append(np.nanmean(mean_x_subj_nocom))
             err_com.append(np.nanstd(mean_x_subj_com)/np.sqrt(nsubs))
@@ -1691,8 +1710,8 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
     ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
                          pos.height*2/5])
     ax_coms = [ax_com_stat, ax_inset]
-    com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
-                                                             ax_coms[1]])
+    com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
+                                                             ax_coms[0]])
     rm_top_right_lines(ax=ax[2])
     mean_com_traj(df=df, ax=ax[2], condition='prior_x_coh', cmap='copper',
                   prior_limit=1, after_correct_only=True, rt_lim=400,
@@ -2058,24 +2077,22 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     #          coh=coh[sound_len_model >= 0], yaxis=False)
     # ax[8].set_title('Data')
     # ax[9].set_title('Model')
-    ax2 = ax[12].twinx()
-    ax2.set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.6,
-                      pos_ax_12.height])
-    rm_top_right_lines(ax2)
+    ax2 = add_inset(ax=ax[12], inset_sz=inset_sz, fgsz=fgsz,
+                    marginx=marginx, marginy=0.07, right=True)
     df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
                             'sound_len': sound_len[sound_len_model >= 0],
                             'rt_model': sound_len_model[sound_len_model >= 0],
                             'com_model': com_model,
                             'com_model_detected': com_model_detected})
     binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax2,
+                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12],
                  legend=False)
     binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                  xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax2,
+                                            'color': 'red'}, ax=ax[12],
                  legend=False)
     binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[12],
+                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax2,
                  legend=False)
     ax[12].xaxis.tick_top()
     ax[12].xaxis.tick_bottom()
@@ -2087,8 +2104,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                              label='Model All')]
     ax[12].legend(handles=legendelements)
     ax[12].set_xlabel('RT (ms)')
-    ax[12].set_ylabel('P(CoM), model', color='green')
-    ax2.set_ylabel('P(CoM), data & \n model detected')
+    ax[12].set_ylabel('P(CoM)')
+    ax2.set_ylabel('P(CoM)')
+    ax2.set_xlabel('RT (ms)')
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
@@ -2354,7 +2372,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
                  wanted_precision=8, inset_sz=.06,
-                 marginx=0.006, marginy=0.12, fgsz=(8, 10)):
+                 marginx=0.006, marginy=0.12, fgsz=(8, 14)):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -2371,11 +2389,12 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    fig, ax = plt.subplots(nrows=4, ncols=3, figsize=fgsz)
+    fig, ax = plt.subplots(nrows=5, ncols=3, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.5, wspace=0.6)
-    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '']
+    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '', 'k',
+            '', '']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
         if n == 9:
@@ -2486,7 +2505,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
             continue
         all_trajs[tr, :len(vals)] = vals
         all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
-                                                    int(max_mt-len(vals)-1))
+                                                int(max_mt-len(vals)-1))
     mean_traj = np.nanmean(all_trajs, axis=0)
     xvals = np.arange(len(mean_traj))*precision
     yvals = mean_traj
@@ -2637,6 +2656,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     decision = df_data.R_response.values[index1]
     trajs = df_data.trajectory_y.values[index1]
     times = df_data.times.values[index1]
+    sound_len = df_data.sound_len[index1]
+    prior = df_data['norm_allpriors'][index1] * (decision*2 - 1)
     ev_vals = np.unique(np.abs(np.round(coh, 2)))
     bins = [0, 0.25, 0.5, 1]
     # congruent_coh = coh * (decision*2 - 1)
@@ -2688,8 +2709,45 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     ax[1].set_xlabel('Time from movement onset (ms)')
     ax[2].set_xlabel('Evidence')
     ax[2].set_ylabel('MT (ms)')
+    rtbins = np.linspace(0, 300, 8)  # np.array([0, 100, 200, 225, 250, 275, 300])
+    split_ind = []
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    for i in range(rtbins.size-1):
+        fig, ax1 = plt.subplots(1)
+        for i_ev, ev in enumerate(ev_vals):
+            index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
+                    (np.abs(np.round(coh, 2)) == ev)  # & (prior <= 0.3)
+            all_trajs = np.empty((sum(index), max_mt))
+            all_trajs[:] = np.nan
+            for tr in range(sum(index)):
+                vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+                vals -= vals[0]
+                ind_time = [True if t != '' else False for t in times[index][tr]]
+                time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+                max_time = max(time)*1e3
+                if max_time > max_mt:
+                    continue
+                # vals_fin = np.interp(np.arange(0, int(max_time),
+                # wanted_precision), xp=time*1e3, fp=vals)
+                all_trajs[tr, :len(vals)] = vals  # - vals[0]
+                all_trajs[tr, len(vals):-1] = np.repeat(vals[-1],
+                                                        int(max_mt-len(vals)-1))
+            if ev == 0:
+                ev_mat = np.repeat(0, sum(index))
+                traj_mat = all_trajs
+            else:
+                ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
+                traj_mat = np.concatenate((traj_mat, all_trajs))
+            ax1.plot(np.nanmean(traj_mat, axis=0), color=colormap[i_ev])
+            ax1.set_xlim(0, 25)
+            ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
+        ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0, max_MT=30,
+                                 pval=0.01)
+        split_ind.append(ind)
+        ax1.axvline(ind, color='r')
+    plt.figure()
+    plt.plot(rtbins[:-1] + np.diff(rtbins)[0]/2, np.array(split_ind)*16)
     # now for the prior
-    prior = df_data['norm_allpriors'][index1] * (decision*2 - 1)
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     colormap = pl.cm.copper(np.linspace(0, 1, len(bins)-1))
@@ -2774,19 +2832,6 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
         ax[0].set_ylabel('y-coord (px)')
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
-
-
-def accuracy_1st_2nd_ch(gt, decision, coh, com):  # ??
-    coh_com = coh[com]
-    gt_com = gt[com]
-    decision_com = decision[com]
-    ev_vals = np.unique(np.abs(coh_com))
-    acc_ch1 = []
-    acc_ch2 = []
-    for ev in ev_vals:
-        index = np.abs(coh_com) == ev
-        acc_ch1.append(np.mean((-decision_com[index]) == gt_com[index]))
-        acc_ch2.append(np.mean(decision_com[index] == gt_com[index]))
 
 
 def linear_fun(x, a, b, c, d):
@@ -3413,26 +3458,26 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = False
-    f3 = True
+    f3 = False
     f4 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE84']
+            # subjects = ['LE37', 'LE84']
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=True,
+                                          sv_folder=SV_FOLDER, after_correct=False,
                                           silent=True, all_trials=True)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
@@ -3548,8 +3593,8 @@ if __name__ == '__main__':
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
-        supp_trajs_prior_cong(df_sim, ax=None)
-        model_vs_data_traj(trajs_model=trajs, df_data=df)
+        # supp_trajs_prior_cong(df_sim, ax=None)
+        # model_vs_data_traj(trajs_model=trajs, df_data=df)
         if f4:
             fig_trajs_model_4(trajs_model=trajs, df_data=df,
                               reaction_time=reaction_time)

@@ -957,7 +957,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound
-            offset = 140
+            offset = 118
             second_response_len =\
                 float(remaining_m_time + offset*com[i_t] -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
@@ -969,8 +969,8 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
             # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
-            # traj_updt = np.concatenate((np.random.randn(
-            #     np.random.randint(15, 60))*0.2, traj_updt))
+            traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
+            # np.random.randn(np.random.randint(15, 60))*0.2
             total_traj.append(traj_updt)
             if com[i_t]:
                 opp_side_values = traj_updt.copy()
