@@ -1599,16 +1599,14 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
         for i_ev, ev in enumerate(ev_vals):
             mean_x_subj_com = []
             mean_x_subj_nocom = []
-            pv_per_sub = []
+            # pv_per_sub = []
             for i_s, subj in enumerate(df.subjid.unique()):
                 indx = (coh == ev) & (df.subjid == subj)
                 h_nocom = hit_com[indx]
                 h_com = hit[indx]
                 mean_x_subj_com.append(np.nanmean(h_com))
                 mean_x_subj_nocom.append(np.nanmean(h_nocom))
-                _, pv = ttest_ind(h_com, h_nocom)
-                pv_per_sub.append(pv)
-            pv = np.nanmax(pv_per_sub)
+            _, pv = ttest_ind(mean_x_subj_com, mean_x_subj_nocom)
             if pv < pvals[0] and pv > pvals[1]:
                 ax.text(ev-0.02, np.nanmean(h_com)+0.05, '*')
             if pv < pvals[1] and pv > pvals[2]:
@@ -3458,19 +3456,19 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = False
-    f3 = False
+    f3 = True
     f4 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE84']
+            subjects = ['LE37', 'LE84']
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
