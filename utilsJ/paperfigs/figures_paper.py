@@ -506,13 +506,15 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
                      title='Stimulus \n evidence', loc='upper left',
                      fontsize=6)
-        ax[1].set_xticks([0, 25, 50, 75])
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
         ax[0].set_xticks([0])
         ax[0].set_xticklabels(['Stimulus'], fontsize=9)
         ax[0].xaxis.set_ticks_position('none')
+        ax[2].set_xticks([0])
+        ax[2].set_xticklabels(['Stimulus'], fontsize=9)
+        ax[2].xaxis.set_ticks_position('none')
         ax[0].set_ylim(240, 295)
         ax[0].set_yticks([250, 275])
         ax[0].set_yticklabels(['250', '275'])
@@ -536,7 +538,6 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                                  label='incongruent')]
         ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
-        ax[1].set_xticks([0, 25, 50, 75])
         # ax[1].legend(labels=['incongruent', 'inc. low', '0', 'con. low',
         #                      'congruent'], title='Prior', loc='upper left')
         xpoints = (bins[:-1] + bins[1:]) / 2
@@ -555,6 +556,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         # ax[2].set_yticklabels(['100', '150'])
         ax[2].set_xticks([0])
         ax[2].set_xticklabels(['Prior'], fontsize=9)
+        ax[2].xaxis.set_ticks_position('none')
     if condition == 'origidx':
         ax[1].legend(labels=['100', '300', '500', '700', '900'],
                      title='Trial index')
@@ -581,13 +583,13 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-20, 450])
-    ax[2].set_xlabel('Peak (pixels/ms)')
+    ax[2].set_ylabel('Peak (pixels/ms)')
     ax[3].set_ylim([-0.05, 0.5])
     ax[3].axhline(0, c='gray')
     ax[3].axhline(threshold, ls=':', c='gray')
     ax[3].set_ylabel('Velocity (pixels/ms)')
     # ax[2].set_xlabel(xlab)
-    ax[3].set_ylabel('Time from movement onset (ms)', fontsize=8)
+    ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
@@ -754,6 +756,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "action"}
     out_data = []
+    sound_len_int = (df.sound_len.values*1e3).astype(int)
     for subject in df.subjid.unique():
         for i in range(rtbins.size-1):
             dat = df.loc[(df.special_trial == 0) &
@@ -787,7 +790,10 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
                     a = a[~np.isnan(a).all(axis=1)]
                 ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                 mat = np.concatenate((mat, mata))
-
+            for i_traj in range(mat.shape[0]):
+                traj = mat[i_traj, :]
+                traj = np.roll(traj, int(sound_len_int[i_traj]))
+                mat[i_traj, :] = traj
             current_split_index =\
                 get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
@@ -1488,12 +1494,12 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=0.04, right=True)
     ax_inset.yaxis.set_ticks_position('none')
-    ax_inset.set_xlabel('Stimulus')
+    # ax_inset.set_xlabel('Stimulus')
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
-    ax_inset.set_xlabel('Stimulus')
+    # ax_inset.set_xlabel('Stimulus')
     ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
     ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
@@ -1609,11 +1615,11 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
                 mean_x_subj_nocom.append(np.nanmean(h_nocom))
             _, pv = ttest_rel(mean_x_subj_com, mean_x_subj_nocom)
             if pv < pvals[0] and pv > pvals[1]:
-                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '*')
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '*', fontsize=10)
             if pv < pvals[1] and pv > pvals[2]:
-                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '**')
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '**', fontsize=10)
             if pv < pvals[2]:
-                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '***')
+                ax.text(ev-0.02, np.nanmean(h_com)+0.05, '***', fontsize=10)
             mean_com.append(np.nanmean(mean_x_subj_com))
             mean_nocom.append(np.nanmean(mean_x_subj_nocom))
             err_com.append(np.nanstd(mean_x_subj_com)/np.sqrt(nsubs))
@@ -3469,7 +3475,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE42', 'LE44']
+            subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE38']
