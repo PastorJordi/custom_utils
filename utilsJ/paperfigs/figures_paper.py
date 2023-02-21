@@ -13,13 +13,13 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
-from scipy.stats import pearsonr, ttest_ind
+from scipy.stats import pearsonr, ttest_ind, ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -40,7 +40,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -71,6 +71,7 @@ elif pc_name == 'alex_CRM':
     DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
     RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
     RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
+    HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
 
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
@@ -580,13 +581,13 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-20, 450])
-    ax[3].set_xlabel('Peak (pixels/ms)')
+    ax[2].set_xlabel('Peak (pixels/ms)')
     ax[3].set_ylim([-0.05, 0.5])
     ax[3].axhline(0, c='gray')
     ax[3].axhline(threshold, ls=':', c='gray')
     ax[3].set_ylabel('Velocity (pixels/ms)')
     # ax[2].set_xlabel(xlab)
-    ax[2].set_ylabel('  Time to \n        threshold (ms)', fontsize=8)
+    ax[3].set_ylabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, ypoints, color='k', ls=':')
     plt.show()
     if accel:
@@ -1606,7 +1607,7 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
                 h_com = hit[indx]
                 mean_x_subj_com.append(np.nanmean(h_com))
                 mean_x_subj_nocom.append(np.nanmean(h_nocom))
-            _, pv = ttest_ind(mean_x_subj_com, mean_x_subj_nocom)
+            _, pv = ttest_rel(mean_x_subj_com, mean_x_subj_nocom)
             if pv < pvals[0] and pv > pvals[1]:
                 ax.text(ev-0.02, np.nanmean(h_com)+0.05, '*')
             if pv < pvals[1] and pv > pvals[2]:
@@ -1623,7 +1624,7 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
                     color=COLOR_NO_COM, label='Initial trajectory', markersize=5)
         ax.set_xlabel('Stimulus evidence')
         ax.set_ylabel('Accuracy')
-        ax.legend()
+        ax.legend(loc='lower right')
         ax.set_xticks(ev_vals)
 
 
@@ -3455,8 +3456,8 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
-    f3 = True
+    f2 = True
+    f3 = False
     f4 = False
     f5 = False
     f6 = False
@@ -3468,14 +3469,15 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE84']
+            # subjects = ['LE37', 'LE42', 'LE44']
+            # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=False,
+                                          sv_folder=SV_FOLDER, after_correct=True,
                                           silent=True, all_trials=True)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
@@ -3523,8 +3525,6 @@ if __name__ == '__main__':
         df['norm_allpriors'] = norm_allpriors_per_subj(df)
         df['CoM_sugg'] = com
         df['time_trajs'] = time_trajs
-
-        # if we want to use data from all rats, we must use dani_clean.pkl
 
     # fig 1
     if f1:

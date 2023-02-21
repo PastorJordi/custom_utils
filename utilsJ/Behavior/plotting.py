@@ -904,8 +904,8 @@ def trajectory_thr(
             y_err += [sem(c[idxes], nan_policy="omit")]
         else:
             y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
-            y_err += np.nanstd(np.nanmax(tmp_mat, axis=1)) /\
-                np.sqrt(len(np.nanmax(tmp_mat, axis=1)))
+            y_err += [np.nanstd(np.nanmax(tmp_mat, axis=1)) /
+                      np.sqrt(len(np.nanmax(tmp_mat, axis=1)))]
         y_points += [y_point]
 
         extra_kw = {}

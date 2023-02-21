@@ -636,10 +636,16 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                                     and hithistory >= 0\
                                         and aftererror==0")
             else:
-                return df.query(
+                if not silent:
+                    return df.query(
                         "sound_len <= 400 and soundrfail ==\
                             False and resp_len <=1 and R_response>= 0\
                                 and hithistory >= 0 and special_trial == 0")
+                if silent:
+                    return df.query(
+                        "sound_len <= 400 and soundrfail ==\
+                            False and resp_len <=1 and R_response>= 0\
+                                and hithistory >= 0")
         if not silent:
             df = df.query(
                     "sound_len <= 400 and soundrfail ==\
