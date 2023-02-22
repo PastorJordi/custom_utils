@@ -17,9 +17,9 @@ from scipy.stats import pearsonr, ttest_ind, ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -40,7 +40,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps_Jordi'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -480,6 +480,8 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
             (df.sound_len < rt_lim)
+        mt = df.resp_len.values*1e3
+        mean_mt_silent = np.nanmean(mt[df.special_trial == 2])
     if condition == 'prior_x_coh':
         bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
         xlab = 'prior resp.'
@@ -510,6 +512,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[0].set_yticks([])
         ax[0].set_ylim(240, 295)
         ax[0].set_xticks([0])
+        ax[0].axhline(mean_mt_silent, color='k', linestyle='--', alpha=0.8)
         ax[0].set_xticklabels(['Stimulus'], fontsize=9)
         ax[0].xaxis.set_ticks_position('none')
         ax[2].set_xticks([0])
@@ -756,16 +759,15 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "action"}
     out_data = []
-    sound_len_int = (df.sound_len.values*1e3).astype(int)
-    for subject in df.subjid.unique():
+    df_1 = df.loc[df.special_trial == 2]
+    for subject in df_1.subjid.unique():
         for i in range(rtbins.size-1):
-            dat = df.loc[(df.special_trial == 0) &
-                         (df.subjid == subject) &
-                         (df.sound_len < rtbins[i + 1]) &
-                         (df.sound_len >= rtbins[i])]
+            dat = df_1.loc[(df_1.subjid == subject) &
+                           (df_1.sound_len < rtbins[i + 1]) &
+                           (df_1.sound_len >= rtbins[i])]
             matb_0 = np.vstack(
-                dat.loc[(dat.norm_allpriors <= 0.1) &
-                        (dat.norm_allpriors > 0)]
+                dat.loc[(dat.norm_allpriors < 0.1) &
+                        (dat.norm_allpriors >= 0)]
                 .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
             matb_1 = np.vstack(
                 dat.loc[(dat.norm_allpriors > -0.1) &
@@ -774,37 +776,53 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
             matb = np.vstack([matb_0*-1, matb_1])
             mat = matb
             ztl = np.repeat(0, matb.shape[0])
+            rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors < 0.1) &
+                                             (dat.norm_allpriors >= 0)]
+            rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors > -0.1) &
+                                             (dat.norm_allpriors <= 0)]
+            rt = np.concatenate((rt_temp_0, rt_temp_1))
             for i_z, zt1 in enumerate(ztbins[:-1]):
                 mata_0 = np.vstack(
                     dat.loc[(dat.norm_allpriors > zt1) &
-                            (dat.norm_allpriors < ztbins[i_z+1])]
+                            (dat.norm_allpriors <= ztbins[i_z+1])]
                     .apply(lambda x: interpolapply(x, **kw),
                            axis=1).values.tolist())
                 mata_1 = np.vstack(
                     dat.loc[(dat.norm_allpriors < -zt1) &
-                            (dat.norm_allpriors > -ztbins[i_z+1])]
+                            (dat.norm_allpriors >= -ztbins[i_z+1])]
                     .apply(lambda x: interpolapply(x, **kw),
                            axis=1).values.tolist())
                 mata = np.vstack([mata_0*-1, mata_1])
-                for a in [mata, matb]:  # discard all nan rows
-                    a = a[~np.isnan(a).all(axis=1)]
+                rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors > zt1) &
+                                                 (dat.norm_allpriors <=
+                                                  ztbins[i_z+1])]
+                rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors < -zt1) &
+                                                 (dat.norm_allpriors >=
+                                                  -ztbins[i_z+1])]
+                rt_a = np.concatenate((rt_temp_0, rt_temp_1))
+                # rt_a = rt_a[~np.isnan(mata).all(axis=1)]
+                # for a in [mata, matb]:  # discard all nan rows
+                #     a = a[~np.isnan(a).all(axis=1)]
                 ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                 mat = np.concatenate((mat, mata))
+                rt = np.concatenate((rt, rt_a))
+            rt = rt.astype(int)
             for i_traj in range(mat.shape[0]):
                 traj = mat[i_traj, :]
-                traj = np.roll(traj, int(sound_len_int[i_traj]))
+                traj = np.roll(traj, int(rt[i_traj]))
                 mat[i_traj, :] = traj
             current_split_index =\
                 get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
+                # + (rtbins[i] + rtbins[i+1])/2
             out_data += [current_split_index]
     out_data = np.array(out_data).reshape(
-        df.subjid.unique().size, rtbins.size-1, -1)
+        df_1.subjid.unique().size, rtbins.size-1, -1)
     out_data = np.swapaxes(out_data, 0, 1)
     out_data = out_data.astype(float)
     out_data[out_data > threshold] = np.nan
     binsize = rtbins[1]-rtbins[0]
-    for i in range(df.subjid.unique().size):
+    for i in range(df_1.subjid.unique().size):
         for j in range(out_data.shape[2]):
             ax.plot(binsize/2 + binsize * np.arange(rtbins.size-1),
                     out_data[:, i, j],
@@ -822,6 +840,38 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 8),
     plt.show()
 
 
+def pCoM_vs_coh(df):
+    """
+    It computes the pCoM vs the coherence
+    """
+    ev_vals = np.sort(np.abs(df.coh2.unique()))  # unique absolute value coh values
+    all_pcom_coh = np.zeros((len(df.subjid.unique()), len(ev_vals)+1))
+    for i, subj in enumerate(df.subjid.unique()):
+        df_sub = df.loc[df.subjid == subj]
+        # separating silent from nonsilent
+        silent = df_sub.loc[df_sub.special_trial == 2]
+        nonsilent = df_sub.loc[df_sub.special_trial == 0]
+        pcom_coh = []  # np.mean(silent.CoM_sugg)
+        num = np.array([len(silent)])
+        for ev in ev_vals:  # for each coherence, a pCoM for each subject
+            index = np.abs(nonsilent.coh2) == ev
+            pcom_coh.append(np.nanmean(nonsilent.CoM_sugg[index]))
+            num = np.concatenate([num, np.array([sum(index)])])
+        all_pcom_coh[i, 1::] = np.array(pcom_coh)
+        all_pcom_coh[i, 0] = np.nanmean(silent.CoM_sugg)
+    all_pcom_coh_sd = np.nanstd(all_pcom_coh, axis=0)/np.sqrt(num)
+    all_pcom_coh_mn = np.nanmean(all_pcom_coh, axis=0)
+    plt.figure()
+    ev_vals_sil = np.concatenate([np.array([-0.25]), ev_vals])
+    plt.errorbar(ev_vals, all_pcom_coh_mn[1::],
+                 yerr=all_pcom_coh_sd[1::], color='b')
+    plt.errorbar(-0.25, all_pcom_coh_mn[0],
+                 yerr=all_pcom_coh_sd[0], color='b')
+    plt.xticks(ticks=ev_vals_sil, labels=(['silent'] + list(ev_vals)))
+    plt.xlabel('coh')
+    plt.ylabel('pCoM')
+
+
 def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                           sim=False,
                           rtbins=np.linspace(0, 150, 16), connect_points=False,
@@ -832,6 +882,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     # threshold= bigger than that are turned to nan so it doesnt break figure range
     # this wont work if when_did_split_dat returns Nones instead of NaNs
     # plot will not work fine with uneven bins
+    sound_len_int = (df.sound_len.values).astype(int)
     if sim:
         splitfun = simul.when_did_split_simul
     if not sim:
@@ -850,16 +901,20 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                                            & (df.subjid == subject)],
                                  side=0, collapse_sides=True,
                                  rtbin=i, rtbins=rtbins, coh1=ev,
-                                 trajectory=trajectory)
+                                 trajectory=trajectory, align="sound")
                     if appb:
                         mat = matb
                         evl = np.repeat(0, matb.shape[0])
                         appb = False
                     mat = np.concatenate((mat, matatmp))
                     evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+                for i_traj in range(mat.shape[0]):
+                    traj = mat[i_traj, :]
+                    traj = np.roll(traj, int(sound_len_int[i_traj]))
+                    mat[i_traj, :] = traj
                 current_split_index =\
                     get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
-                                       startfrom=700)
+                                       startfrom=700)  # + (rtbins[i] + rtbins[i+1])/2
                 out_data += [current_split_index]
             else:
                 for j in [0, 1]:  # side values
@@ -2250,7 +2305,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
-                (df_sim.R_response.values == 1)
+                (df_sim.R_response.values == 1) * (df_sim.special_trial == 2)
             colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
@@ -2718,7 +2773,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
     split_ind = []
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for i in range(rtbins.size-1):
-        fig, ax1 = plt.subplots(1)
+        # fig, ax1 = plt.subplots(1)
         for i_ev, ev in enumerate(ev_vals):
             index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
                     (np.abs(np.round(coh, 2)) == ev)  # & (prior <= 0.3)
@@ -2743,15 +2798,19 @@ def human_trajs(df_data, ax, sv_folder, max_mt=600, jitter=0.003,
             else:
                 ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
                 traj_mat = np.concatenate((traj_mat, all_trajs))
-            ax1.plot(np.nanmean(traj_mat, axis=0), color=colormap[i_ev])
-            ax1.set_xlim(0, 25)
-            ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
+            # ax1.plot(np.nanmean(traj_mat, axis=0), color=colormap[i_ev])
+            # ax1.set_xlim(0, 25)
+            # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
         ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0, max_MT=30,
                                  pval=0.01)
         split_ind.append(ind)
-        ax1.axvline(ind, color='r')
+        # ax1.axvline(ind, color='r')
     plt.figure()
-    plt.plot(rtbins[:-1] + np.diff(rtbins)[0]/2, np.array(split_ind)*16)
+    plt.plot(rtbins[:-1] + np.diff(rtbins)[0]/2, np.array(split_ind)*16,
+             marker='o', color='firebrick', markersize=5)
+    plt.title('Impact of stimulus')
+    plt.ylabel('Splitting time')
+    plt.xlabel('RT (ms)')
     # now for the prior
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
@@ -3466,7 +3525,7 @@ if __name__ == '__main__':
     f3 = False
     f4 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
@@ -3475,7 +3534,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE38']
@@ -3604,7 +3663,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
