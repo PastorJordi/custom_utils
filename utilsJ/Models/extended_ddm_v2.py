@@ -963,7 +963,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound
-            offset = 118
+            offset = 140
             second_response_len =\
                 float(remaining_m_time + offset*com[i_t] -
                       p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
