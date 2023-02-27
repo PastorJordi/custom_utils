@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -124,6 +124,30 @@ def plot_coms(df, ax, human=False):
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
+
+
+def plot_fixation_breaks_single(subject, ax):
+    path = DATA_FOLDER + subject + '_clean.pkl'
+    df = pd.read_pickle(path)
+    hist_edges = np.linspace(-0.3, 0.4, 71)
+    rt_density_per_session =\
+        np.vstack(df.groupby('sessid').apply(lambda x: np.concatenate(
+            [x.sound_len/1000, np.concatenate(x.fb.values)-0.3]))
+            .apply(lambda x: np.histogram(x, density=True, bins=hist_edges)[0])
+            .values)
+    ax.errorbar(hist_edges[:-1]+0.005, rt_density_per_session.mean(axis=0),
+                np.std(rt_density_per_session, axis=0))
+    ax.axvline(0, c='r')
+    ax.set_xlabel('RT (s)')
+    ax.set_ylabel('mean density (+/- std)')
+    plt.show()
+
+
+def plot_rt_all_rats(subjects):
+    fig, ax = plt.subplots(nrows=5, ncols=3)
+    ax = ax.flatten()
+    for i_s, subject in enumerate(subjects):
+        plot_fixation_breaks_single(subject=subject, ax=ax[i_s])
 
 
 def tracking_image(ax, figsize=(8, 12), margin=.01):
@@ -718,7 +742,8 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             _, matatmp, matb =\
                 simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=True,
                                          ax=ax, rtbin=rtbin, rtbins=rtbins,
-                                         color=colors[iev], label=lbl, coh1=ev)
+                                         color=colors[iev], label=lbl, coh1=ev,
+                                         align='sound')
         if appb:
             mat = matb
             evl = np.repeat(0, matb.shape[0])
@@ -730,10 +755,10 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
 
     # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
     #          head_length=0.3)
-    ax.set_xlim(-10, 155)
+    ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
     if xlab:
-        ax.set_xlabel('Time from movement onset (ms)')
+        ax.set_xlabel('Time from stimulus onset (ms)')
     if rtbins[-1] > 25 and xlab:
         ax.set_title('\n RT > 150 ms', fontsize=8)
         ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
@@ -844,6 +869,8 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ax.set_xlabel('RT (ms)')
     ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
+    ax.plot([0, 250], [0, 250], color='k')
+    ax.set_xlim(-5, 155)
     plt.show()
 
 
@@ -984,7 +1011,8 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     )
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
-
+    ax.plot([0, 250], [0, 250], color='k')
+    ax.set_xlim(-5, 155)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
     ax.set_title('Impact of stimulus', fontsize=9)
@@ -2778,7 +2806,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                            color=colormap[i_ev])
     ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
     ax[1].set_xlim(-0.1, 200)
-    ax[1].set_ylim(-1, 610)
+    ax[1].set_ylim(-1, 570)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     # ax[1].legend(labels=['0', '', '', '1'],
     #              title='Stimulus \n evidence', loc='upper left',
@@ -2788,8 +2816,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     ax[1].set_xlabel('Time from movement onset (ms)')
     ax[2].set_xlabel('Evidence')
     ax[2].set_ylabel('MT (ms)')
-    rtbins = np.array([0, 150, np.median(sound_len), 300])  # np.linspace(0, 300, 8)
-    # np.array([0, 100, 200, 225, 250, 275, 300])
+    rtbins = np.array([0, np.median(sound_len), 300])
+    # rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75])))
     split_ind = []
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for subj in np.unique(subjects):
@@ -2831,7 +2859,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                 # ax1.set_xlim(0, 650)
                 # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
             ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                     max_MT=max_mt+300, pval=0.05)
+                                     max_MT=max_mt+300, pval=0.001)
             split_ind.append(ind)
             # ax1.axvline(ind*16, color='r')
     out_data = np.array(split_ind)
@@ -2886,12 +2914,12 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     for i_pr, pr_min in enumerate(bins):
         if pr_min == 1:
             break
-        index = (prior >= bins[i_pr])*(prior < bins[i_pr+1]) * (coh == 0)
+        index = (prior >= bins[i_pr])*(prior < bins[i_pr+1])  # * (coh == 0)
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
             if prior[index][tr] != 0:
-                vals = np.array(trajs[index][tr]) * decision[index][tr]
+                vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
                 ind_time = [True if t != '' else False for t in times[index][tr]]
                 time = np.array(times[index][tr])[
                     np.array(ind_time)].astype(float)*1e3
@@ -2928,7 +2956,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     ax[4].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
     # ax[3].set_xlim(-0.1, 360)
     ax[1].set_xlim(-0.1, 200)
-    ax[3].set_ylim(-1, 520)
+    ax[3].set_ylim(-1, 570)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
     legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
@@ -3618,20 +3646,20 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE42']
@@ -3760,7 +3788,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
