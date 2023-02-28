@@ -784,7 +784,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
 def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                           trajectory='trajectory_y', threshold=300):
     ztbins = [0.1, 0.4, 1.1]
-    kw = {"trajectory": trajectory, "align": "action"}
+    kw = {"trajectory": trajectory, "align": "sound"}
     out_data = []
     df_1 = df  # .loc[df.special_trial == 2]
     for subject in df_1.subjid.unique():
@@ -803,13 +803,13 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
             matb = np.vstack([matb_0*-1, matb_1])
             mat = matb
             ztl = np.repeat(0, matb.shape[0])
-            rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors < 0.1) &
-                                             (dat.norm_allpriors >= 0)]
-            rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors > -0.1) &
-                                             (dat.norm_allpriors <= 0)]
-            rt_b = np.concatenate((rt_temp_0, rt_temp_1))
+            # rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors < 0.1) &
+            #                                  (dat.norm_allpriors >= 0)]
+            # rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors > -0.1) &
+            #                                  (dat.norm_allpriors <= 0)]
+            # rt_b = np.concatenate((rt_temp_0, rt_temp_1))
             # rt_b = rt_b[~np.isnan(matb).all(axis=1)]
-            rt = rt_b
+            # rt = rt_b
             for i_z, zt1 in enumerate(ztbins[:-1]):
                 mata_0 = np.vstack(
                     dat.loc[(dat.norm_allpriors > zt1) &
@@ -822,27 +822,27 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                     .apply(lambda x: interpolapply(x, **kw),
                            axis=1).values.tolist())
                 mata = np.vstack([mata_0*-1, mata_1])
-                rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors > zt1) &
-                                                 (dat.norm_allpriors <=
-                                                  ztbins[i_z+1])]
-                rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors < -zt1) &
-                                                 (dat.norm_allpriors >=
-                                                  -ztbins[i_z+1])]
-                rt_a = np.concatenate((rt_temp_0, rt_temp_1))
+                # rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors > zt1) &
+                #                                  (dat.norm_allpriors <=
+                #                                   ztbins[i_z+1])]
+                # rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors < -zt1) &
+                #                                  (dat.norm_allpriors >=
+                #                                   -ztbins[i_z+1])]
+                # rt_a = np.concatenate((rt_temp_0, rt_temp_1))
                 # rt_a = rt_a[~np.isnan(mata).all(axis=1)]
                 # for a in [mata, matb]:  # discard all nan rows
                 #     a = a[~np.isnan(a).all(axis=1)]
                 ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                 mat = np.concatenate((mat, mata))
-                rt = np.concatenate((rt, rt_a))
-            rt = rt.astype(int)
-            for i_traj in range(mat.shape[0]):
-                traj = mat[i_traj, :]
-                if np.isnan(traj).all():
-                    continue
-                else:
-                    traj = np.roll(traj, int(rt[i_traj]))
-                    mat[i_traj, :] = traj
+                # rt = np.concatenate((rt, rt_a))
+            # rt = rt.astype(int)
+            # for i_traj in range(mat.shape[0]):
+            #     traj = mat[i_traj, :]
+            #     if np.isnan(traj).all():
+            #         continue
+            #     else:
+            #         traj = np.roll(traj, int(rt[i_traj]))
+            #         mat[i_traj, :] = traj
             current_split_index =\
                 get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
@@ -3642,6 +3642,18 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
                     pl = False
 
 
+def plot_fb_per_subj_from_df(df):
+    fig, ax = plt.subplots(5, 3)
+    ax = ax.flatten()
+    for i_s, subj in enumerate(subjects):
+        df_1 = df[df.subjid == subj]
+        fix_breaks = np.vstack(np.concatenate([df_1.sound_len/1000,
+                                               np.concatenate(df_1.fb.values)-0.3]))
+        ax[i_s].hist(fix_breaks*1000, bins=200, range=(-100, 400),
+                     density=True)
+        ax[i_s].set_title(subj)
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -3692,7 +3704,8 @@ if __name__ == '__main__':
         traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
         traj_y = df.trajectory_y.values  # [after_correct_id]
         fix_onset = df.fix_onset_dt.values  # [after_correct_id]
-
+        fix_breaks = np.vstack(np.concatenate([df.sound_len/1000,
+                                               np.concatenate(df.fb.values)-0.3]))
         sound_len = np.array(df.sound_len)
         # sound_len = sound_len[after_correct_id]
         gt = np.array(df.rewside) * 2 - 1
