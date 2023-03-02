@@ -23,8 +23,8 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 # import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
@@ -34,14 +34,14 @@ from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
@@ -991,10 +991,11 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound
-            offset = 140
+            difference = (updt_ev - first_ev[i_t])*sign_
+            # offset = 120
             second_response_len =\
-                float(remaining_m_time + offset*com[i_t] -
-                      p_2nd_readout*(np.abs(updt_ev - com_bound_signed)))
+                float(remaining_m_time -  # offset*com[i_t] -
+                      p_2nd_readout*(difference))
             # SECOND readout
             traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
                                     resp_len=second_response_len)

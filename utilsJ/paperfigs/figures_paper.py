@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3099,18 +3099,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 9
+    p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
+    p_w_zt = 0.18
     p_w_stim = 0.08
     p_e_noise = 0.01
-    p_com_bound = 0.
+    p_com_bound = 0.05
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 70
-    p_2nd_readout = 30
+    p_1st_readout = 60
+    p_2nd_readout = 90
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3262,7 +3262,7 @@ def fig_7(df, df_sim):
     fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
-def mt_matrix_vs_ev_zt(df, ax):
+def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False):
     ax0, ax1 = ax
     df_0 = df.loc[(df.R_response == 0)]
     df_1 = df.loc[(df.R_response == 1)]  # & (df.CoM_sugg == False)
@@ -3297,9 +3297,10 @@ def mt_matrix_vs_ev_zt(df, ax):
                                  'resp_len']
             mat_0[i_zt, i_ev] = np.nanmean(mt_vals_0)*1e3
             mat_1[i_zt, i_ev] = np.nanmean(mt_vals_1)*1e3
-    # We substract reference MT (in silent trials) at each row
-    # mat_0 += -silent_mat_per_rows_0
-    # mat_1 += -silent_mat_per_rows_1
+    if silent_comparison:
+        # We substract reference MT (in silent trials) at each row
+        mat_0 += -silent_mat_per_rows_0
+        mat_1 += -silent_mat_per_rows_1
     # SIDE 0
     coh_vals = ['', '-1 \n L', -0.5, -0.25, 0, 0.25, 0.5, '1 \n R']
     im_0 = ax0.imshow(mat_0, cmap='gist_heat')
@@ -3691,7 +3692,7 @@ if __name__ == '__main__':
             subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
-            subjects = ['LE42']
+            subjects = ['LE38']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
@@ -3805,6 +3806,8 @@ if __name__ == '__main__':
         df_sim['hithistory'] = np.array(resp_fin == gt)
         df_sim['allpriors'] =\
             np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)[:int(num_tr)]
+        df_sim['norm_allpriors'] = df_sim.allpriors.values \
+            / np.nanmax(np.abs(df_sim.allpriors.values))
         df_sim = df_sim[df_sim.sound_len.values >= 0]
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
@@ -3815,6 +3818,8 @@ if __name__ == '__main__':
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
+        fig, ax = plt.subplots(ncols=2)
+        mt_matrix_vs_ev_zt(df_sim, ax)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)
         if f4:
