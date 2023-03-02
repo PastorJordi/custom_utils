@@ -83,7 +83,7 @@ def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.001, nan_policy="omit"
 
 def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
                        startfrom=700,  ax=None, plot_kwargs={}, align='movement',
-                       collapse_sides=False, trajectory="trajectory_y",
+                       collapse_sides=True, trajectory="trajectory_y",
                        coh1=1, color='k', label=''):
     """
     gets when they are statistically different by t_test,
@@ -196,15 +196,15 @@ def shortpad2(row, upto=1000, align='movement', pad_value=np.nan, pad_pre=0):
 def when_did_split_simul(
     df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
     ax=None, plot_kwargs={}, align='movement',
-    return_mats=False  # debugging purposes
+    return_mats=False, coh=1  # debugging purposes
 ):
     """gets when they are statistically different by t_test
     here df is simulated df"""
     # get matrices
     if side == 0:
-        coh1 = -1
+        coh1 = -coh
     else:
-        coh1 = 1
+        coh1 = coh
     shortpad_kws = {}
     if align == 'sound':
         shortpad_kws = dict(upto=1400, align='sound')
@@ -213,18 +213,29 @@ def when_did_split_simul(
         & (df.sound_len >= rtbins[rtbin])
         # & (df.resp_len) # ?
     ]  # &(df.R_response==side) this goes out
-    mata = np.vstack(
-        dat.loc[(dat.traj.apply(len) > 0) & (dat.coh2 == coh1)]
+    mata_0 = np.vstack(
+            dat.loc[dat.coh2 == coh1]
+            # removed swifter
+            .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
+            .values.tolist())
+    mata_1 = np.vstack(
+        dat.loc[dat.coh2 == -coh1]
+        # removed swifter
         .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
-        .values.tolist()
-    )
-    matb = np.vstack(
-        dat.loc[
-            (dat.traj.apply(len) > 0) & (dat.coh2 == 0) & (dat.rewside == side)
-        ]
+        .values.tolist())
+    mata = np.vstack([mata_0*-1, mata_1])
+    matb_0 = np.vstack(
+        dat.loc[(dat.coh2 == 0) & (dat.rewside == 0)]
+        # removed swifter
         .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
-        .values.tolist()
-    )
+        .values.tolist())
+    matb_1 = np.vstack(
+        dat.loc[(dat.coh2 == 0) & (dat.rewside == 1)]
+        # removed swifter
+        .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
+        .values.tolist())
+    matb = np.vstack([matb_0*-1, matb_1])
+
     matlist = [mata, matb]
     # discard all nan rows # this is not working because a is a copy!
     for i in [0, 1]:

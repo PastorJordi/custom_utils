@@ -23,24 +23,24 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 # import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
@@ -196,7 +196,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                                                          'hithistory',
                                                          'avtrapz',
                                                          'final_resp',
-                                                         'MT', 'trial_idxs']}
+                                                         'MT', 'trial_idxs',
+                                                         'subjid']}
     else:
         fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
         ax = ax.flatten()
@@ -207,7 +208,8 @@ def plot_misc(data_to_plot, stim_res, all_trajs=True, data=False):
                                                          'avtrapz',
                                                          'final_resp',
                                                          'MT', 'trial_idxs',
-                                                         're_vs_pro']}
+                                                         're_vs_pro',
+                                                         'subjid']}
     df_plot = pd.DataFrame(data_to_df)
     xpos = int(np.diff(BINS)[0]+1)
     binned_curve(df_plot, 'CoM', 'sound_len', bins=BINS,
@@ -595,7 +597,7 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                         num_tr_per_rat=int(1e4), after_correct=True, silent=False,
                         splitting=False, all_trials=False, return_df=False,
-                        sv_folder=None):
+                        sv_folder=None, srfail=False):
     # import data for 1 rat
     print('Loading data')
     sv_f = sv_folder or SV_FOLDER
@@ -624,28 +626,54 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         if return_df:
             if after_correct:
                 if not silent:
-                    return df.query(
-                            "sound_len <= 400 and soundrfail ==\
-                                False and resp_len <=1 and R_response>= 0\
-                                    and hithistory >= 0 and special_trial == 0\
-                                        and aftererror==0")
+                    if srfail:
+                        return df.query(
+                               "sound_len <= 400 and\
+                                   resp_len <=1 and R_response>= 0\
+                                       and hithistory >= 0 and special_trial == 0\
+                                           and aftererror==0")
+                    else:
+                        return df.query(
+                                "sound_len <= 400 and soundrfail ==\
+                                    False and resp_len <=1 and R_response>= 0\
+                                        and hithistory >= 0 and special_trial == 0\
+                                            and aftererror==0")
                 if silent:
-                    return df.query(
-                            "sound_len <= 400 and soundrfail ==\
-                                False and resp_len <=1 and R_response>= 0\
-                                    and hithistory >= 0\
-                                        and aftererror==0")
+                    if srfail:
+                        return df.query(
+                                "sound_len <= 400 and \
+                                    resp_len <=1 and R_response>= 0\
+                                        and hithistory >= 0\
+                                            and aftererror==0")
+                    else:
+                        return df.query(
+                                "sound_len <= 400 and soundrfail ==\
+                                    False and resp_len <=1 and R_response>= 0\
+                                        and hithistory >= 0\
+                                            and aftererror==0")
             else:
                 if not silent:
-                    return df.query(
-                        "sound_len <= 400 and soundrfail ==\
-                            False and resp_len <=1 and R_response>= 0\
-                                and hithistory >= 0 and special_trial == 0")
+                    if srfail:
+                        return df.query(
+                            "sound_len <= 400 and\
+                            resp_len <=1 and R_response>= 0\
+                            and hithistory >= 0 and special_trial == 0")
+                    else:
+                        return df.query(
+                            "sound_len <= 400 and soundrfail ==\
+                                False and resp_len <=1 and R_response>= 0\
+                                    and hithistory >= 0 and special_trial == 0")
                 if silent:
-                    return df.query(
-                        "sound_len <= 400 and soundrfail ==\
+                    if srfail:
+                        return df.query(
+                         "sound_len <= 400 and\
+                         resp_len <=1 and R_response>= 0\
+                         and hithistory >= 0")
+                    else:
+                        return df.query(
+                            "sound_len <= 400 and soundrfail ==\
                             False and resp_len <=1 and R_response>= 0\
-                                and hithistory >= 0")
+                            and hithistory >= 0")
         if not silent:
             df = df.query(
                     "sound_len <= 400 and soundrfail ==\
@@ -975,7 +1003,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             traj_before_uptd = prior0[0:t_updt]
             traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
             # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
-            traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
+            # traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
             # np.random.randn(np.random.randint(15, 60))*0.2
             total_traj.append(traj_updt)
             if com[i_t]:
@@ -1219,7 +1247,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                                 'matrix': matrix,
                                 'MT': MT,
                                 'zt': zt[tr_index], 'decision': decision,
-                                'trial_idxs': trial_index[tr_index]}
+                                'trial_idxs': trial_index[tr_index],
+                                'subjid': np.repeat('sim', len(tr_index))}
                 left_right_matrix(zt[tr_index], coh[tr_index],
                                   detected_com, resp_fin[tr_index])
                 pcom_model_vs_data(detected_com, com[tr_index],
@@ -2544,17 +2573,18 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(25e3)
+    num_tr = int(1e5)
     load_data = True
     new_sample = True
-    single_run = False
+    single_run = True
     shuffle = False
     simulate = True
-    parallel = True
+    parallel = False
     plot_t12 = False
     data_augment_factor = 10
     splitting = True
-    silent = False
+    silent = True
+    rat = 'LE42'
     if simulate:
         # GET DATA
         if load_data:  # experimental data
@@ -2562,7 +2592,7 @@ if __name__ == '__main__':
                 stim, zt, coh, gt, com, decision, sound_len, resp_len, hit,\
                     trial_index, special_trial, traj_y, fix_onset, traj_stamps,\
                     subjects =\
-                    get_data_and_matrix(dfpath=DATA_FOLDER + 'LE38',
+                    get_data_and_matrix(dfpath=DATA_FOLDER + rat,
                                         num_tr_per_rat=int(1e4),
                                         after_correct=True, splitting=splitting,
                                         silent=silent, all_trials=True)
@@ -2618,6 +2648,7 @@ if __name__ == '__main__':
         # RUN MODEL
         decision = decision[:int(num_tr)]
         stim = stim[:, :int(num_tr)]
+        # stim[:] = 1
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
         resp_len = resp_len[:int(num_tr)]
@@ -2671,7 +2702,8 @@ if __name__ == '__main__':
                                 'detected_com': com,
                                 'MT': resp_len*1e3,
                                 'zt': zt, 'decision': decision,
-                                'trial_idxs': trial_index}
+                                'trial_idxs': trial_index,
+                                'subjid': np.repeat(rat, len(com))}
                 plot_misc(data_to_plot, stim_res=stim_res, data=True)
                 # mean_com_traj_peak(trajectories=traj_y, com=com, zt=zt,
                 #                    sound_len=sound_len, decision=decision,

@@ -1887,7 +1887,7 @@ def tachometric(
     # beware those with coh .2 and .4
     evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
     rt='sound_len',  # column
-    rtbins=np.arange(0, 151, 3),
+    rtbins=np.arange(0, 201, 3),
     fill_error=False,  # if true it uses fill between instead of errorbars
     error_kws={},
     cmap='inferno',

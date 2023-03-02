@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -919,6 +919,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     # sound_len_int = (df.sound_len.values).astype(int)
     if sim:
         splitfun = simul.when_did_split_simul
+        df['traj'] = df.trajectory_y.values
     if not sim:
         splitfun = simul.when_did_split_dat
     out_data = []
@@ -930,12 +931,19 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                 evl = np.empty(())
                 appb = True
                 for iev, ev in enumerate(evs):
-                    _, matatmp, matb =\
-                        splitfun(df=df.loc[(df.special_trial == 0)
-                                           & (df.subjid == subject)],
-                                 side=0, collapse_sides=True,
-                                 rtbin=i, rtbins=rtbins, coh1=ev,
-                                 trajectory=trajectory, align="sound")
+                    if not sim:
+                        _, matatmp, matb =\
+                            splitfun(df=df.loc[(df.special_trial == 0)
+                                               & (df.subjid == subject)],
+                                     side=0, collapse_sides=True,
+                                     rtbin=i, rtbins=rtbins, coh1=ev,
+                                     trajectory=trajectory, align="sound")
+                    if sim:
+                        _, matatmp, matb =\
+                            splitfun(df=df.loc[(df.special_trial == 0)
+                                               & (df.subjid == subject)],
+                                     side=0, rtbin=i, rtbins=rtbins, coh=ev,
+                                     align="sound")
                     if appb:
                         mat = matb
                         evl = np.repeat(0, matb.shape[0])
@@ -946,9 +954,14 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                 #     traj = mat[i_traj, :]
                 #     traj = np.roll(traj, int(sound_len_int[i_traj]))
                 #     mat[i_traj, :] = traj
-                current_split_index =\
-                    get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
-                                       startfrom=700)
+                if not sim:
+                    current_split_index =\
+                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
+                                           startfrom=700)
+                if sim:
+                    current_split_index =\
+                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=600,
+                                           startfrom=0)
                 # + (rtbins[i] + rtbins[i+1])/2
                 out_data += [current_split_index]
             else:
@@ -956,7 +969,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                     current_split_index, _, _ = splitfun(
                         df.loc[df.subjid == subject],
                         j,  # side has no effect because this is collapsing_sides
-                        rtbin=i, rtbins=rtbins)
+                        rtbin=i, rtbins=rtbins, align='sound')
                     out_data += [current_split_index]
 
     # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
@@ -1100,14 +1113,14 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
     # ax.set_xlim(0, max(bins))
 
 
-def pdf_cohs(df, ax, bins=np.linspace(0, 150, 31), yaxis=True):
+def pdf_cohs(df, ax, bins=np.linspace(0, 200, 51), yaxis=True):
     # ev_vals = np.unique(np.abs(coh))
     sound_len = df.sound_len.values
     coh = df.coh2.values
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 2))
     num_subjs = len(df.subjid.unique())
     for i_coh, ev in enumerate([0, 1]):
-        counts_all_rats = np.zeros((30, num_subjs))
+        counts_all_rats = np.zeros((len(bins)-1, num_subjs))
         for i_s, subj in enumerate(df.subjid.unique()):
             index = (np.abs(coh) == ev) & (df.subjid == subj)
             counts_coh, bins_coh = np.histogram(sound_len[index], bins=bins)
@@ -1121,7 +1134,7 @@ def pdf_cohs(df, ax, bins=np.linspace(0, 150, 31), yaxis=True):
                         color=colormap[i_coh], alpha=0.4)
     ax.set_xlabel('Reaction time (ms)')
     if yaxis:
-        ax.set_ylabel('Density')
+        ax.set_ylabel('RT density')
     ax.legend()
 
 
@@ -1304,9 +1317,9 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
             trial = df.iloc[tr]
             traj_x = trial['trajectory_x']
             traj_y = trial['trajectory_y']
-            ax_rawtr.plot(traj_x, traj_y, color='k', lw=.5)
+            ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
             time = trial['time_trajs']
-            ax_ydim.plot(time, traj_y, color='k', lw=.5)
+            ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
     ax_ydim.set_xlim(-100, 800)
     ax_rawtr.set_xlim(-80, 20)
     ax_rawtr.set_ylim(-100, 100)
@@ -2164,7 +2177,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     com_model_detected = com_model_detected[sound_len_model >= 0]
     decision_model = decision_model[sound_len_model >= 0]
     com_model = com_model[sound_len_model >= 0]
-    subjid = df_sim.subjid.values[sound_len_model >= 0]
+    subjid = df_sim.subjid.values
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
                          subjid=subjid, ax=ax[6], label='')
@@ -2261,9 +2274,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
-                        prior_lim=0.25)
+                        prior_lim=0.1)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
-    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=False, threshold=300,
+    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=True, threshold=300,
                           sim=True,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
@@ -2303,13 +2316,13 @@ def traj_model_plot(df_sim):
 def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
                         vel_thr=0.2, prior_lim=1):
     # TODO: save each matrix? or save the mean and std
+    df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
         func_final = np.nanmedian
     if not median:
         func_final = np.nanmean
     nanidx = df_sim.loc[df_sim[['dW_trans',
                                 'dW_lat']].isna().sum(axis=1) == 2].index
-    df_sim['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
@@ -2333,15 +2346,17 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
     for i_ev, ev in enumerate(bins_ref):
         if not prior:
             index = (df_sim.choice_x_coh.values == ev) *\
-                (df_sim.R_response.values == 1) *\
-                (df_sim.allpriors.abs() <= prior_lim)
+                (df_sim.allpriors.abs() <= prior_lim) *\
+                (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
+                (df_sim.sound_len >= 0)
             colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
         if prior:
             if ev == 1:
                 break
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
-                (df_sim.R_response.values == 1) * (df_sim.special_trial == 2)
+                (df_sim.R_response.values == 1) *\
+                (df_sim.sound_len >= 0)  # * (df_sim.special_trial == 2)
             colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
             # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
@@ -2352,6 +2367,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         for tr in range(sum(index)):
             vals_traj = df_sim.traj[index].values[tr] *\
                 (signed_response[index][tr]*2 - 1)
+            if sum(vals_traj) == 0:
+                continue
             vals_traj = np.concatenate((vals_traj,
                                         np.repeat(75, max(lens)-len(vals_traj))))
             vals_vel = df_sim.traj_d1[index].values[tr] *\
@@ -2385,7 +2402,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         except Exception:
             mean_vel = func_final(vel_all, axis=0)
             std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
-        val_vel = np.argmax(mean_vel >= vel_thr)
+        val_vel = np.nanmean(np.nanmax(vel_all, axis=1))
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=30)
         vals_thr_vel.append(val_vel)
         if not prior:
@@ -2431,7 +2448,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
     ax[1].set_xlabel('Time from movement onset (ms)', fontsize=8)
     # ax[1].set_title('Mean velocity', fontsize=8)
     ax[2].set_ylabel('MT (ms)', fontsize=8)
-    ax[3].set_ylabel('  Time to \n        threshold (ms)', fontsize=8)
+    ax[3].set_ylabel('Peak (pixels/ms)', fontsize=8)
 
 
 def supp_trajs_prior_cong(df_sim, ax=None):
@@ -3658,20 +3675,20 @@ def plot_fb_per_subj_from_df(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE42', 'LE44']
+            subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE42']
@@ -3680,7 +3697,8 @@ if __name__ == '__main__':
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
                                           sv_folder=SV_FOLDER, after_correct=True,
-                                          silent=True, all_trials=True)
+                                          silent=True, all_trials=True,
+                                          srfail=False)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
         if all_rats:
@@ -3785,6 +3803,9 @@ if __name__ == '__main__':
         df_sim['com_detected'] = com_model_detected
         df_sim['peak_com'] = np.array(x_val_at_updt)
         df_sim['hithistory'] = np.array(resp_fin == gt)
+        df_sim['allpriors'] =\
+            np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)[:int(num_tr)]
+        df_sim = df_sim[df_sim.sound_len.values >= 0]
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
