@@ -924,8 +924,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
-        indx_update_ch = indx_final_ch if len(indx_com) == 0\
-            else indx_com[0] + hit_dec
+        indx_update_ch = indx_final_ch
+        # if len(indx_com) == 0\
+        #     else indx_com[0] + hit_dec
         # get final decision
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
         second_ind.append(indx_update_ch)

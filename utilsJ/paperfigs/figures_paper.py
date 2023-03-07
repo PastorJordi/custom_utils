@@ -484,7 +484,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
-                                  prior_limit=0.25, rt_lim=25,
+                                  prior_limit=0.25, rt_lim=50,
                                   after_correct_only=True,
                                   trajectory="trajectory_y",
                                   velocity=("traj_d1", 1),
@@ -644,7 +644,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
-    for i in range(max_MT):
+    for i in reversed(range(max_MT)):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = evl[nan_idx]
@@ -655,8 +655,8 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
             continue
             # return np.nan
         # plist.append(p2)
-        if p2 < pval:
-            return i
+        if p2 > pval:
+            return i + 1
     return np.nan
 
 
@@ -2314,7 +2314,7 @@ def traj_model_plot(df_sim):
 
 
 def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
-                        vel_thr=0.2, prior_lim=1):
+                        vel_thr=0.2, prior_lim=1, rt_lim=50):
     # TODO: save each matrix? or save the mean and std
     df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
@@ -2348,7 +2348,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             index = (df_sim.choice_x_coh.values == ev) *\
                 (df_sim.allpriors.abs() <= prior_lim) *\
                 (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
-                (df_sim.sound_len >= 0)
+                (df_sim.sound_len >= 0) * (df.sound_len <= rt_lim)
             colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
         if prior:
             if ev == 1:
@@ -2356,9 +2356,9 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
                 (df_sim.R_response.values == 1) *\
-                (df_sim.sound_len >= 0)  # * (df_sim.special_trial == 2)
+                (df_sim.sound_len >= 0) * (df.sound_len <= rt_lim)
+            # * (df_sim.special_trial == 2)
             colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
-            # (df_sim.R_response.values == 1) *\
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
         traj_all = np.empty((sum(index), max(lens)))
         traj_all[:] = np.nan
@@ -3105,12 +3105,12 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_w_zt = 0.18
     p_w_stim = 0.08
     p_e_noise = 0.01
-    p_com_bound = 0.05
+    p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 60
-    p_2nd_readout = 90
+    p_1st_readout = 70
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3262,10 +3262,18 @@ def fig_7(df, df_sim):
     fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
-def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False):
+def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     ax0, ax1 = ax
-    df_0 = df.loc[(df.R_response == 0)]
-    df_1 = df.loc[(df.R_response == 1)]  # & (df.CoM_sugg == False)
+    if rt_bin is not None:
+        if rt_bin > 100:
+            df_fil = df.loc[df.sound_len > rt_bin]
+        if rt_bin < 100:
+            df_fil = df.loc[df.sound_len < rt_bin]
+        df_0 = df_fil.loc[(df_fil.R_response == 0)]
+        df_1 = df_fil.loc[(df_fil.R_response == 1)]
+    else:
+        df_0 = df.loc[(df.R_response == 0)]
+        df_1 = df.loc[(df.R_response == 1)]
     bins_zt = np.linspace(1.01, -1.01, 8)
     coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     mat_0 = np.empty((7, 7))
@@ -3309,7 +3317,13 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False):
     cbar_0.set_label(r'$MT \; (ms)$')
     ax0.set_xlabel('Evidence')
     ax0.set_ylabel('Prior')
-    ax0.set_title('Left')
+    if rt_bin is not None:
+        if rt_bin > 100:
+            ax0.set_title('Left, RT > ' + str(rt_bin) + ' ms')
+        else:
+            ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
+    else:
+        ax0.set_title('Left')
     ax0.set_yticklabels(['', 'R', '', '', '0', '', '', 'L'])
     ax0.set_xticklabels(coh_vals)
     # SIDE 1
@@ -3322,6 +3336,13 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False):
     ax1.set_ylabel('Prior')
     ax1.set_yticklabels(['', 'R', '', '', '0', '', '', 'L'])
     ax1.set_xticklabels(coh_vals)
+
+
+def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
+    fig, ax = plt.subplots(ncols=2)
+    mt_matrix_vs_ev_zt(df, ax, rt_bin=big_rt, silent_comparison=True)
+    fig, ax = plt.subplots(ncols=2)
+    mt_matrix_vs_ev_zt(df, ax, rt_bin=small_rt, silent_comparison=True)
 
 
 def supp_com_marginal(df):
@@ -3427,6 +3448,80 @@ def different_com_thresholds(traj_y, time_trajs, decision, sound_len,
     ax.set_ylabel('P(CoM)')
     com_dframe = pd.DataFrame(com_d)
     com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
+
+
+def mt_vs_stim_cong(df, rtbins=np.linspace(0, 150, 16)):
+    ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    nsubs = len(df.subjid.unique())
+    # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
+    mat_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)))
+    for irt, rtbin in enumerate(rtbins[:-1]):
+        mt_mat = np.empty((nsubs, len(ev_vals)))
+        mt_sil = []
+        for i_sub, subject in enumerate(df.subjid.unique()):
+            df_sub = df.loc[(df.subjid == subject) * (df.soundrfail == 0) *
+                            (df.sound_len >= rtbin)*(df.sound_len < rtbins[irt+1])]
+            # * (df.norm_allpriors.abs() < 0.1)]
+            coh_cong = (df_sub.R_response.values*2-1)*(df_sub.coh2.values) *\
+                (df_sub.special_trial == 0)
+            for i_ev, ev in enumerate(ev_vals):
+                index = coh_cong == ev
+                mt_mat[i_sub, i_ev] = np.nanmean(df_sub.resp_len.values[index])
+            if sum(df_sub.special_trial == 2) > 0:
+                mt_sil.append(np.nanmean(
+                    df_sub.resp_len.values[df_sub.special_trial == 2]))
+        mt_mat *= 1e3
+        mt_sil = np.array(mt_sil) * 1e3
+        resp_len_mean = np.nanmean(mt_mat, axis=0)
+        mat_mt_rt[irt, :] = resp_len_mean-np.nanmean(mt_sil)
+    plt.figure()
+    ax = plt.axes(projection='3d')
+    x, y = np.meshgrid(ev_vals, rtbins[:-1])
+    ax.plot_surface(x, y, Z=mat_mt_rt, cmap='gist_heat')
+    ax.set_xlabel('Stim evidence')
+    ax.set_ylabel('RT (ms)')
+    ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
+    # for iev, ev in enumerate(ev_vals):
+    #     plt.errorbar(ev, resp_len_mean[iev]-np.nanmean(mt_sil),
+    #                  np.nanstd(mt_mat, axis=0)[iev]/np.sqrt(nsubs),
+    #                  color=colormap[iev], marker='o',
+    #                  markersize=10)
+    # plt.title('RT > ' + str(rtbin) + ', RT < ' + str(rtbins[irt+1]))
+    # plt.plot(ev_vals, resp_len_mean-np.nanmean(mt_sil),
+    #          color='gray', linestyle='--')
+    # # plt.axhline(np.nanmean(mt_sil), color='k', linestyle='--')
+    # # plt.text(-0.75, np.nanmean(mt_sil)+2, "Silent MT (mean)")
+    # plt.xlabel('Stim. evidence congruency')
+    # plt.ylabel('MT (ms) - MT (silent, ms)')
+
+
+def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
+    fig, ax = plt.subplots(1)
+    rm_top_right_lines(ax)
+    coh_weights = []
+    zt_weights = []
+    coh_err = []
+    zt_err = []
+    for irt, rtbin in enumerate(rtbins[:-1]):
+        df_rt = df.loc[(df.sound_len >= rtbin) &
+                       (df.sound_len < rtbins[irt+1])]
+        mean_sub, err_sub = mt_weights(df_rt, ax=None, plot=False,
+                                       means_errs=True, mt=True)
+        coh_weights.append(mean_sub[1])
+        zt_weights.append(mean_sub[0])
+        coh_err.append(err_sub[1])
+        zt_err.append(err_sub[0])
+    error_kws = dict(ecolor='goldenrod', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='goldenrod', marker='o', label='Prior')
+    ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, zt_weights, zt_err,
+                **error_kws)
+    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='firebrick', marker='o', label='Stimulus')
+    ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, coh_weights, coh_err,
+                **error_kws)
+    ax.set_ylabel('MT weight')
+    ax.set_xlabel('RT (ms)')
+    ax.legend()
 
 
 def supp_com_threshold_matrices(df):
@@ -3663,33 +3758,69 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
 def plot_fb_per_subj_from_df(df):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
+    colormap = pl.cm.gist_yarg(np.linspace(0.4, 1, 2))
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
-        fix_breaks = np.vstack(np.concatenate([df_1.sound_len/1000,
-                                               np.concatenate(df_1.fb.values)-0.3]))
-        ax[i_s].hist(fix_breaks*1000, bins=200, range=(-100, 400),
-                     density=True)
-        ax[i_s].set_title(subj)
+        coh_vec = df_1.coh2.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        for iev, ev in enumerate([0, 1]):
+            index = np.abs(coh_vec) == ev
+            fix_breaks =\
+                np.vstack(np.concatenate([df_1.sound_len/1000,
+                                          np.concatenate(df_1.fb.values)-0.3]))
+            fix_breaks = fix_breaks[index]
+            counts_coh, bins = np.histogram(fix_breaks*1000,
+                                            bins=30, range=(-100, 200))
+            norm_counts = counts_coh/sum(counts_coh)
+            ax[i_s].plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
+                         color=colormap[iev])
+            ax[i_s].set_title(subj)
+
+
+def plot_tach_per_subj_from_df(df):
+    fig, ax = plt.subplots(5, 3)
+    ax = ax.flatten()
+    labels = ['0', '0.25', '0.5', '1']
+    for i_s, subj in enumerate(subjects):
+        df_1 = df[df.subjid == subj]
+        coh_vec = df_1.coh2.values
+        hits = df_1.hithistory.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+                hits = np.append(hits, np.nan)
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
+        fix_breaks = fix_breaks[:, 0]
+        df_data = pd.DataFrame({'hithistory': hits, 'avtrapz': coh_vec,
+                                'sound_len': fix_breaks*1e3,
+                                'subjid': np.repeat(subj, len(hits))})
+        tachometric(df_data, ax=ax[i_s], fill_error=True, cmap='gist_yarg',
+                    labels=labels)
+        ax[i_s].set_xlim(-5, 155)
 
 
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE38']
@@ -3699,7 +3830,7 @@ if __name__ == '__main__':
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
                                           sv_folder=SV_FOLDER, after_correct=True,
                                           silent=True, all_trials=True,
-                                          srfail=False)
+                                          srfail=True)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
         if all_rats:
