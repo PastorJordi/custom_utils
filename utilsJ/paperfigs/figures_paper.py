@@ -959,8 +959,9 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
+                    max_mt = int(np.nanmax(df.resp_len.values)*1e3)
                     current_split_index =\
-                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=600,
+                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
                                            startfrom=0)
                 # + (rtbins[i] + rtbins[i+1])/2
                 out_data += [current_split_index]
@@ -2348,7 +2349,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             index = (df_sim.choice_x_coh.values == ev) *\
                 (df_sim.allpriors.abs() <= prior_lim) *\
                 (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
-                (df_sim.sound_len >= 0) * (df.sound_len <= rt_lim)
+                (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim)
             colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
         if prior:
             if ev == 1:
@@ -2356,7 +2357,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
                 (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
                 (df_sim.R_response.values == 1) *\
-                (df_sim.sound_len >= 0) * (df.sound_len <= rt_lim)
+                (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim)
             # * (df_sim.special_trial == 2)
             colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
         lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
@@ -3103,13 +3104,13 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.18
-    p_w_stim = 0.08
+    p_w_stim = 0.12
     p_e_noise = 0.01
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 70
+    p_1st_readout = 90
     p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
@@ -3807,15 +3808,15 @@ def plot_tach_per_subj_from_df(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
