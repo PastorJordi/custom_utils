@@ -207,7 +207,7 @@ def when_did_split_simul(
         coh1 = coh
     shortpad_kws = {}
     if align == 'sound':
-        shortpad_kws = dict(upto=1400, align='sound')
+        shortpad_kws = dict(upto=1000, align='sound')
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
@@ -253,7 +253,7 @@ def when_did_split_simul(
         ax.plot(np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
         ax.scatter(ind, np.nanmedian(mata[:, ind]), marker='x',
                    color=plot_kwargs['color'], s=50, zorder=3)
-    return ind, mata, matb,
+    return ind, mata, matb
 
 
 def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None,

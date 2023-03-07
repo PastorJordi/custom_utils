@@ -959,7 +959,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
-                    max_mt = int(np.nanmax(df.resp_len.values)*1e3) - 100
+                    max_mt = int(np.nanmax(df.resp_len.values)*1e3) + 200
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
                                            startfrom=0)
@@ -2315,7 +2315,7 @@ def traj_model_plot(df_sim):
 
 
 def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
-                        vel_thr=0.2, prior_lim=1, rt_lim=50):
+                        vel_thr=0.2, prior_lim=1, rt_lim=100):
     # TODO: save each matrix? or save the mean and std
     df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
@@ -3100,18 +3100,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 9
-    p_t_eff = 9
+    p_t_aff = 8
+    p_t_eff = 8
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.08
     p_e_noise = 0.01
-    p_com_bound = 0.05
+    p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 100
-    p_2nd_readout = 120
+    p_1st_readout = 120
+    p_2nd_readout = 80
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3315,7 +3315,7 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     im_0 = ax0.imshow(mat_0, cmap='gist_heat')
     plt.sca(ax0)
     cbar_0 = plt.colorbar(im_0, fraction=0.2)
-    cbar_0.set_label(r'$MT \; (ms)$')
+    cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
     ax0.set_xlabel('Evidence')
     ax0.set_ylabel('Prior')
     if rt_bin is not None:
@@ -3332,7 +3332,7 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     im_1 = ax1.imshow(mat_1, cmap='gist_heat')
     plt.sca(ax1)
     cbar_1 = plt.colorbar(im_1, fraction=0.2)
-    cbar_1.set_label(r'$MT \; (ms)$')
+    cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
     ax1.set_xlabel('Evidence')
     ax1.set_ylabel('Prior')
     ax1.set_yticklabels(['', 'R', '', '', '0', '', '', 'L'])
@@ -3808,15 +3808,15 @@ def plot_tach_per_subj_from_df(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
