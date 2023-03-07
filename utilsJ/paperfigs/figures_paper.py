@@ -959,7 +959,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
-                    max_mt = int(np.nanmax(df.resp_len.values)*1e3)
+                    max_mt = int(np.nanmax(df.resp_len.values)*1e3) - 100
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
                                            startfrom=0)
@@ -1770,13 +1770,13 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
 
 
 def mt_distros(df, ax):
-    mt_nocom = df.loc[df.CoM_sugg == False, 'resp_len'].values*1e3
+    mt_nocom = df.loc[df.CoM_sugg == 0, 'resp_len'].values*1e3
     mt_nocom = mt_nocom[(mt_nocom <= 1000) * (mt_nocom > 50)]
-    mt_com = df.loc[df.CoM_sugg == True, 'resp_len'].values*1e3
+    mt_com = df.loc[df.CoM_sugg == 1, 'resp_len'].values*1e3
     mt_com = mt_com[(mt_com <= 1000) & (mt_com > 50)]
-    ax.hist(mt_nocom, bins=100, color='tab:cyan', density=True, label='No CoM',
+    ax.hist(mt_nocom, bins=40, color='tab:cyan', density=True, label='No CoM',
             alpha=0.5)
-    ax.hist(mt_com, bins=100, color='tab:olive', density=True, alpha=0.5,
+    ax.hist(mt_com, bins=30, color='tab:olive', density=True, alpha=0.5,
             label='CoM')
     ax.axvline(np.nanmedian(mt_nocom), color='k')
     ax.axvline(np.nanmedian(mt_com), color='k')
@@ -2277,7 +2277,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=0.1)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
-    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=True, threshold=300,
+    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=True, threshold=500,
                           sim=True,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),
@@ -3103,15 +3103,15 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_aff = 9
     p_t_eff = 9
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.18
-    p_w_stim = 0.12
+    p_w_zt = 0.2
+    p_w_stim = 0.08
     p_e_noise = 0.01
-    p_com_bound = 0.
+    p_com_bound = 0.05
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-05  # fixed
     p_a_noise = 0.04  # fixed
-    p_1st_readout = 90
-    p_2nd_readout = 40
+    p_1st_readout = 100
+    p_2nd_readout = 120
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3907,6 +3907,7 @@ if __name__ == '__main__':
         if stim.shape[0] != 20:
             stim = stim.T
         stim = stim[:, :int(num_tr)]
+        # stim[:] = 0  # for silent simulation
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             pro_vs_re, trajs, x_val_at_updt =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,

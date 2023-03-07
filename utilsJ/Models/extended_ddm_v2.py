@@ -24,24 +24,24 @@ from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-# sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 # import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
@@ -962,7 +962,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*trial_index[i_t] + MT_intercep + 35*np.random.randn(1)
+            MT = MT_slope*trial_index[i_t] + MT_intercep  # + 35*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
@@ -1315,14 +1315,14 @@ def set_parameters(num_vals=3, factor=8):
     p_w_stim_list = np.linspace(0.06, 0.12, num=num_vals)
     p_e_noise_list = [0.01]
     p_com_bound_list = [0.]
-    p_t_aff_list = np.linspace(6, 10, num=num_vals+1, dtype=int)
-    p_t_eff_list = np.linspace(6, 10, num=num_vals+1, dtype=int)
-    p_t_a_list = [14]
-    p_w_a_intercept_list = [0.052]
-    p_w_a_slope_list = [2.2e-5]
-    p_a_noise_list = [0.04]
-    p_1st_readout_list = [20, 30, 40, 50]
-    p_2nd_readout_list = [5, 10, 15, 20, 25]
+    p_t_aff_list = [6, 8, 10]
+    p_t_eff_list = [6, 8, 10]
+    p_t_a_list = np.linspace(10, 16, num=num_vals)
+    p_w_a_intercept_list = np.linspace(0.05, 0.07, num=num_vals-1)
+    p_w_a_slope_list = np.linspace(2e-5, 2.9e-5, num=num_vals)
+    p_a_noise_list = np.linspace(0.02, 0.06, num=num_vals+1)
+    p_1st_readout_list = [25]
+    p_2nd_readout_list = [25]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_noise_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -2574,18 +2574,18 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(1e5)
+    num_tr = int(3e4)
     load_data = True
     new_sample = True
-    single_run = True
+    single_run = False
     shuffle = False
     simulate = True
-    parallel = False
+    parallel = True
     plot_t12 = False
     data_augment_factor = 10
     splitting = True
     silent = True
-    rat = 'LE42'
+    rat = 'LE38'
     if simulate:
         # GET DATA
         if load_data:  # experimental data
