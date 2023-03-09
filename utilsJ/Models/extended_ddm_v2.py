@@ -852,9 +852,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # print('Starting simulation, PSIAM')
     # start_eddm = time.time()
     # TODO: COMMENT EVERY FORKING LINE
-    bound = 1
-    bound_a = 2.2
-    p_leak = 0.6
+    bound = 2.0732
+    bound_a = 2.6313
+    p_leak = 0.
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -987,7 +987,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
             # this sets the maximum updating evidence equal to the ev bound
             # and avoids having negative second_resp_len (impossibly fast
             # responses) bc of very strong confirmation evidence.
-            updt_ev = np.clip(second_ev[i_t], a_min=-1, a_max=1)
+            updt_ev = np.clip(second_ev[i_t], a_min=-bound, a_max=bound)
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
             com_bound_signed = (-sign_)*p_com_bound

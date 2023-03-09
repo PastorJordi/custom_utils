@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -959,7 +959,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
-                    max_mt = int(np.nanmax(df.resp_len.values)*1e3) + 200
+                    max_mt = 400
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
                                            startfrom=0)
@@ -2503,11 +2503,12 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    fig, ax = plt.subplots(nrows=4, ncols=3, figsize=fgsz)
+    fig, ax = plt.subplots(nrows=5, ncols=3, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.5, wspace=0.6)
-    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '']
+    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '', 'k',
+            '', '']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
         if n == 9:
@@ -2553,7 +2554,7 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
     ax_inset = add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=0.04, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
-    axes_trajs = [ax[2], ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0]]
+    axes_trajs = [ax[2], ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12]]
     peak_com = -df_data.com_peak.values
     time_com = df_data.time_com.values
     ax_com_stat = ax[9]
@@ -2882,47 +2883,47 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
             # ax1.axvline(ind*16, color='r')
     out_data = np.array(split_ind)
     # to plot trajectories with splitting time: (all subjects together)
-    for i in range(rtbins.size-1):
-        fig, ax1 = plt.subplots(1)
-        for i_ev, ev in enumerate(ev_vals):
-            index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
-                    (np.abs(np.round(coh, 2)) == ev)
-            all_trajs = all_trajs = np.empty((sum(index), int(max_mt+300)))
-            all_trajs[:] = np.nan
-            for tr in range(sum(index)):
-                vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
-                ind_time = [True if t != '' else False
-                            for t in times[index][tr]]
-                time = np.array(times[index][tr])[
-                    np.array(ind_time)].astype(float)*1e3
-                f = interpolate.interp1d(time, vals, bounds_error=False)
-                vals_in = f(interpolatespace)
-                vals_in = vals_in[~np.isnan(vals_in)]
-                vals_in -= vals_in[0]
-                vals_in = np.concatenate((np.zeros((int(sound_len[tr]))),
-                                          vals_in))
-                max_time = max(time)
-                if max_time > max_mt:
-                    continue
-                all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
-                all_trajs[tr, len(vals_in):-1] =\
-                    np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
-            if ev == 0:
-                ev_mat = np.repeat(0, sum(index))
-                traj_mat = all_trajs
-            else:
-                ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
-                traj_mat = np.concatenate((traj_mat, all_trajs))
-            ax1.plot(np.arange(len(np.nanmean(traj_mat, axis=0))),
-                     np.nanmean(traj_mat, axis=0),
-                     color=colormap[i_ev])
-            ax1.set_xlim(0, 650)
-            ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
-        ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                 max_MT=max_mt+300, pval=0.001)
-        ax1.axvline(ind, color='r')
-        ax1.set_xlabel('Time (ms)')
-        ax1.set_ylabel('Position (pixels)')
+    # for i in range(rtbins.size-1):
+    #     fig, ax1 = plt.subplots(1)
+    #     for i_ev, ev in enumerate(ev_vals):
+    #         index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
+    #                 (np.abs(np.round(coh, 2)) == ev)
+    #         all_trajs = all_trajs = np.empty((sum(index), int(max_mt+300)))
+    #         all_trajs[:] = np.nan
+    #         for tr in range(sum(index)):
+    #             vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
+    #             ind_time = [True if t != '' else False
+    #                         for t in times[index][tr]]
+    #             time = np.array(times[index][tr])[
+    #                 np.array(ind_time)].astype(float)*1e3
+    #             f = interpolate.interp1d(time, vals, bounds_error=False)
+    #             vals_in = f(interpolatespace)
+    #             vals_in = vals_in[~np.isnan(vals_in)]
+    #             vals_in -= vals_in[0]
+    #             vals_in = np.concatenate((np.zeros((int(sound_len[tr]))),
+    #                                       vals_in))
+    #             max_time = max(time)
+    #             if max_time > max_mt:
+    #                 continue
+    #             all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
+    #             all_trajs[tr, len(vals_in):-1] =\
+    #                 np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
+    #         if ev == 0:
+    #             ev_mat = np.repeat(0, sum(index))
+    #             traj_mat = all_trajs
+    #         else:
+    #             ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
+    #             traj_mat = np.concatenate((traj_mat, all_trajs))
+    #         ax1.plot(np.arange(len(np.nanmean(traj_mat, axis=0))),
+    #                  np.nanmean(traj_mat, axis=0),
+    #                  color=colormap[i_ev])
+    #         ax1.set_xlim(0, 650)
+    #         ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
+    #     ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
+    #                              max_MT=max_mt+300, pval=0.001)
+    #     ax1.axvline(ind, color='r')
+    #     ax1.set_xlabel('Time (ms)')
+    #     ax1.set_ylabel('Position (pixels)')
     # now for the prior
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
@@ -3021,7 +3022,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     out_data = np.swapaxes(out_data, 0, 1)
     out_data = out_data.astype(float)
     binsize = np.diff(rtbins)
-    fig2, ax2 = plt.subplots(1)
+    ax2 = ax[-1]
+    # fig2, ax2 = plt.subplots(1)
     for i in range(len(np.unique(subjects))):
         for j in range(out_data.shape[2]):
             ax2.plot(binsize/2 + binsize * np.arange(rtbins.size-1),
@@ -3036,6 +3038,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                  axis=1, nan_policy='omit'), **error_kws)
     ax2.set_xlabel('RT (ms)')
     ax2.set_title('Impact of stimulus', fontsize=9)
+    ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
+    ax2.set_ylim(190, 410)
     ax2.set_ylabel('Splitting time (ms)')
     rm_top_right_lines(ax2)
 
@@ -3092,6 +3096,7 @@ def basic_statistics(decision, resp_fin):
 
 
 def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
+    dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
     else:
@@ -3101,17 +3106,17 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_intercep = 253
     detect_CoMs_th = 8
     p_t_aff = 8
-    p_t_eff = 8
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
-    p_w_stim = 0.08
-    p_e_noise = 0.01
+    p_t_eff = 12
+    p_t_a = 16-p_t_eff  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 1.1018/np.nanmax(abs(zt))
+    p_w_stim = 3.2433*dt
+    p_e_noise = np.sqrt(dt)
     p_com_bound = 0.
-    p_w_a_intercept = 0.052
-    p_w_a_slope = -2.2e-05  # fixed
-    p_a_noise = 0.04  # fixed
-    p_1st_readout = 120
-    p_2nd_readout = 80
+    p_w_a_intercept = 9.9498*dt
+    p_w_a_slope = -0.0069*dt  # fixed
+    p_a_noise = np.sqrt(dt)  # fixed
+    p_1st_readout = 30
+    p_2nd_readout = 20
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3451,11 +3456,12 @@ def different_com_thresholds(traj_y, time_trajs, decision, sound_len,
     com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
 
 
-def mt_vs_stim_cong(df, rtbins=np.linspace(0, 150, 16)):
+def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
     ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     nsubs = len(df.subjid.unique())
-    # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
+    colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     mat_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)))
+    err_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)))
     for irt, rtbin in enumerate(rtbins[:-1]):
         mt_mat = np.empty((nsubs, len(ev_vals)))
         mt_sil = []
@@ -3473,15 +3479,32 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 150, 16)):
                     df_sub.resp_len.values[df_sub.special_trial == 2]))
         mt_mat *= 1e3
         mt_sil = np.array(mt_sil) * 1e3
-        resp_len_mean = np.nanmean(mt_mat, axis=0)
-        mat_mt_rt[irt, :] = resp_len_mean-np.nanmean(mt_sil)
-    plt.figure()
-    ax = plt.axes(projection='3d')
-    x, y = np.meshgrid(ev_vals, rtbins[:-1])
-    ax.plot_surface(x, y, Z=mat_mt_rt, cmap='gist_heat')
-    ax.set_xlabel('Stim evidence')
-    ax.set_ylabel('RT (ms)')
-    ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
+        resp_len_mean = np.nanmean(1/mt_mat, axis=0)
+        resp_len_err = np.nanstd(1/mt_mat, axis=0)
+        mat_mt_rt[irt, :] = resp_len_mean  # -np.nanmean(mt_sil)
+        err_mt_rt[irt, :] = resp_len_err/np.sqrt(nsubs)
+    if not matrix:
+        fig, ax = plt.subplots(1)
+        rm_top_right_lines(ax)
+        for ev in reversed(range(mat_mt_rt.shape[1])):
+            ax.plot(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
+                    mat_mt_rt[:, ev], color=colormap[ev],
+                    label=ev_vals[ev])
+            y = mat_mt_rt[:, ev]
+            err = err_mt_rt[:, ev]
+            ax.fill_between(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
+                            y+err, y-err, color=colormap[ev], alpha=0.3)
+        ax.legend(title='Stim. evidence')
+        ax.set_ylabel('vigor ~ 1/MT (ms^-1)')
+        ax.set_xlabel('RT (ms)')
+    if matrix:
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        x, y = np.meshgrid(ev_vals, rtbins[:-1])
+        ax.plot_surface(x, y, Z=mat_mt_rt, cmap='coolwarm')
+        ax.set_xlabel('Stim evidence')
+        ax.set_ylabel('RT (ms)')
+        ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
     # for iev, ev in enumerate(ev_vals):
     #     plt.errorbar(ev, resp_len_mean[iev]-np.nanmean(mt_sil),
     #                  np.nanstd(mt_mat, axis=0)[iev]/np.sqrt(nsubs),
@@ -3807,8 +3830,8 @@ def plot_tach_per_subj_from_df(df):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
-    f2 = True
+    f1 = True
+    f2 = False
     f3 = False
     f4 = False
     f5 = False
@@ -3821,10 +3844,10 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE42', 'LE44']
+            subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
-            subjects = ['LE38']
+            subjects = ['LE43']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
@@ -3895,7 +3918,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(2e5)
+        num_tr = int(1e5)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
@@ -3960,7 +3983,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
