@@ -3105,18 +3105,18 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 8
-    p_t_eff = 12
+    p_t_aff = 6
+    p_t_eff = 6
     p_t_a = 16-p_t_eff  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 1.1018/np.nanmax(abs(zt))
     p_w_stim = 3.2433*dt
-    p_e_noise = np.sqrt(dt)
+    p_e_noise = np.sqrt(dt)/10
     p_com_bound = 0.
     p_w_a_intercept = 9.9498*dt
     p_w_a_slope = -0.0069*dt  # fixed
     p_a_noise = np.sqrt(dt)  # fixed
-    p_1st_readout = 30
-    p_2nd_readout = 20
+    p_1st_readout = 10
+    p_2nd_readout = 40
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -3460,8 +3460,8 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
     ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     nsubs = len(df.subjid.unique())
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
-    mat_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)))
-    err_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)))
+    mat_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)+1))
+    err_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)+1))
     for irt, rtbin in enumerate(rtbins[:-1]):
         mt_mat = np.empty((nsubs, len(ev_vals)))
         mt_sil = []
@@ -3479,21 +3479,31 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
                     df_sub.resp_len.values[df_sub.special_trial == 2]))
         mt_mat *= 1e3
         mt_sil = np.array(mt_sil) * 1e3
+        mat_mt_rt[irt, -1] = np.nanmean(1/mt_sil)
+        err_mt_rt[irt, -1] = np.nanstd(1/mt_sil)/np.sqrt(nsubs)
         resp_len_mean = np.nanmean(1/mt_mat, axis=0)
         resp_len_err = np.nanstd(1/mt_mat, axis=0)
-        mat_mt_rt[irt, :] = resp_len_mean  # -np.nanmean(mt_sil)
-        err_mt_rt[irt, :] = resp_len_err/np.sqrt(nsubs)
+        mat_mt_rt[irt, :-1] = resp_len_mean  # -np.nanmean(mt_sil)
+        err_mt_rt[irt, :-1] = resp_len_err/np.sqrt(nsubs)
+    ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1, 'silent']
     if not matrix:
         fig, ax = plt.subplots(1)
         rm_top_right_lines(ax)
         for ev in reversed(range(mat_mt_rt.shape[1])):
-            ax.plot(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
-                    mat_mt_rt[:, ev], color=colormap[ev],
-                    label=ev_vals[ev])
+            if ev == len(ev_vals)-1:
+                color = 'k'
+            else:
+                color = colormap[ev]
+            # ax.plot(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
+            #         mat_mt_rt[:, ev], color=color,
+            #         label=ev_vals[ev])
+            x = rtbins[:-1]+(rtbins[1]-rtbins[0])/2
             y = mat_mt_rt[:, ev]
             err = err_mt_rt[:, ev]
-            ax.fill_between(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
-                            y+err, y-err, color=colormap[ev], alpha=0.3)
+            ax.errorbar(x, y, err, color=color, marker='o',
+                        label=ev_vals[ev])
+            # ax.fill_between(rtbins[:-1]+(rtbins[1]-rtbins[0])/2,
+            #                 y+err, y-err, color=color, alpha=0.3)
         ax.legend(title='Stim. evidence')
         ax.set_ylabel('vigor ~ 1/MT (ms^-1)')
         ax.set_xlabel('RT (ms)')
@@ -3830,16 +3840,16 @@ def plot_tach_per_subj_from_df(df):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -3918,7 +3928,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(1e5)
+        num_tr = int(7e4)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
@@ -3960,6 +3970,7 @@ if __name__ == '__main__':
         df_sim['com_detected'] = com_model_detected
         df_sim['peak_com'] = np.array(x_val_at_updt)
         df_sim['hithistory'] = np.array(resp_fin == gt)
+        df_sim['soundrfail'] = df.soundrfail.values[:int(num_tr)]
         df_sim['allpriors'] =\
             np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)[:int(num_tr)]
         df_sim['norm_allpriors'] = df_sim.allpriors.values \
@@ -3976,6 +3987,8 @@ if __name__ == '__main__':
               errors_model=errors_model, df_sim=df_sim)
         fig, ax = plt.subplots(ncols=2)
         mt_matrix_vs_ev_zt(df_sim, ax)
+        fig, ax = plt.subplots(1)
+        mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)
         if f4:

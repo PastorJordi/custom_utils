@@ -854,7 +854,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # TODO: COMMENT EVERY FORKING LINE
     bound = 2.0732
     bound_a = 2.6313
-    p_leak = 0.
+    p_leak = 0.6
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
