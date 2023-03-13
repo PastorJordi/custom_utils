@@ -159,8 +159,8 @@ def tracking_image(ax, figsize=(8, 12), margin=.01):
                              pos.height])
     # add colorbar for screenshot
     n_stps = 100
-    ax_clbr = plt.axes([pos.x0+pos.width*2/7, pos.y0+pos.height+margin,
-                        pos.width*0.4, pos.height/15])
+    ax_clbr = plt.axes([pos.x0+pos.width*1/7, pos.y0+pos.height+margin,
+                        pos.width*0.6, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     ax_clbr.set_xticks([0, n_stps-1])
     ax_clbr.set_xticklabels(['0', '400ms'])
@@ -246,6 +246,14 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     if humans:
         num = 8
         rtbins = np.linspace(0, 300, num=num)
+        # xvals, yvals1, yerr = tachs_values(df=df_data, rtbins=rtbins)
+        # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+        # for j in range(4):
+        #     ax_tach.plot(xvals[:, j], yvals1[:, j], color=colormap[j],
+        #                  linewidth=1.5)
+        #     ax_tach.fill_between(xvals[:, j], yvals1[:, j]-yerr[:, j],
+        #                          yvals1[:, j]-yerr[:, j], color=colormap[j],
+        #                     alpha=0.6)
         tachometric(df_data, ax=ax_tach, fill_error=True, rtbins=rtbins,
                     cmap='gist_yarg')
     else:
@@ -415,6 +423,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                   after_correct_only=True, rt_lim=300,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700)):
+    rm_top_right_lines(ax)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
@@ -480,7 +489,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
                              label='No-CoM')]
     ax.legend(handles=legendelements)
     ax.axhline(-8, color='r', linestyle=':')
-    ax.text(200, -20, "Detection threshold", color='r')
+    ax.text(20, -20, "Detection threshold", color='r')
 
 
 def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
@@ -544,9 +553,9 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[2].set_xticks([0])
         ax[2].set_xticklabels(['Stimulus'], fontsize=9)
         ax[2].xaxis.set_ticks_position('none')
-        ax[0].set_ylim(240, 295)
-        ax[0].set_yticks([250, 275])
-        ax[0].set_yticklabels(['250', '275'])
+        ax[0].set_ylim(235, 295)
+        ax[0].set_yticks([240, 275])
+        ax[0].set_yticklabels(['240', '275'])
         ax[2].set_ylim([0.5, 0.8])
         # ax[2].set_yticks([120, 130])
         # ax[2].set_yticklabels(['120', '130'])
@@ -765,17 +774,17 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                  head_length=0.4)
         ax.text(ind-15, 3.4, 'Splitting Time', fontsize=8)
         ax.set_ylabel("{}y dimension (px)".format("       "))
-    else:
-        ax.set_title('RT < 15 ms', fontsize=8)
-        ax.text(ind-15, 3.3, 'Splitting Time', fontsize=8)
-        ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
-                 head_length=0.4)
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
         for i_l, lab in enumerate(labels):
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7)
+    else:
+        ax.set_title('RT < 15 ms', fontsize=8)
+        ax.text(ind-15, 3.3, 'Splitting Time', fontsize=8)
+        ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
+                 head_length=0.4)
         ax.set_xticklabels([''])
         # ax.xaxis.set_ticks_position('none')
     plt.show()
@@ -1381,6 +1390,7 @@ def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
         retbins=False, include_lowest=True, right=True).astype(float)
     xvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
     yvals = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
+    yerr = np.zeros((len(rtbins)-1, len(evidence_bins)-1))
     n_subjs = len(df.subjid.unique())
     vals_all_rats = np.zeros((len(rtbins)-1, n_subjs))
     for i in range(evidence_bins.size-1):
@@ -1394,9 +1404,10 @@ def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
         xvals[:len(tmp.rtbin.values), i] =\
             tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize
         yvals[:, i] = np.nanmean(vals_all_rats, axis=1)
+        yerr[:, i] = np.nanstd(vals_all_rats, axis=1) / n_subjs
     xvals = xvals[:len(tmp['mean'].values), :]
     yvals = yvals[:len(tmp['mean'].values), :]
-    return xvals, yvals
+    return xvals, yvals, yerr
 
 
 def mt_weights(df, ax, plot=False, means_errs=True, mt=True):
@@ -1576,7 +1587,7 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(4, 3, 9)
     ax_label = f.add_subplot(4, 3, 10)
-    ax_label.text(-0.1, 1.9, 'g', transform=ax_label.transAxes,
+    ax_label.text(-0.1, 3., 'g', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     ax_label = f.add_subplot(4, 3, 11)
     ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
@@ -1638,8 +1649,9 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     pos = ax_weights.get_position()
     ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
                              pos.height*1/2])
-    for a in ax:
-        rm_top_right_lines(a)
+    for i_a, a in enumerate(ax):
+        if i_a != 7 and i_a != 8:
+            rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
     # (see line 805 in function trajectory_thr in plotting.py)
     df_trajs = df  # df.loc[df.subjid == 'LE38']
@@ -1655,7 +1667,8 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     trajs_splitting_prior(df=df, ax=ax[11])
     # traj splitting ev
     trajs_splitting_point(df=df, ax=ax[10], connect_points=True)
-
+    mt_matrix_vs_ev_zt(df=df, ax=[ax[7], ax[8]], silent_comparison=True,
+                       rt_bin=60)
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -1704,13 +1717,15 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len, 'subjid': subj})
     if tachometric:
-        xvals, yvals1 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
+        xvals, yvals1, _ = tachs_values(df=df_plot_data,
+                                        rtbins=np.arange(0, 151, 3))
         colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
         for j in range(4):
             ax.plot(xvals[:, j], yvals1[:, j], color=colormap[j], linewidth=1.5)
         df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit_com,
                                      'sound_len': sound_len, 'subjid': subj})
-        xvals, yvals2 = tachs_values(df=df_plot_data, rtbins=np.arange(0, 151, 3))
+        xvals, yvals2, _ = tachs_values(df=df_plot_data,
+                                        rtbins=np.arange(0, 151, 3))
         for j in range(4):
             ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
                     linewidth=1.5)
@@ -1809,34 +1824,49 @@ def mt_distros(df, ax):
     # ax.set_yscale('log')
 
 
-def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
-               marginy=0.04, figsize=(8, 12), com_th=8):
+def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
+               marginy=0.05, figsize=(8, 10), com_th=8):
     if com_th != 8:
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                           time_trajs=time_trajs)
         com = np.array(com)  # new CoM list
         df['CoM_sugg'] = com
-    fig, ax = plt.subplots(4, 2, figsize=figsize)
+    fig, ax = plt.subplots(3, 3, figsize=figsize)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.5, wspace=0.4)
-    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', '']
+    pos_ax_0 = ax[0].get_position()
+    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*0.8,
+                        pos_ax_0.height])
+    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*1.2, pos_ax_0.y0,
+                        pos_ax_0.width*1.4, pos_ax_0.height])
+    pos_ax_2 = ax[2].get_position()
+    ax[2].set_position([pos_ax_2.x0 + pos_ax_0.width*0.2,
+                        pos_ax_2.y0 + pos_ax_2.height/6,
+                        pos_ax_2.width*0.8, pos_ax_2.height*4/6])
+    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '']
     for n, axis in enumerate(ax):
-        if n == 3:
+        if n == 4:
             axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        elif n == 1:
+            axis.text(-0.1, 1.05, labs[n], transform=axis.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        elif n == 7:
+            axis.text(-0.1, 1.3, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         else:
             axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    ax_mat = [ax[6], ax[7]]
-    rm_top_right_lines(ax=ax[4])
-    tach_1st_2nd_choice(df=df, ax=ax[4])
-    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[5])
-    ax[5].set_ylim(0, 0.075)
+    ax_mat = [ax[7], ax[8]]
+    rm_top_right_lines(ax=ax[5])
+    tach_1st_2nd_choice(df=df, ax=ax[5])
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[6])
+    ax[6].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
-    ax_com_stat = ax[3]
+    ax_com_stat = ax[4]
     pos = ax_com_stat.get_position()
     ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
                               pos.height*2/5])
@@ -1846,14 +1876,14 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
     rm_top_right_lines(ax=ax[2])
-    mean_com_traj(df=df, ax=ax[2], condition='prior_x_coh', cmap='copper',
+    mean_com_traj(df=df, ax=ax[3], condition='prior_x_coh', cmap='copper',
                   prior_limit=1, after_correct_only=True, rt_lim=400,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700))
     # plot Pcoms matrices
-    mat_side_0_all = np.zeros((7, 7))
-    mat_side_1_all = np.zeros((7, 7))
     n_subjs = len(df.subjid.unique())
+    mat_side_0_all = np.zeros((7, 7, n_subjs))
+    mat_side_1_all = np.zeros((7, 7, n_subjs))
     for i_s, subj in enumerate(df.subjid.unique()):
         matrix_side_0 =\
             com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
@@ -1861,10 +1891,10 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
         matrix_side_1 =\
             com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
                                                side=1)
-        mat_side_0_all += matrix_side_0
-        mat_side_1_all += matrix_side_1
-    matrix_side_0 = mat_side_0_all / n_subjs
-    matrix_side_1 = mat_side_1_all / n_subjs
+        mat_side_0_all[:, :, i_s] = matrix_side_0
+        mat_side_1_all[:, :, i_s] = matrix_side_1
+    matrix_side_0 = np.nanmean(mat_side_0_all, axis=2)
+    matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
@@ -1886,15 +1916,15 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.03, marginx=0.25,
     cbar.set_label('p(detected CoM)')
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticks(np.arange(7))
-        ax_i.set_xticks(np.arange(7))
-        ax_i.set_yticklabels(['R', '', '', '0', '', '', 'L'])
-        ax_i.set_xticklabels(['L', '', '', '0', '', '', 'R'])
+        ax_i.set_yticks([0, 3, 6], ['R', '0', 'L'])
+        ax_i.set_xticks([0, 3, 6], ['L', '0', 'R'])
+        # ax_i.set_yticklabels(['R', '', '', '0', '', '', 'L'])
+        # ax_i.set_xticklabels(['L', '', '', '0', '', '', 'R'])
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-    ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
-                         marginx=marginx, marginy=marginy)
-    fig_COMs_per_rat_inset_3(df=df, ax_inset=ax_inset)
+    # ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
+    #                      marginx=marginx, marginy=marginy)
+    fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig3.png', dpi=400, bbox_inches='tight')
 
@@ -2065,11 +2095,17 @@ def com_heatmap_marginal_pcom_side_mat(
     tmp = df.dropna(subset=['CoM_sugg', 'norm_allpriors', 'avtrapz'])
     tmp['tmp_com'] = False
     tmp.loc[(tmp.R_response == side) & (tmp.CoM_sugg), 'tmp_com'] = True
-
+    bins_zt = [-1.01]
+    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+        if i_p > 2:
+            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+        else:
+            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+    bins_zt.append(1.01)
     com_heatmap_kws.update({
         'return_mat': True,
         'predefbins': [
-            np.linspace(-1, 1, nbins+1), np.linspace(-1, 1, nbins+1)
+            np.array(bins_zt), np.array(bins_zt)
         ]
     })
     if not average_across_subjects:
@@ -3303,47 +3339,71 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     else:
         df_0 = df.loc[(df.R_response == 0)]
         df_1 = df.loc[(df.R_response == 1)]
-    bins_zt = np.linspace(1.01, -1.01, 8)
+    bins_zt = [1.01]
+    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+        if i_p < 3:
+            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+        else:
+            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+    bins_zt.append(-1.01)
+    # bins_zt = [1.01, 0.65, 0.35, 0.1, -0.1, -0.35, -0.65, -1.01]
+    # np.linspace(1.01, -1.01, 8)
     coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    mat_0 = np.empty((7, 7))
-    mat_0[:] = np.nan
-    mat_1 = np.empty((7, 7))
-    mat_1[:] = np.nan
-    silent_mat_per_rows_0 = np.zeros((7, 7))
-    silent_mat_per_rows_1 = np.zeros((7, 7))
+    nsubs = len(df.subjid.unique())
+    mat_0 = np.zeros((len(bins_zt)-1, 7, nsubs))
+    mat_1 = np.zeros((len(bins_zt)-1, 7, nsubs))
+    silent_mat_per_rows_0 = np.zeros((len(bins_zt)-1, 7))
+    silent_mat_per_rows_1 = np.zeros((len(bins_zt)-1, 7))
     # reference MT computation
     for i_zt, zt in enumerate(bins_zt[:-1]):
-        mt_silent_0 = df_0.loc[(df_0.special_trial == 2) &
-                               (df_0.norm_allpriors < zt)
-                               & (df_0.norm_allpriors > bins_zt[i_zt+1]),
-                               'resp_len']
-        mt_silent_1 = df_1.loc[(df_1.special_trial == 2) &
-                               (df_1.norm_allpriors < zt)
-                               & (df_1.norm_allpriors > bins_zt[i_zt+1]),
-                               'resp_len']
-        silent_mat_per_rows_0[i_zt, :] = np.nanmean(mt_silent_0)*1e3
-        silent_mat_per_rows_1[i_zt, :] = np.nanmean(mt_silent_1)*1e3
+        mt_sil_per_sub_0 = []
+        mt_sil_per_sub_1 = []
+        for subj in df.subjid.unique():
+            mt_silent_0 = df_0.loc[(df_0.special_trial == 2) &
+                                   (df_0.norm_allpriors < zt) &
+                                   (df_0.subjid == subj) &
+                                   (df_0.norm_allpriors > bins_zt[i_zt+1]),
+                                   'resp_len']
+            mt_silent_1 = df_1.loc[(df_1.special_trial == 2) &
+                                   (df_1.norm_allpriors < zt) &
+                                   (df_1.subjid == subj) &
+                                   (df_1.norm_allpriors > bins_zt[i_zt+1]),
+                                   'resp_len']
+            mt_sil_per_sub_0.append(np.nanmean(mt_silent_0))
+            mt_sil_per_sub_1.append(np.nanmean(mt_silent_1))
+        silent_mat_per_rows_0[i_zt, :] = np.nanmean(mt_sil_per_sub_0)*1e3
+        silent_mat_per_rows_1[i_zt, :] = np.nanmean(mt_sil_per_sub_1)*1e3
     # MT matrix computation, reference MT will be substracted
-    for i_ev, ev in enumerate(coh_vals):
-        for i_zt, zt in enumerate(bins_zt[:-1]):
-            mt_vals_0 = df_0.loc[(df_0.coh2 == ev) & (df_0.norm_allpriors < zt)
-                                 & (df_0.norm_allpriors > bins_zt[i_zt+1]),
-                                 'resp_len']
-            mt_vals_1 = df_1.loc[(df_1.coh2 == ev) & (df_1.norm_allpriors < zt)
-                                 & (df_1.norm_allpriors > bins_zt[i_zt+1]),
-                                 'resp_len']
-            mat_0[i_zt, i_ev] = np.nanmean(mt_vals_0)*1e3
-            mat_1[i_zt, i_ev] = np.nanmean(mt_vals_1)*1e3
+    for i_s, subj in enumerate(df.subjid.unique()):
+        df_sub_0 = df_0.loc[(df_0.subjid == subj)]
+        df_sub_1 = df_1.loc[(df_1.subjid == subj)]
+        for i_ev, ev in enumerate(coh_vals):
+            for i_zt, zt in enumerate(bins_zt[:-1]):
+                mt_vals_0 = df_sub_0.loc[(df_sub_0.coh2 == ev) &
+                                         (df_sub_0.norm_allpriors < zt)
+                                         & (df_sub_0.norm_allpriors >=
+                                            bins_zt[i_zt+1]),
+                                         'resp_len']
+                mt_vals_1 = df_sub_1.loc[(df_sub_1.coh2 == ev) &
+                                         (df_sub_1.norm_allpriors < zt)
+                                         & (df_sub_1.norm_allpriors >=
+                                            bins_zt[i_zt+1]),
+                                         'resp_len']
+                mat_0[i_zt, i_ev, i_s] = np.nanmean(mt_vals_0)*1e3
+                mat_1[i_zt, i_ev, i_s] = np.nanmean(mt_vals_1)*1e3
+    mat_0 = np.nanmean(mat_0, axis=2)
+    mat_1 = np.nanmean(mat_1, axis=2)
     if silent_comparison:
         # We substract reference MT (in silent trials) at each row
-        mat_0 += -silent_mat_per_rows_0
-        mat_1 += -silent_mat_per_rows_1
+        mat_0 -= silent_mat_per_rows_0
+        mat_1 -= silent_mat_per_rows_1
     # SIDE 0
-    coh_vals = ['', '-1 \n L', -0.5, -0.25, 0, 0.25, 0.5, '1 \n R']
-    im_0 = ax0.imshow(mat_0, cmap='gist_heat')
+    im_0 = ax0.imshow(mat_0, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
+                      vmax=np.nanmax((mat_1, mat_0)))
     plt.sca(ax0)
-    cbar_0 = plt.colorbar(im_0, fraction=0.2)
-    cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
+    cbar_0 = plt.colorbar(im_0, fraction=0.04)
+    cbar_0.remove()
+    # cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
     ax0.set_xlabel('Evidence')
     ax0.set_ylabel('Prior')
     if rt_bin is not None:
@@ -3353,18 +3413,27 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
             ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
     else:
         ax0.set_title('Left')
-    ax0.set_yticklabels(['', 'R', '', '', '0', '', '', 'L'])
-    ax0.set_xticklabels(coh_vals)
+    ax0.set_yticks([0, 3, 6], ['R', '0', 'L'])
+    ax0.set_xticks([0, 3, 6], ['L', '0', 'R'])
     # SIDE 1
     ax1.set_title('Right')
-    im_1 = ax1.imshow(mat_1, cmap='gist_heat')
+    im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
+                      vmax=np.nanmax((mat_1, mat_0)))
     plt.sca(ax1)
-    cbar_1 = plt.colorbar(im_1, fraction=0.2)
-    cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
     ax1.set_xlabel('Evidence')
-    ax1.set_ylabel('Prior')
-    ax1.set_yticklabels(['', 'R', '', '', '0', '', '', 'L'])
-    ax1.set_xticklabels(coh_vals)
+    # ax1.set_ylabel('Prior')
+    cbar_1 = plt.colorbar(im_1, fraction=0.04, pad=-0.05)
+    if silent_comparison:
+        cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
+    else:
+        cbar_1.set_label(r'$MT \;(ms)$')
+    ax1.set_yticks([0, 3, 6], ['', '', ''])
+    ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
+    ax0pos = ax0.get_position()
+    ax1pos = ax1.get_position()
+    ax0.set_position([ax0pos.x0, ax1pos.y0, ax1pos.width, ax1pos.height])
+    ax1.set_position([ax1pos.x0-ax1pos.width*0.2,
+                      ax1pos.y0, ax1pos.width, ax1pos.height])
 
 
 def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
@@ -3877,7 +3946,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3942,7 +4011,7 @@ if __name__ == '__main__':
 
     # fig 2
     if f2:
-        fig_trajs_2(df=df)
+        fig_trajs_2(df=df.loc[df.soundrfail == 0])
 
     # fig 3
     if f3:
@@ -4019,7 +4088,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='AlexCRM', sv_folder=SV_FOLDER, max_mt=400,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
