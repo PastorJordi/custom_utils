@@ -18,8 +18,8 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1546,44 +1546,63 @@ def plot_violins(w_coh, w_t_i, w_zt, ax, mt=True):
 
 
 def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
-                marginy=0.12):
+                marginy=0.1):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
     # ax = ax.flatten()
-    ax_label = f.add_subplot(4, 2, 1)
+    ax_label = f.add_subplot(4, 3, 1)
     # pos = ax_label.get_position()
     # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
     ax_label.text(-0.1, 1.2, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 2)
+    ax_label = f.add_subplot(4, 3, 2)
     ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 3)
+    ax_label = f.add_subplot(4, 3, 3)
+    ax_label.axis('off')
+    ax_label = f.add_subplot(4, 3, 4)
     ax_label.text(-0.1, 1.2, 'b', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 4)
+    ax_label = f.add_subplot(4, 3, 5)
     ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 5)
-    ax_label.text(-0.1, 3., 'e', transform=ax_label.transAxes,
+    ax_label = f.add_subplot(4, 3, 6)
+    ax_label.axis('off')
+    ax_label = f.add_subplot(4, 3, 7)
+    ax_label.text(-0.1, 1.2, 'e', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 6)
+    ax_label = f.add_subplot(4, 3, 8)
     ax_label.text(-0.1, 1.2, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 7)
-    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
+    ax_label = f.add_subplot(4, 3, 9)
+    ax_label = f.add_subplot(4, 3, 10)
+    ax_label.text(-0.1, 1.9, 'g', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 2, 8)
+    ax_label = f.add_subplot(4, 3, 11)
     ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(4, 3, 12)
+    ax_label.text(-0.1, 1.2, 'i', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
-    ax = f.axes
-    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
-    ax_cohs = np.array([ax[1], ax[3]])
-    ax_zt = np.array([ax[0], ax[2]])
+    ax = f.axes
+    pos_ax_0 = ax[0].get_position()
+    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
+                        pos_ax_0.height])
+    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
+                        pos_ax_0.width*1.6, pos_ax_0.height])
+    pos_ax_3 = ax[3].get_position()
+    ax[3].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
+                        pos_ax_3.height])
+    ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
+                        pos_ax_3.width*1.6, pos_ax_3.height])
+
+    ax_cohs = np.array([ax[1], ax[4]])
+    ax_zt = np.array([ax[0], ax[3]])
     # splitting
-    ax_split = ax[4]
+    ax_split = ax[9]
     pos = ax_split.get_position()
     ax_split.set_position([pos.x0, pos.y0, pos.width,
                            pos.height*2/5])
@@ -1615,6 +1634,10 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
     ax_zt = np.insert(ax_zt, 2, ax_inset)
+    ax_weights = ax[2]
+    pos = ax_weights.get_position()
+    ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
+                             pos.height*1/2])
     for a in ax:
         rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
@@ -1627,11 +1650,11 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
-    mt_weights(df, ax=ax[5], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[6], plot=True, means_errs=False)
     # traj splitting prior
-    trajs_splitting_prior(df=df, ax=ax[7])
+    trajs_splitting_prior(df=df, ax=ax[11])
     # traj splitting ev
-    trajs_splitting_point(df=df, ax=ax[6], connect_points=True)
+    trajs_splitting_point(df=df, ax=ax[10], connect_points=True)
 
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
@@ -3841,15 +3864,15 @@ def plot_tach_per_subj_from_df(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
