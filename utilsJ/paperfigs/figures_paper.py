@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
-from scipy.stats import pearsonr, ttest_ind, ttest_rel
+from scipy.stats import pearsonr, ttest_ind, ttest_rel, zscore
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
@@ -74,6 +74,7 @@ elif pc_name == 'alex_CRM':
     RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
     RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
     HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
+    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
 
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
@@ -1140,13 +1141,13 @@ def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
     # ax.set_xlim(0, max(bins))
 
 
-def pdf_cohs(df, ax, bins=np.linspace(0, 200, 51), yaxis=True):
+def pdf_cohs(df, ax, bins=np.linspace(0, 200, 41), yaxis=True):
     # ev_vals = np.unique(np.abs(coh))
     sound_len = df.sound_len.values
     coh = df.coh2.values
-    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 2))
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     num_subjs = len(df.subjid.unique())
-    for i_coh, ev in enumerate([0, 1]):
+    for i_coh, ev in enumerate([0, 0.25, 0.5, 1]):
         counts_all_rats = np.zeros((len(bins)-1, num_subjs))
         for i_s, subj in enumerate(df.subjid.unique()):
             index = (np.abs(coh) == ev) & (df.subjid == subj)
@@ -1163,6 +1164,28 @@ def pdf_cohs(df, ax, bins=np.linspace(0, 200, 51), yaxis=True):
     if yaxis:
         ax.set_ylabel('RT density')
     ax.legend()
+
+
+def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
+    colormap = pl.cm.gist_yarg(np.linspace(0.3, 1, 4))
+    df_1 = df[df.subjid == subj]
+    coh_vec = df_1.coh2.values
+    for ifb, fb in enumerate(df_1.fb):
+        for j in range(len(fb)):
+            coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+    for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+        index = np.abs(coh_vec) == ev
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
+        fix_breaks = fix_breaks[index]
+        counts_coh, bins = np.histogram(fix_breaks*1000,
+                                        bins=30, range=(-100, 200))
+        norm_counts = counts_coh/sum(counts_coh)
+        ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
+                color=colormap[iev])
+    ax.set_ylabel('RT density')
+    ax.set_xlabel('Reaction time (ms)')
 
 
 def express_performance(hit, coh, sound_len, pos_tach_ax, ax, label,
@@ -1273,9 +1296,13 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
+    labs = ['a', '',  'c', 'b', '', 'd', 'e', 'f', 'g']
+    for n, ax_1 in enumerate(ax):
+        rm_top_right_lines(ax_1)
+        ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                  fontweight='bold', va='top', ha='right')
     for i in [0, 1, 3]:
         ax[i].axis('off')
-
     # task panel
     ax_task = ax[0]
     pos = ax_task.get_position()
@@ -1330,7 +1357,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     # RTs
     ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
-    pdf_cohs(df=df, ax=ax_rts, yaxis=True)
+    plot_rt_cohs_with_fb(df=df, ax=ax_rts, subj='LE46')
     ax_rts.set_xlabel('')
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
@@ -1436,18 +1463,18 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True):
     for subject in df.subjid.unique():
         df_1 = df.loc[df.subjid == subject]
         if mt:
-            var = np.array(df_1.resp_len)
+            var = zscore(np.array(df_1.resp_len))
         else:
-            var = np.array(df_1.sound_len)
+            var = zscore(np.array(df_1.sound_len))
         decision = np.array(df_1.R_response)*2 - 1
         coh = np.array(df_1.coh2)
         trial_index = np.array(df_1.origidx)
         com = df_1.CoM_sugg.values
         zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
-        params = mt_linear_reg(mt=var/np.nanmean(var),
-                               coh=coh*decision/max(np.abs(coh)),
-                               trial_index=trial_index/max(trial_index),
-                               prior=zt*decision/max(np.abs(zt)), plot=False,
+        params = mt_linear_reg(mt=var,
+                               coh=zscore(coh*decision),
+                               trial_index=zscore(trial_index.astype(float)),
+                               prior=zscore(zt*decision), plot=False,
                                com=com)
         w_coh.append(params[1])
         w_t_i.append(params[2])
@@ -1824,7 +1851,7 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     # ax4.set_ylabel('Time to CoM (ms)')
 
 
-def mt_distros(df, ax):
+def mt_distros(df, ax, median_lines=False):
     mt_nocom = df.loc[df.CoM_sugg == 0, 'resp_len'].values*1e3
     mt_nocom = mt_nocom[(mt_nocom <= 1000) * (mt_nocom > 50)]
     mt_com = df.loc[df.CoM_sugg == 1, 'resp_len'].values*1e3
@@ -1833,8 +1860,10 @@ def mt_distros(df, ax):
             alpha=0.5)
     ax.hist(mt_com, bins=30, color='tab:olive', density=True, alpha=0.5,
             label='CoM')
-    ax.axvline(np.nanmedian(mt_nocom), color='k')
-    ax.axvline(np.nanmedian(mt_com), color='k')
+    if median_lines:
+        ax.axvline(np.nanmedian(mt_nocom), color='k')
+        ax.axvline(np.nanmedian(mt_com), color='k')
+    ax.set_xlim(45, 755)
     ax.legend()
     ax.set_xlabel('MT (ms)')
     ax.set_ylabel('Density')
@@ -1942,6 +1971,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     # ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
     #                      marginx=marginx, marginy=marginy)
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
+    rm_top_right_lines(ax=ax[9])
     mt_distros(df=df, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig3.png', dpi=400, bbox_inches='tight')
@@ -3187,11 +3217,11 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_a = 16-p_t_eff  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 1.1018/np.nanmax(abs(zt))
     p_w_stim = 3.2433*dt
-    p_e_noise = np.sqrt(dt)
+    p_e_noise = np.sqrt(dt)*dt
     p_com_bound = 0.
     p_w_a_intercept = 9.9498*dt
     p_w_a_slope = -0.0069*dt  # fixed
-    p_a_noise = np.sqrt(dt)  # fixed
+    p_a_noise = np.sqrt(dt)*dt  # fixed
     p_1st_readout = 10
     p_2nd_readout = 40
 
@@ -3952,7 +3982,7 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = True
-    f3 = False
+    f3 = True
     f4 = False
     f5 = False
     f6 = False
@@ -3964,7 +3994,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
