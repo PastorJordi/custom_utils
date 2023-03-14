@@ -1848,7 +1848,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
                                           time_trajs=time_trajs)
         com = np.array(com)  # new CoM list
         df['CoM_sugg'] = com
-    fig, ax = plt.subplots(3, 3, figsize=figsize)
+    fig, ax = plt.subplots(4, 3, figsize=figsize)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.5, wspace=0.4)
@@ -1861,7 +1861,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     ax[2].set_position([pos_ax_2.x0 + pos_ax_0.width*0.2,
                         pos_ax_2.y0 + pos_ax_2.height/6,
                         pos_ax_2.width*0.8, pos_ax_2.height*4/6])
-    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '']
+    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '', 'h', '', '']
     for n, axis in enumerate(ax):
         if n == 4:
             axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
@@ -1942,6 +1942,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     # ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
     #                      marginx=marginx, marginy=marginy)
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
+    mt_distros(df=df, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig3.png', dpi=400, bbox_inches='tight')
 
