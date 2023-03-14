@@ -1349,6 +1349,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
+    ax_tach.set_yticks([0.4, 0.6, 0.8, 1], ['0.4', '0.6', '0.8', '1'])
     rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0+margin/2, pos.width, pos.height])
@@ -1382,7 +1383,9 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')  # , fontsize=14)
-    ax_ydim.set_xlabel('time (ms)')  # , fontsize=14)
+    ax_ydim.set_xlabel('Time from movement onset (ms)')  # , fontsize=14)
+    ax_rawtr.axhline(0, color='k')
+    ax_ydim.axhline(0, color='k')
 
     # adjust panels positions
     pos = ax_rawtr.get_position()
@@ -1413,7 +1416,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
         ax[i_a].axhline(y=-85, linestyle='--', color='k', lw=.5)
     ax[6].axhline(y=200, linestyle='--', color='k', lw=.5)
     ax[6].axhline(y=600, linestyle='--', color='k', lw=.5)
-
+    ax_scrnsht.axhline(400, color='k')
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
 
