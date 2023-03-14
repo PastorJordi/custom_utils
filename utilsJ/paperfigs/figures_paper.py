@@ -772,7 +772,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         ax.set_title('\n RT > 150 ms', fontsize=8)
         ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
                  head_length=0.4)
-        ax.text(ind-15, 3.4, 'Splitting Time', fontsize=8)
+        ax.text(ind-17, 3.4, 'Splitting Time', fontsize=8)
         ax.set_ylabel("{}y dimension (px)".format("       "))
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
@@ -780,14 +780,27 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7)
+        plot_boxcar_rt(rt=rtbins[0], ax=ax)
     else:
         ax.set_title('RT < 15 ms', fontsize=8)
-        ax.text(ind-15, 3.3, 'Splitting Time', fontsize=8)
+        ax.text(ind-25, 3.3, 'Splitting Time', fontsize=8)
         ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
                  head_length=0.4)
         ax.set_xticklabels([''])
+        plot_boxcar_rt(rt=rtbins[-1], ax=ax)
         # ax.xaxis.set_ticks_position('none')
     plt.show()
+
+
+def plot_boxcar_rt(rt, ax, low_val=2, high_val=4):
+    x_vals = np.linspace(-1, 255, num=100)
+    y_vals = [low_val]
+    for x in x_vals[:-1]:
+        if x <= rt:
+            y_vals.append(high_val)
+        else:
+            y_vals.append(low_val)
+    ax.step(x_vals, y_vals, color='k')
 
 
 def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
@@ -878,7 +891,9 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ax.set_xlabel('RT (ms)')
     ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
-    ax.plot([0, 250], [0, 250], color='k')
+    ax.plot([0, 155], [0, 155], color='k')
+    ax.fill_between([0, 250], [0, 250], [0, 0],
+                    color='goldenrod', alpha=0.4)
     ax.set_xlim(-5, 155)
     plt.show()
 
@@ -1034,7 +1049,9 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     )
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
-    ax.plot([0, 250], [0, 250], color='k')
+    ax.plot([0, 155], [0, 155], color='k')
+    ax.fill_between([0, 250], [0, 250], [0, 0],
+                    color='firebrick', alpha=0.4)
     ax.set_xlim(-5, 155)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
@@ -3164,12 +3181,12 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_slope = 0.12
     MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 6
-    p_t_eff = 6
+    p_t_aff = 8
+    p_t_eff = 4
     p_t_a = 16-p_t_eff  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 1.1018/np.nanmax(abs(zt))
     p_w_stim = 3.2433*dt
-    p_e_noise = np.sqrt(dt)/10
+    p_e_noise = np.sqrt(dt)
     p_com_bound = 0.
     p_w_a_intercept = 9.9498*dt
     p_w_a_slope = -0.0069*dt  # fixed
@@ -3946,7 +3963,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE42', 'LE44']
+            subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
