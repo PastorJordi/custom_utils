@@ -17,8 +17,8 @@ from scipy.stats import pearsonr, ttest_ind, ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 from utilsJ.Models import simul
@@ -42,7 +42,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'idibaps_Jordi'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3317,7 +3317,7 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
         mat_1 += -silent_mat_per_rows_1
     # SIDE 0
     coh_vals = ['', '-1 \n L', -0.5, -0.25, 0, 0.25, 0.5, '1 \n R']
-    im_0 = ax0.imshow(mat_0, cmap='gist_heat')
+    im_0 = ax0.imshow(mat_0, cmap='coolwarm')
     plt.sca(ax0)
     cbar_0 = plt.colorbar(im_0, fraction=0.2)
     cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
@@ -3334,7 +3334,7 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     ax0.set_xticklabels(coh_vals)
     # SIDE 1
     ax1.set_title('Right')
-    im_1 = ax1.imshow(mat_1, cmap='gist_heat')
+    im_1 = ax1.imshow(mat_1, cmap='coolwarm')
     plt.sca(ax1)
     cbar_1 = plt.colorbar(im_1, fraction=0.2)
     cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
@@ -3456,12 +3456,16 @@ def different_com_thresholds(traj_y, time_trajs, decision, sound_len,
     com_dframe.to_csv(SV_FOLDER + 'com_diff_thresholds.csv')
 
 
-def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
+def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
+                    title=None):
     ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     nsubs = len(df.subjid.unique())
+    nsubs_sil = len(df.loc[df.special_trial == 2].subjid.unique())
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(ev_vals)))
     mat_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)+1))
     err_mt_rt = np.empty((len(rtbins)-1, len(ev_vals)+1))
+    mat_mt_rt[:] = np.nan
+    err_mt_rt[:] = np.nan
     for irt, rtbin in enumerate(rtbins[:-1]):
         mt_mat = np.empty((nsubs, len(ev_vals)))
         mt_sil = []
@@ -3480,13 +3484,13 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
         mt_mat *= 1e3
         mt_sil = np.array(mt_sil) * 1e3
         mat_mt_rt[irt, -1] = np.nanmean(1/mt_sil)
-        err_mt_rt[irt, -1] = np.nanstd(1/mt_sil)/np.sqrt(nsubs)
+        err_mt_rt[irt, -1] = np.nanstd(1/mt_sil)/np.sqrt(nsubs_sil)
         resp_len_mean = np.nanmean(1/mt_mat, axis=0)
         resp_len_err = np.nanstd(1/mt_mat, axis=0)
         mat_mt_rt[irt, :-1] = resp_len_mean  # -np.nanmean(mt_sil)
         err_mt_rt[irt, :-1] = resp_len_err/np.sqrt(nsubs)
     ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1, 'silent']
-    if not matrix:
+    if not matrix and vigor:
         fig, ax = plt.subplots(1)
         rm_top_right_lines(ax)
         for ev in reversed(range(mat_mt_rt.shape[1])):
@@ -3507,14 +3511,39 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
         ax.legend(title='Stim. evidence')
         ax.set_ylabel('vigor ~ 1/MT (ms^-1)')
         ax.set_xlabel('RT (ms)')
-    if matrix:
-        plt.figure()
-        ax = plt.axes(projection='3d')
-        x, y = np.meshgrid(ev_vals, rtbins[:-1])
-        ax.plot_surface(x, y, Z=mat_mt_rt, cmap='coolwarm')
+        ax.set_ylim(0.0028, 0.0043)
+    if matrix and vigor:
+        fig, ax = plt.subplots(1)
+        # plt.figure()
+        # ax = plt.axes(projection='3d')
+        # x, y = np.meshgrid(ev_vals, rtbins[:-1])
+        # ax.plot_surface(x, y, Z=mat_mt_rt, cmap='coolwarm')
+        im = ax.imshow(mat_mt_rt, cmap='coolwarm')
+        ax.set_xticks(np.arange(8), labels=ev_vals)
+        ax.set_yticks(np.arange(8), labels=rtbins[:-1]+(rtbins[1]-rtbins[0])/2)
         ax.set_xlabel('Stim evidence')
         ax.set_ylabel('RT (ms)')
-        ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
+        plt.colorbar(im, label='vigor')
+        # ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
+    if matrix and not vigor:
+        fig, ax = plt.subplots(1)
+        # plt.figure()
+        # ax = plt.axes(projection='3d')
+        # x, y = np.meshgrid(ev_vals, rtbins[:-1])
+        # ax.plot_surface(x, y, Z=mat_mt_rt, cmap='coolwarm')
+        mat_silent = np.zeros((mat_mt_rt[:, :-1].shape))
+        for j in range(len(ev_vals)-1):
+            mat_silent[:, j] += 1/mat_mt_rt[:, -1]
+        im = ax.imshow(1/mat_mt_rt[:, :-1] - mat_silent, cmap='coolwarm',
+                       vmin=-50, vmax=75)
+        ax.set_xticks(np.arange(len(ev_vals)-1), labels=ev_vals[:-1])
+        ax.set_yticks(np.arange(len(rtbins)-1),
+                      labels=rtbins[:-1]+(rtbins[1]-rtbins[0])/2)
+        ax.set_xlabel('Stim evidence')
+        ax.set_ylabel('RT (ms)')
+        plt.colorbar(im, label='MT (ms) - MT silent (ms)')
+        # ax.set_zlabel(r'$MT - MT_{silent} \; (ms)$')
+    ax.set_title(title)
     # for iev, ev in enumerate(ev_vals):
     #     plt.errorbar(ev, resp_len_mean[iev]-np.nanmean(mt_sil),
     #                  np.nanstd(mt_mat, axis=0)[iev]/np.sqrt(nsubs),
@@ -3527,6 +3556,15 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False):
     # # plt.text(-0.75, np.nanmean(mt_sil)+2, "Silent MT (mean)")
     # plt.xlabel('Stim. evidence congruency')
     # plt.ylabel('MT (ms) - MT (silent, ms)')
+
+
+def plot_vigor_prior_bins(df, ztbins=[0, 0.1, 0.5, 1], matrix=False, vigor=True):
+    for izt, zt in enumerate(ztbins[:-1]):
+        df_filt = df.loc[(df.norm_allpriors.abs() >= zt) &
+                         (df.norm_allpriors.abs() < ztbins[izt+1])]
+        mt_vs_stim_cong(df_filt, rtbins=np.linspace(0, 80, 9), matrix=matrix,
+                        vigor=vigor, title=str(zt) + '<= zt <' +
+                        str(ztbins[izt+1]))
 
 
 def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
@@ -3840,21 +3878,21 @@ def plot_tach_per_subj_from_df(df):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = False
+        all_rats = True
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44']
+            # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
