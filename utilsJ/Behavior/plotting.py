@@ -346,10 +346,18 @@ def com_heatmap(x, y, com, flip=False, annotate=True, predefbins=None,
 
     # make bins
     tmp["binned_prior"] = np.nan
-    maxedge_prior = tmp.prior.abs().max()
+    # maxedge_prior = tmp.prior.abs().max()
     if predefbins is None:
         predefbinsflag = False
-        bins = np.linspace(-maxedge_prior - 0.01, maxedge_prior + 0.01, 8)
+        bins = [-1.01]
+        for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+            if i_p < 3:
+                bins.append(-np.quantile(tmp.prior.abs(), perc))
+            else:
+                bins.append(np.quantile(tmp.prior.abs(), perc))
+        bins.append(1.01)
+        bins = np.array(bins)
+        # bins = np.linspace(-maxedge_prior - 0.01, maxedge_prior + 0.01, 8)
     else:
         predefbinsflag = True
         bins = np.asarray(predefbins[0])

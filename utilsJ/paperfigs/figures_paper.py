@@ -19,8 +19,8 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_Jordi'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -301,7 +301,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_mat[0].set_title(pcomlabel_1)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
     plt.sca(ax_mat[0])
-    plt.colorbar(im, fraction=0.04)
+    # plt.colorbar(im, fraction=0.04)
     # pos = ax_mat.get_position()
     # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
     # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
@@ -311,7 +311,8 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
-    plt.colorbar(im, fraction=0.04)
+    cbar = plt.colorbar(im, fraction=0.04)
+    cbar.set_label('p(detected CoM)', rotation=270, labelpad=10)
     # pright matrix
     if humans:
         coh = df_data['avtrapz'].values
@@ -444,7 +445,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
-    df['norm_allpriors'] = df.allpriors / np.max(np.abs(df.allpriors))
+    df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
     bins = np.array([-1.1, 1.1])
@@ -518,7 +519,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
-    df['norm_allpriors'] = df.allpriors / np.max(np.abs(df.allpriors))
+    df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
     if after_correct_only:
@@ -670,6 +671,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
+    # plist = []
     for i in reversed(range(max_MT)):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
@@ -677,10 +679,10 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
         pop_a = pop_a[nan_idx]
         try:
             _, p2 = pearsonr(pop_a, pop_evidence)
+            # plist.append(p2)
         except Exception:
             continue
             # return np.nan
-        # plist.append(p2)
         if p2 > pval:
             return i + 1
     return np.nan
@@ -1978,7 +1980,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(detected CoM)')
+    cbar.set_label('p(detected CoM)', rotation=270)
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticks([0, 3, 6], ['R', '0', 'L'])
@@ -2610,7 +2612,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
     ax.set_xlabel('Time from movement onset (ms)', fontsize=10)
 
 
-def fig_humans_6(user_id, sv_folder, nm='300', max_mt=400, jitter=0.003,
+def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                  wanted_precision=8, inset_sz=.06,
                  marginx=0.006, marginy=0.12, fgsz=(8, 14)):
     if user_id == 'Alex':
@@ -2888,7 +2890,7 @@ def traj_mean_human_per_subject(df_data, mean=True):
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
-                wanted_precision=8, max_px=600, plotxy=False,
+                wanted_precision=8, max_px=800, plotxy=False,
                 interpolatespace=np.arange(500)):
     # TRAJECTORIES
     index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
@@ -2917,7 +2919,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     for i_ev, ev in enumerate(ev_vals):
         index = (congruent_coh == ev) &\
-            (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
+            (np.abs(prior) <= np.quantile(np.abs(prior), 0.1))
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
@@ -2955,8 +2957,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
     ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[1].set_xlim(-0.1, 300)
-    ax[1].set_ylim(-1, 570)
+    ax[1].set_xlim(-0.1, 470)
+    ax[1].set_ylim(-1, 620)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     # ax[1].legend(labels=['0', '', '', '1'],
     #              title='Stimulus \n evidence', loc='upper left',
@@ -2967,8 +2969,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     ax[2].set_xticks([])
     ax[2].set_xlabel('Stimulus')
     ax[2].set_ylabel('MT (ms)')
-    rtbins = np.array([0, np.median(sound_len), 300])
-    # rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75])))
+    # rtbins = np.array([0, np.median(sound_len), 300])
+    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     split_ind = []
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     ev_vals = [0, 0.25, 0.5, 1]
@@ -2991,7 +2993,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                     vals_in = f(interpolatespace)
                     vals_in = vals_in[~np.isnan(vals_in)]
                     vals_in -= vals_in[0]
-                    vals_in = np.concatenate((np.zeros((int(sound_len[tr]))),
+                    vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
                                               vals_in))
                     max_time = max(time)
                     if max_time > max_mt:
@@ -3012,13 +3014,22 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                 # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
             ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                                      max_MT=max_mt+300, pval=0.001)
-            split_ind.append(ind)
+            if ind < 410:
+                split_ind.append(ind)
+            else:
+                # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
+                #                          max_MT=500, pval=0.001)
+                # if ind > 410:
+                split_ind.append(np.nan)
             # ax1.axvline(ind*16, color='r')
     out_data = np.array(split_ind)
+    rtbins = np.array((rtbins[0], rtbins[1], rtbins[2]))
     # to plot trajectories with splitting time: (all subjects together)
     labs = ['Early RT', 'Late RT']
     for i in range(rtbins.size-1):
         ax1 = ax[-3+i]
+        if i > 0:
+            rtbins = np.array((rtbins[-3], rtbins[-2], rtbins[-1]))
         for i_ev, ev in enumerate(ev_vals):
             index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
                     (np.abs(np.round(coh, 2)) == ev)
@@ -3034,7 +3045,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                 vals_in = f(interpolatespace)
                 vals_in = vals_in[~np.isnan(vals_in)]
                 vals_in -= vals_in[0]
-                vals_in = np.concatenate((np.zeros((int(sound_len[tr]))),
+                vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
                                           vals_in))
                 max_time = max(time)
                 if max_time > max_mt:
@@ -3048,18 +3059,32 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
             else:
                 ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
                 traj_mat = np.concatenate((traj_mat, all_trajs))
-            ax1.plot(np.arange(len(np.nanmean(traj_mat, axis=0))),
-                     np.nanmean(traj_mat, axis=0),
+            ax1.plot(np.arange(len(np.nanmean(all_trajs, axis=0))),
+                     np.nanmean(all_trajs, axis=0),
                      color=colormap[i_ev])
-            ax1.set_xlim(-5, 205)
-            ax1.set_ylim(-2, 32)
-            ax1.set_title(labs[i])
+        ax1.set_xlim(-5, 405)
+        ax1.set_ylim(-2, 400)
+        ax1.set_title(labs[i])
         ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                 max_MT=max_mt+300, pval=0.0001)
-        ax1.axvline(ind, color='r')
+                                 max_MT=max_mt+300, pval=0.001)
+        # ax1.axvline(ind, color='r')
         ax1.set_xlabel('Time (ms)')
         if i == 0:
-            ax1.set_ylabel('Position (pixels)')
+            ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
+                      head_length=0.4)
+            ax1.text(ind-30, 10, 'Splitting Time', fontsize=8)
+            labels = ['0', '0.25', '0.5', '1']
+            legendelements = []
+            for i_l, lab in enumerate(labels):
+                legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+                                      label=lab))
+            ax1.legend(handles=legendelements, fontsize=7, loc='upper left')
+        else:
+            if np.isnan(ind):
+                ind = rtbins[i]
+            ax1.arrow(ind, 145, 0, -65, color='k', width=1, head_width=5,
+                      head_length=0.4)
+            ax1.text(ind-60, 160, 'Splitting Time', fontsize=8)
     # now for the prior
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
@@ -3109,8 +3134,8 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                            color=colormap[i_pr])
     ax[4].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
     # ax[3].set_xlim(-0.1, 360)
-    ax[1].set_xlim(-0.1, 200)
-    ax[3].set_ylim(-1, 570)
+    ax[1].set_xlim(-0.1, 470)
+    ax[3].set_ylim(-1, 620)
     # ax[0].axhline(y=traj_thr, linestyle='--', color='k', alpha=0.4)
     colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
     legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
@@ -3151,29 +3176,33 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
         ax[0].set_ylabel('y-coord (px)')
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
+    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     out_data = np.array(out_data).reshape(np.unique(subjects).size,
                                           rtbins.size-1, -1)
     out_data = np.swapaxes(out_data, 0, 1)
     out_data = out_data.astype(float)
-    binsize = np.diff(rtbins)
+    # binsize = np.diff(rtbins)
     ax2 = ax[-1]
     # fig2, ax2 = plt.subplots(1)
     for i in range(len(np.unique(subjects))):
         for j in range(out_data.shape[2]):
-            ax2.plot(binsize/2 + binsize * np.arange(rtbins.size-1),
+            ax2.plot(rtbins[:-1],
                      out_data[:, i, j],
                      marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                      mew=1, color=(.6, .6, .6, .3))
     error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='firebrick', marker='o', label='mean & SEM')
-    ax2.errorbar(binsize/2 + binsize * np.arange(rtbins.size-1),
+    ax2.errorbar(rtbins[:-1],
                  np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
                  yerr=sem(out_data.reshape(rtbins.size-1, -1),
                  axis=1, nan_policy='omit'), **error_kws)
     ax2.set_xlabel('RT (ms)')
     ax2.set_title('Impact of stimulus', fontsize=9)
-    ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
-    ax2.set_ylim(190, 410)
+    # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
+    # ax2.set_ylim(190, 410)
+    ax2.plot([0, 250], [0, 250], color='k')
+    ax2.fill_between([0, 250], [0, 250], [0, 0],
+                     color='grey')
     ax2.set_ylabel('Splitting time (ms)')
     rm_top_right_lines(ax2)
 
@@ -3240,17 +3269,17 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     MT_intercep = 253
     detect_CoMs_th = 8
     p_t_aff = 8
-    p_t_eff = 4
-    p_t_a = 16-p_t_eff  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 1.1018/np.nanmax(abs(zt))
-    p_w_stim = 3.2433*dt
-    p_e_noise = np.sqrt(dt)*dt
+    p_t_eff = 8
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.18
+    p_w_stim = 0.08
+    p_e_noise = 0.001
     p_com_bound = 0.
-    p_w_a_intercept = 9.9498*dt
-    p_w_a_slope = -0.0069*dt  # fixed
-    p_a_noise = np.sqrt(dt)*dt  # fixed
-    p_1st_readout = 10
-    p_2nd_readout = 40
+    p_w_a_intercept = 0.052
+    p_w_a_slope = -2.2e-5  # fixed
+    p_a_noise = 0.04  # fixed
+    p_1st_readout = 60
+    p_2nd_readout = 90
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
@@ -4049,12 +4078,12 @@ if __name__ == '__main__':
     f2 = False
     f3 = False
     f4 = False
-    f5 = False
-    f6 = True
+    f5 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
-        all_rats = True
+        all_rats = False
         if all_rats:
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -4201,7 +4230,7 @@ if __name__ == '__main__':
                               reaction_time=reaction_time)
     if f6:
         # human traj plots
-        fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=400,
+        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=600,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)

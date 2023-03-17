@@ -585,13 +585,86 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
 
     """
     t_arr = np.arange(jerk_lock_ms, resp_len)
-    M = get_Mt0te(jerk_lock_ms, resp_len)
-    M_1 = np.linalg.inv(M)
+    resp_len = float(resp_len)
+    # M = get_Mt0te(jerk_lock_ms, resp_len)
+    # M_1 = np.linalg.inv(M)
+    m_sup = np.concatenate((get_m1_inv(), np.zeros((3, 3))), axis=1)
+    m_inf = np.concatenate((mult_m3(resp_len), get_m4_inv(resp_len)), axis=1)
+    M_1 = np.concatenate((m_sup, m_inf))
     vt = v_(t_arr)
     N = np.matmul(vt, M_1)
     traj = np.matmul(N, mu).ravel()
     traj = np.concatenate([[0]*jerk_lock_ms, traj])  # trajectory
     return traj
+
+
+def time_comparison(resp_len):
+    time_st = time.time()
+    np.seterr(all='print')
+    M = get_Mt0te(0, resp_len)
+    M_1_1 = np.linalg.inv(M)
+    t_linalg = time.time()-time_st
+    time_st = time.time()
+    m_sup = np.concatenate((get_m1_inv(), np.zeros((3, 3))), axis=1)
+    m_inf = np.concatenate((mult_m3(resp_len), get_m4_inv(resp_len)), axis=1)
+    M_1_2 = np.concatenate((m_sup, m_inf))
+    t_analt = time.time()-time_st
+    return t_linalg, t_analt, M_1_1, M_1_2
+
+
+def time_comparison_different_t(len_arr=100000, return_time=False):
+    resp_len = np.random.randint(1, 800, len_arr).astype(float)
+    t_inv_np = []
+    t_inv_an = []
+    for t in resp_len:
+        t_linalg, t_analt, _, _ = time_comparison(t)
+        t_inv_np.append(t_linalg)
+        t_inv_an.append(t_analt)
+    t_inv_np = np.array(t_inv_np)
+    t_inv_an = np.array(t_inv_an)
+    if not return_time:
+        plt.figure()
+        plt.yscale('log')
+        sns.histplot(t_inv_np-t_inv_an, bins=40)
+        print(sum(t_inv_np-t_inv_an))
+    if return_time:
+        return t_inv_np, t_inv_an, sum(t_inv_np-t_inv_an)
+
+
+def time_comp_different_number_comp(low_val=1, max_val=int(1e5), step=int(1e3)):
+    n_comps = np.arange(low_val, max_val+1, step).astype(int)
+    diff_list = []
+    for nc in n_comps:
+        _, _, diff = time_comparison_different_t(len_arr=nc,
+                                                 return_time=True)
+        diff_list.append(diff)
+    plt.figure()
+    plt.plot(n_comps, diff, 'o', color='k')
+    plt.ylabel('Time difference')
+    plt.xlabel('Number of computations')
+
+
+def get_m4_inv(t):
+    m4_inv = np.array([[10/t**3, -4/t**2, 1/(2*t)],
+                       [-15/t**4, 7/t**3, -1/t**2],
+                       [6/t**5, -3/t**4, 1/(2*t**3)]])
+    return m4_inv
+
+
+def get_m1_inv():
+    m1_inv = np.array([[1, 0, 0],
+                       [0, 1, 0],
+                       [0, 0, 1/2]])
+    return m1_inv
+
+
+def mult_m3(t):
+    m4_inv = get_m4_inv(t)
+    m1_inv = get_m1_inv()
+    m3 = np.array([[1, t, t**2],
+                   [0, 1, 2*t],
+                   [0, 0, 2]])
+    return -(m4_inv @ m3) @ m1_inv
 
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
@@ -852,9 +925,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # print('Starting simulation, PSIAM')
     # start_eddm = time.time()
     # TODO: COMMENT EVERY FORKING LINE
-    bound = 2.0732
-    bound_a = 2.6313
-    p_leak = 0.6*2
+    bound = 1
+    bound_a = 2.2
+    p_leak = 0.6
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
