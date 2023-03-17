@@ -15,6 +15,7 @@ from cmaes import CMA
 from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
+from sbi.inference import MNLE
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
@@ -395,10 +396,10 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     diff_rms_list = []
     for i in range(num_times_tr):
         # start_simu = time.time()
-        E, A, com_model, first_ind, second_ind, resp_first, resp_fin,\
-            pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
-            frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
-            rt_vals, rt_bins, tr_index =\
+        _, _, com_model, first_ind, _, _, resp_fin,\
+            _, _, total_traj, _, _,\
+            _, x_val_at_updt, _, _,\
+            _, _, _ =\
             trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                 trial_index=trial_index,
                                 MT_slope=MT_slope, MT_intercep=MT_intercep,
@@ -412,6 +413,8 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 p_2nd_readout=p_2nd_readout,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs)
+        reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
+        motor_time = [len(t) for t in total_traj]
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
         pright_mat[:, i] = (resp_fin + 1)/2
