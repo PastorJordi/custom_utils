@@ -855,7 +855,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
                         p_1st_readout, p_2nd_readout, num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(3e4),
-                        fixation_ms=300):
+                        fixation_ms=300, compute_mat_and_pcom=False):
     """
     Generate stim and time integration and trajectories
 
@@ -1008,8 +1008,11 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     pro_vs_re = np.array(pro_vs_re)
     rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
                                     bins=np.linspace(-100, 300, 81))
-    matrix, _ = com_heatmap_jordi(zt, coh, com,
-                                  return_mat=True, flip=True)
+    if compute_mat_and_pcom:
+        matrix, _ = com_heatmap_jordi(zt, coh, com,
+                                      return_mat=True, flip=True)
+    else:
+        matrix = None
     # end_eddm = time.time()
     # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
     # XXX: put in a different function
@@ -1093,11 +1096,15 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
                     'sound_len': (first_ind[indx_trajs]-fixation+p_t_eff)*stim_res}
         df_curve = pd.DataFrame(df_curve)
         xpos = int(np.diff(BINS)[0])
-        xpos_plot, median_pcom, _ =\
-            binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
-                         bins=BINS,
-                         return_data=True)
+        if compute_mat_and_pcom:
+            xpos_plot, median_pcom, _ =\
+                binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
+                             bins=BINS,
+                             return_data=True)
         # end_traj = time.time()
+        else:
+            xpos_plot = None
+            median_pcom = None
         # print('Time for trajectories: ' + str(end_traj - start_traj))
         return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
             matrix, total_traj, init_trajs, final_trajs, frst_traj_motor_time,\

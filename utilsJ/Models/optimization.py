@@ -16,23 +16,29 @@ from skimage.metrics import structural_similarity as ssim
 import dirichlet
 import seaborn as sns
 from sbi.inference import MNLE
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+from sbi.utils import MultipleIndependent
+import torch
+from torch.distributions import Beta, Binomial, Gamma, Uniform
+from sbi.analysis import pairplot
+
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized, data_augmentation
+from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
+    data_augmentation, get_data_and_matrix
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 
@@ -364,36 +370,50 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                    p_w_stim, p_e_noise, p_com_bound, p_t_aff, p_t_eff, p_t_a,
                    p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
                    p_2nd_readout, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False, epsilon=1e-6):
+                   rms_comparison=False, epsilon=1e-6, mnle=True):
     start_llk = time.time()
-    num_tr = stim.shape[1]
-    indx_sh = np.arange(len(zt))
-    np.random.shuffle(indx_sh)
-    stim = stim[:, indx_sh]
-    zt = zt[indx_sh]
-    coh = coh[indx_sh]
-    gt = gt[indx_sh]
-    # num_tr = 5
-    stim = stim[:, :int(num_tr)]
-    zt = zt[:int(num_tr)]
-    coh = coh[:int(num_tr)]
-    com = com[:int(num_tr)]
-    gt = gt[:int(num_tr)]
-    trial_index = trial_index[:int(num_tr)]
     data_augment_factor = 10
+    if isinstance(coh, np.ndarray):
+        num_tr = stim.shape[1]
+        indx_sh = np.arange(len(zt))
+        np.random.shuffle(indx_sh)
+        stim = stim[:, indx_sh]
+        zt = zt[indx_sh]
+        coh = coh[indx_sh]
+        gt = gt[indx_sh]
+        # num_tr = 5
+        stim = stim[:, :int(num_tr)]
+        zt = zt[:int(num_tr)]
+        coh = coh[:int(num_tr)]
+        com = com[:int(num_tr)]
+        gt = gt[:int(num_tr)]
+        trial_index = trial_index[:int(num_tr)]
+        stim = data_augmentation(stim=stim, daf=data_augment_factor)
+        stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
+                                                    stim.shape[1]))))
+    else:
+        augm_stim = np.zeros((data_augment_factor*len(stim), 1))
+        for tmstp in range(len(stim)):
+            augm_stim[data_augment_factor*tmstp:data_augment_factor*(tmstp+1)] =\
+                stim[tmstp]
+        stim = augm_stim
+        stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff), 1))))
+        num_tr = 1
+        stim_temp = np.array(stim_temp)
     MT_slope = 0.123
     MT_intercep = 254
     compute_trajectories = True
     all_trajs = True
-    stim = data_augmentation(stim=stim, daf=data_augment_factor)
+
     stim_res = 50/data_augment_factor
     global fixation
     fixation = int(300 / stim_res)
-    stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
-                                                stim.shape[1]))))
+
     detected_com_mat = np.zeros((num_tr, num_times_tr))
     pright_mat = np.zeros((num_tr, num_times_tr))
     diff_rms_list = []
+    mt = torch.tensor(())
+    choice = torch.tensor(())
     for i in range(num_times_tr):
         # start_simu = time.time()
         _, _, com_model, first_ind, _, _, resp_fin,\
@@ -412,18 +432,26 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 p_1st_readout=p_1st_readout,
                                 p_2nd_readout=p_2nd_readout,
                                 compute_trajectories=compute_trajectories,
-                                stim_res=stim_res, all_trajs=all_trajs)
+                                stim_res=stim_res, all_trajs=all_trajs,
+                                compute_mat_and_pcom=False)
         reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
-        motor_time = [len(t) for t in total_traj]
+        motor_time = np.array([len(t) for t in total_traj])
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         detected_com_mat[:, i] = detected_com
         pright_mat[:, i] = (resp_fin + 1)/2
+        motor_time = torch.tensor(motor_time)
+        resp_fin = torch.tensor((resp_fin+1)/2)
+        mt = torch.concatenate((mt, motor_time))
+        choice = torch.concatenate((choice, resp_fin))
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
         if rms_comparison:
             diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
+    if mnle:
+        x = torch.column_stack((mt, choice))
+        return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
     mat_left_and_com = detected_com_mat*(1-pright_mat)
@@ -516,11 +544,12 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
-    optimization = True
+    optimization_cmaes = False
+    optimization_mnle = True
     rms_comparison = False
     plotting = False
     plot_rms_llk = False
-    single_run = True
+    single_run = False
     stim, zt, coh, gt, com, pright, trial_index =\
         get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
                  num_tr_per_rat=int(1e4), all_trials=False)
@@ -553,7 +582,7 @@ if __name__ == '__main__':
                            p_1st_readout, p_2nd_readout, num_times_tr=int(1e1))
         print(llk_val)
     # TODO: paralelize different initial points
-    if optimization:
+    if optimization_cmaes:
         num_times_tr = 100
         print('Start optimization')
         rms_list = []
@@ -599,6 +628,99 @@ if __name__ == '__main__':
             optimizer.tell(solutions)
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
+    if optimization_mnle:
+        com = None
+        pright = None
+        num_times_tr = 1
+        num_trials_training = int(1e4)
+        index = np.arange(num_trials_training)
+        # load real data
+        subject = 'LE43'
+        df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
+                                 sv_folder=SV_FOLDER, after_correct=True,
+                                 silent=True, all_trials=True,
+                                 srfail=True)
+        mt = df.resp_len.values
+        choice = df.R_response.values
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        stim = np.array([stim for stim in df.res_sound])
+        coh = np.array(df.coh2)
+        trial_index = np.array(df.origidx)
+        gt = np.array(df.rewside) * 2 - 1
+        # 1. Parameters' prior distro definition
+        prior = MultipleIndependent([Beta(torch.tensor([1.]),
+                                          torch.tensor([10.])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Uniform(torch.tensor([1.]),
+                                             torch.tensor([15.])),
+                                     Uniform(torch.tensor([1.]),
+                                             torch.tensor([15.0])),
+                                     Uniform(torch.tensor([8.]),
+                                             torch.tensor([20.0])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Beta(torch.tensor([1.0]),
+                                          torch.tensor([10.0])),
+                                     Uniform(torch.tensor([20.]),
+                                             torch.tensor([120.])),
+                                     Uniform(torch.tensor([20.]),
+                                             torch.tensor([120.0]))],
+                                    validate_args=False)
+        # 2. Def. theta_o as a prior sample
+        theta_o = prior.sample((1,))
+        # 3. define all theta space with samples from prior
+        num_simulations = 50000
+        theta_all = prior.sample((num_simulations,))
+        x_o = torch.column_stack((torch.tensor(mt*1e3), torch.tensor(choice)))
+        x_o = x_o.to(torch.float32)
+        # run simulations
+        x = torch.tensor(())
+        for i_t, theta in enumerate(theta_all):
+            p_w_zt = float(theta[0])
+            p_w_stim = float(theta[1])
+            p_e_noise = float(theta[2])
+            p_com_bound = float(theta[3])
+            p_t_aff = int(np.round(theta[4]))
+            p_t_eff = int(np.round(theta[5]))
+            p_t_a = int(np.round(theta[6]))
+            p_w_a_intercept = float(theta[7])
+            p_w_a_slope = float(theta[8])
+            p_a_noise = float(theta[9])
+            p_1st_readout = float(theta[10])
+            p_2nd_readout = float(theta[11])
+            x_temp = run_likelihood(stim[i_t, :], zt[i_t], coh[i_t],
+                                    np.array([trial_index[i_t]]), gt[i_t],
+                                    com, pright,
+                                    p_w_zt, p_w_stim, p_e_noise, p_com_bound,
+                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                    p_w_a_slope, p_a_noise, p_1st_readout,
+                                    p_2nd_readout, rms_comparison=rms_comparison,
+                                    num_times_tr=num_times_tr, mnle=True)
+            x = torch.concatenate((x, x_temp))
+        x = x.to(torch.float32)
+        trainer = MNLE(prior=prior)
+        estimator = trainer.append_simulations(theta_all, x).train()
+
+        # Markov chain Monte-Carlo (MCMC) to get posterior distros
+        num_samples = 10000
+        mcmc_parameters = dict(num_chains=4, thin=10,
+                               warmup_steps=num_samples//2,
+                               init_strategy="proposal",
+                               num_workers=1,)
+        mnle_posterior = trainer.build_posterior(prior=prior,
+                                                 mcmc_method="slice_np",
+                                                 mcmc_parameters=mcmc_parameters)
+        mnle_samples = mnle_posterior.sample((num_samples,), x=x_o,
+                                             show_progress_bars=True)
+        # at this point, we should re-simulate the model with all trials
+        # and compare distros
     if rms_comparison and plotting:
         plt.figure()
         plt.scatter(rms_list, llk_list)
