@@ -21,8 +21,8 @@ import torch
 from torch.distributions import Beta, Binomial, Gamma, Uniform
 from sbi.analysis import pairplot
 
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
@@ -30,15 +30,15 @@ from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 
@@ -661,35 +661,35 @@ if __name__ == '__main__':
                                           torch.tensor([10.])),
                                      Beta(torch.tensor([1.0]),
                                           torch.tensor([10.0])),
+                                     Uniform(torch.tensor([1.5]),
+                                             torch.tensor([3.])),
                                      Beta(torch.tensor([1.0]),
                                           torch.tensor([10.0])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
-                                     Uniform(torch.tensor([1.]),
-                                             torch.tensor([15.])),
-                                     Uniform(torch.tensor([1.]),
-                                             torch.tensor([15.0])),
+                                     Uniform(torch.tensor([4.]),
+                                             torch.tensor([20.])),
+                                     Uniform(torch.tensor([4.]),
+                                             torch.tensor([20.0])),
                                      Uniform(torch.tensor([8.]),
                                              torch.tensor([20.0])),
                                      Beta(torch.tensor([1.0]),
                                           torch.tensor([10.0])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
+                                     Gamma(torch.tensor([0.001]),
+                                           torch.tensor([0.001])),
+                                     Uniform(torch.tensor([2.]),
+                                             torch.tensor([4.])),
                                      Uniform(torch.tensor([20.]),
-                                             torch.tensor([120.])),
+                                             torch.tensor([80.])),
                                      Uniform(torch.tensor([20.]),
-                                             torch.tensor([120.0])),
+                                             torch.tensor([80.0])),
                                      Beta(torch.tensor([3.0]),
                                           torch.tensor([2.0])),
                                      Uniform(torch.tensor([20.]),
-                                             torch.tensor([80.0]))],
+                                             torch.tensor([50.0]))],
                                     validate_args=False)
         # 2. Def. theta_o as a prior sample
         theta_o = prior.sample((1,))
         # 3. define all theta space with samples from prior
-        num_simulations = 50000
+        num_simulations = 30000
         theta_all = prior.sample((num_simulations,))
         x_o = torch.column_stack((torch.tensor(mt*1e3), torch.tensor(choice)))
         x_o = x_o.to(torch.float32)
@@ -704,25 +704,30 @@ if __name__ == '__main__':
             p_t_eff = int(np.round(theta[5]))
             p_t_a = int(np.round(theta[6]))
             p_w_a_intercept = float(theta[7])
-            p_w_a_slope = float(theta[8])
+            p_w_a_slope = -float(theta[8])
             p_a_bound = float(theta[9])
             p_1st_readout = float(theta[10])
             p_2nd_readout = float(theta[11])
             p_leak = float(theta[12])
             p_mt_noise = float(theta[13])
-            x_temp = run_likelihood(stim[i_t, :], zt[i_t], coh[i_t],
-                                    np.array([trial_index[i_t]]), gt[i_t],
-                                    com, pright,
-                                    p_w_zt, p_w_stim, p_e_bound, p_com_bound,
-                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                    p_w_a_slope, p_a_bound, p_1st_readout,
-                                    p_2nd_readout, p_leak, p_mt_noise,
-                                    rms_comparison=rms_comparison,
-                                    num_times_tr=num_times_tr, mnle=True)
+            try:
+                x_temp = run_likelihood(stim[i_t, :], zt[i_t], coh[i_t],
+                                        np.array([trial_index[i_t]]), gt[i_t],
+                                        com, pright,
+                                        p_w_zt, p_w_stim, p_e_bound, p_com_bound,
+                                        p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                        p_w_a_slope, p_a_bound, p_1st_readout,
+                                        p_2nd_readout, p_leak, p_mt_noise,
+                                        rms_comparison=rms_comparison,
+                                        num_times_tr=num_times_tr, mnle=True)
+            except ValueError:
+                x_temp = torch.tensor([[np.nan, np.nan]])
             x = torch.concatenate((x, x_temp))
         x = x.to(torch.float32)
+        nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         trainer = MNLE(prior=prior)
-        estimator = trainer.append_simulations(theta_all, x).train()
+        estimator = trainer.append_simulations(theta_all[~nan_mask, :],
+                                               x[~nan_mask, :]).train()
 
         # Markov chain Monte-Carlo (MCMC) to get posterior distros
         num_samples = 10000
