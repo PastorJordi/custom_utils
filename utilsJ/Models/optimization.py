@@ -367,10 +367,10 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
 
 
 def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
-                   p_w_stim, p_e_noise, p_com_bound, p_t_aff, p_t_eff, p_t_a,
-                   p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
-                   p_2nd_readout, num_times_tr=int(1e3), detect_CoMs_th=5,
-                   rms_comparison=False, epsilon=1e-6, mnle=True):
+                   p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff, p_t_a,
+                   p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+                   p_2nd_readout, p_leak, p_mt_noise, num_times_tr=int(1e3),
+                   detect_CoMs_th=8, rms_comparison=False, epsilon=1e-6, mnle=True):
     start_llk = time.time()
     data_augment_factor = 10
     if isinstance(coh, np.ndarray):
@@ -424,13 +424,14 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 trial_index=trial_index,
                                 MT_slope=MT_slope, MT_intercep=MT_intercep,
                                 p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                 p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                 num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
                                 p_w_a_slope=p_w_a_slope,
-                                p_a_noise=p_a_noise,
+                                p_a_bound=p_a_bound,
                                 p_1st_readout=p_1st_readout,
                                 p_2nd_readout=p_2nd_readout,
+                                p_leak=p_leak, p_mt_noise=p_mt_noise,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs,
                                 compute_mat_and_pcom=False)
@@ -506,6 +507,9 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
 
 def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
                     n_params=10, save_path=SV_FOLDER):
+    """
+    DEPRECATED
+    """
     rms_comparison = True
     rms_list = []
     llk_list = []
@@ -516,15 +520,15 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
         p_t_a = int(params[2])
         p_w_zt = params[3]
         p_w_stim = params[4]
-        p_e_noise = params[5]
+        p_e_bound = params[5]
         p_com_bound = params[6]
         p_w_a = params[7]
-        p_a_noise = params[8]
+        p_a_bound = params[8]
         p_w_updt = params[9]
         llk_val, diff_rms =\
             run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim,
-                           p_e_noise, p_com_bound, p_t_aff, p_t_eff,
-                           p_t_a, p_w_a, p_a_noise, p_w_updt,
+                           p_e_bound, p_com_bound, p_t_aff, p_t_eff,
+                           p_t_a, p_w_a, p_a_bound, p_w_updt,
                            num_times_tr=int(1e1), detect_CoMs_th=5,
                            rms_comparison=rms_comparison)
         llk_list.append(llk_val)
@@ -553,13 +557,13 @@ if __name__ == '__main__':
     stim, zt, coh, gt, com, pright, trial_index =\
         get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
                  num_tr_per_rat=int(1e4), all_trials=False)
-    array_params = np.array((0.2, 0.11, 0.02, 1e-2, 8, 8, 14, 0.052, -2.2e-05,
-                             0.04, 10, 10))
+    array_params = np.array((0.2, 0.11, 2, 1e-2, 8, 8, 14, 0.052, -2.2e-05,
+                             2.6, 10, 10, 0.6, 35))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
     scaling_value = array_params/scaled_params
-    bounds = np.array(((0.1, 0.4), (0.02, 0.25), (0.001, 0.04), (1e-3, 1),
+    bounds = np.array(((0.1, 0.4), (1, 3), (0.001, 0.04), (1e-3, 1),
                        (1, 15), (1, 15), (2, 25), (0.01, 0.1), (-1e-04, 0),
-                       (0.01, 0.08), (1, 100), (1, 100)))
+                       (1, 3), (1, 100), (1, 100), (0, 2), (1, 60)))
     bounds_scaled = np.array([bound / scaling_value[i_b] for i_b, bound in
                               enumerate(bounds)])
     if single_run:
@@ -568,18 +572,21 @@ if __name__ == '__main__':
         p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
         p_w_zt = 0.2
         p_w_stim = 0.11
-        p_e_noise = 0.02
+        p_e_bound = 2
         p_com_bound = 0.
         p_w_a_intercept = 0.052
         p_w_a_slope = -2.2e-05  # fixed
-        p_a_noise = 0.04  # fixed
+        p_a_bound = 2.6  # fixed
         p_1st_readout = 10
         p_2nd_readout = 10
+        p_leak = 0.6
+        p_mt_noise = 35
         llk_val, diff_rms =\
             run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
-                           p_w_stim, p_e_noise, p_com_bound, p_t_aff, p_t_eff,
-                           p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise,
-                           p_1st_readout, p_2nd_readout, num_times_tr=int(1e1))
+                           p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff,
+                           p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+                           p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+                           num_times_tr=int(1e1))
         print(llk_val)
     # TODO: paralelize different initial points
     if optimization_cmaes:
@@ -597,21 +604,23 @@ if __name__ == '__main__':
                 params = params_init * scaling_value
                 p_w_zt = params[0]
                 p_w_stim = params[1]
-                p_e_noise = params[2]
+                p_e_bound = params[2]
                 p_com_bound = params[3]
                 p_t_aff = int(round(params[4]))
                 p_t_eff = int(round(params[5]))
                 p_t_a = int(round(params[6]))
                 p_w_a_intercept = params[7]
                 p_w_a_slope = params[8]
-                p_a_noise = params[9]
+                p_a_bound = params[9]
                 p_1st_readout = params[10]
                 p_2nd_readout = params[11]
+                p_leak = params[12]
+                p_mt_noise = params[13]
                 llk_val, diff_rms =\
                     run_likelihood(stim, zt, coh, trial_index, gt, com, pright,
-                                   p_w_zt, p_w_stim, p_e_noise, p_com_bound,
+                                   p_w_zt, p_w_stim, p_e_bound, p_com_bound,
                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                   p_w_a_slope, p_a_noise, p_1st_readout,
+                                   p_w_a_slope, p_a_bound, p_1st_readout,
                                    p_2nd_readout, rms_comparison=rms_comparison,
                                    num_times_tr=num_times_tr)
                 solutions.append((params_init, llk_val))
@@ -671,7 +680,11 @@ if __name__ == '__main__':
                                      Uniform(torch.tensor([20.]),
                                              torch.tensor([120.])),
                                      Uniform(torch.tensor([20.]),
-                                             torch.tensor([120.0]))],
+                                             torch.tensor([120.0])),
+                                     Beta(torch.tensor([3.0]),
+                                          torch.tensor([2.0])),
+                                     Uniform(torch.tensor([20.]),
+                                             torch.tensor([80.0]))],
                                     validate_args=False)
         # 2. Def. theta_o as a prior sample
         theta_o = prior.sample((1,))
@@ -685,23 +698,26 @@ if __name__ == '__main__':
         for i_t, theta in enumerate(theta_all):
             p_w_zt = float(theta[0])
             p_w_stim = float(theta[1])
-            p_e_noise = float(theta[2])
+            p_e_bound = float(theta[2])
             p_com_bound = float(theta[3])
             p_t_aff = int(np.round(theta[4]))
             p_t_eff = int(np.round(theta[5]))
             p_t_a = int(np.round(theta[6]))
             p_w_a_intercept = float(theta[7])
             p_w_a_slope = float(theta[8])
-            p_a_noise = float(theta[9])
+            p_a_bound = float(theta[9])
             p_1st_readout = float(theta[10])
             p_2nd_readout = float(theta[11])
+            p_leak = float(theta[12])
+            p_mt_noise = float(theta[13])
             x_temp = run_likelihood(stim[i_t, :], zt[i_t], coh[i_t],
                                     np.array([trial_index[i_t]]), gt[i_t],
                                     com, pright,
-                                    p_w_zt, p_w_stim, p_e_noise, p_com_bound,
+                                    p_w_zt, p_w_stim, p_e_bound, p_com_bound,
                                     p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                    p_w_a_slope, p_a_noise, p_1st_readout,
-                                    p_2nd_readout, rms_comparison=rms_comparison,
+                                    p_w_a_slope, p_a_bound, p_1st_readout,
+                                    p_2nd_readout, p_leak, p_mt_noise,
+                                    rms_comparison=rms_comparison,
                                     num_times_tr=num_times_tr, mnle=True)
             x = torch.concatenate((x, x_temp))
         x = x.to(torch.float32)

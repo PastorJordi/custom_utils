@@ -19,8 +19,8 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_Jordi'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3259,7 +3259,7 @@ def basic_statistics(decision, resp_fin):
 
 
 def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
-    dt = 5e-3
+    # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
     else:
@@ -3273,36 +3273,40 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.18
     p_w_stim = 0.08
-    p_e_noise = 0.001
+    p_e_bound = 2
     p_com_bound = 0.
     p_w_a_intercept = 0.052
     p_w_a_slope = -2.2e-5  # fixed
-    p_a_noise = 0.04  # fixed
+    p_a_bound = 2.6  # fixed
     p_1st_readout = 60
     p_2nd_readout = 90
+    p_leak = 0.6
+    p_mt_noise = 35
 
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-    conf = [p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
-            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise, p_1st_readout,
-            p_2nd_readout]
+    conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+            p_2nd_readout, p_leak, p_mt_noise]
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
     p_w_stim = conf[1]+jitters[1]*np.random.rand()
-    p_e_noise = conf[2]+jitters[2]*np.random.rand()
+    p_e_bound = conf[2]+jitters[2]*np.random.rand()
     p_com_bound = conf[3]+jitters[3]*np.random.rand()
     p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
     p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
     p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
-    p_a_noise = conf[9]+jitters[9]*np.random.rand()
+    p_a_bound = conf[9]+jitters[9]*np.random.rand()
     p_1st_readout = conf[10]+jitters[10]*np.random.rand()
     p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
+    p_2nd_readout = conf[12]+jitters[12]*np.random.rand()
+    p_mt_noise = conf[13]+jitters[13]*np.random.rand()
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -3315,13 +3319,14 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
                                  trial_index=trial_index,
                                  MT_slope=MT_slope, MT_intercep=MT_intercep,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                 p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                 p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                  num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
                                  p_w_a_slope=p_w_a_slope,
-                                 p_a_noise=p_a_noise,
+                                 p_a_bound=p_a_bound,
                                  p_1st_readout=p_1st_readout,
-                                 p_2nd_readout=p_2nd_readout,
+                                 p_2nd_readout=p_2nd_readout, p_leak=p_leak,
+                                 p_mt_noise=p_mt_noise,
                                  compute_trajectories=compute_trajectories,
                                  stim_res=stim_res, all_trajs=all_trajs)
     hit_model = resp_fin == gt
@@ -4162,7 +4167,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(2e5)
+        num_tr = int(7e4)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]

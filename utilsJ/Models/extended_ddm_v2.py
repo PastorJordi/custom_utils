@@ -23,24 +23,24 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
+# sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 # import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
-SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
+# SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
-DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
@@ -850,9 +850,10 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
 
 
 def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_zt,
-                        p_w_stim, p_e_noise, p_com_bound, p_t_eff, p_t_aff,
-                        p_t_a, p_w_a_intercept, p_w_a_slope, p_a_noise,
-                        p_1st_readout, p_2nd_readout, num_tr, stim_res,
+                        p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
+                        p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+                        p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+                        num_tr, stim_res,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(3e4),
                         fixation_ms=300, compute_mat_and_pcom=False):
@@ -873,8 +874,8 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         fitting parameter: gain for prior (zt).
     p_w_stim : float
         fitting parameter: gain for stim (stim).
-    p_e_noise : float
-        fitting parameter: standard deviation of evidence noise (gaussian).
+    p_e_bound : float
+        fitting parameter: bounds for the evidence integrator.
     p_com_bound : float
         fitting parameter: change-of-mind bound (will have opposite sign of
         first choice).
@@ -886,8 +887,8 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         fitting parameter: latency for action integration.
     p_w_a_intercept : float
         fitting parameter: drift of action noise.
-    p_a_noise : float
-        fitting parameter: standard deviation of action noise (gaussian).
+    p_a_bound : float
+        fitting parameter: bounds for the action integrator.
     p_1st_readout : float
         fitting parameter: slope of the linear realtion with time and evidence
         for trajectory update.
@@ -925,9 +926,10 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # print('Starting simulation, PSIAM')
     # start_eddm = time.time()
     # TODO: COMMENT EVERY FORKING LINE
-    bound = 1
-    bound_a = 2.2
-    p_leak = 0.6
+    bound = p_e_bound
+    bound_a = p_a_bound
+    p_e_noise = np.sqrt(stim_res*1e-3)
+    p_a_noise = np.sqrt(stim_res*1e-3)
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -1038,7 +1040,8 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*trial_index[i_t] + MT_intercep  # + 35*np.random.randn(1)
+            MT = MT_slope*trial_index[i_t] + MT_intercep +\
+                p_mt_noise*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
@@ -1160,14 +1163,16 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
     """
     def save_data():
         data_final = {'p_w_zt': p_w_zt_vals, 'p_w_stim': p_w_stim_vals,
-                      'p_e_noise': p_e_noise_vals,
+                      'p_e_bound': p_e_bound_vals,
                       'p_com_bound': p_com_bound_vals,
                       'p_t_aff': p_t_aff_vals, 'p_t_eff': p_t_eff_vals,
                       'p_t_a': p_t_a_vals, 'p_w_a_intercept': p_w_a_intercept_vals,
                       'p_w_a_slope': p_w_a_slope_vals,
-                      'p_a_noise': p_a_noise_vals,
+                      'p_a_bound': p_a_bound_vals,
                       'p_1st_readout': p_1st_readout_vals,
                       'p_2nd_readout': p_2nd_readout_vals,
+                      'p_leak_vals': p_leak_vals,
+                      'p_mt_noise': p_mt_noise_vals,
                       'pcom_matrix': all_mats,
                       'x_val_at_updt_mat': x_val_at_updt_mat,
                       'xpos_rt_pcom': xpos_rt_pcom,
@@ -1205,16 +1210,18 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
     MT_intercep = 254
     p_w_zt_vals = []
     p_w_stim_vals = []
-    p_e_noise_vals = []
+    p_e_bound_vals = []
     p_com_bound_vals = []
     p_t_aff_vals = []
     p_t_eff_vals = []
     p_t_a_vals = []
     p_w_a_intercept_vals = []
     p_w_a_slope_vals = []
-    p_a_noise_vals = []
+    p_a_bound_vals = []
     p_1st_readout_vals = []
     p_2nd_readout_vals = []
+    p_leak_vals = []
+    p_mt_noise_vals = []
     all_mats = []
     x_val_at_updt_mat = []
     xpos_rt_pcom = []
@@ -1226,30 +1233,34 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
         print('--------------')
         print('p_w_zt: '+str(conf[0]))
         print('p_w_stim: '+str(conf[1]))
-        print('p_e_noise: '+str(conf[2]))
+        print('p_e_bound: '+str(conf[2]))
         print('p_com_bound: '+str(conf[3]))
         print('p_t_aff: '+str(conf[4]))
         print('p_t_eff: '+str(conf[5]))
         print('p_t_a: '+str(conf[6]))
         print('p_w_a_intercept: '+str(conf[7]))
         print('p_w_a_slope: '+str(conf[8]))
-        print('p_a_noise: '+str(conf[9]))
+        print('p_a_bound: '+str(conf[9]))
         print('p_1st_readout: '+str(conf[10]))
         print('p_2nd_readout: '+str(conf[11]))
+        print('p_leak: '+str(conf[12]))
+        print('p_mt_noise: '+str(conf[12]))
         start = time.time()
         if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
             p_w_stim = conf[1]+jitters[1]*np.random.rand()
-            p_e_noise = conf[2]+jitters[2]*np.random.rand()
+            p_e_bound = conf[2]+jitters[2]*np.random.rand()
             p_com_bound = conf[3]+jitters[3]*np.random.rand()
             p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
             p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
             p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
             p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
             p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
-            p_a_noise = conf[9]+jitters[9]*np.random.rand()
+            p_a_bound = conf[9]+jitters[9]*np.random.rand()
             p_1st_readout = conf[10]+jitters[10]*np.random.rand()
             p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
+            p_leak = conf[12] + jitters[12]*np.random.rand()
+            p_mt_noise = conf[13] + jitters[13]*np.random.rand()
             stim_temp =\
                 np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
@@ -1262,15 +1273,17 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                                     trial_index=trial_index,
                                     MT_slope=MT_slope, MT_intercep=MT_intercep,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                    p_e_noise=p_e_noise, p_com_bound=p_com_bound,
+                                    p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
                                     num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
                                     p_w_a_slope=p_w_a_slope,
-                                    p_a_noise=p_a_noise,
+                                    p_a_bound=p_a_bound,
                                     p_1st_readout=p_1st_readout,
-                                    p_2nd_readout=p_2nd_readout,
+                                    p_2nd_readout=p_2nd_readout, p_leak=p_leak,
+                                    p_mt_noise=p_mt_noise,
                                     compute_trajectories=compute_trajectories,
-                                    stim_res=stim_res, all_trajs=all_trajs)
+                                    stim_res=stim_res, all_trajs=all_trajs,
+                                    compute_mat_and_pcom=True)
 
             print(np.mean(com_model))
             if plot:
@@ -1353,16 +1366,18 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                 print('Plotting time: ' + str(end_plot-start_plot))
             p_w_zt_vals.append([conf[0], p_w_zt])
             p_w_stim_vals.append([conf[1], p_w_stim])
-            p_e_noise_vals.append([conf[2], p_e_noise])
+            p_e_bound_vals.append([conf[2], p_e_bound])
             p_com_bound_vals.append([conf[3], p_com_bound])
             p_t_aff_vals.append([conf[4], p_t_aff])
             p_t_eff_vals.append([conf[5], p_t_eff])
             p_t_a_vals.append([conf[6], p_t_a])
             p_w_a_intercept_vals.append([conf[7], p_w_a_intercept])
             p_w_a_slope_vals.append([conf[8], p_w_a_slope])
-            p_a_noise_vals.append([conf[9], p_a_noise])
+            p_a_bound_vals.append([conf[9], p_a_bound])
             p_1st_readout_vals.append([conf[10], p_1st_readout])
             p_2nd_readout_vals.append([conf[11], p_2nd_readout])
+            p_leak_vals.append([conf[12], p_leak])
+            p_mt_noise_vals.append([conf[13], p_mt_noise])
             all_mats.append(matrix)
             x_val_at_updt_mat.append(x_val_at_updt)
             xpos_rt_pcom.append(xpos_plot)
@@ -1393,24 +1408,28 @@ def set_parameters(num_vals=3, factor=8):
     """
     p_w_zt_list = [0.15, 0.17, 0.2]
     p_w_stim_list = np.linspace(0.06, 0.12, num=num_vals)
-    p_e_noise_list = [0.01]
+    p_e_bound_list = [0.01]
     p_com_bound_list = [0.]
     p_t_aff_list = [6, 8, 10]
     p_t_eff_list = [6, 8, 10]
     p_t_a_list = np.linspace(10, 16, num=num_vals)
     p_w_a_intercept_list = np.linspace(0.05, 0.07, num=num_vals-1)
     p_w_a_slope_list = np.linspace(2e-5, 2.9e-5, num=num_vals)
-    p_a_noise_list = np.linspace(0.02, 0.06, num=num_vals+1)
+    p_a_bound_list = np.linspace(0.02, 0.06, num=num_vals+1)
     p_1st_readout_list = [25]
     p_2nd_readout_list = [25]
+    p_leak_list = [0.6]
+    p_mt_noise_list = [30, 40, 50]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
-                                            p_e_noise_list, p_com_bound_list,
+                                            p_e_bound_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
                                             p_w_a_intercept_list,
                                             p_w_a_slope_list,
-                                            p_a_noise_list,
+                                            p_a_bound_list,
                                             p_1st_readout_list,
-                                            p_2nd_readout_list))
+                                            p_2nd_readout_list,
+                                            p_leak_list,
+                                            p_mt_noise_list))
     if num_vals == 1:
         jitters = np.repeat(0.00001, 12)
     else:
@@ -1425,6 +1444,8 @@ def set_parameters(num_vals=3, factor=8):
                    1e-8,
                    0.0001,
                    1,
+                   1,
+                   1e-3,
                    1]
     return configurations, jitters
 
@@ -2654,13 +2675,13 @@ if __name__ == '__main__':
     # TODO: organize script
     plt.close('all')
     # tests_trajectory_update(remaining_time=100, w_updt=10)
-    num_tr = int(3e4)
+    num_tr = int(3e5)
     load_data = True
     new_sample = True
-    single_run = False
+    single_run = True
     shuffle = False
     simulate = True
-    parallel = True
+    parallel = False
     plot_t12 = False
     data_augment_factor = 10
     splitting = True
@@ -2748,21 +2769,24 @@ if __name__ == '__main__':
             p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
             p_w_zt = 0.2
             p_w_stim = 0.11
-            p_e_noise = 0.01
+            p_e_bound = 2
             p_com_bound = 0.001
             p_w_a_intercept = 0.052
             p_w_a_slope = -2.2e-05  # fixed
-            p_a_noise = 0.04  # fixed
+            p_a_bound = 2.6  # fixed
             p_1st_readout = 35
             p_2nd_readout = 35
+            p_leak = 0.6
+            p_mt_noise = 35
             compute_trajectories = True
             plot = True
             all_trajs = True
-            configurations = [(p_w_zt, p_w_stim, p_e_noise, p_com_bound, p_t_aff,
+            configurations = [(p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
                               p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope,
-                              p_a_noise,
+                              p_a_bound,
                               p_1st_readout,
-                              p_2nd_readout)]
+                              p_2nd_readout,
+                              p_leak, p_mt_noise)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
             time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
