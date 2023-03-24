@@ -1041,7 +1041,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = p_MT_slope*trial_index[i_t] +  p_MT_intercept +\
+            MT = p_MT_slope*trial_index[i_t] + p_MT_intercept +\
                 p_mt_noise*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
@@ -1054,7 +1054,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
             t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
-            t_updt = int(np.min((t_updt, len(velocities)-1)))
+            t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
             frst_traj_motor_time.append(t_updt)
             vel = velocities[t_updt]  # velocity at the timepoint
             acc = accelerations[t_updt]

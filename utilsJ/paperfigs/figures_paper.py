@@ -19,8 +19,8 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -63,7 +63,7 @@ elif pc_name == 'idibaps':
         'ChangesOfMind/figures/Figure_3/001965.png'
     TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
         'figures/Figure_1/panel_a.png'
-elif pc_name == 'idibaps_Jordi':
+elif pc_name == 'idibaps_alex':
     SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
     RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
@@ -2173,9 +2173,7 @@ def com_heatmap_marginal_pcom_side_mat(
     bins_zt.append(1.01)
     com_heatmap_kws.update({
         'return_mat': True,
-        'predefbins': [
-            np.array(bins_zt), np.array(bins_zt)
-        ]
+        'predefbins': None
     })
     if not average_across_subjects:
         mat, nmat = com_heatmap(
@@ -3268,34 +3266,34 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     # MT_slope = 0.12
     # MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 8
-    p_t_eff = 8
+    p_t_aff = 5
+    p_t_eff = 6
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.18
-    p_w_stim = 0.08
+    p_w_zt = 0.5
+    p_w_stim = 0.14
     p_e_bound = 2
     p_com_bound = 0.
-    p_w_a_intercept = 0.052
-    p_w_a_slope = -2.2e-5  # fixed
+    p_w_a_intercept = 0.056
+    p_w_a_slope = -2e-5  # fixed
     p_a_bound = 2.6  # fixed
-    p_1st_readout = 60
+    p_1st_readout = 50
     p_2nd_readout = 90
-    p_leak = 0.6
+    p_leak = 0.5
     p_mt_noise = 35
-    p_MT_intercept = 253
-    p_MT_slope = 0.12
-    conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
-                     1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
-                     2.53915835e-02, 2.51916752e+02, 1.69955742e+00, 1.00173787e-03,
-                     2.52672592e+02, 2.46703042e+02, 9.03654487e+02, 9.29949224e+01])
+    p_MT_intercept = 310
+    p_MT_slope = 0.10
+    # conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
+    #                  1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
+    #                  2.53915835e-02, 2.51916752e+02, 1.69955742e+00, 1.00173787e-03,
+    #                  2.52672592e+02, 2.46703042e+02, 9.03654487e+02, 9.29949224e+01])
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-    # conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
-    #         p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
-    #         p_2nd_readout, p_leak, p_mt_noise]
+    conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+            p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4084,6 +4082,19 @@ def plot_tach_per_subj_from_df(df):
         ax[i_s].set_xlim(-5, 155)
 
 
+def mt_vs_ti_data_comparison(df, df_sim):
+    mt_data = df.resp_len.values
+    t_i_data = df.origidx
+    mt_model = df_sim.resp_len
+    t_i_model = df_sim.origidx
+    plt.figure()
+    plt.plot(t_i_data, mt_data*1e3, 'o', markersize=0.6, color='orange',
+             label='Data')
+    plt.plot(t_i_model, mt_model*1e3, 'o', markersize=0.8, color='blue',
+             label='Model')
+    plt.legend()
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -4220,9 +4231,9 @@ if __name__ == '__main__':
         df_sim['soundrfail'] = df.soundrfail.values[:int(num_tr)]
         df_sim['allpriors'] =\
             np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)[:int(num_tr)]
+        df_sim = df_sim[df_sim.sound_len.values >= 0]
         df_sim['norm_allpriors'] = df_sim.allpriors.values \
             / np.nanmax(np.abs(df_sim.allpriors.values))
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
