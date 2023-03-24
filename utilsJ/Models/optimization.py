@@ -366,11 +366,12 @@ def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
     return diff_rms_mat
 
 
-def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
-                   p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff, p_t_a,
-                   p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
-                   p_2nd_readout, p_leak, p_mt_noise, num_times_tr=int(1e3),
-                   detect_CoMs_th=8, rms_comparison=False, epsilon=1e-6, mnle=True):
+def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
+               p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff, p_t_a,
+               p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+               p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope,
+               num_times_tr=int(1e3), detect_CoMs_th=8, rms_comparison=False,
+               epsilon=1e-6, mnle=True):
     start_llk = time.time()
     data_augment_factor = 10
     if isinstance(coh, np.ndarray):
@@ -400,7 +401,7 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff), 1))))
         num_tr = 1
         stim_temp = np.array(stim_temp)
-    MT_slope = 0.123
+    MT_slope = 0.15
     MT_intercep = 254
     compute_trajectories = True
     all_trajs = True
@@ -408,12 +409,13 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     stim_res = 50/data_augment_factor
     global fixation
     fixation = int(300 / stim_res)
-
-    detected_com_mat = np.zeros((num_tr, num_times_tr))
-    pright_mat = np.zeros((num_tr, num_times_tr))
+    if not mnle:
+        detected_com_mat = np.zeros((num_tr, num_times_tr))
+        pright_mat = np.zeros((num_tr, num_times_tr))
     diff_rms_list = []
-    mt = torch.tensor(())
-    choice = torch.tensor(())
+    if mnle:
+        mt = torch.tensor(())
+        choice = torch.tensor(())
     for i in range(num_times_tr):
         # start_simu = time.time()
         _, _, com_model, first_ind, _, _, resp_fin,\
@@ -422,7 +424,6 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             _, _, _ =\
             trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                 trial_index=trial_index,
-                                MT_slope=MT_slope, MT_intercep=MT_intercep,
                                 p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                 p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                 p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
@@ -432,18 +433,24 @@ def run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 p_1st_readout=p_1st_readout,
                                 p_2nd_readout=p_2nd_readout,
                                 p_leak=p_leak, p_mt_noise=p_mt_noise,
+                                p_MT_intercept=p_MT_intercept,
+                                p_MT_slope=p_MT_slope,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs,
                                 compute_mat_and_pcom=False)
-        reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
+        # reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
         motor_time = np.array([len(t) for t in total_traj])
-        detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-        detected_com_mat[:, i] = detected_com
-        pright_mat[:, i] = (resp_fin + 1)/2
-        motor_time = torch.tensor(motor_time)
-        resp_fin = torch.tensor((resp_fin+1)/2)
-        mt = torch.concatenate((mt, motor_time))
-        choice = torch.concatenate((choice, resp_fin))
+        if not mnle:
+            detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+            detected_com_mat[:, i] = detected_com
+            pright_mat[:, i] = (resp_fin + 1)/2
+        if mnle:
+            first_ind = []
+            total_traj = []
+            x_val_at_updt = []
+            com_model = []
+            mt = torch.cat((mt, torch.tensor(motor_time)))
+            choice = torch.cat((choice, torch.tensor((resp_fin+1)/2)))
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
         if rms_comparison:
@@ -526,11 +533,11 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
         p_a_bound = params[8]
         p_w_updt = params[9]
         llk_val, diff_rms =\
-            run_likelihood(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim,
-                           p_e_bound, p_com_bound, p_t_aff, p_t_eff,
-                           p_t_a, p_w_a, p_a_bound, p_w_updt,
-                           num_times_tr=int(1e1), detect_CoMs_th=5,
-                           rms_comparison=rms_comparison)
+            simulation(stim, zt, coh, gt, com, pright, p_w_zt, p_w_stim,
+                       p_e_bound, p_com_bound, p_t_aff, p_t_eff,
+                       p_t_a, p_w_a, p_a_bound, p_w_updt,
+                       num_times_tr=int(1e1), detect_CoMs_th=5,
+                       rms_comparison=rms_comparison)
         llk_list.append(llk_val)
         rms_list.append(diff_rms)
         if i % 3 == 0:
@@ -581,12 +588,14 @@ if __name__ == '__main__':
         p_2nd_readout = 10
         p_leak = 0.6
         p_mt_noise = 35
+        p_MT_intercept = 250
+        p_MT_slope = 0.13
         llk_val, diff_rms =\
-            run_likelihood(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
-                           p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff,
-                           p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
-                           p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
-                           num_times_tr=int(1e1))
+            simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
+                       p_w_stim, p_e_bound, p_com_bound, p_t_aff, p_t_eff,
+                       p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+                       p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+                       p_MT_intercept, p_MT_slope, num_times_tr=int(1e1))
         print(llk_val)
     # TODO: paralelize different initial points
     if optimization_cmaes:
@@ -617,12 +626,12 @@ if __name__ == '__main__':
                 p_leak = params[12]
                 p_mt_noise = params[13]
                 llk_val, diff_rms =\
-                    run_likelihood(stim, zt, coh, trial_index, gt, com, pright,
-                                   p_w_zt, p_w_stim, p_e_bound, p_com_bound,
-                                   p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                   p_w_a_slope, p_a_bound, p_1st_readout,
-                                   p_2nd_readout, rms_comparison=rms_comparison,
-                                   num_times_tr=num_times_tr)
+                    simulation(stim, zt, coh, trial_index, gt, com, pright,
+                               p_w_zt, p_w_stim, p_e_bound, p_com_bound,
+                               p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                               p_w_a_slope, p_a_bound, p_1st_readout,
+                               p_2nd_readout, rms_comparison=rms_comparison,
+                               num_times_tr=num_times_tr)
                 solutions.append((params_init, llk_val))
                 np.save(SV_FOLDER+'last_solutions.npy', solutions)
                 if rms_comparison:
@@ -710,19 +719,22 @@ if __name__ == '__main__':
             p_2nd_readout = float(theta[11])
             p_leak = float(theta[12])
             p_mt_noise = float(theta[13])
+            p_MT_intercept = float(theta[14])
+            p_MT_slope = float(theta[15])
             try:
-                x_temp = run_likelihood(stim[i_t, :], zt[i_t], coh[i_t],
-                                        np.array([trial_index[i_t]]), gt[i_t],
-                                        com, pright,
-                                        p_w_zt, p_w_stim, p_e_bound, p_com_bound,
-                                        p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                        p_w_a_slope, p_a_bound, p_1st_readout,
-                                        p_2nd_readout, p_leak, p_mt_noise,
-                                        rms_comparison=rms_comparison,
-                                        num_times_tr=num_times_tr, mnle=True)
+                x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
+                                    np.array([trial_index[i_t]]), gt[i_t],
+                                    com, pright,
+                                    p_w_zt, p_w_stim, p_e_bound, p_com_bound,
+                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                    p_w_a_slope, p_a_bound, p_1st_readout,
+                                    p_2nd_readout, p_leak, p_mt_noise,
+                                    p_MT_intercept, p_MT_slope,
+                                    rms_comparison=rms_comparison,
+                                    num_times_tr=num_times_tr, mnle=True)
             except ValueError:
                 x_temp = torch.tensor([[np.nan, np.nan]])
-            x = torch.concatenate((x, x_temp))
+            x = torch.cat((x, x_temp))
         x = x.to(torch.float32)
         nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         trainer = MNLE(prior=prior)
@@ -731,8 +743,8 @@ if __name__ == '__main__':
 
         # Markov chain Monte-Carlo (MCMC) to get posterior distros
         num_samples = 10000
-        mcmc_parameters = dict(num_chains=4, thin=10,
-                               warmup_steps=num_samples//2,
+        mcmc_parameters = dict(num_chains=10, thin=10,
+                               warmup_steps=num_samples//4,
                                init_strategy="proposal",
                                num_workers=1,)
         mnle_posterior = trainer.build_posterior(prior=prior,

@@ -849,7 +849,7 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         subject
 
 
-def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_zt,
+def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
                         p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
                         p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
@@ -928,8 +928,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
     # TODO: COMMENT EVERY FORKING LINE
     bound = p_e_bound
     bound_a = p_a_bound
-    p_e_noise = np.sqrt(stim_res*1e-3)
-    p_a_noise = np.sqrt(stim_res*1e-3)
+    dt = stim_res*1e-3
+    p_e_noise = np.sqrt(dt)
+    p_a_noise = np.sqrt(dt)
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
     prior = zt*p_w_zt
     # instantaneous evidence
@@ -1040,7 +1041,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
         for i_t in indx_trajs:
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
-            MT = MT_slope*trial_index[i_t] + MT_intercep +\
+            MT = p_MT_slope*trial_index[i_t] +  p_MT_intercept +\
                 p_mt_noise*np.random.randn(1)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
@@ -1093,13 +1094,13 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, MT_slope, MT_intercep, p_w_z
                 x_val_at_updt.append(max_val_towards_opposite)
             else:
                 x_val_at_updt.append(0)
-        detect_CoMs_th = 8
-        detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
-        df_curve = {'detected_CoM': detected_com,
-                    'sound_len': (first_ind[indx_trajs]-fixation+p_t_eff)*stim_res}
-        df_curve = pd.DataFrame(df_curve)
-        xpos = int(np.diff(BINS)[0])
         if compute_mat_and_pcom:
+            detect_CoMs_th = 8
+            detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
+            df_curve = {'detected_CoM': detected_com,
+                        'sound_len': (first_ind[indx_trajs]-fixation+p_t_eff)*stim_res}
+            df_curve = pd.DataFrame(df_curve)
+            xpos = int(np.diff(BINS)[0])
             xpos_plot, median_pcom, _ =\
                 binned_curve(df_curve, 'detected_CoM', 'sound_len', xpos=xpos,
                              bins=BINS,
@@ -1173,6 +1174,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                       'p_2nd_readout': p_2nd_readout_vals,
                       'p_leak_vals': p_leak_vals,
                       'p_mt_noise': p_mt_noise_vals,
+                      ' p_MT_intercept':  p_MT_intercept,
+                      'p_MT_slope': p_MT_slope,
                       'pcom_matrix': all_mats,
                       'x_val_at_updt_mat': x_val_at_updt_mat,
                       'xpos_rt_pcom': xpos_rt_pcom,
@@ -1206,8 +1209,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
             fix_onset = fix_onset[indx_sh]
             traj_stamps = traj_stamps[indx_sh]
     num_tr = stim.shape[1]
-    MT_slope = 0.123
-    MT_intercep = 254
+    # MT_slope = 0.123
+    # MT_intercep = 254
     p_w_zt_vals = []
     p_w_stim_vals = []
     p_e_bound_vals = []
@@ -1244,7 +1247,9 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
         print('p_1st_readout: '+str(conf[10]))
         print('p_2nd_readout: '+str(conf[11]))
         print('p_leak: '+str(conf[12]))
-        print('p_mt_noise: '+str(conf[12]))
+        print('p_mt_noise: '+str(conf[13]))
+        print(' p_MT_intercept: '+str(conf[14]))
+        print('p_MT_slope: '+str(conf[15]))
         start = time.time()
         if (np.sum(done_confs-np.array(conf).reshape(-1, 1), axis=0) != 0).all():
             p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -1261,6 +1266,8 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
             p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
             p_leak = conf[12] + jitters[12]*np.random.rand()
             p_mt_noise = conf[13] + jitters[13]*np.random.rand()
+            p_MT_intercept = conf[14] + jitters[14]*np.random.rand()
+            p_MT_slope = conf[15] + jitters[15]*np.random.rand()
             stim_temp =\
                 np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                                 stim.shape[1]))))
@@ -1271,7 +1278,7 @@ def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamp
                 rt_vals, rt_bins, tr_index =\
                 trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                     trial_index=trial_index,
-                                    MT_slope=MT_slope, MT_intercep=MT_intercep,
+                                    p_MT_slope=p_MT_slope,  p_MT_intercept= p_MT_intercept,
                                     p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                     p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                     p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
@@ -1420,6 +1427,8 @@ def set_parameters(num_vals=3, factor=8):
     p_2nd_readout_list = [25]
     p_leak_list = [0.6]
     p_mt_noise_list = [30, 40, 50]
+    p_MT_intercept_list = [200, 250, 300]
+    p_mt_slope_list = [0.1, 0.15, 0.2]
     configurations = list(itertools.product(p_w_zt_list, p_w_stim_list,
                                             p_e_bound_list, p_com_bound_list,
                                             p_t_aff_list, p_t_eff_list, p_t_a_list,
@@ -1429,7 +1438,9 @@ def set_parameters(num_vals=3, factor=8):
                                             p_1st_readout_list,
                                             p_2nd_readout_list,
                                             p_leak_list,
-                                            p_mt_noise_list))
+                                            p_mt_noise_list,
+                                            p_MT_intercept_list,
+                                            p_mt_slope_list ))
     if num_vals == 1:
         jitters = np.repeat(0.00001, 12)
     else:
@@ -1444,6 +1455,8 @@ def set_parameters(num_vals=3, factor=8):
                    1e-8,
                    0.0001,
                    1,
+                   1,
+                   1e-3,
                    1,
                    1e-3,
                    1]
@@ -2778,6 +2791,8 @@ if __name__ == '__main__':
             p_2nd_readout = 35
             p_leak = 0.6
             p_mt_noise = 35
+            p_MT_intercept = 220
+            p_MT_slope = 0.12
             compute_trajectories = True
             plot = True
             all_trajs = True
@@ -2786,7 +2801,7 @@ if __name__ == '__main__':
                               p_a_bound,
                               p_1st_readout,
                               p_2nd_readout,
-                              p_leak, p_mt_noise)]
+                              p_leak, p_mt_noise,  p_MT_intercept, p_MT_slope)]
             jitters = len(configurations[0])*[0]
             print('Number of trials: ' + str(stim.shape[1]))
             time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,

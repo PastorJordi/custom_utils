@@ -2,7 +2,7 @@ from scipy.signal import find_peaks
 import seaborn as sns
 from ast import literal_eval
 import matplotlib.pyplot as plt
-import cv2
+# import cv2
 import os
 import numpy as np
 import pandas as pd

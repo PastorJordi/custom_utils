@@ -3265,8 +3265,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     else:
         num_tr = int(len(zt))
     data_augment_factor = 10
-    MT_slope = 0.12
-    MT_intercep = 253
+    # MT_slope = 0.12
+    # MT_intercep = 253
     detect_CoMs_th = 8
     p_t_aff = 8
     p_t_eff = 8
@@ -3282,15 +3282,20 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_2nd_readout = 90
     p_leak = 0.6
     p_mt_noise = 35
-
+    p_MT_intercept = 253
+    p_MT_slope = 0.12
+    conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
+                     1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
+                     2.53915835e-02, 2.51916752e+02, 1.69955742e+00, 1.00173787e-03,
+                     2.52672592e+02, 2.46703042e+02, 9.03654487e+02, 9.29949224e+01])
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-    conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
-            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
-            p_2nd_readout, p_leak, p_mt_noise]
+    # conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+    #         p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+    #         p_2nd_readout, p_leak, p_mt_noise]
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -3307,6 +3312,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
     p_2nd_readout = conf[12]+jitters[12]*np.random.rand()
     p_mt_noise = conf[13]+jitters[13]*np.random.rand()
+    p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
+    p_MT_slope = conf[15]+jitters[15]*np.random.rand()
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -3317,7 +3324,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
         rt_vals, rt_bins, tr_index =\
         edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
                                  trial_index=trial_index,
-                                 MT_slope=MT_slope, MT_intercep=MT_intercep,
+                                 p_MT_slope=p_MT_slope,
+                                 p_MT_intercept=p_MT_intercept,
                                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
                                  p_e_bound=p_e_bound, p_com_bound=p_com_bound,
                                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
