@@ -3267,7 +3267,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     # MT_intercep = 253
     detect_CoMs_th = 8
     p_t_aff = 5
-    p_t_eff = 6
+    p_t_eff = 5
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.5
     p_w_stim = 0.14
@@ -3280,7 +3280,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_2nd_readout = 80
     p_leak = 0.5
     p_mt_noise = 35
-    p_MT_intercept = 310
+    p_MT_intercept = 340
     p_MT_slope = 0.10
     # conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
     #                  1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
@@ -3308,7 +3308,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_a_bound = conf[9]+jitters[9]*np.random.rand()
     p_1st_readout = conf[10]+jitters[10]*np.random.rand()
     p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
-    p_2nd_readout = conf[12]+jitters[12]*np.random.rand()
+    p_leak = conf[12]+jitters[12]*np.random.rand()
     p_mt_noise = conf[13]+jitters[13]*np.random.rand()
     p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
     p_MT_slope = conf[15]+jitters[15]*np.random.rand()
@@ -4083,8 +4083,10 @@ def plot_tach_per_subj_from_df(df):
 
 
 def mt_vs_ti_data_comparison(df, df_sim):
-    mt_data = df.resp_len.values
-    t_i_data = df.origidx
+    df = df[:len(df_sim)]
+    coh = np.array(df.coh2)[:len(df_sim)]
+    mt_data = df.resp_len.values[:len(df_sim)]
+    t_i_data = df.origidx[:len(df_sim)]
     mt_model = df_sim.resp_len
     t_i_model = df_sim.origidx
     plt.figure()
@@ -4092,7 +4094,49 @@ def mt_vs_ti_data_comparison(df, df_sim):
              label='Data')
     plt.plot(t_i_model, mt_model*1e3, 'o', markersize=0.8, color='blue',
              label='Model')
+    plt.ylabel('MT (ms)')
+    plt.xlabel('Trial index')
     plt.legend()
+    mt_model_signed = np.copy(mt_model)*1e3
+    mt_model_signed[df_sim.R_response.values == 0] *= -1
+    mt_sign = np.copy(mt_data*1e3)
+    mt_sign[df.R_response.values == 0] *= -1
+    fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(15, 10))
+    ax = ax.flatten()
+    sns.histplot(mt_model_signed, ax=ax[0])
+    sns.histplot(mt_model*1e3, ax=ax[1])
+    sns.histplot(mt_data*1e3, color='orange', ax=ax[2])
+    sns.histplot(mt_sign, color='orange', ax=ax[3])
+    sns.kdeplot(mt_data*1e3, color='orange', ax=ax[4], label='Data')
+    sns.kdeplot(mt_model*1e3, color='blue', ax=ax[4], label='Model - prior sampling')
+    ax[4].legend()
+    ax[1].set_title('Model - prior sampling')
+    ax[0].set_title('Model - prior sampling')
+    ax[2].set_title('Data')
+    ax[3].set_xlabel('MT (ms)')
+    ax[4].set_xlabel('MT (ms)')
+    for i in range(2):
+        ax[i+1].set_xlim(0, 600)
+    ax[3].set_xlim(-600, 600)
+    ax[0].set_xlim(-600, 600)
+    
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+        index = np.abs(coh) == ev
+        sns.kdeplot(mt_data[index]*1e3, color=colormap[iev], ax=ax[5])
+        sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5], linestyle='--')
+    ax[5].set_xlim(0, 600)
+    plt.show()
+    fig, ax = plt.subplots(ncols=3)
+    sns.kdeplot(df_sim.sound_len.values, color='blue', label='Model', ax=ax[0])
+    sns.kdeplot(df.sound_len.values, color='orange', label='Data', ax=ax[0])
+    ax[0].legend()
+    ax[0].set_xlabel('RT (ms)')
+    sns.histplot(df_sim.sound_len.values, color='blue', label='Model', ax=ax[1])
+    sns.histplot(df.sound_len.values, color='orange', label='Data', ax=ax[2])
+    ax[1].set_xlabel('RT (ms)')
+    ax[1].set_title('Model')
+    ax[2].set_xlabel('Data')
 
 
 # ---MAIN

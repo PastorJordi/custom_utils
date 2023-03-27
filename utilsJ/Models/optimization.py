@@ -415,6 +415,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     diff_rms_list = []
     if mnle:
         mt = torch.tensor(())
+        # rt = torch.tensor(())
+        com = torch.tensor(())
         choice = torch.tensor(())
     for i in range(num_times_tr):
         # start_simu = time.time()
@@ -440,8 +442,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 compute_mat_and_pcom=False)
         # reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
         motor_time = np.array([len(t) for t in total_traj])
+        detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         if not mnle:
-            detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
             detected_com_mat[:, i] = detected_com
             pright_mat[:, i] = (resp_fin + 1)/2
         if mnle:
@@ -450,6 +452,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             x_val_at_updt = []
             com_model = []
             mt = torch.cat((mt, torch.tensor(motor_time)))
+            # rt = torch.cat((rt, torch.tensor(reaction_time)))
+            com = torch.cat((com, torch.tensor(detected_com*1)))
             choice = torch.cat((choice, torch.tensor((resp_fin+1)/2)))
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
@@ -458,7 +462,7 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     if mnle:
-        x = torch.column_stack((mt, choice))
+        x = torch.column_stack((mt, com, choice))
         return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
