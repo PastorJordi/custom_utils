@@ -20,13 +20,14 @@ from sbi.utils import MultipleIndependent
 import torch
 from torch.distributions import Beta, Binomial, Gamma, Uniform
 from sbi.analysis import pairplot
+from pybads import BADS
 
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
-    data_augmentation, get_data_and_matrix
+    data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
@@ -41,6 +42,11 @@ SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
+global x_o
+global trial_index
+global coh
+global zt
+global estimator
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -462,7 +468,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     if mnle:
-        x = torch.column_stack((mt, com, choice))
+        choice_and_com = com + choice*2
+        x = torch.column_stack((mt, choice_and_com))
         return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
@@ -554,6 +561,197 @@ def plot_rms_vs_llk(mean, sigma, zt, stim, iterations, scaling_value,
             plt.savefig(SV_FOLDER+'/figures/llk_vs_rms.png', dpi=400,
                         bbox_inches='tight')
             plt.close()
+
+
+def build_prior_sample_theta(num_simulations):
+    # 1. Parameters' prior distro definition
+    prior =\
+        MultipleIndependent([
+            Uniform(torch.tensor([1e-1]),
+                    torch.tensor([1])),  # prior weight
+            Uniform(torch.tensor([1e-3]),
+                    torch.tensor([0.8])),  # stim weight
+            Uniform(torch.tensor([1e-2]),
+                    torch.tensor([3.])),  # evidence integrator bound
+            Uniform(torch.tensor([1e-8]),
+                    torch.tensor([1.])),  # CoM bound
+            Uniform(torch.tensor([4.]),
+                    torch.tensor([12.])),  # afferent time
+            Uniform(torch.tensor([4.]),
+                    torch.tensor([12.])),  # efferent time
+            Uniform(torch.tensor([9.]),
+                    torch.tensor([16.])),  # time offset action
+            Uniform(torch.tensor([1e-2]),
+                    torch.tensor([0.08])),  # intercept trial index for action drift
+            Uniform(torch.tensor([1e-7]),
+                    torch.tensor([5e-5])),  # slope trial index for action drift
+            Uniform(torch.tensor([0.5]),
+                    torch.tensor([4.])),  # bound for action integrator
+            Uniform(torch.tensor([10.]),
+                    torch.tensor([100.])),  # weight of evidence at first readout (for MT reduction)
+            Uniform(torch.tensor([10.]),
+                    torch.tensor([100.])),  # weight of evidence at second readout
+            Uniform(torch.tensor([0.2]),
+                    torch.tensor([0.9])),  # leak
+            Uniform(torch.tensor([1.]),
+                    torch.tensor([35.])),  # std of the MT noise
+            Uniform(torch.tensor([120.]),
+                    torch.tensor([400.])),  # MT offset
+            Uniform(torch.tensor([0.06]),
+                    torch.tensor([0.5]))],  # MT slope with trial index
+            validate_args=False)
+
+    # 2. define all theta space with samples from prior
+    theta_all = prior.sample((num_simulations,))
+    return prior, theta_all
+
+
+def fun_theta(theta):
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(num_simulations, 1)
+    theta[:, 0] *= torch.tensor(zt[:n_trials])
+    theta[:, 1] *= torch.tensor(coh[:n_trials])
+    t_i = torch.tensor(
+        trial_index[:n_trials].astype(float)).to(torch.float32)
+    theta = torch.column_stack((theta, t_i))
+    log_liks = estimator.log_prob(x_o[:n_trials], context=theta)
+    return -torch.nansum(log_liks).detach().numpy()
+
+
+def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
+    # run simulations
+    x = torch.tensor(())
+    print('Starting simulation')
+    for i_t, theta in enumerate(theta_all):
+        if (i_t+1) % 50000 == 0 and i_t != 0:
+            print('Simulation number: ' + str(i_t+1))
+        p_w_zt = float(theta[0])
+        p_w_stim = float(theta[1])
+        p_e_bound = float(theta[2])
+        p_com_bound = float(theta[3])*p_e_bound
+        p_t_aff = int(np.round(theta[4]))
+        p_t_eff = int(np.round(theta[5]))
+        p_t_a = int(np.round(theta[6]))
+        p_w_a_intercept = float(theta[7])
+        p_w_a_slope = -float(theta[8])
+        p_a_bound = float(theta[9])
+        p_1st_readout = float(theta[10])
+        p_2nd_readout = float(theta[11])
+        p_leak = float(theta[12])
+        p_mt_noise = float(theta[13])
+        p_mt_intercept = float(theta[14])
+        p_mt_slope = float(theta[15])
+        try:
+            x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
+                                np.array([trial_index[i_t]]), gt[i_t],
+                                None, None,
+                                p_w_zt, p_w_stim, p_e_bound, p_com_bound,
+                                p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                p_w_a_slope, p_a_bound, p_1st_readout,
+                                p_2nd_readout, p_leak, p_mt_noise,
+                                p_mt_intercept, p_mt_slope,
+                                rms_comparison=False,
+                                num_times_tr=1, mnle=True)
+        except ValueError:
+            x_temp = torch.tensor([[np.nan, np.nan]])
+        x = torch.cat((x, x_temp))
+    x = x.to(torch.float32)
+    return x
+
+
+def opt_mnle(df, num_simulations, n_trials, bads=True):
+    mt = df.resp_len.values
+    choice = df.R_response.values
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    stim = np.array([stim for stim in df.res_sound])
+    coh = np.array(df.coh2)
+    trial_index = np.array(df.origidx)
+    gt = np.array(df.rewside) * 2 - 1
+    traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
+    traj_y = df.trajectory_y.values  # [after_correct_id]
+    fix_onset = df.fix_onset_dt.values  # [after_correct_id]
+    sound_len = np.array(df.sound_len)
+    time_trajs = get_trajs_time(resp_len=mt,
+                                traj_stamps=traj_stamps,
+                                fix_onset=fix_onset, com=None,
+                                sound_len=sound_len)
+    _, _, _, com =\
+        com_detection(trajectories=traj_y, decision=choice,
+                      time_trajs=time_trajs, com_threshold=8)
+    # Prepare data:
+    coh = np.resize(coh, num_simulations)
+    zt = np.resize(zt, num_simulations)
+    trial_index = np.resize(trial_index, num_simulations)
+    stim = np.resize(stim, (num_simulations, 20))
+    gt = np.resize(gt, num_simulations)
+    mt = np.resize(mt, num_simulations)
+    choice = np.resize(choice, num_simulations)
+    com = np.resize(com, num_simulations)
+    choice_and_com = com + choice*2
+
+    x_o = torch.column_stack((torch.tensor(mt*1e3),
+                              torch.tensor(choice_and_com)))
+    x_o = x_o.to(torch.float32)
+
+    prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
+    x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
+    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
+    trainer = MNLE(prior=prior)
+    theta_all_inp = theta_all.clone().detach()
+    theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
+    theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
+    theta_all_inp = torch.column_stack((
+        theta_all_inp, torch.tensor(
+            trial_index[:num_simulations].astype(float)).to(torch.float32)))
+    theta_all_inp = theta_all_inp.to(torch.float32)
+    time_start = time.time()
+    estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
+                                           x[~nan_mask, :]).train(
+                                               show_train_summary=True)
+    print('For a batch of ' + str(num_simulations) +
+          ' simulations, it took ' + str(int(time.time() - time_start)/60)
+          + ' mins')
+    if bads:
+        mt = df.resp_len.values
+        choice = df.R_response.values
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        stim = np.array([stim for stim in df.res_sound])
+        coh = np.array(df.coh2)
+        trial_index = np.array(df.origidx)
+        gt = np.array(df.rewside) * 2 - 1
+        x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
+            x_o[:num_simulations], context=theta_all_inp)), :-1]
+        x0[0] = 0.5
+        x0[1] = 0.5
+        print('Initial guess is: ' + str(x0))
+
+        lb = np.array([np.float64(prior.dists[i].low/10)
+                       for i in range(len(prior.dists))])
+        ub = np.array([np.float64(prior.dists[i].high*100)
+                       for i in range(len(prior.dists))])
+        pub = np.array([np.float64(prior.dists[i].high)
+                        for i in range(len(prior.dists))])
+        plb = np.array([np.float64(prior.dists[i].low)
+                        for i in range(len(prior.dists))])
+        bads = BADS(fun_theta, x0, lb, ub, plb, pub)
+        optimize_result = bads.optimize()
+        return optimize_result.x
+    else:
+        # Markov chain Monte-Carlo (MCMC) to get posterior distros
+        num_samples = 10000
+        mcmc_parameters = dict(num_chains=10, thin=10,
+                               warmup_steps=num_samples//4,
+                               init_strategy="proposal",
+                               num_workers=1,)
+        mnle_posterior = trainer.build_posterior(prior=prior,
+                                                 mcmc_method="slice_np",
+                                                 mcmc_parameters=mcmc_parameters)
+        mnle_samples = mnle_posterior.sample((num_samples,), x=x_o,
+                                             show_progress_bars=True)
+        return mnle_samples
+    # at this point, we should re-simulate the model with all trials
+    # and compare distros
 
 
 # --- MAIN
@@ -651,113 +849,16 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        com = None
-        pright = None
-        num_times_tr = 1
-        num_trials_training = int(1e4)
-        index = np.arange(num_trials_training)
+        num_simulations = 250000
+        n_trials = 140000
         # load real data
         subject = 'LE43'
         df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
                                  sv_folder=SV_FOLDER, after_correct=True,
                                  silent=True, all_trials=True,
                                  srfail=True)
-        mt = df.resp_len.values
-        choice = df.R_response.values
-        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        stim = np.array([stim for stim in df.res_sound])
-        coh = np.array(df.coh2)
-        trial_index = np.array(df.origidx)
-        gt = np.array(df.rewside) * 2 - 1
-        # 1. Parameters' prior distro definition
-        prior = MultipleIndependent([Beta(torch.tensor([1.]),
-                                          torch.tensor([10.])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
-                                     Uniform(torch.tensor([1.5]),
-                                             torch.tensor([3.])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
-                                     Uniform(torch.tensor([4.]),
-                                             torch.tensor([20.])),
-                                     Uniform(torch.tensor([4.]),
-                                             torch.tensor([20.0])),
-                                     Uniform(torch.tensor([8.]),
-                                             torch.tensor([20.0])),
-                                     Beta(torch.tensor([1.0]),
-                                          torch.tensor([10.0])),
-                                     Gamma(torch.tensor([0.001]),
-                                           torch.tensor([0.001])),
-                                     Uniform(torch.tensor([2.]),
-                                             torch.tensor([4.])),
-                                     Uniform(torch.tensor([20.]),
-                                             torch.tensor([80.])),
-                                     Uniform(torch.tensor([20.]),
-                                             torch.tensor([80.0])),
-                                     Beta(torch.tensor([3.0]),
-                                          torch.tensor([2.0])),
-                                     Uniform(torch.tensor([20.]),
-                                             torch.tensor([50.0]))],
-                                    validate_args=False)
-        # 2. Def. theta_o as a prior sample
-        theta_o = prior.sample((1,))
-        # 3. define all theta space with samples from prior
-        num_simulations = 30000
-        theta_all = prior.sample((num_simulations,))
-        x_o = torch.column_stack((torch.tensor(mt*1e3), torch.tensor(choice)))
-        x_o = x_o.to(torch.float32)
-        # run simulations
-        x = torch.tensor(())
-        for i_t, theta in enumerate(theta_all):
-            p_w_zt = float(theta[0])
-            p_w_stim = float(theta[1])
-            p_e_bound = float(theta[2])
-            p_com_bound = float(theta[3])
-            p_t_aff = int(np.round(theta[4]))
-            p_t_eff = int(np.round(theta[5]))
-            p_t_a = int(np.round(theta[6]))
-            p_w_a_intercept = float(theta[7])
-            p_w_a_slope = -float(theta[8])
-            p_a_bound = float(theta[9])
-            p_1st_readout = float(theta[10])
-            p_2nd_readout = float(theta[11])
-            p_leak = float(theta[12])
-            p_mt_noise = float(theta[13])
-            p_MT_intercept = float(theta[14])
-            p_MT_slope = float(theta[15])
-            try:
-                x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
-                                    np.array([trial_index[i_t]]), gt[i_t],
-                                    com, pright,
-                                    p_w_zt, p_w_stim, p_e_bound, p_com_bound,
-                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                    p_w_a_slope, p_a_bound, p_1st_readout,
-                                    p_2nd_readout, p_leak, p_mt_noise,
-                                    p_MT_intercept, p_MT_slope,
-                                    rms_comparison=rms_comparison,
-                                    num_times_tr=num_times_tr, mnle=True)
-            except ValueError:
-                x_temp = torch.tensor([[np.nan, np.nan]])
-            x = torch.cat((x, x_temp))
-        x = x.to(torch.float32)
-        nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
-        trainer = MNLE(prior=prior)
-        estimator = trainer.append_simulations(theta_all[~nan_mask, :],
-                                               x[~nan_mask, :]).train()
-
-        # Markov chain Monte-Carlo (MCMC) to get posterior distros
-        num_samples = 10000
-        mcmc_parameters = dict(num_chains=10, thin=10,
-                               warmup_steps=num_samples//4,
-                               init_strategy="proposal",
-                               num_workers=1,)
-        mnle_posterior = trainer.build_posterior(prior=prior,
-                                                 mcmc_method="slice_np",
-                                                 mcmc_parameters=mcmc_parameters)
-        mnle_samples = mnle_posterior.sample((num_samples,), x=x_o,
-                                             show_progress_bars=True)
-        # at this point, we should re-simulate the model with all trials
-        # and compare distros
+        parameters = opt_mnle(df=df, num_simulations=num_simulations,
+                              n_trials=n_trials, bads=True)
     if rms_comparison and plotting:
         plt.figure()
         plt.scatter(rms_list, llk_list)
