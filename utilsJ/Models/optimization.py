@@ -623,7 +623,7 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
     x = torch.tensor(())
     print('Starting simulation')
     for i_t, theta in enumerate(theta_all):
-        if (i_t+1) % 50000 == 0 and i_t != 0:
+        if (i_t+1) % 100000 == 0 and i_t != 0:
             print('Simulation number: ' + str(i_t+1))
         p_w_zt = float(theta[0])
         p_w_stim = float(theta[1])
