@@ -19,8 +19,8 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -2531,7 +2531,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         except Exception:
             mean_vel = func_final(vel_all, axis=0)
             std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
-        val_vel = np.nanmean(np.nanmax(vel_all, axis=1))
+        val_vel = func_final(np.nanmax(vel_all, axis=1))
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=30)
         vals_thr_vel.append(val_vel)
         if not prior:
@@ -3269,7 +3269,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     # MT_intercep = 253
     detect_CoMs_th = 8
     p_t_aff = 5
-    p_t_eff = 5
+    p_t_eff = 4
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.5
     p_w_stim = 0.14
@@ -3283,11 +3283,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_leak = 0.5
     p_mt_noise = 35
     p_MT_intercept = 290
-    p_MT_slope = 0.10
-    # conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
-    #                  1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
-    #                  2.53915835e-02, 2.51916752e+02, 1.69955742e+00, 1.00173787e-03,
-    #                  2.52672592e+02, 2.46703042e+02, 9.03654487e+02, 9.29949224e+01])
+    p_MT_slope = 0.08
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
@@ -4166,7 +4162,7 @@ if __name__ == '__main__':
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=True,
+                                          sv_folder=SV_FOLDER, after_correct=False,
                                           silent=True, all_trials=True,
                                           srfail=True)
             if all_rats:
@@ -4232,7 +4228,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(7e4)
+        num_tr = int(2e5)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
