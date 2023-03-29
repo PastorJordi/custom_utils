@@ -670,8 +670,8 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         plt.show()
 
 
-def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
-    # plist = []
+def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
+    plist = []
     for i in reversed(range(max_MT)):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
@@ -679,11 +679,13 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700):
         pop_a = pop_a[nan_idx]
         try:
             _, p2 = pearsonr(pop_a, pop_evidence)
-            # plist.append(p2)
+            plist.append(p2)
         except Exception:
             continue
             # return np.nan
         if p2 > pval:
+            return i + 1
+        if sim and np.isnan(p2):
             return i + 1
     return np.nan
 
@@ -1002,9 +1004,9 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
-                    max_mt = 400
+                    max_mt = 130 + i*10
                     current_split_index =\
-                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
+                        get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
                                            startfrom=0)
                 # + (rtbins[i] + rtbins[i+1])/2
                 out_data += [current_split_index]
@@ -3280,7 +3282,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_2nd_readout = 80
     p_leak = 0.5
     p_mt_noise = 35
-    p_MT_intercept = 340
+    p_MT_intercept = 290
     p_MT_slope = 0.10
     # conf = np.array([1.05160325e-12, 1.90922363e-01, 1.66309585e+02, 2.97762416e+02,
     #                  1.95951700e+02, 1.04819640e+01, 1.94412934e+02, 1.72497347e+00,
@@ -4108,10 +4110,10 @@ def mt_vs_ti_data_comparison(df, df_sim):
     sns.histplot(mt_data*1e3, color='orange', ax=ax[2])
     sns.histplot(mt_sign, color='orange', ax=ax[3])
     sns.kdeplot(mt_data*1e3, color='orange', ax=ax[4], label='Data')
-    sns.kdeplot(mt_model*1e3, color='blue', ax=ax[4], label='Model - prior sampling')
+    sns.kdeplot(mt_model*1e3, color='blue', ax=ax[4], label='Model')
     ax[4].legend()
-    ax[1].set_title('Model - prior sampling')
-    ax[0].set_title('Model - prior sampling')
+    ax[1].set_title('Model')
+    ax[0].set_title('Model')
     ax[2].set_title('Data')
     ax[3].set_xlabel('MT (ms)')
     ax[4].set_xlabel('MT (ms)')
@@ -4288,8 +4290,7 @@ if __name__ == '__main__':
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
         fig, ax = plt.subplots(ncols=2)
-        mt_matrix_vs_ev_zt(df_sim, ax)
-        fig, ax = plt.subplots(1)
+        mt_matrix_vs_ev_zt(df_sim, ax, silent_comparison=True)
         mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)

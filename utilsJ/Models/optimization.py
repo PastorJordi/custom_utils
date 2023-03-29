@@ -42,11 +42,6 @@ DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
-global x_o
-global trial_index
-global coh
-global zt
-global estimator
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -606,7 +601,11 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta):
+def fun_theta(theta, data, estimator):
+    zt = data[:, 0]
+    coh = data[:, 1]
+    trial_index = data[:, 2]
+    x_o = data[:, 2:-1]
     theta = torch.reshape(torch.tensor(theta),
                           (1, len(theta))).to(torch.float32)
     theta = theta.repeat(num_simulations, 1)
@@ -693,7 +692,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     x_o = torch.column_stack((torch.tensor(mt*1e3),
                               torch.tensor(choice_and_com)))
     x_o = x_o.to(torch.float32)
-
+    data = torch.column_stack((zt, coh, trial_index, x_o))
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
     x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
     nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
@@ -713,13 +712,6 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
           ' simulations, it took ' + str(int(time.time() - time_start)/60)
           + ' mins')
     if bads:
-        mt = df.resp_len.values
-        choice = df.R_response.values
-        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        stim = np.array([stim for stim in df.res_sound])
-        coh = np.array(df.coh2)
-        trial_index = np.array(df.origidx)
-        gt = np.array(df.rewside) * 2 - 1
         x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
             x_o[:num_simulations], context=theta_all_inp)), :-1]
         x0[0] = 0.5
@@ -734,7 +726,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
                         for i in range(len(prior.dists))])
         plb = np.array([np.float64(prior.dists[i].low)
                         for i in range(len(prior.dists))])
-        bads = BADS(fun_theta, x0, lb, ub, plb, pub)
+        fun_target = lambda x: fun_theta(x, data, estimator)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
         return optimize_result.x
     else:
