@@ -601,18 +601,18 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta, data, estimator):
+def fun_theta(theta, data, estimator, n_trials):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
-    x_o = data[:, 2:-1]
+    x_o = data[:, 3::]
     theta = torch.reshape(torch.tensor(theta),
                           (1, len(theta))).to(torch.float32)
-    theta = theta.repeat(num_simulations, 1)
+    theta = theta.repeat(n_trials, 1)
     theta[:, 0] *= torch.tensor(zt[:n_trials])
     theta[:, 1] *= torch.tensor(coh[:n_trials])
     t_i = torch.tensor(
-        trial_index[:n_trials].astype(float)).to(torch.float32)
+        trial_index[:n_trials]).to(torch.float32)
     theta = torch.column_stack((theta, t_i))
     log_liks = estimator.log_prob(x_o[:n_trials], context=theta)
     return -torch.nansum(log_liks).detach().numpy()
@@ -692,7 +692,11 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     x_o = torch.column_stack((torch.tensor(mt*1e3),
                               torch.tensor(choice_and_com)))
     x_o = x_o.to(torch.float32)
-    data = torch.column_stack((zt, coh, trial_index, x_o))
+    data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
+                               torch.tensor(trial_index.astype(float)),
+                               x_o))
+    data = data.to(torch.float32)
+    print('Data preprocessed, building prior distros')
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
     x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
     nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
@@ -705,6 +709,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
             trial_index[:num_simulations].astype(float)).to(torch.float32)))
     theta_all_inp = theta_all_inp.to(torch.float32)
     time_start = time.time()
+    print('Starting network training')
     estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                            x[~nan_mask, :]).train(
                                                show_train_summary=True)
@@ -726,7 +731,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
                         for i in range(len(prior.dists))])
         plb = np.array([np.float64(prior.dists[i].low)
                         for i in range(len(prior.dists))])
-        fun_target = lambda x: fun_theta(x, data, estimator)
+        fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
         return optimize_result.x
@@ -842,8 +847,8 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = 2000
-        n_trials = 1000
+        num_simulations = int(10e6)  # number of simulations to train the network
+        n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'
         df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
