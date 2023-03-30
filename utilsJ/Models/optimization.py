@@ -22,8 +22,8 @@ from torch.distributions import Beta, Binomial, Gamma, Uniform
 from sbi.analysis import pairplot
 from pybads import BADS
 
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
@@ -31,15 +31,15 @@ from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 
@@ -699,9 +699,12 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
                                x_o))
     data = data.to(torch.float32)
     print('Data preprocessed, building prior distros')
+    # build prior
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
+    # simulate
     x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
     nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
+    # define network MNLE
     trainer = MNLE(prior=prior)
     theta_all_inp = theta_all.clone().detach()
     theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
@@ -712,6 +715,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     theta_all_inp = theta_all_inp.to(torch.float32)
     time_start = time.time()
     print('Starting network training')
+    # network training
     estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                            x[~nan_mask, :]).train(
                                                show_train_summary=True)
@@ -849,7 +853,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e3)  # number of simulations to train the network
+        num_simulations = int(2e4)  # number of simulations to train the network
         n_trials = 1000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'

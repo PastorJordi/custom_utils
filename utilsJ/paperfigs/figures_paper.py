@@ -20,8 +20,8 @@ from statsmodels.stats.proportion import proportion_confint
 # import shutil
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3292,10 +3292,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    conf = np.array([1.00000137e-02, 8.53635742e-01, 8.06001132e-01, 1.15759617e+00,
-                     4.55979109e+00, 1.56722906e+01, 1.03774541e+01, 1.56764368e-01,
-                     2.94196556e-05, 7.53589514e+00, 5.49887760e+01, 6.75982469e+01,
-                     1.99999997e-02, 1.00000865e-01, 3.87920668e+02, 1.06242345e+00])
+    conf = np.array([1.02264323e-02, 1.00002553e-04, 4.46613252e+00, 4.83162564e-07,
+                     4.00000036e-01, 4.00000036e-01, 1.85079452e+00, 3.36811357e-02,
+                     4.15314630e-05, 8.11933361e+00, 1.00000007e+00, 1.00000007e+00,
+                     1.99999997e-02, 1.00000163e-01, 4.53547195e+02, 1.34556320e+00])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4232,7 +4232,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(2e5)
+        num_tr = int(5e4)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
