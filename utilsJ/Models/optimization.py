@@ -23,9 +23,9 @@ from sbi.analysis import pairplot
 from pybads import BADS
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -33,13 +33,13 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 
@@ -416,8 +416,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     diff_rms_list = []
     if mnle:
         mt = torch.tensor(())
-        # rt = torch.tensor(())
-        com = torch.tensor(())
+        rt = torch.tensor(())
+        # com = torch.tensor(())
         choice = torch.tensor(())
     for i in range(num_times_tr):
         # start_simu = time.time()
@@ -441,7 +441,7 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs,
                                 compute_mat_and_pcom=False)
-        # reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
+        reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
         motor_time = np.array([len(t) for t in total_traj])
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         if not mnle:
@@ -453,8 +453,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             x_val_at_updt = []
             com_model = []
             mt = torch.cat((mt, torch.tensor(motor_time)))
-            # rt = torch.cat((rt, torch.tensor(reaction_time)))
-            com = torch.cat((com, torch.tensor(detected_com*1)))
+            rt = torch.cat((rt, torch.tensor(reaction_time)))
+            # com = torch.cat((com, torch.tensor(detected_com*1)))
             choice = torch.cat((choice, torch.tensor((resp_fin+1)/2)))
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
@@ -463,8 +463,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     if mnle:
-        choice_and_com = com + choice*2
-        x = torch.column_stack((mt, choice_and_com))
+        # choice_and_com = com + choice*2
+        x = torch.column_stack((mt, rt, choice))
         return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
@@ -653,7 +653,7 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
                                 rms_comparison=False,
                                 num_times_tr=1, mnle=True)
         except ValueError:
-            x_temp = torch.tensor([[np.nan, np.nan]])
+            x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
         x = torch.cat((x, x_temp))
     x = x.to(torch.float32)
     return x
@@ -678,6 +678,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     _, _, _, com =\
         com_detection(trajectories=traj_y, decision=choice,
                       time_trajs=time_trajs, com_threshold=8)
+    stim[df.soundrfail, :] = 0
     # Prepare data:
     coh = np.resize(coh, num_simulations)
     zt = np.resize(zt, num_simulations)
@@ -686,11 +687,12 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     gt = np.resize(gt, num_simulations)
     mt = np.resize(mt, num_simulations)
     choice = np.resize(choice, num_simulations)
-    com = np.resize(com, num_simulations)
-    choice_and_com = com + choice*2
-
+    # com = np.resize(com, num_simulations)
+    # choice_and_com = com + choice*2
+    rt = np.resize(sound_len, num_simulations)
     x_o = torch.column_stack((torch.tensor(mt*1e3),
-                              torch.tensor(choice_and_com)))
+                              torch.tensor(rt),
+                              torch.tensor(choice)))
     x_o = x_o.to(torch.float32)
     data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
                                torch.tensor(trial_index.astype(float)),
@@ -847,8 +849,8 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(10e6)  # number of simulations to train the network
-        n_trials = 100000  # number of trials to evaluate the likelihood for fitting
+        num_simulations = int(2e3)  # number of simulations to train the network
+        n_trials = 1000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'
         df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,

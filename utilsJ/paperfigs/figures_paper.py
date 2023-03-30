@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3292,6 +3292,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
+    conf = np.array([1.00000137e-02, 8.53635742e-01, 8.06001132e-01, 1.15759617e+00,
+                     4.55979109e+00, 1.56722906e+01, 1.03774541e+01, 1.56764368e-01,
+                     2.94196556e-05, 7.53589514e+00, 5.49887760e+01, 6.75982469e+01,
+                     1.99999997e-02, 1.00000865e-01, 3.87920668e+02, 1.06242345e+00])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4117,12 +4121,12 @@ def mt_vs_ti_data_comparison(df, df_sim):
         ax[i+1].set_xlim(0, 600)
     ax[3].set_xlim(-600, 600)
     ax[0].set_xlim(-600, 600)
-    
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate([0, 0.25, 0.5, 1]):
         index = np.abs(coh) == ev
         sns.kdeplot(mt_data[index]*1e3, color=colormap[iev], ax=ax[5])
-        sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5], linestyle='--')
+        sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5],
+                    linestyle='--')
     ax[5].set_xlim(0, 600)
     plt.show()
     fig, ax = plt.subplots(ncols=3)
