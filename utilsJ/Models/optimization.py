@@ -402,8 +402,6 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff), 1))))
         num_tr = 1
         stim_temp = np.array(stim_temp)
-    MT_slope = 0.15
-    MT_intercep = 254
     compute_trajectories = True
     all_trajs = True
 
@@ -703,7 +701,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
     # simulate
     x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
-    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
+    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)  # + (x[:, 1] < 0)
     # define network MNLE
     trainer = MNLE(prior=prior)
     theta_all_inp = theta_all.clone().detach()

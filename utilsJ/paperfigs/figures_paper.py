@@ -522,6 +522,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
+    prior_lim = np.quantile(df.norm_allpriors, prior_limit)
     if after_correct_only:
         ac_cond = df.aftererror == False
     else:
@@ -2919,7 +2920,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     for i_ev, ev in enumerate(ev_vals):
         index = (congruent_coh == ev) &\
-            (np.abs(prior) <= np.quantile(np.abs(prior), 0.1))
+            (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
@@ -3268,7 +3269,7 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     # MT_slope = 0.12
     # MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 5
+    p_t_aff = 4
     p_t_eff = 4
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.5
@@ -3292,10 +3293,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    conf = np.array([1.02264323e-02, 1.00002553e-04, 4.46613252e+00, 4.83162564e-07,
-                     4.00000036e-01, 4.00000036e-01, 1.85079452e+00, 3.36811357e-02,
-                     4.15314630e-05, 8.11933361e+00, 1.00000007e+00, 1.00000007e+00,
-                     1.99999997e-02, 1.00000163e-01, 4.53547195e+02, 1.34556320e+00])
+    # conf = np.array([1.02264323e-02, 1.00002553e-04, 4.46613252e+00, 4.83162564e-07,
+    #                  4.00000036e-01, 4.00000036e-01, 1.85079452e+00, 3.36811357e-02,
+    #                  4.15314630e-05, 8.11933361e+00, 1.00000007e+00, 1.00000007e+00,
+    #                  1.99999997e-02, 1.00000163e-01, 4.53547195e+02, 1.34556320e+00])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4232,7 +4233,8 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(5e4)
+        stim[df.soundrfail, :] = 0
+        num_tr = int(8e4)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
