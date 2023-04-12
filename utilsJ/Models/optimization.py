@@ -402,8 +402,6 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff), 1))))
         num_tr = 1
         stim_temp = np.array(stim_temp)
-    MT_slope = 0.15
-    MT_intercep = 254
     compute_trajectories = True
     all_trajs = True
 
@@ -416,8 +414,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     diff_rms_list = []
     if mnle:
         mt = torch.tensor(())
-        # rt = torch.tensor(())
-        com = torch.tensor(())
+        rt = torch.tensor(())
+        # com = torch.tensor(())
         choice = torch.tensor(())
     for i in range(num_times_tr):
         # start_simu = time.time()
@@ -441,7 +439,7 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                 compute_trajectories=compute_trajectories,
                                 stim_res=stim_res, all_trajs=all_trajs,
                                 compute_mat_and_pcom=False)
-        # reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
+        reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
         motor_time = np.array([len(t) for t in total_traj])
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
         if not mnle:
@@ -453,8 +451,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             x_val_at_updt = []
             com_model = []
             mt = torch.cat((mt, torch.tensor(motor_time)))
-            # rt = torch.cat((rt, torch.tensor(reaction_time)))
-            com = torch.cat((com, torch.tensor(detected_com*1)))
+            rt = torch.cat((rt, torch.tensor(reaction_time)))
+            # com = torch.cat((com, torch.tensor(detected_com*1)))
             choice = torch.cat((choice, torch.tensor((resp_fin+1)/2)))
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
@@ -463,8 +461,8 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     if mnle:
-        choice_and_com = com + choice*2
-        x = torch.column_stack((mt, choice_and_com))
+        # choice_and_com = com + choice*2
+        x = torch.column_stack((mt, rt+300, choice))
         return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
@@ -656,7 +654,7 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
                                 rms_comparison=False,
                                 num_times_tr=1, mnle=True)
         except ValueError:
-            x_temp = torch.tensor([[np.nan, np.nan]])
+            x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
         x = torch.cat((x, x_temp))
     x = x.to(torch.float32)
     return x
@@ -681,6 +679,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     _, _, _, com =\
         com_detection(trajectories=traj_y, decision=choice,
                       time_trajs=time_trajs, com_threshold=8)
+    stim[df.soundrfail, :] = 0
     # Prepare data:
     coh = np.resize(coh, num_simulations)
     zt = np.resize(zt, num_simulations)
@@ -689,20 +688,24 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     gt = np.resize(gt, num_simulations)
     mt = np.resize(mt, num_simulations)
     choice = np.resize(choice, num_simulations)
-    com = np.resize(com, num_simulations)
-    choice_and_com = com + choice*2
-
+    # com = np.resize(com, num_simulations)
+    # choice_and_com = com + choice*2
+    rt = np.resize(sound_len + 300, num_simulations)
     x_o = torch.column_stack((torch.tensor(mt*1e3),
-                              torch.tensor(choice_and_com)))
+                              torch.tensor(rt),
+                              torch.tensor(choice)))
     x_o = x_o.to(torch.float32)
     data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
                                torch.tensor(trial_index.astype(float)),
                                x_o))
     data = data.to(torch.float32)
     print('Data preprocessed, building prior distros')
+    # build prior
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
+    # simulate
     x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
-    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
+    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)  # + (x[:, 1] < 0)
+    # define network MNLE
     trainer = MNLE(prior=prior)
     theta_all_inp = theta_all.clone().detach()
     theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
@@ -713,6 +716,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     theta_all_inp = theta_all_inp.to(torch.float32)
     time_start = time.time()
     print('Starting network training')
+    # network training
     estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                            x[~nan_mask, :]).train(
                                                show_train_summary=True)
@@ -725,7 +729,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
         x0[0] = 0.5
         x0[1] = 0.5
         print('Initial guess is: ' + str(x0))
-
+        time_start = time.time()
         lb = np.array([np.float64(prior.dists[i].low/10)
                        for i in range(len(prior.dists))])
         ub = np.array([np.float64(prior.dists[i].high*100)
@@ -734,9 +738,11 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
                         for i in range(len(prior.dists))])
         plb = np.array([np.float64(prior.dists[i].low)
                         for i in range(len(prior.dists))])
-        fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
+        fun_target = lambda x: fun_theta(x, data[:n_trials, :], estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
+        print('For ' + str(n_trials) + ' trials, it took' +
+              + str(int(time.time() - time_start)/60))
         return optimize_result.x
     else:
         # Markov chain Monte-Carlo (MCMC) to get posterior distros
@@ -764,9 +770,10 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
-    stim, zt, coh, gt, com, pright, trial_index =\
-        get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
-                 num_tr_per_rat=int(1e4), all_trials=False)
+    if not optimization_mnle:
+        stim, zt, coh, gt, com, pright, trial_index =\
+            get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
+                     num_tr_per_rat=int(1e4), all_trials=False)
     array_params = np.array((0.2, 0.11, 2, 1e-2, 8, 8, 14, 0.052, -2.2e-05,
                              2.6, 10, 10, 0.6, 35))
     scaled_params = np.repeat(1, len(array_params)).astype(float)
@@ -850,7 +857,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e6)  # number of simulations to train the network
+        num_simulations = int(1e3)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'

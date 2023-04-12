@@ -522,6 +522,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
+    prior_lim = np.quantile(df.norm_allpriors, prior_limit)
     if after_correct_only:
         ac_cond = df.aftererror == False
     else:
@@ -2919,7 +2920,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     for i_ev, ev in enumerate(ev_vals):
         index = (congruent_coh == ev) &\
-            (np.abs(prior) <= np.quantile(np.abs(prior), 0.1))
+            (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
@@ -3273,8 +3274,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.5
     p_w_stim = 0.14
-    p_e_bound = 2
-    p_com_bound = 0.
+    p_e_bound = 2.
+    p_com_bound = 0.1
     p_w_a_intercept = 0.056
     p_w_a_slope = -2e-5  # fixed
     p_a_bound = 2.6  # fixed
@@ -3282,8 +3283,8 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     p_2nd_readout = 80
     p_leak = 0.5
     p_mt_noise = 35
-    p_MT_intercept = 290
-    p_MT_slope = 0.08
+    p_MT_intercept = 320
+    p_MT_slope = 0.07
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
@@ -3292,6 +3293,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
+    # conf = np.array([2.06626961e-01, 3.40776907e-02, 2.55279881e+00, 2.75455094e-01,
+    #                  1.21289825e+01, 1.12038422e+01, 1.09259186e+01, 3.20281403e-02,
+    #                  1.58609565e-05, 2.67780018e+00, 4.48279629e+01, 5.26272296e+01,
+    #                  4.18581766e-01, 5.91413782e+01, 3.07487335e+02, 8.09522997e-02])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4117,12 +4122,13 @@ def mt_vs_ti_data_comparison(df, df_sim):
         ax[i+1].set_xlim(0, 600)
     ax[3].set_xlim(-600, 600)
     ax[0].set_xlim(-600, 600)
-    
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate([0, 0.25, 0.5, 1]):
         index = np.abs(coh) == ev
         sns.kdeplot(mt_data[index]*1e3, color=colormap[iev], ax=ax[5])
-        sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5], linestyle='--')
+        index = np.abs(df_sim.coh2) == ev
+        sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5],
+                    linestyle='--')
     ax[5].set_xlim(0, 600)
     plt.show()
     fig, ax = plt.subplots(ncols=3)
@@ -4135,6 +4141,31 @@ def mt_vs_ti_data_comparison(df, df_sim):
     ax[1].set_xlabel('RT (ms)')
     ax[1].set_title('Model')
     ax[2].set_xlabel('Data')
+
+
+def plot_mt_vs_rt_model_comparison(df, df_sim, bins_rt=np.linspace(0, 300, 31)):
+    fig, ax = plt.subplots(ncols=2)
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    ax1, ax2 = ax
+    for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+        binned_curve(df.loc[df.coh2.abs() == ev], 'resp_len', 'sound_len',
+                     bins=bins_rt, xpos=np.diff(bins_rt)[0], ax=ax1,
+                     errorbar_kw={'label': 'ev: ' + str(ev),
+                                  'color': colormap[iev]})
+    ax1.set_xlabel('RT (ms)')
+    ax1.set_ylabel('MT (s)')
+    ax1.set_title('Data')
+    ax1.set_ylim(0.23, 0.42)
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+        binned_curve(df_sim.loc[df_sim.coh2.abs() == ev], 'resp_len', 'sound_len',
+                     bins=bins_rt, xpos=np.diff(bins_rt)[0], ax=ax2,
+                     errorbar_kw={'label': 'ev: ' + str(ev),
+                                  'color': colormap[iev]})
+    ax2.set_xlabel('RT (ms)')
+    ax2.set_ylabel('MT (s)')
+    ax2.set_title('Model')
+    ax2.set_ylim(0.23, 0.42)
 
 
 # ---MAIN
@@ -4228,7 +4259,8 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        num_tr = int(2e5)
+        stim[df.soundrfail, :] = 0
+        num_tr = int(1.2e5)
         decision = decision[:int(num_tr)]
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
@@ -4286,7 +4318,7 @@ if __name__ == '__main__':
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
         fig, ax = plt.subplots(ncols=2)
-        mt_matrix_vs_ev_zt(df_sim, ax, silent_comparison=True)
+        mt_matrix_vs_ev_zt(df_sim, ax, silent_comparison=True, rt_bin=60)
         mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)
