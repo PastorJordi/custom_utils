@@ -622,9 +622,12 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
     # run simulations
     x = torch.tensor(())
     print('Starting simulation')
+    time_start = time.time()
     for i_t, theta in enumerate(theta_all):
         if (i_t+1) % 100000 == 0 and i_t != 0:
             print('Simulation number: ' + str(i_t+1))
+            print('Time elapsed: ' + str((time.time()-time_start)/60) +
+                  ' mins')
         p_w_zt = float(theta[0])
         p_w_stim = float(theta[1])
         p_e_bound = float(theta[2])
@@ -847,7 +850,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(10e6)  # number of simulations to train the network
+        num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'
