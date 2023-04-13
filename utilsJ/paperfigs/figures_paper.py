@@ -4168,6 +4168,34 @@ def plot_mt_vs_rt_model_comparison(df, df_sim, bins_rt=np.linspace(0, 300, 31)):
     ax2.set_ylim(0.23, 0.42)
 
 
+def plot_proportion_corr_com_vs_stim(df, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(1)
+    com = df.CoM_sugg.values
+    gt = np.array(df.rewside)*2-1
+    ch = df.R_response.values*2-1
+    coh = df.coh2.abs().values
+    ch_com = np.copy(ch)
+    ch_no_com = np.copy(ch)
+    ch_no_com[com] *= -1
+    # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    m_corr = []
+    std_corr = []
+    for iev, ev in enumerate(np.unique(coh)):
+        index = coh == ev
+        m_corr_ev = []
+        for subj in df.subjid.unique():
+            ch_sub = ch_com[index & (df.subjid == subj) & com]
+            gt_sub = gt[index & (df.subjid == subj) & com]
+            num_correct = sum(ch_sub == gt_sub)
+            m_corr_ev.append(num_correct/sum(index & (df.subjid == subj) & com))
+        m_corr.append(np.nanmean(m_corr_ev))
+        std_corr.append(np.nanstd(m_corr_ev))
+    ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o')
+    ax.set_xlabel('Stimulus evidence')
+    ax.set_ylabel('Fraction of correcting CoM')
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
