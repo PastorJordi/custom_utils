@@ -913,7 +913,7 @@ def trajectory_thr(
             y_point = np.nanmedian(np.nanmax(tmp_mat, axis=1))  # c[idxes]
             y_err += [np.nanstd(np.nanmax(tmp_mat, axis=1)) /
                       np.sqrt(len(np.nanmax(tmp_mat, axis=1)))]
-        y_points += [y_point]
+        # y_points += [y_point]
 
         extra_kw = {}
 
@@ -946,6 +946,8 @@ def trajectory_thr(
                 traj_kws["color"] = color_tr
                 traj_kws["alpha"] = 0.15
             ytoplot = np.nanmedian(matrix_dic[b], axis=0)
+            if alpha_low:
+                y_points += [np.nanmax(ytoplot)]
             if plot_traj:
                 ax_traj.plot((interpolatespace) / 1000,
                              ytoplot-np.nanmean(

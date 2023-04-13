@@ -20,12 +20,13 @@ from sbi.utils import MultipleIndependent
 import torch
 from torch.distributions import Beta, Binomial, Gamma, Uniform
 from sbi.analysis import pairplot
+import pickle
 from pybads import BADS
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -33,13 +34,13 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 
@@ -720,10 +721,13 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                            x[~nan_mask, :]).train(
                                                show_train_summary=True)
+    with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", "wb") as fh:
+        pickle.dump(dict(estimator=estimator, num_simulations=num_simulations), fh)
     print('For a batch of ' + str(num_simulations) +
           ' simulations, it took ' + str(int(time.time() - time_start)/60)
           + ' mins')
     if bads:
+        # find starting point
         x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
             x_o[:num_simulations], context=theta_all_inp)), :-1]
         x0[0] = 0.5
@@ -857,7 +861,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(1e3)  # number of simulations to train the network
+        num_simulations = int(4e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subject = 'LE43'
@@ -899,3 +903,7 @@ if __name__ == '__main__':
 
 
 # RT < p_t_aff : proactive trials
+
+# to load estimator:
+# with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
+#     x = pickle.load(f)

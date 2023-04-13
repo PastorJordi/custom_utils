@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -2521,7 +2521,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             xval = xvals_zt[i_ev]
         else:
             xval = ev
-        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='D', s=30)
+        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='o', s=25)
         vals_thr_traj.append(val_traj)
         try:
             index_vel = np.where(np.sum(np.isnan(vel_all), axis=0)
@@ -2532,8 +2532,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         except Exception:
             mean_vel = func_final(vel_all, axis=0)
             std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
-        val_vel = func_final(np.nanmax(vel_all, axis=1))
-        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='D', s=30)
+        val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
+        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='o', s=25)
         vals_thr_vel.append(val_vel)
         if not prior:
             label = labels_coh[i_ev]
@@ -4317,8 +4317,11 @@ if __name__ == '__main__':
               com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
-        fig, ax = plt.subplots(ncols=2)
-        mt_matrix_vs_ev_zt(df_sim, ax, silent_comparison=True, rt_bin=60)
+        fig, ax = plt.subplots(ncols=2, nrows=2)
+        ax = ax.flatten()
+        mt_matrix_vs_ev_zt(df, ax[0:2], silent_comparison=False)
+        mt_matrix_vs_ev_zt(df_sim, ax[2:4], silent_comparison=False)
+        fig.suptitle('DATA (top) vs MODEL (bottom)')
         mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)
