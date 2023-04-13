@@ -4171,6 +4171,7 @@ def plot_mt_vs_rt_model_comparison(df, df_sim, bins_rt=np.linspace(0, 300, 31)):
 def plot_proportion_corr_com_vs_stim(df, ax=None):
     if ax is None:
         fig, ax = plt.subplots(1)
+    rm_top_right_lines(ax)
     com = df.CoM_sugg.values
     gt = np.array(df.rewside)*2-1
     ch = df.R_response.values*2-1
@@ -4194,6 +4195,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o')
     ax.set_xlabel('Stimulus evidence')
     ax.set_ylabel('Fraction of correcting CoM')
+    ax.set_xticks([0, 0.25, 0.5, 1])
 
 
 # ---MAIN
