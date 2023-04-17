@@ -912,8 +912,9 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
-        print('For ' + str(n_trials) + ' trials, it took' +
-              + str(int(time.time() - time_start)/60))
+        # print('For ' + str(n_trials) + ' trials, it took' +
+        #       + str(int(time.time() - time_start)/60))
+        print(optimize_result.total_time)
         return optimize_result.x
     else:
         # Markov chain Monte-Carlo (MCMC) to get posterior distros
