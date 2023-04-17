@@ -383,13 +383,11 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
         stim = stim[:, indx_sh]
         zt = zt[indx_sh]
         coh = coh[indx_sh]
-        gt = gt[indx_sh]
         # num_tr = 5
         stim = stim[:, :int(num_tr)]
         zt = zt[:int(num_tr)]
         coh = coh[:int(num_tr)]
         com = com[:int(num_tr)]
-        gt = gt[:int(num_tr)]
         trial_index = trial_index[:int(num_tr)]
         stim = data_augmentation(stim=stim, daf=data_augment_factor)
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
@@ -617,7 +615,7 @@ def fun_theta(theta, data, estimator, n_trials):
     return -torch.nansum(log_liks).detach().numpy()
 
 
-def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
+def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
     # run simulations
     x = torch.tensor(())
     print('Starting simulation')
@@ -645,7 +643,7 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
         p_mt_slope = float(theta[15])
         try:
             x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
-                                np.array([trial_index[i_t]]), gt[i_t],
+                                np.array([trial_index[i_t]]), None,
                                 None, None,
                                 p_w_zt, p_w_stim, p_e_bound, p_com_bound,
                                 p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
@@ -661,14 +659,164 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt):
     return x
 
 
-def opt_mnle(df, num_simulations, n_trials, bads=True):
+def get_x0():
+    p_t_aff = 5
+    p_t_eff = 4
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.5
+    p_w_stim = 0.14
+    p_e_bound = 2.
+    p_com_bound = 0.1
+    p_w_a_intercept = 0.056
+    p_w_a_slope = 2e-5  # fixed
+    p_a_bound = 2.6  # fixed
+    p_1st_readout = 40
+    p_2nd_readout = 80
+    p_leak = 0.5
+    p_mt_noise = 35
+    p_MT_intercept = 320
+    p_MT_slope = 0.07
+    return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+            p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+            p_MT_intercept, p_MT_slope]
+
+
+def get_lb():
+    """
+    Returns list with hard lower bounds (LB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard lower bounds.
+
+    """
+    lb_aff = 1
+    lb_eff = 1
+    lb_t_a = 1
+    lb_w_zt = 0
+    lb_w_st = 0
+    lb_e_bound = 0.1
+    lb_com_bound = 0
+    lb_w_intercept = 0
+    lb_w_slope = 0
+    lb_a_bound = 0.1
+    lb_1st_r = 1
+    lb_2nd_r = 1
+    lb_leak = 0
+    lb_mt_n = 1
+    lb_mt_int = 100
+    lb_mt_slope = 0.001
+    return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
+            lb_eff, lb_t_a, lb_w_intercept, lb_w_slope, lb_a_bound,
+            lb_1st_r, lb_2nd_r, lb_leak, lb_mt_n,
+            lb_mt_int, lb_mt_slope]
+
+
+def get_ub():
+    """
+    Returns list with hard upper bounds (UB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard upper bounds.
+
+    """
+    ub_aff = 15
+    ub_eff = 15
+    ub_t_a = 20
+    ub_w_zt = 1
+    ub_w_st = 1
+    ub_e_bound = 4
+    ub_com_bound = 1
+    ub_w_intercept = 0.1
+    ub_w_slope = 0.01
+    ub_a_bound = 4
+    ub_1st_r = 150
+    ub_2nd_r = 150
+    ub_leak = 2
+    ub_mt_n = 80
+    ub_mt_int = 450
+    ub_mt_slope = 0.15
+    return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
+            ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
+            ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
+            ub_mt_int, ub_mt_slope]
+
+
+def get_pub():
+    """
+    Returns list with plausible upper bounds (PUB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with plausible upper bounds.
+
+    """
+    pub_aff = 6
+    pub_eff = 6
+    pub_t_a = 15
+    pub_w_zt = 0.7
+    pub_w_st = 0.18
+    pub_e_bound = 2.5
+    pub_com_bound = 0.2
+    pub_w_intercept = 0.08
+    pub_w_slope = 3e-5
+    pub_a_bound = 3
+    pub_1st_r = 50
+    pub_2nd_r = 90
+    pub_leak = 0.8
+    pub_mt_n = 45
+    pub_mt_int = 350
+    pub_mt_slope = 0.12
+    return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
+            pub_eff, pub_t_a, pub_w_intercept, pub_w_slope, pub_a_bound,
+            pub_1st_r, pub_2nd_r, pub_leak, pub_mt_n,
+            pub_mt_int, pub_mt_slope]
+
+
+def get_plb():
+    """
+    Returns list with plausible lower bounds (PLB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with plausible lower bounds.
+
+    """
+    plb_aff = 3
+    plb_eff = 3
+    plb_t_a = 10
+    plb_w_zt = 0.3
+    plb_w_st = 0.08
+    plb_e_bound = 1.6
+    plb_com_bound = 1e-3
+    plb_w_intercept = 0.03
+    plb_w_slope = 1.5e-5
+    plb_a_bound = 2.2
+    plb_1st_r = 30
+    plb_2nd_r = 70
+    plb_leak = 0.4
+    plb_mt_n = 25
+    plb_mt_int = 290
+    plb_mt_slope = 0.04
+    return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
+            plb_eff, plb_t_a, plb_w_intercept, plb_w_slope, plb_a_bound,
+            plb_1st_r, plb_2nd_r, plb_leak, plb_mt_n,
+            plb_mt_int, plb_mt_slope]
+
+
+def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     mt = df.resp_len.values
     choice = df.R_response.values
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     stim = np.array([stim for stim in df.res_sound])
     coh = np.array(df.coh2)
     trial_index = np.array(df.origidx)
-    gt = np.array(df.rewside) * 2 - 1
     traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
     traj_y = df.trajectory_y.values  # [after_correct_id]
     fix_onset = df.fix_onset_dt.values  # [after_correct_id]
@@ -686,7 +834,6 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
     zt = np.resize(zt, num_simulations)
     trial_index = np.resize(trial_index, num_simulations)
     stim = np.resize(stim, (num_simulations, 20))
-    gt = np.resize(gt, num_simulations)
     mt = np.resize(mt, num_simulations)
     choice = np.resize(choice, num_simulations)
     # com = np.resize(com, num_simulations)
@@ -696,18 +843,19 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
                               torch.tensor(rt),
                               torch.tensor(choice)))
     x_o = x_o.to(torch.float32)
+    # to save some memory
+    choice = []
+    rt = []
+    mt = []
     data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
                                torch.tensor(trial_index.astype(float)),
                                x_o))
     data = data.to(torch.float32)
+    data = data[:n_trials, :]
     print('Data preprocessed, building prior distros')
     # build prior
     prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
-    # simulate
-    x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, gt)
-    nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)  # + (x[:, 1] < 0)
-    # define network MNLE
-    trainer = MNLE(prior=prior)
+    # add zt, coh, trial index
     theta_all_inp = theta_all.clone().detach()
     theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
     theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
@@ -715,34 +863,52 @@ def opt_mnle(df, num_simulations, n_trials, bads=True):
         theta_all_inp, torch.tensor(
             trial_index[:num_simulations].astype(float)).to(torch.float32)))
     theta_all_inp = theta_all_inp.to(torch.float32)
-    time_start = time.time()
-    print('Starting network training')
-    # network training
-    estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
-                                           x[~nan_mask, :]).train(
-                                               show_train_summary=True)
-    with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", "wb") as fh:
-        pickle.dump(dict(estimator=estimator, num_simulations=num_simulations), fh)
-    print('For a batch of ' + str(num_simulations) +
-          ' simulations, it took ' + str(int(time.time() - time_start)/60)
-          + ' mins')
+    if training:
+        # simulate
+        x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+        coh = []
+        zt = []
+        trial_index = []
+        stim = []
+        nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)  # + (x[:, 1] < 0)
+        # define network MNLE
+        trainer = MNLE(prior=prior)
+        time_start = time.time()
+        print('Starting network training')
+        # network training
+        estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
+                                               x[~nan_mask, :]).train(
+                                                   show_train_summary=True)
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", "wb") as fh:
+            pickle.dump(dict(estimator=estimator, num_simulations=num_simulations), fh)
+        print('For a batch of ' + str(num_simulations) +
+              ' simulations, it took ' + str(int(time.time() - time_start)/60)
+              + ' mins')
+        # x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
+        #     x_o[:num_simulations], context=theta_all_inp)), :-1]
+    else:
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
+            estimator = pickle.load(f)
+        estimator = estimator['estimator']
     if bads:
         # find starting point
-        x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
-            x_o[:num_simulations], context=theta_all_inp)), :-1]
-        x0[0] = 0.5
-        x0[1] = 0.5
+        # x0 = np.array([np.float64(prior.dists[i].low/2) +
+        #                np.float64(prior.dists[i].high/2)
+        #                for i in range(len(prior.dists))])
+        # x0[0] = 0.5
+        # x0[1] = 0.5
+        x0 = get_x0()
         print('Initial guess is: ' + str(x0))
         time_start = time.time()
-        lb = np.array([np.float64(prior.dists[i].low/10)
-                       for i in range(len(prior.dists))])
-        ub = np.array([np.float64(prior.dists[i].high*100)
-                       for i in range(len(prior.dists))])
-        pub = np.array([np.float64(prior.dists[i].high)
-                        for i in range(len(prior.dists))])
-        plb = np.array([np.float64(prior.dists[i].low)
-                        for i in range(len(prior.dists))])
-        fun_target = lambda x: fun_theta(x, data[:n_trials, :], estimator, n_trials)
+        # lb = np.array([np.float64(prior.dists[i].low/10)
+        #                for i in range(len(prior.dists))])
+        lb = get_lb()
+        # ub = np.array([np.float64(prior.dists[i].high*100)
+        #                for i in range(len(prior.dists))])
+        ub = get_ub()
+        pub = get_pub()
+        plb = get_plb()
+        fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
         print('For ' + str(n_trials) + ' trials, it took' +
@@ -870,7 +1036,7 @@ if __name__ == '__main__':
                                  silent=True, all_trials=True,
                                  srfail=True)
         parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                              n_trials=n_trials, bads=True)
+                              n_trials=n_trials, bads=True, training=False)
         print('--------------')
         print('p_w_zt: '+str(parameters[0]))
         print('p_w_stim: '+str(parameters[1]))
@@ -903,7 +1069,3 @@ if __name__ == '__main__':
 
 
 # RT < p_t_aff : proactive trials
-
-# to load estimator:
-# with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
-#     x = pickle.load(f)

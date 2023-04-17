@@ -3293,10 +3293,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    # conf = np.array([2.06626961e-01, 3.40776907e-02, 2.55279881e+00, 2.75455094e-01,
-    #                  1.21289825e+01, 1.12038422e+01, 1.09259186e+01, 3.20281403e-02,
-    #                  1.58609565e-05, 2.67780018e+00, 4.48279629e+01, 5.26272296e+01,
-    #                  4.18581766e-01, 5.91413782e+01, 3.07487335e+02, 8.09522997e-02])
+    conf = np.array([7.23627143e-02, 2.91310496e-01, 3.25674575e+00, 1.64414680e-05,
+           1.86048060e+01, 1.14022579e+01, 8.87481151e+00, 6.59221259e-02,
+           1.36056359e-05, 3.29970818e+00, 7.47310239e+01, 5.61431538e+01,
+           8.63255073e-01, 5.48421880e+01, 2.53382420e+02, 1.02481603e-01])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
