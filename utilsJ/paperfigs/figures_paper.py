@@ -1494,7 +1494,7 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True):
         coh = np.array(df_1.coh2)
         trial_index = np.array(df_1.origidx)
         com = df_1.CoM_sugg.values
-        zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+        zt = df_1.allpriors.values
         params = mt_linear_reg(mt=var,
                                coh=zscore(coh*decision),
                                trial_index=zscore(trial_index.astype(float)),
@@ -1544,7 +1544,7 @@ def mt_weights_rt_bins(df, ax):
             coh = np.array(df_1.coh2)
             trial_index = np.array(df_1.origidx)
             com = df_1.CoM_sugg.values
-            zt = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+            zt = df_1.allpriors.values
             params = mt_linear_reg(mt=resp_len/max(resp_len),
                                    coh=coh*decision/max(np.abs(coh)),
                                    trial_index=trial_index/max(trial_index),
@@ -2452,8 +2452,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
         func_final = np.nanmedian
     if not median:
         func_final = np.nanmean
-    nanidx = df_sim.loc[df_sim[['dW_trans',
-                                'dW_lat']].isna().sum(axis=1) == 2].index
+    nanidx = df_sim.loc[df_sim.allpriors.isna()].index
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
@@ -3399,7 +3398,7 @@ def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
 
 
 def fig_7(df, df_sim):
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    zt = df.allpriors.values
     coh = df.coh2.values
     com = df.CoM_sugg.values
     com_model = df_sim['com_detcted'].values
@@ -3603,7 +3602,7 @@ def norm_allpriors_per_subj(df):
     norm_allpriors = np.empty((0,))
     for subj in df.subjid.unique():
         df_1 = df.loc[df.subjid == subj]
-        zt_tmp = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+        zt_tmp = df_1.allpriors.values
         norm_allpriors = np.concatenate((norm_allpriors,
                                          zt_tmp/max(abs(zt_tmp))))
     return norm_allpriors
@@ -3812,7 +3811,7 @@ def supp_com_threshold_matrices(df):
     fig, ax = plt.subplots(nrows=3, ncols=10, figsize=(15, 6))
     ax = ax.flatten()
     thlist = np.linspace(1, 10, 10)
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    zt = df.allpriors.values
     coh = df.coh2.values
     decision = df.R_response.values*2 - 1
     nbins = 7
@@ -3933,7 +3932,7 @@ def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
         error_com_vs_zt = np.zeros((len(subjects), len(bins_zt)-1))
         for i_sub, subj in enumerate(subjects):
             df_1 = df.loc[df.subjid == subj]
-            zt_tmp = np.nansum(df_1[["dW_lat", "dW_trans"]].values, axis=1)
+            zt_tmp = df_1.allpriors.values
             if j != 0:
                 zt_tmp *= (df_1.R_response.values*2-1)
                 ax[j].set_xlabel('Prior Congruency')
@@ -4236,6 +4235,7 @@ if __name__ == '__main__':
         # after_correct_id = np.where((df.aftererror == 0))
         # *(df.special_trial == 0))[0]
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        df['allpriors'] = zt
         # zt = zt[after_correct_id]
         hit = np.array(df['hithistory'])
         # hit = hit[after_correct_id]
@@ -4290,21 +4290,23 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
+        n_sil = 10000
         stim[df.soundrfail, :] = 0
         num_tr = int(1.2e5)
-        decision = np.resize(decision[:int(num_tr)])
-        zt = zt[:int(num_tr)]
-        sound_len = sound_len[:int(num_tr)]
-        coh = coh[:int(num_tr)]
-        com = com[:int(num_tr)]
-        gt = gt[:int(num_tr)]
-        trial_index = trial_index[:int(num_tr)]
-        hit = hit[:int(num_tr)]
+        decision = np.resize(decision[:int(num_tr)], num_tr + n_sil)
+        zt = np.resize(zt[:int(num_tr)], num_tr + n_sil)
+        sound_len = np.resize(sound_len[:int(num_tr)], num_tr + n_sil)
+        coh = np.resize(coh[:int(num_tr)], num_tr + n_sil)
+        com = np.resize(com[:int(num_tr)], num_tr + n_sil)
+        gt = np.resize(gt[:int(num_tr)], num_tr + n_sil)
+        trial_index = np.resize(trial_index[:int(num_tr)], num_tr + n_sil)
+        hit = np.resize(hit[:int(num_tr)], num_tr + n_sil)
+        special_trial = np.resize(df.special_trial[:int(num_tr)], num_tr + n_sil)
+        special_trial[int(num_tr):] = 2
         if stim.shape[0] != 20:
             stim = stim.T
-        stim = stim[:, :int(num_tr)]
-        stim[:, df.soundrfail[:num_tr]] = 0
-        # stim[:] = 0  # for silent simulation
+        stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
+        stim[:, int(num_tr):] = 0  # for silent simulation
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             pro_vs_re, trajs, x_val_at_updt =\
             run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
@@ -4321,22 +4323,17 @@ if __name__ == '__main__':
         df_sim['CoM_sugg'] = com_model
         df_sim['traj_d1'] = [np.diff(t) for t in trajs]
         df_sim['aftererror'] =\
-            np.array(df.aftererror)[:int(num_tr)]
+            np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
         df_sim['subjid'] = 'simul'
-        df_sim['dW_trans'] =\
-            np.array(df.dW_trans)[:int(num_tr)]
-        df_sim['origidx'] =\
-            np.array(df.origidx)[:int(num_tr)]
-        df_sim['dW_lat'] = np.array(df.dW_lat)[:int(num_tr)]
-        df_sim['special_trial'] =\
-            np.array(df.special_trial)[:int(num_tr)]
+        df_sim['origidx'] = trial_index
+        df_sim['special_trial'] = special_trial
         df_sim['traj'] = df_sim['trajectory_y']
         df_sim['com_detected'] = com_model_detected
         df_sim['peak_com'] = np.array(x_val_at_updt)
         df_sim['hithistory'] = np.array(resp_fin == gt)
-        df_sim['soundrfail'] = df.soundrfail.values[:int(num_tr)]
-        df_sim['allpriors'] =\
-            np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)[:int(num_tr)]
+        df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
+                                         num_tr + n_sil)
+        df_sim['allpriors'] = zt
         df_sim = df_sim[df_sim.sound_len.values >= 0]
         df_sim['norm_allpriors'] = df_sim.allpriors.values \
             / np.nanmax(np.abs(df_sim.allpriors.values))
