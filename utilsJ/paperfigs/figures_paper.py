@@ -2402,7 +2402,8 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax_zt = np.insert(ax_zt, 2, ax_inset)
     ax_cohs = [ax_cohs[1], ax_cohs[3], ax_cohs[0], ax_cohs[2]]
     ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, median=True, prior=True)
+    traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt, median=True,
+                        prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=0.1)
     # bins_MT = np.linspace(50, 600, num=25, dtype=int)
@@ -3293,10 +3294,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    conf = np.array([7.23627143e-02, 2.91310496e-01, 3.25674575e+00, 1.64414680e-05,
-           1.86048060e+01, 1.14022579e+01, 8.87481151e+00, 6.59221259e-02,
-           1.36056359e-05, 3.29970818e+00, 7.47310239e+01, 5.61431538e+01,
-           8.63255073e-01, 5.48421880e+01, 2.53382420e+02, 1.02481603e-01])
+    conf = np.array([2.36188975e-01, 8.57655186e-02, 1.86483346e+00, 1.25620520e-01,
+                     3.53190353e+00, 3.88364662e+00, 1.47750235e+01, 6.68404796e-02,
+                     1.35558469e-05, 3.49999976e+00, 2.55568651e+01, 7.70196100e+01,
+                     3.03208220e-02, 4.51672673e+01, 2.75520133e+02, 7.91752296e-02])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4291,7 +4292,7 @@ if __name__ == '__main__':
     if f5:
         stim[df.soundrfail, :] = 0
         num_tr = int(1.2e5)
-        decision = decision[:int(num_tr)]
+        decision = np.resize(decision[:int(num_tr)])
         zt = zt[:int(num_tr)]
         sound_len = sound_len[:int(num_tr)]
         coh = coh[:int(num_tr)]
@@ -4302,6 +4303,7 @@ if __name__ == '__main__':
         if stim.shape[0] != 20:
             stim = stim.T
         stim = stim[:, :int(num_tr)]
+        stim[:, df.soundrfail[:num_tr]] = 0
         # stim[:] = 0  # for silent simulation
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             pro_vs_re, trajs, x_val_at_updt =\

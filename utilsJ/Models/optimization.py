@@ -668,8 +668,8 @@ def get_x0():
     p_e_bound = 2.
     p_com_bound = 0.1
     p_w_a_intercept = 0.056
-    p_w_a_slope = 2e-5  # fixed
-    p_a_bound = 2.6  # fixed
+    p_w_a_slope = 2e-5
+    p_a_bound = 2.6
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
@@ -733,7 +733,7 @@ def get_ub():
     ub_com_bound = 1
     ub_w_intercept = 0.1
     ub_w_slope = 0.01
-    ub_a_bound = 4
+    ub_a_bound = 3.5
     ub_1st_r = 150
     ub_2nd_r = 150
     ub_leak = 2
@@ -765,7 +765,7 @@ def get_pub():
     pub_com_bound = 0.2
     pub_w_intercept = 0.08
     pub_w_slope = 3e-5
-    pub_a_bound = 3
+    pub_a_bound = 2.8
     pub_1st_r = 50
     pub_2nd_r = 90
     pub_leak = 0.8
@@ -887,6 +887,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
         #     x_o[:num_simulations], context=theta_all_inp)), :-1]
     else:
+        x_o = []
         with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
             estimator = pickle.load(f)
         estimator = estimator['estimator']
@@ -1030,31 +1031,35 @@ if __name__ == '__main__':
         num_simulations = int(4e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        subject = 'LE43'
-        df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
-                                 sv_folder=SV_FOLDER, after_correct=False,
-                                 silent=True, all_trials=True,
-                                 srfail=True)
-        parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                              n_trials=n_trials, bads=True, training=False)
-        print('--------------')
-        print('p_w_zt: '+str(parameters[0]))
-        print('p_w_stim: '+str(parameters[1]))
-        print('p_e_bound: '+str(parameters[2]))
-        print('p_com_bound: '+str(parameters[3]))
-        print('p_t_aff: '+str(parameters[4]))
-        print('p_t_eff: '+str(parameters[5]))
-        print('p_t_a: '+str(parameters[6]))
-        print('p_w_a_intercept: '+str(parameters[7]))
-        print('p_w_a_slope: '+str(parameters[8]))
-        print('p_a_bound: '+str(parameters[9]))
-        print('p_1st_readout: '+str(parameters[10]))
-        print('p_2nd_readout: '+str(parameters[11]))
-        print('p_leak: '+str(parameters[12]))
-        print('p_mt_noise: '+str(parameters[13]))
-        print('p_MT_intercept: '+str(parameters[14]))
-        print('p_MT_slope: '+str(parameters[15]))
-        np.save(SV_FOLDER + 'parameters_MNLE_BADS.npy', parameters)
+        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                    'LE44']
+        for subject in subjects:
+            # subject = 'LE43'
+            df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
+                                     sv_folder=SV_FOLDER, after_correct=False,
+                                     silent=True, all_trials=True,
+                                     srfail=True)
+            parameters = opt_mnle(df=df, num_simulations=num_simulations,
+                                  n_trials=n_trials, bads=True, training=False)
+            print('--------------')
+            print('p_w_zt: '+str(parameters[0]))
+            print('p_w_stim: '+str(parameters[1]))
+            print('p_e_bound: '+str(parameters[2]))
+            print('p_com_bound: '+str(parameters[3]))
+            print('p_t_aff: '+str(parameters[4]))
+            print('p_t_eff: '+str(parameters[5]))
+            print('p_t_a: '+str(parameters[6]))
+            print('p_w_a_intercept: '+str(parameters[7]))
+            print('p_w_a_slope: '+str(parameters[8]))
+            print('p_a_bound: '+str(parameters[9]))
+            print('p_1st_readout: '+str(parameters[10]))
+            print('p_2nd_readout: '+str(parameters[11]))
+            print('p_leak: '+str(parameters[12]))
+            print('p_mt_noise: '+str(parameters[13]))
+            print('p_MT_intercept: '+str(parameters[14]))
+            print('p_MT_slope: '+str(parameters[15]))
+            np.save(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy', parameters)
     if rms_comparison and plotting:
         plt.figure()
         plt.scatter(rms_list, llk_list)
