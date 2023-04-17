@@ -1036,6 +1036,7 @@ if __name__ == '__main__':
                     'LE44']
         for subject in subjects:
             # subject = 'LE43'
+            print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
                                      sv_folder=SV_FOLDER, after_correct=False,
                                      silent=True, all_trials=True,

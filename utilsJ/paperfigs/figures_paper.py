@@ -3293,10 +3293,10 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
             p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    conf = np.array([2.36188975e-01, 8.57655186e-02, 1.86483346e+00, 1.25620520e-01,
-                     3.53190353e+00, 3.88364662e+00, 1.47750235e+01, 6.68404796e-02,
-                     1.35558469e-05, 3.49999976e+00, 2.55568651e+01, 7.70196100e+01,
-                     3.03208220e-02, 4.51672673e+01, 2.75520133e+02, 7.91752296e-02])
+    conf = np.array([2.46240234e-01, 8.65544128e-02, 1.86659698e+00, 1.22538910e-01,
+                     3.44657135e+00, 4.36040497e+00, 1.45203400e+01, 6.73123169e-02,
+                     1.32197571e-05, 3.49999847e+00, 2.52673340e+01, 7.44302368e+01,
+                     3.66210938e-05, 4.52249146e+01, 2.75469208e+02, 7.92211914e-02])
     jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -4290,7 +4290,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
-        n_sil = 10000
+        n_sil = 0
         stim[df.soundrfail, :] = 0
         num_tr = int(1.2e5)
         decision = np.resize(decision[:int(num_tr)], num_tr + n_sil)
@@ -4324,7 +4324,7 @@ if __name__ == '__main__':
         df_sim['traj_d1'] = [np.diff(t) for t in trajs]
         df_sim['aftererror'] =\
             np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
-        df_sim['subjid'] = 'simul'
+        df_sim['subjid'] = df.subjid.values
         df_sim['origidx'] = trial_index
         df_sim['special_trial'] = special_trial
         df_sim['traj'] = df_sim['trajectory_y']
