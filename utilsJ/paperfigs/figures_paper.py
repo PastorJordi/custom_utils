@@ -20,8 +20,8 @@ from statsmodels.stats.proportion import proportion_confint
 # import shutil
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3259,62 +3259,64 @@ def basic_statistics(decision, resp_fin):
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
 
 
-def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
+def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None):
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
     else:
         num_tr = int(len(zt))
     data_augment_factor = 10
-    # MT_slope = 0.12
-    # MT_intercep = 253
     detect_CoMs_th = 8
-    p_t_aff = 5
-    p_t_eff = 4
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.5
-    p_w_stim = 0.14
-    p_e_bound = 2.
-    p_com_bound = 0.1
-    p_w_a_intercept = 0.056
-    p_w_a_slope = -2e-5  # fixed
-    p_a_bound = 2.6  # fixed
-    p_1st_readout = 40
-    p_2nd_readout = 80
-    p_leak = 0.5
-    p_mt_noise = 35
-    p_MT_intercept = 320
-    p_MT_slope = 0.07
+    if subject is None:
+        p_t_aff = 5
+        p_t_eff = 4
+        p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+        p_w_zt = 0.5
+        p_w_stim = 0.14
+        p_e_bound = 2.
+        p_com_bound = 0.1
+        p_w_a_intercept = 0.056
+        p_w_a_slope = -2e-5  # fixed
+        p_a_bound = 2.6  # fixed
+        p_1st_readout = 40
+        p_2nd_readout = 80
+        p_leak = 0.5
+        p_mt_noise = 35
+        p_MT_intercept = 320
+        p_MT_slope = 0.07
+        conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+                p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
+                p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
+        jitters = len(conf)*[0]
+        print('Number of trials: ' + str(stim.shape[1]))
+        p_w_zt = conf[0]+jitters[0]*np.random.rand()
+        p_w_stim = conf[1]+jitters[1]*np.random.rand()
+        p_e_bound = conf[2]+jitters[2]*np.random.rand()
+        p_com_bound = conf[3]+jitters[3]*np.random.rand()
+        p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
+        p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
+        p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
+        p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
+        p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+        p_a_bound = conf[9]+jitters[9]*np.random.rand()
+        p_1st_readout = conf[10]+jitters[10]*np.random.rand()
+        p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
+        p_leak = conf[12]+jitters[12]*np.random.rand()
+        p_mt_noise = conf[13]+jitters[13]*np.random.rand()
+        p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
+        p_MT_slope = conf[15]+jitters[15]*np.random.rand()
+    else:
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-    conf = [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
-            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
-            p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
-    conf = np.array([2.46240234e-01, 8.65544128e-02, 1.86659698e+00, 1.22538910e-01,
-                     3.44657135e+00, 4.36040497e+00, 1.45203400e+01, 6.73123169e-02,
-                     1.32197571e-05, 3.49999847e+00, 2.52673340e+01, 7.44302368e+01,
-                     3.66210938e-05, 4.52249146e+01, 2.75469208e+02, 7.92211914e-02])
-    jitters = len(conf)*[0]
-    print('Number of trials: ' + str(stim.shape[1]))
-    p_w_zt = conf[0]+jitters[0]*np.random.rand()
-    p_w_stim = conf[1]+jitters[1]*np.random.rand()
-    p_e_bound = conf[2]+jitters[2]*np.random.rand()
-    p_com_bound = conf[3]+jitters[3]*np.random.rand()
-    p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
-    p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
-    p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
-    p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
-    p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
-    p_a_bound = conf[9]+jitters[9]*np.random.rand()
-    p_1st_readout = conf[10]+jitters[10]*np.random.rand()
-    p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
-    p_leak = conf[12]+jitters[12]*np.random.rand()
-    p_mt_noise = conf[13]+jitters[13]*np.random.rand()
-    p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
-    p_MT_slope = conf[15]+jitters[15]*np.random.rand()
+    # conf = np.array([2.46240234e-01, 8.65544128e-02, 1.86659698e+00, 1.22538910e-01,
+    #                  3.44657135e+00, 4.36040497e+00, 1.45203400e+01, 6.73123169e-02,
+    #                  1.32197571e-05, 3.49999847e+00, 2.52673340e+01, 7.44302368e+01,
+    #                  3.66210938e-05, 4.52249146e+01, 2.75469208e+02, 7.92211914e-02])
+
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -3343,6 +3345,37 @@ def run_model(stim, zt, coh, gt, trial_index, num_tr=None):
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
         pro_vs_re, total_traj, x_val_at_updt
+
+
+def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
+                                   subjid, num_tr=None):
+    hit_model = np.empty((0))
+    reaction_time = np.empty((0))
+    detected_com = np.empty((0))
+    resp_fin = np.empty((0))
+    com_model = np.empty((0))
+    pro_vs_re = np.empty((0))
+    total_traj = np.empty((0))
+    x_val_at_updt = np.empty((0))
+    subjid = np.empty((0))
+    for subject in subject_list:
+        index = subjid == subject
+        hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
+        com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
+            run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
+                      gt=gt[index], trial_index=trial_index[index],
+                      subject=subject)
+        hit_model = np.concatenate((hit_model, hit_model_tmp))
+        reaction_time = np.concatenate((reaction_time, reaction_time_tmp))
+        detected_com = np.concatenate((detected_com, detected_com_tmp))
+        resp_fin = np.concatenate((resp_fin, resp_fin_tmp))
+        com_model = np.concatenate((com_model, com_model_tmp))
+        pro_vs_re = np.concatenate((pro_vs_re, pro_vs_re_tmp))
+        total_traj = np.concatenate((total_traj, total_traj_tmp))
+        x_val_at_updt = np.concatenate((x_val_at_updt, x_val_at_updt_tmp))
+        subjid = np.concatenate((subjid, np.repeat(subject, num_tr)))
+    return hit_model, reaction_time, detected_com, resp_fin, com_model,\
+        pro_vs_re, total_traj, x_val_at_updt, subjid
 
 
 def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
