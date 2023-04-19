@@ -540,6 +540,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
         xlab = 'prior resp.'
         bintype = 'edges'
+        rt_lim = 200
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 2) &\
             (df.sound_len < rt_lim)
@@ -1010,7 +1011,10 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
                                            startfrom=0)
                 # + (rtbins[i] + rtbins[i+1])/2
-                out_data += [current_split_index]
+                if current_split_index >= rtbins[i]:
+                    out_data += [current_split_index]
+                else:
+                    out_data += [np.nan ]
             else:
                 for j in [0, 1]:  # side values
                     current_split_index, _, _ = splitfun(
@@ -1726,7 +1730,9 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     trajs_cond_on_coh_computation(df=df_trajs.loc[df_trajs.special_trial == 2],
                                   ax=ax_zt, condition='prior_x_coh',
                                   prior_limit=1, cmap='copper')
-    trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs, prior_limit=0.1,
+    trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs,
+                                  prior_limit=np.quantile(
+                                      df.norm_allpriors.values, 0.1),
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
@@ -2152,7 +2158,7 @@ def com_heatmap_marginal_pcom_side_mat(
     average_across_subjects=False
 ):
     assert side in [0, 1], "side value must be either 0 or 1"
-    assert df[priors_col].abs().max() <= 1,\
+    assert df[priors_col].abs().nanmax() <= 1,\
         "prior must be normalized between -1 and 1"
     assert df[stim_col].abs().max() <= 1, "stimulus must be between -1 and 1"
     if pcomlabel is None:
@@ -2318,21 +2324,40 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     # ax[9].set_title('Model')
     ax2 = add_inset(ax=ax[12], inset_sz=inset_sz, fgsz=fgsz,
                     marginx=marginx, marginy=0.07, right=True)
-    df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
-                            'sound_len': sound_len[sound_len_model >= 0],
-                            'rt_model': sound_len_model[sound_len_model >= 0],
-                            'com_model': com_model,
-                            'com_model_detected': com_model_detected})
-    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12],
-                 legend=False)
-    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[12],
-                 legend=False)
-    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax2,
-                 legend=False)
+    df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
+                                 'sound_len': sound_len[sound_len_model >= 0],
+                                 'rt_model': sound_len_model[sound_len_model >= 0],
+                                 'com_model': com_model,
+                                 'com_model_detected': com_model_detected,
+                                 'subjid': subjid})
+    subjects = np.unique(subjid)
+    com_data = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_all = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_det = np.empty((len(subjects), len(BINS_RT)-1))
+    for i_s, subject in enumerate(subjects):
+        df_plot = df_plot_pcom.loc[subjid == subject]
+        xpos_plot, median_pcom_dat, _ =\
+            binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                         errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12],
+                         legend=False, return_data=True)
+        xpos_plot, median_pcom_mod_det, _ =\
+            binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                         xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
+                                                    'color': 'red'}, ax=ax[12],
+                         legend=False, return_data=True)
+        xpos_plot, median_pcom_mod_all, _ =\
+            binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
+                         errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax2,
+                         legend=False, return_data=True)
+        com_data[i_s, :] = median_pcom_dat
+        com_model_all[i_s, :] = median_pcom_mod_all
+        com_model_det[i_s, :] = median_pcom_mod_det
+    ax[12].errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+                    yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
+    ax[12].errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
+                    yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
+    ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
+                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='k')
     ax[12].xaxis.tick_top()
     ax[12].xaxis.tick_bottom()
     legendelements = [Line2D([0], [0], color='k', lw=2,
@@ -2349,33 +2374,72 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     zt_model = zt[sound_len_model >= 0]
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
-    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[7],
-                           flip=True, annotate=False, xlabel='prior',
-                           ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
+    mat_pright = np.zeros((7, 7, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        mat_per_subj, _ =\
+            edd2.com_heatmap_jordi(zt_model[subjid == subject],
+                               coh_model[subjid == subject],
+                               decision_01_model[subjid == subject],
+                               ax=ax[7],
+                               flip=False, annotate=False, xlabel='prior',
+                               return_mat=True,
+                               ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
+        mat_pright[:, :, i_s] = mat_per_subj
+    mat_pright_avg = np.nanmean(mat_pright, axis=2)
+    # P_right
+    ax_pright = ax[7]
+    im = ax_pright.imshow(mat_pright_avg, vmin=0., vmax=1, cmap='PRGn_r')
+    cbar = plt.colorbar(im, fraction=0.04)
+    cbar.set_label('p(Right)', rotation=270)
+    ax_pright.set_yticks([0, 3, 6])
+    ax_pright.set_ylim([-0.5, 6.5])
+    ax_pright.set_yticklabels(['L', '', 'R'])
+    ax_pright.set_xticks([0, 3, 6])
+    ax_pright.set_xlim([-0.5, 6.5])
+    ax_pright.set_xticklabels(['L', '', 'R'])
+    ax_pright.set_xlabel('Prior Evidence')
+    ax_pright.set_ylabel('Stimulus Evidence')
     # ax[7].set_title('Pright Model')
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg':
                                  com_model_detected,
                              'norm_allpriors':
                                  zt_model/max(abs(zt_model)),
-                             'R_response': (decision_model+1)/2})
+                             'R_response': (decision_model+1)/2,
+                             'subjid': subjid})
     nbins = 7
-    matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=0)
-    matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_model, side=1)
+    # plot Pcoms matrices
+    ax_mat = [ax[10], ax[11]]
+    n_subjs = len(df.subjid.unique())
+    mat_side_0_all = np.zeros((7, 7, n_subjs))
+    mat_side_1_all = np.zeros((7, 7, n_subjs))
+    for i_s, subj in enumerate(df.subjid.unique()):
+        matrix_side_0 =\
+            com_heatmap_marginal_pcom_side_mat(
+                df=df_model.loc[df_model.subjid == subj], side=0)
+        matrix_side_1 =\
+            com_heatmap_marginal_pcom_side_mat(
+                df=df_model.loc[df_model.subjid == subj], side=1)
+        mat_side_0_all[:, :, i_s] = matrix_side_0
+        mat_side_1_all[:, :, i_s] = matrix_side_1
+    matrix_side_0 = np.nanmean(mat_side_0_all, axis=2)
+    matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
+    # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax[10].set_title(pcomlabel_1, fontsize=8)
-    im = ax[10].imshow(matrix_side_1, vmin=0, vmax=vmax)
-    plt.sca(ax[10])
-    cbar_0 = plt.colorbar(im, fraction=0.04)
-    cbar_0.ax.set_title('p(CoM)')
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    ax[11].set_title(pcomlabel_0, fontsize=8)
-    im = ax[11].imshow(matrix_side_0, vmin=0, vmax=vmax)
-    ax[11].yaxis.set_ticks_position('none')
-    plt.sca(ax[11])
+    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_0)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    plt.sca(ax_mat[0])
     plt.colorbar(im, fraction=0.04)
-    for ax_i in [ax[10], ax[11], ax[7]]:
+    ax_mat[1].set_title(pcomlabel_1)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    ax_mat[1].yaxis.set_ticks_position('none')
+    plt.sca(ax_mat[1])
+    cbar = plt.colorbar(im, fraction=0.04)
+    cbar.set_label('p(detected CoM)', rotation=270)
+
+    for ax_i in [ax[10], ax[11]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
@@ -2523,15 +2587,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
             xval = ev
         ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='o', s=25)
         vals_thr_traj.append(val_traj)
-        try:
-            index_vel = np.where(np.sum(np.isnan(vel_all), axis=0)
-                                 > traj_all.shape[0] - 50)[0][0]
-            mean_vel = func_final(vel_all[:, :index_vel], axis=0)
-            std_vel = np.nanstd(vel_all[:, :index_vel],
-                                axis=0) / np.sqrt(sum(index))
-        except Exception:
-            mean_vel = func_final(vel_all, axis=0)
-            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
+        mean_vel = func_final(vel_all, axis=0)
+        std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
         val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='o', s=25)
         vals_thr_vel.append(val_vel)
@@ -2552,7 +2609,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True, traj_thr=30,
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 460)
     ax[0].set_ylim(-10, 85)
-    ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
+    # ax[1].axhline(y=vel_thr, linestyle='--', color='k', alpha=0.4)
     ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 460)
     if prior:
@@ -3359,7 +3416,11 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
     x_val_at_updt = np.empty((0))
     subjid = np.empty((0))
     for subject in subject_list:
-        index = subjid == subject
+        if subject_list[0] is not None:
+            index = subjid == subject
+        else:
+            index = range(num_tr)
+            subjid = np.concatenate((subjid, np.repeat('simul', num_tr)))
         hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
         com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
             run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
@@ -3373,7 +3434,6 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         pro_vs_re = np.concatenate((pro_vs_re, pro_vs_re_tmp))
         total_traj = np.concatenate((total_traj, total_traj_tmp))
         x_val_at_updt = np.concatenate((x_val_at_updt, x_val_at_updt_tmp))
-        subjid = np.concatenate((subjid, np.repeat(subject, num_tr)))
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
         pro_vs_re, total_traj, x_val_at_updt, subjid
 
@@ -4074,6 +4134,7 @@ def plot_fb_per_subj_from_df(df):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     colormap = pl.cm.gist_yarg(np.linspace(0.4, 1, 2))
+    subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
         coh_vec = df_1.coh2.values
@@ -4098,6 +4159,7 @@ def plot_tach_per_subj_from_df(df):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     labels = ['0', '0.25', '0.5', '1']
+    subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
         coh_vec = df_1.coh2.values
@@ -4261,6 +4323,8 @@ if __name__ == '__main__':
                                           srfail=True)
             if all_rats:
                 df_all = pd.concat((df_all, df), ignore_index=True)
+            else:
+                subjects = [None]
         if all_rats:
             df = df_all
             df_all = []
@@ -4297,6 +4361,7 @@ if __name__ == '__main__':
                                          traj_stamps=traj_stamps,
                                          fix_onset=fix_onset, com=com,
                                          sound_len=sound_len)
+        subjid = df.subjid.values
         print('Computing CoMs')
         _, time_com, peak_com, com =\
             edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -4325,7 +4390,7 @@ if __name__ == '__main__':
     if f5:
         n_sil = 0
         stim[df.soundrfail, :] = 0
-        num_tr = int(1.2e5)
+        num_tr = int(3e4)
         decision = np.resize(decision[:int(num_tr)], num_tr + n_sil)
         zt = np.resize(zt[:int(num_tr)], num_tr + n_sil)
         sound_len = np.resize(sound_len[:int(num_tr)], num_tr + n_sil)
@@ -4341,9 +4406,10 @@ if __name__ == '__main__':
         stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
         stim[:, int(num_tr):] = 0  # for silent simulation
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            pro_vs_re, trajs, x_val_at_updt =\
-            run_model(stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
-                      num_tr=None)
+            pro_vs_re, trajs, x_val_at_updt, subjid_model =\
+            run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                           trial_index=trial_index, num_tr=num_tr,
+                                           subject_list=subjects, subjid=subjid)
         # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
         # basic_statistics(com, com_model_detected)  # com
         # basic_statistics(hit, hit_model)  # hit
@@ -4353,15 +4419,15 @@ if __name__ == '__main__':
                                'rewside': (gt + 1)/2,
                                'R_response': (resp_fin+1)/2,
                                'resp_len': np.array(MT)*1e-3})
-        df_sim['CoM_sugg'] = com_model
+        df_sim['CoM_sugg'] = com_model.astype(bool)
         df_sim['traj_d1'] = [np.diff(t) for t in trajs]
         df_sim['aftererror'] =\
             np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
-        df_sim['subjid'] = df.subjid.values
+        df_sim['subjid'] = subjid_model
         df_sim['origidx'] = trial_index
         df_sim['special_trial'] = special_trial
         df_sim['traj'] = df_sim['trajectory_y']
-        df_sim['com_detected'] = com_model_detected
+        df_sim['com_detected'] = com_model_detected.astype(bool)
         df_sim['peak_com'] = np.array(x_val_at_updt)
         df_sim['hithistory'] = np.array(resp_fin == gt)
         df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
