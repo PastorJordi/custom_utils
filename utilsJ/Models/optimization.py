@@ -21,12 +21,13 @@ import torch
 from torch.distributions import Beta, Binomial, Gamma, Uniform
 from sbi.analysis import pairplot
 import pickle
+import scipy
 from pybads import BADS
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -34,15 +35,16 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
+CTE = 1/2 * 1/600 * 1/995
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -598,7 +600,7 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta, data, estimator, n_trials):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -612,6 +614,8 @@ def fun_theta(theta, data, estimator, n_trials):
         trial_index[:n_trials]).to(torch.float32)
     theta = torch.column_stack((theta, t_i))
     log_liks = estimator.log_prob(x_o[:n_trials], context=theta)
+    log_liks = torch.exp(log_liks)*(1-eps) + eps*CTE
+    log_liks = torch.log(log_liks)
     return -torch.nansum(log_liks).detach().numpy()
 
 
@@ -810,6 +814,18 @@ def get_plb():
             plb_mt_int, plb_mt_slope]
 
 
+def gumbel_plotter():
+    # fits = scipy.stats.gumbel_r.fit(df.resp_len.values*1000)
+    fig, ax = plt.subplots(1)
+    val = np.arange(1, 11, 1)
+    for v in val:
+        fff = []
+        for i in range(100000):
+            fff.append(v*np.random.gumbel())
+        sns.kdeplot(np.array(fff)[~np.isnan(fff)], ax=ax, label=v)
+    ax.legend()
+
+
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     mt = df.resp_len.values
     choice = df.R_response.values
@@ -931,6 +947,98 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         return mnle_samples
     # at this point, we should re-simulate the model with all trials
     # and compare distros
+
+
+def matrix_probs(x, bins_rt=np.arange(200, 600, 25),
+                 bins_mt=np.arange(100, 600, 50)):
+    mt = x[:, 0]
+    rt = x[:, 1]
+    n_total = len(mt)
+    mat_final = np.zeros((len(bins_rt)-1, len(bins_mt)-1))
+    for irt, rtb in enumerate(bins_rt[:-1]):
+        for imt, mtb in enumerate(bins_mt[:-1]):
+            index = (mt >= mtb) & (mt < bins_mt[imt+1]) &\
+                (rt >= rtb) & (rt < bins_rt[irt+1])
+            mat_final[irt, imt] = sum(index)/n_total
+    return mat_final
+
+
+def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5)):
+    grid_rt = np.arange(-100, 300, 25) + 300
+    grid_mt = np.arange(100, 600, 50)
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    # to simulate
+    stim = np.array([stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
+    theta = get_x0()
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(num_simulations, 1)
+    stim = np.array([np.concatenate((stim, stim)) for i in range(len(theta))])
+    trial_index = np.repeat(10, len(theta))
+    x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                             zt=np.repeat(0.5, len(theta)),
+                             coh=np.repeat(0.5, len(theta)),
+                             trial_index=trial_index)
+    # let's compute prob for each bin
+    mat_0 = matrix_probs(x[x[:, 2] == 0])
+    mat_1 = matrix_probs(x[x[:, 2] == 1])
+    fig, ax = plt.subplots(ncols=2)
+    ax[0].imshow(mat_0.T*len(x[x[:, 2] == 0])/len(x[:, 2]),
+                 vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
+                                      mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
+    ax[0].set_title('Choice 0')
+    ax[0].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[0].set_ylabel('MT (ms)')
+    ax[0].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[0].set_xlabel('RT (ms)')
+    im1 = ax[1].imshow(mat_1.T*len(x[x[:, 2] == 1])/len(x[:, 2]),
+                       vmin=0,
+                       vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
+                                    mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
+    ax[1].set_title('Choice 1')
+    ax[1].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[1].set_ylabel('MT (ms)')
+    ax[1].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[1].set_xlabel('RT (ms)')
+    plt.colorbar(im1)
+    # we load estimator
+    with open(SV_FOLDER + "/mnle_n4000000.p", 'rb') as f:
+        estimator = pickle.load(f)
+    estimator = estimator['estimator']
+    theta = get_x0()
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(len(x_o), 1)
+    theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                        torch.tensor(trial_index[
+                                            :len(x_o)]).to(torch.float32)))
+    lprobs = estimator.log_prob(x_o, theta_tri_ind)
+    lprobs = torch.exp(lprobs)
+    theta[:, 0] *= torch.tensor(0.5)
+    theta[:, 1] *= torch.tensor(0.5)
+    mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                              len(grid_rt)).detach().numpy()
+    mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                              len(grid_rt)).detach().numpy()
+    fig, ax = plt.subplots(ncols=2)
+    ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+    ax[0].set_title('Choice 0')
+    ax[0].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[0].set_ylabel('MT (ms)')
+    ax[0].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[0].set_xlabel('RT (ms)')
+    im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+    ax[1].set_title('Choice 1')
+    ax[1].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[1].set_ylabel('MT (ms)')
+    ax[1].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[1].set_xlabel('RT (ms)')
+    plt.colorbar(im1)
 
 
 # --- MAIN

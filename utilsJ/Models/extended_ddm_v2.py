@@ -1042,7 +1042,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
             # pre-planned Motor Time, the modulo prevents trial-index from
             # growing indefinitely
             MT = p_MT_slope*trial_index[i_t] + p_MT_intercept +\
-                p_mt_noise*np.random.randn(1)
+                np.random.gumbel(p_mt_noise)
             first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
             # first_resp_len: evidence influence on MT. The larger the ev,
             # the smaller the motor time
