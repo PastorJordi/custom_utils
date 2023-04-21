@@ -561,17 +561,17 @@ def build_prior_sample_theta(num_simulations):
     # 1. Parameters' prior distro definition
     prior =\
         MultipleIndependent([
-            Uniform(torch.tensor([1e-1]),
+            Uniform(torch.tensor([1e-2]),
                     torch.tensor([1])),  # prior weight
             Uniform(torch.tensor([1e-3]),
                     torch.tensor([0.8])),  # stim weight
             Uniform(torch.tensor([1e-2]),
-                    torch.tensor([3.])),  # evidence integrator bound
+                    torch.tensor([3.5])),  # evidence integrator bound
             Uniform(torch.tensor([1e-8]),
                     torch.tensor([1.])),  # CoM bound
-            Uniform(torch.tensor([4.]),
+            Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # afferent time
-            Uniform(torch.tensor([4.]),
+            Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
             Uniform(torch.tensor([9.]),
                     torch.tensor([16.])),  # time offset action
@@ -581,14 +581,14 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([5e-5])),  # slope trial index for action drift
             Uniform(torch.tensor([0.5]),
                     torch.tensor([4.])),  # bound for action integrator
-            Uniform(torch.tensor([10.]),
-                    torch.tensor([100.])),  # weight of evidence at first readout (for MT reduction)
-            Uniform(torch.tensor([10.]),
-                    torch.tensor([100.])),  # weight of evidence at second readout
-            Uniform(torch.tensor([0.2]),
+            Uniform(torch.tensor([1.]),
+                    torch.tensor([150.])),  # weight of evidence at first readout (for MT reduction)
+            Uniform(torch.tensor([1.]),
+                    torch.tensor([150.])),  # weight of evidence at second readout
+            Uniform(torch.tensor([1e-6]),
                     torch.tensor([0.9])),  # leak
             Uniform(torch.tensor([1.]),
-                    torch.tensor([35.])),  # std of the MT noise
+                    torch.tensor([50.])),  # std of the MT noise
             Uniform(torch.tensor([120.]),
                     torch.tensor([400.])),  # MT offset
             Uniform(torch.tensor([0.06]),
@@ -677,7 +677,7 @@ def get_x0():
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
-    p_mt_noise = 35
+    p_mt_noise = 15
     p_MT_intercept = 320
     p_MT_slope = 0.07
     return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
@@ -706,7 +706,7 @@ def get_lb():
     lb_w_intercept = 0
     lb_w_slope = 0
     lb_a_bound = 0.1
-    lb_1st_r = 1
+    lb_1st_r = 15
     lb_2nd_r = 1
     lb_leak = 0
     lb_mt_n = 1
@@ -741,7 +741,7 @@ def get_ub():
     ub_1st_r = 150
     ub_2nd_r = 150
     ub_leak = 2
-    ub_mt_n = 80
+    ub_mt_n = 70
     ub_mt_int = 450
     ub_mt_slope = 0.15
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -773,7 +773,7 @@ def get_pub():
     pub_1st_r = 50
     pub_2nd_r = 90
     pub_leak = 0.8
-    pub_mt_n = 45
+    pub_mt_n = 20
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -802,10 +802,10 @@ def get_plb():
     plb_w_intercept = 0.03
     plb_w_slope = 1.5e-5
     plb_a_bound = 2.2
-    plb_1st_r = 30
+    plb_1st_r = 40
     plb_2nd_r = 70
     plb_leak = 0.4
-    plb_mt_n = 25
+    plb_mt_n = 5
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
@@ -817,7 +817,7 @@ def get_plb():
 def gumbel_plotter():
     # fits = scipy.stats.gumbel_r.fit(df.resp_len.values*1000)
     fig, ax = plt.subplots(1)
-    val = np.arange(1, 11, 1)
+    val = np.arange(1, 81, 10)
     for v in val:
         fff = []
         for i in range(100000):
@@ -1140,9 +1140,10 @@ if __name__ == '__main__':
         num_simulations = int(4e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-                    'LE44']
+        # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+        #             'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+        #             'LE44']
+        subjects = ['LE43']  # to run only once and train
         for subject in subjects:
             # subject = 'LE43'
             print('Fitting rat ' + str(subject))
@@ -1152,7 +1153,7 @@ if __name__ == '__main__':
                                      srfail=True)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                      n_trials=n_trials, bads=True, training=False)
+                                      n_trials=n_trials, bads=True, training=True)
                 print('--------------')
                 print('p_w_zt: '+str(parameters[0]))
                 print('p_w_stim: '+str(parameters[1]))
