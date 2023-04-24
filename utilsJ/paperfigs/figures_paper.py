@@ -516,13 +516,14 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                                   trajectory="trajectory_y",
                                   velocity=("traj_d1", 1),
                                   acceleration=('traj_d2', 1), accel=False):
+    interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
-    prior_lim = np.quantile(df.norm_allpriors, prior_limit)
+    # prior_lim = np.quantile(df.norm_allpriors, prior_limit)
     if after_correct_only:
         ac_cond = df.aftererror == False
     else:
@@ -536,7 +537,17 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
             (df.sound_len < rt_lim)
         mt = df.resp_len.values*1e3
         mean_mt_silent = np.nanmean(mt[df.special_trial == 2])
+        n_iters = len(bins)
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     if condition == 'prior_x_coh':
+        bins_zt = [-1.01]
+        for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
+            if i_p > 2:
+                bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+            else:
+                bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+        bins_zt.append(1.01)
+        bins = np.array(bins_zt)
         bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
         xlab = 'prior resp.'
         bintype = 'edges'
@@ -544,6 +555,8 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 2) &\
             (df.sound_len < rt_lim)
+        n_iters = len(bins)-1
+        colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
     if condition == 'origidx':
         bins = np.linspace(0, 1e3, num=6)
         xlab = 'trial index'
@@ -552,13 +565,31 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
             ac_cond & (df.special_trial == 0) &\
             (df.sound_len < rt_lim)
     # position
-
-    xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
-        trajectory_thr(df.loc[indx_trajs], condition, bins,
-                       collapse_sides=True, thr=30, ax=ax[0], ax_traj=ax[1],
-                       return_trash=True, error_kwargs=dict(marker='o'),
-                       cmap=cmap, bintype=bintype,
-                       trajectory=trajectory, plotmt=True, alpha_low=False)
+    subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
+    mat_all = np.empty((n_iters, 1700, len(subjects)))
+    mt_all = np.empty((n_iters, len(subjects)))
+    for i_subj, subj in enumerate(subjects):
+        xpoints, _, _, mat, _, mt_time =\
+            trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                           condition, bins,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=cmap, bintype=bintype,
+                           trajectory=trajectory, plotmt=True, alpha_low=False)
+        mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+        mat_all[:, :, i_subj] = mean_traj
+        mt_all[:, i_subj] = mt_time
+    all_trajs = np.nanmean(mat_all, axis=2)
+    all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
+    mt_time = np.nanmean(mt_all, axis=1)
+    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
+    for i_tr, traj in enumerate(all_trajs):
+        ax[1].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[1].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
+                           alpha=0.5)
+        ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                       color=colormap[i_tr], marker='o')
     if condition == 'choice_x_coh':
         ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
                      title='Stimulus \n evidence', loc='upper left',
@@ -580,10 +611,10 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         # ax[2].set_yticks([120, 130])
         # ax[2].set_yticklabels(['120', '130'])
     if condition == 'prior_x_coh':
+        colormap = pl.cm.copper_r(np.linspace(0., 1, n_iters))
         ax[0].set_yticklabels('')
         ax[0].set_ylim(240, 340)
         ax[0].set_yticks([])
-        colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
                                  label='congruent'),
                           Line2D([0], [0], color=colormap[1], lw=2,
@@ -632,12 +663,36 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[0].plot(xpoints, mt_time, color='k', ls=':')
     # ax2.set_label('Motor time')
     # velocities
-    threshold = .2
-    xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
-        df.loc[indx_trajs], condition, bins, collapse_sides=True,
-        thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
-        error_kwargs=dict(marker='o'), cmap=cmap,
-        bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
+    mat_all = np.empty((n_iters, 1700, len(subjects)))
+    mt_all = np.empty((n_iters, len(subjects)))
+    for i_subj, subj in enumerate(subjects):
+        xpoints, ypoints, _, mat, _, mt_time =\
+            trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                           condition, bins,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=cmap, bintype=bintype,
+                           trajectory=velocity, plotmt=True, alpha_low=False)
+        mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+        mat_all[:, :, i_subj] = mean_traj
+        mt_all[:, i_subj] = mt_time
+    all_trajs = np.nanmean(mat_all, axis=2)
+    all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
+    mt_time = np.nanmean(mt_all, axis=1)
+    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
+    for i_tr, traj in enumerate(all_trajs):
+        ax[3].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[3].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
+                           alpha=0.5)
+        ax[2].errorbar(xpoints[i_tr], ypoints[i_tr], yerr=mt_time_err[i_tr],
+                       color=colormap[i_tr], marker='o')
+    # threshold = .2
+    # xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
+    #     df.loc[indx_trajs], condition, bins, collapse_sides=True,
+    #     thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
+    #     error_kwargs=dict(marker='o'), cmap=cmap,
+    #     bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
     # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
     #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-20, 450])
@@ -830,7 +885,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "sound"}
     out_data = []
-    df_1 = df  # .loc[df.special_trial == 2]
+    df_1 = df.copy()  # .loc[df.special_trial == 2]
     for subject in df_1.subjid.unique():
         for i in range(rtbins.size-1):
             dat = df_1.loc[(df_1.subjid == subject) &
@@ -891,7 +946,10 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                 get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
             # + (rtbins[i] + rtbins[i+1])/2
-            out_data += [current_split_index]
+            if current_split_index >= rtbins[i]:
+                out_data += [current_split_index]
+            else:
+                out_data += [np.nan]
     out_data = np.array(out_data).reshape(
         df_1.subjid.unique().size, rtbins.size-1, -1)
     out_data = np.swapaxes(out_data, 0, 1)
@@ -1725,13 +1783,12 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
             rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
     # (see line 805 in function trajectory_thr in plotting.py)
-    df_trajs = df  # df.loc[df.subjid == 'LE38']
+    df_trajs = df.copy()  # df.loc[df.subjid == 'LE38']
     trajs_cond_on_coh_computation(df=df_trajs.loc[df_trajs.special_trial == 2],
                                   ax=ax_zt, condition='prior_x_coh',
                                   prior_limit=1, cmap='copper')
     trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs,
-                                  prior_limit=np.quantile(
-                                      df.norm_allpriors.values, 0.1),
+                                  prior_limit=0.1,  # 10% quantile
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
@@ -1740,8 +1797,9 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     trajs_splitting_prior(df=df, ax=ax[11])
     # traj splitting ev
     trajs_splitting_point(df=df, ax=ax[10], connect_points=True)
-    mt_matrix_vs_ev_zt(df=df, ax=[ax[7], ax[8]], silent_comparison=True,
-                       rt_bin=60)
+    mt_matrix_vs_ev_zt(df=df, ax=ax[7], silent_comparison=False,
+                       rt_bin=60, collapse_sides=True)
+    plot_mt_vs_stim(df, ax[8], prior_min=0.8, rt_max=50)
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -1955,7 +2013,8 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
                       fontweight='bold', va='top', ha='right')
     ax_mat = [ax[7], ax[8]]
     rm_top_right_lines(ax=ax[5])
-    tach_1st_2nd_choice(df=df, ax=ax[5])
+    # tach_1st_2nd_choice(df=df, ax=ax[5])
+    plot_proportion_corr_com_vs_stim(df, ax[5])
     fig2.e(df, sv_folder=SV_FOLDER, ax=ax[6])
     ax[6].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
@@ -2039,7 +2098,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
     #               0.1*np.random.randn(len(comlist_rats)),
     #               comlist_rats, color='k', linestyle='',
     #               marker='o', alpha=0.5)
-    ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k')
+    ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k', alpha=0.6)
     ax_inset.set_xlabel('P(CoM)')
     ax_inset.set_ylabel('# Rats')
     # ax_inset.set_xlabel('Rat')
@@ -3566,18 +3625,56 @@ def fig_7(df, df_sim):
     fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
-def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
-    ax0, ax1 = ax
+def plot_mt_vs_stim(df, ax, prior_min=0.8, rt_max=50):
+    subjects = df.subjid.unique()
+    subjid = df.subjid
+    zt_cong = df.norm_allpriors.values * (df.R_response*2-1)
+    coh_cong = df.coh2.values * (df.R_response*2-1)
+    rt = df.sound_len.values
+    spec_trial = df.special_trial.values
+    mt = df.resp_len.values
+    mt_mat = np.empty((len(subjects), len(np.unique(coh_cong))))
+    for i_s, subject in enumerate(subjects):
+        for iev, ev in enumerate(np.unique(coh_cong)):
+            index = (subjid == subject) & (zt_cong >= prior_min) & (rt <= rt_max) &\
+                (spec_trial == 0) & (coh_cong == ev)
+            mt_mat[i_s, iev] = np.nanmean(mt[index])*1e3
+    mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
+    sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
+    ax.axhline(np.nanmean(mt[(zt_cong >= prior_min) & (rt <= rt_max) &
+                             (spec_trial == 2)])*1e3,
+               color='k', linestyle='--', alpha=0.6)
+    coh_unq = np.unique(coh_cong)
+    colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
+    for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
+        ax.plot(x, y, 'o', color=color)
+        ax.errorbar(x, y, e, color=color)
+    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    ax.set_xticks(coh_vals)
+    ax.set_xlabel('Stimulus')
+    ax.set_ylabel('MT (ms)')
+
+
+def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None,
+                       collapse_sides=False):
+    if not collapse_sides:
+        ax0, ax1 = ax
     if rt_bin is not None:
         if rt_bin > 100:
             df_fil = df.loc[df.sound_len > rt_bin]
         if rt_bin < 100:
             df_fil = df.loc[df.sound_len < rt_bin]
-        df_0 = df_fil.loc[(df_fil.R_response == 0)]
-        df_1 = df_fil.loc[(df_fil.R_response == 1)]
+        if not collapse_sides:
+            df_0 = df_fil.loc[(df_fil.R_response == 0)]
+            df_1 = df_fil.loc[(df_fil.R_response == 1)]
+        else:
+            df_s = df_fil
     else:
-        df_0 = df.loc[(df.R_response == 0)]
-        df_1 = df.loc[(df.R_response == 1)]
+        if not collapse_sides:
+            df_0 = df.loc[(df.R_response == 0)]
+            df_1 = df.loc[(df.R_response == 1)]
+        else:
+            df_s = df.copy()
     bins_zt = [1.01]
     for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
         if i_p < 3:
@@ -3589,90 +3686,138 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None):
     # np.linspace(1.01, -1.01, 8)
     coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     nsubs = len(df.subjid.unique())
-    mat_0 = np.zeros((len(bins_zt)-1, 7, nsubs))
-    mat_1 = np.zeros((len(bins_zt)-1, 7, nsubs))
-    silent_mat_per_rows_0 = np.zeros((len(bins_zt)-1, 7))
-    silent_mat_per_rows_1 = np.zeros((len(bins_zt)-1, 7))
+    if not collapse_sides:
+        mat_0 = np.zeros((len(bins_zt)-1, 7, nsubs))
+        mat_1 = np.zeros((len(bins_zt)-1, 7, nsubs))
+        silent_mat_per_rows_0 = np.zeros((len(bins_zt)-1, 7))
+        silent_mat_per_rows_1 = np.zeros((len(bins_zt)-1, 7))
+    else:
+        mat_s = np.zeros((len(bins_zt)-1, 7, nsubs))
+        silent_mat_per_rows = np.zeros((len(bins_zt)-1, 7))
     # reference MT computation
     for i_zt, zt in enumerate(bins_zt[:-1]):
-        mt_sil_per_sub_0 = []
-        mt_sil_per_sub_1 = []
+        if not collapse_sides:
+            mt_sil_per_sub_0 = []
+            mt_sil_per_sub_1 = []
+        else:
+            mt_sil_per_sub = []
         for subj in df.subjid.unique():
-            mt_silent_0 = df_0.loc[(df_0.special_trial == 2) &
-                                   (df_0.norm_allpriors < zt) &
-                                   (df_0.subjid == subj) &
-                                   (df_0.norm_allpriors > bins_zt[i_zt+1]),
-                                   'resp_len']
-            mt_silent_1 = df_1.loc[(df_1.special_trial == 2) &
-                                   (df_1.norm_allpriors < zt) &
-                                   (df_1.subjid == subj) &
-                                   (df_1.norm_allpriors > bins_zt[i_zt+1]),
-                                   'resp_len']
-            mt_sil_per_sub_0.append(np.nanmean(mt_silent_0))
-            mt_sil_per_sub_1.append(np.nanmean(mt_silent_1))
-        silent_mat_per_rows_0[i_zt, :] = np.nanmean(mt_sil_per_sub_0)*1e3
-        silent_mat_per_rows_1[i_zt, :] = np.nanmean(mt_sil_per_sub_1)*1e3
-    # MT matrix computation, reference MT will be substracted
+            if not collapse_sides:
+                mt_silent_0 = df_0.loc[(df_0.special_trial == 2) &
+                                       (df_0.norm_allpriors < zt) &
+                                       (df_0.subjid == subj) &
+                                       (df_0.norm_allpriors > bins_zt[i_zt+1]),
+                                       'resp_len']
+                mt_silent_1 = df_1.loc[(df_1.special_trial == 2) &
+                                       (df_1.norm_allpriors < zt) &
+                                       (df_1.subjid == subj) &
+                                       (df_1.norm_allpriors > bins_zt[i_zt+1]),
+                                       'resp_len']
+                mt_sil_per_sub_0.append(np.nanmean(mt_silent_0))
+                mt_sil_per_sub_1.append(np.nanmean(mt_silent_1))
+            else:
+                mt_silent = df_s.loc[(df_s.special_trial == 2) &
+                                     (df_s.norm_allpriors < zt) &
+                                     (df_s.subjid == subj) &
+                                     (df_s.norm_allpriors > bins_zt[i_zt+1]),
+                                     'resp_len']
+                mt_sil_per_sub.append(np.nanmean(mt_silent))
+        if not collapse_sides:
+            silent_mat_per_rows_0[i_zt, :] = np.nanmean(mt_sil_per_sub_0)*1e3
+            silent_mat_per_rows_1[i_zt, :] = np.nanmean(mt_sil_per_sub_1)*1e3
+        else:
+            silent_mat_per_rows[i_zt, :] = np.nanmean(mt_sil_per_sub)*1e3
+    # MT matrix computation, reference MT can be substracted if desired
     for i_s, subj in enumerate(df.subjid.unique()):
-        df_sub_0 = df_0.loc[(df_0.subjid == subj)]
-        df_sub_1 = df_1.loc[(df_1.subjid == subj)]
+        if not collapse_sides:
+            df_sub_0 = df_0.loc[(df_0.subjid == subj)]
+            df_sub_1 = df_1.loc[(df_1.subjid == subj)]
+        else:
+            df_sub = df_s.loc[df_s.subjid == subj]
         for i_ev, ev in enumerate(coh_vals):
             for i_zt, zt in enumerate(bins_zt[:-1]):
-                mt_vals_0 = df_sub_0.loc[(df_sub_0.coh2 == ev) &
-                                         (df_sub_0.norm_allpriors < zt)
-                                         & (df_sub_0.norm_allpriors >=
+                if not collapse_sides:
+                    mt_vals_0 = df_sub_0.loc[(df_sub_0.coh2 == ev) &
+                                             (df_sub_0.norm_allpriors < zt)
+                                             & (df_sub_0.norm_allpriors >=
+                                                bins_zt[i_zt+1]),
+                                             'resp_len']
+                    mt_vals_1 = df_sub_1.loc[(df_sub_1.coh2 == ev) &
+                                             (df_sub_1.norm_allpriors < zt)
+                                             & (df_sub_1.norm_allpriors >=
+                                                bins_zt[i_zt+1]),
+                                             'resp_len']
+                    mat_0[i_zt, i_ev, i_s] = np.nanmean(mt_vals_0)*1e3
+                    mat_1[i_zt, i_ev, i_s] = np.nanmean(mt_vals_1)*1e3
+                else:
+                    mt_vals = df_sub.loc[(df_sub.coh2 == ev) &
+                                         (df_sub.norm_allpriors < zt)
+                                         & (df_sub.norm_allpriors >=
                                             bins_zt[i_zt+1]),
                                          'resp_len']
-                mt_vals_1 = df_sub_1.loc[(df_sub_1.coh2 == ev) &
-                                         (df_sub_1.norm_allpriors < zt)
-                                         & (df_sub_1.norm_allpriors >=
-                                            bins_zt[i_zt+1]),
-                                         'resp_len']
-                mat_0[i_zt, i_ev, i_s] = np.nanmean(mt_vals_0)*1e3
-                mat_1[i_zt, i_ev, i_s] = np.nanmean(mt_vals_1)*1e3
-    mat_0 = np.nanmean(mat_0, axis=2)
-    mat_1 = np.nanmean(mat_1, axis=2)
+                    mat_s[i_zt, i_ev, i_s] = np.nanmean(mt_vals)*1e3
+    if not collapse_sides:
+        mat_0 = np.nanmean(mat_0, axis=2)
+        mat_1 = np.nanmean(mat_1, axis=2)
+    else:
+        mat_s = np.nanmean(mat_s, axis=2)
     if silent_comparison:
-        # We substract reference MT (in silent trials) at each row
-        mat_0 -= silent_mat_per_rows_0
-        mat_1 -= silent_mat_per_rows_1
-    # SIDE 0
-    im_0 = ax0.imshow(mat_0, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
-                      vmax=np.nanmax((mat_1, mat_0)))
-    plt.sca(ax0)
-    cbar_0 = plt.colorbar(im_0, fraction=0.04)
-    cbar_0.remove()
-    # cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
-    ax0.set_xlabel('Evidence')
-    ax0.set_ylabel('Prior')
-    if rt_bin is not None:
-        if rt_bin > 100:
-            ax0.set_title('Left, RT > ' + str(rt_bin) + ' ms')
+        if not collapse_sides:
+            # We substract reference MT (in silent trials) at each row
+            mat_0 -= silent_mat_per_rows_0
+            mat_1 -= silent_mat_per_rows_1
         else:
-            ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
+            mat_s -= silent_mat_per_rows
+    # else:
+    #     if collapse_sides:
+    #         mat_s = np.column_stack((mat_s, silent_mat_per_rows[:, 0]))
+    if not collapse_sides:
+        # SIDE 0
+        im_0 = ax0.imshow(mat_0, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
+                          vmax=np.nanmax((mat_1, mat_0)))
+        plt.sca(ax0)
+        cbar_0 = plt.colorbar(im_0, fraction=0.04)
+        cbar_0.remove()
+        # cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
+        ax0.set_xlabel('Evidence')
+        ax0.set_ylabel('Prior')
+        if rt_bin is not None:
+            if rt_bin > 100:
+                ax0.set_title('Left, RT > ' + str(rt_bin) + ' ms')
+            else:
+                ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
+        else:
+            ax0.set_title('Left')
+        ax0.set_yticks([0, 3, 6, 7], ['R', '0', 'L'])
+        ax0.set_xticks([0, 3, 6, 7], ['L', '0', 'R'])
+        # SIDE 1
+        ax1.set_title('Right')
+        im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
+                          vmax=np.nanmax((mat_1, mat_0)))
+        plt.sca(ax1)
+        ax1.set_xlabel('Evidence')
+        # ax1.set_ylabel('Prior')
+        cbar_1 = plt.colorbar(im_1, fraction=0.04, pad=-0.05)
+        if silent_comparison:
+            cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
+        else:
+            cbar_1.set_label(r'$MT \;(ms)$')
+        ax1.set_yticks([0, 3, 6], ['', '', ''])
+        ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
+        ax0pos = ax0.get_position()
+        ax1pos = ax1.get_position()
+        ax0.set_position([ax0pos.x0, ax1pos.y0, ax1pos.width, ax1pos.height])
+        ax1.set_position([ax1pos.x0-ax1pos.width*0.2,
+                          ax1pos.y0, ax1pos.width, ax1pos.height])
     else:
-        ax0.set_title('Left')
-    ax0.set_yticks([0, 3, 6], ['R', '0', 'L'])
-    ax0.set_xticks([0, 3, 6], ['L', '0', 'R'])
-    # SIDE 1
-    ax1.set_title('Right')
-    im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
-                      vmax=np.nanmax((mat_1, mat_0)))
-    plt.sca(ax1)
-    ax1.set_xlabel('Evidence')
-    # ax1.set_ylabel('Prior')
-    cbar_1 = plt.colorbar(im_1, fraction=0.04, pad=-0.05)
-    if silent_comparison:
-        cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
-    else:
-        cbar_1.set_label(r'$MT \;(ms)$')
-    ax1.set_yticks([0, 3, 6], ['', '', ''])
-    ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
-    ax0pos = ax0.get_position()
-    ax1pos = ax1.get_position()
-    ax0.set_position([ax0pos.x0, ax1pos.y0, ax1pos.width, ax1pos.height])
-    ax1.set_position([ax1pos.x0-ax1pos.width*0.2,
-                      ax1pos.y0, ax1pos.width, ax1pos.height])
+        im_s = ax.imshow(mat_s, cmap='RdGy')
+        plt.sca(ax)
+        cbar_s = plt.colorbar(im_s, fraction=0.04)
+        cbar_s.set_label(r'$MT \;(ms)$')
+        ax.set_yticks([0, 3, 6], ['R', '0', 'L'])
+        ax.set_xticks([0, 3, 6], ['L', '0', 'R'])
+        ax.set_xlabel('Evidence')
+        ax.set_ylabel('Prior')
 
 
 def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
@@ -3725,7 +3870,7 @@ def norm_allpriors_per_subj(df):
         df_1 = df.loc[df.subjid == subj]
         zt_tmp = df_1.allpriors.values
         norm_allpriors = np.concatenate((norm_allpriors,
-                                         zt_tmp/max(abs(zt_tmp))))
+                                         zt_tmp/np.nanmax(abs(zt_tmp))))
     return norm_allpriors
 
 
@@ -4325,20 +4470,20 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
-    f3 = False
+    f2 = True
+    f3 = True
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
         all_rats = True
         if all_rats:
-            subjects = ['LE84', 'LE43']
-            # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-            #             'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-            #             'LE44']
+            # subjects = ['LE37', 'LE84', 'LE43', 'LE44']
+            subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                        'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                        'LE44']
             # subjects = ['LE37', 'LE42', 'LE44']
             # with silent: 42, 43, 44, 45, 46, 47
         else:

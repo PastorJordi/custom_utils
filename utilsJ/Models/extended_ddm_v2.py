@@ -2790,7 +2790,7 @@ if __name__ == '__main__':
             p_1st_readout = 40
             p_2nd_readout = 80
             p_leak = 0.5
-            p_mt_noise = 35
+            p_mt_noise = 15
             p_MT_intercept = 310
             p_MT_slope = 0.10
             compute_trajectories = True
