@@ -1686,8 +1686,8 @@ def plot_violins(w_coh, w_t_i, w_zt, ax, mt=True):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
-                marginy=0.1):
+def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
+                marginy=0.05):
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
     # ax = ax.flatten()
