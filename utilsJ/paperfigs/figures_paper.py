@@ -611,19 +611,18 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         # ax[2].set_yticks([120, 130])
         # ax[2].set_yticklabels(['120', '130'])
     if condition == 'prior_x_coh':
-        colormap = pl.cm.copper_r(np.linspace(0., 1, n_iters))
         ax[0].set_yticklabels('')
         ax[0].set_ylim(240, 340)
         ax[0].set_yticks([])
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+        legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
                                  label='congruent'),
-                          Line2D([0], [0], color=colormap[1], lw=2,
+                          Line2D([0], [0], color=colormap[3], lw=2,
                                  label=''),
                           Line2D([0], [0], color=colormap[2], lw=2,
                                  label='0'),
-                          Line2D([0], [0], color=colormap[2], lw=2,
+                          Line2D([0], [0], color=colormap[1], lw=2,
                                  label=''),
-                          Line2D([0], [0], color=colormap[4], lw=2,
+                          Line2D([0], [0], color=colormap[0], lw=2,
                                  label='incongruent')]
         ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
@@ -675,7 +674,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                            trajectory=velocity, plotmt=True, alpha_low=False)
         mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
         mat_all[:, :, i_subj] = mean_traj
-        mt_all[:, i_subj] = mt_time
+        mt_all[:, i_subj] = ypoints
     all_trajs = np.nanmean(mat_all, axis=2)
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
     mt_time = np.nanmean(mt_all, axis=1)
@@ -685,7 +684,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[3].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        ax[2].errorbar(xpoints[i_tr], ypoints[i_tr], yerr=mt_time_err[i_tr],
+        ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                        color=colormap[i_tr], marker='o')
     # threshold = .2
     # xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
@@ -878,6 +877,8 @@ def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
         else:
             y_vals.append(low_val)
     ax.step(x_vals, y_vals, color='k')
+    ax.fill_between(x_vals, y_vals, np.repeat(0, len(y_vals)),
+                    color='grey')
 
 
 def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
@@ -1690,39 +1691,56 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     f = plt.figure(figsize=fgsz)
     # plt.tight_layout()
     # ax = ax.flatten()
-    ax_label = f.add_subplot(4, 3, 1)
+    ax_label = f.add_subplot(5, 3, 1)
     # pos = ax_label.get_position()
     # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
+    # mt vs zt
     ax_label.text(-0.1, 1.2, 'a', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 2)
-    ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 3)
-    ax_label.axis('off')
-    ax_label = f.add_subplot(4, 3, 4)
+    # mt vs stim
+    ax_label = f.add_subplot(5, 3, 2)
     ax_label.text(-0.1, 1.2, 'b', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 5)
+    ax_label = f.add_subplot(5, 3, 3)
+    ax_label.axis('off')
+    # trajs prior
+    ax_label = f.add_subplot(5, 3, 4)
+    ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    # trajs stim
+    ax_label = f.add_subplot(5, 3, 5)
     ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 6)
+    ax_label = f.add_subplot(5, 3, 6)
     ax_label.axis('off')
-    ax_label = f.add_subplot(4, 3, 7)
+    # vel prior
+    ax_label = f.add_subplot(5, 3, 7)
     ax_label.text(-0.1, 1.2, 'e', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 8)
+    ax_label = f.add_subplot(5, 3, 8)
     ax_label.text(-0.1, 1.2, 'f', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 9)
-    ax_label = f.add_subplot(4, 3, 10)
-    ax_label.text(-0.1, 3., 'g', transform=ax_label.transAxes,
+    ax_label = f.add_subplot(5, 3, 9)
+    ax_label.axis('off')
+    ax_label = f.add_subplot(5, 3, 10)
+    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 11)
+    # weights linear reg
+    ax_label = f.add_subplot(5, 3, 11)
     ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
-    ax_label = f.add_subplot(4, 3, 12)
+    # mt mat
+    ax_label = f.add_subplot(5, 3, 12)
     ax_label.text(-0.1, 1.2, 'i', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(5, 3, 13)
+    ax_label.text(-0.1, 3., 'j', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(5, 3, 14)
+    ax_label.text(-0.1, 1.2, 'k', transform=ax_label.transAxes,
+                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(5, 3, 15)
+    ax_label.text(-0.1, 1.2, 'l', transform=ax_label.transAxes,
                   fontsize=16, fontweight='bold', va='top', ha='right')
     # plt.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
@@ -1738,11 +1756,16 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
                         pos_ax_3.height])
     ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
                         pos_ax_3.width*1.6, pos_ax_3.height])
+    pos_ax_5 = ax[6].get_position()
+    ax[6].set_position([pos_ax_5.x0, pos_ax_5.y0, pos_ax_5.width*1.6,
+                        pos_ax_5.height])
+    ax[7].set_position([pos_ax_5.x0 + pos_ax_5.width*2.2, pos_ax_5.y0,
+                        pos_ax_5.width*1.6, pos_ax_5.height])
 
-    ax_cohs = np.array([ax[1], ax[4]])
-    ax_zt = np.array([ax[0], ax[3]])
+    ax_cohs = np.array([ax[1], ax[4], ax[7]])
+    ax_zt = np.array([ax[0], ax[3], ax[6]])
     # splitting
-    ax_split = ax[9]
+    ax_split = ax[12]
     pos = ax_split.get_position()
     ax_split.set_position([pos.x0, pos.y0, pos.width,
                            pos.height*2/5])
@@ -1755,21 +1778,21 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
     trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
                     xlab=True)
     # trajs. conditioned on coh
-    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
-    ax_inset.yaxis.set_ticks_position('none')
+    # ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
+    #                      marginx=marginx, marginy=0.04, right=True)
+    # ax_inset.yaxis.set_ticks_position('none')
     # ax_inset.set_xlabel('Stimulus')
-    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    # ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
     # ax_inset.set_xlabel('Stimulus')
     ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
-    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
-    ax_inset.yaxis.set_ticks_position('none')
-    ax_zt = np.insert(ax_zt, 0, ax_inset)
+    # ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
+    #                      marginx=marginx, marginy=0.04, right=True)
+    # ax_inset.yaxis.set_ticks_position('none')
+    # ax_zt = np.insert(ax_zt, 0, ax_inset)
     ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
@@ -1792,14 +1815,14 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.006,
                                   condition='choice_x_coh',
                                   cmap='coolwarm')
     # regression weights
-    mt_weights(df, ax=ax[6], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[9], plot=True, means_errs=False)
     # traj splitting prior
-    trajs_splitting_prior(df=df, ax=ax[11])
+    trajs_splitting_prior(df=df, ax=ax[14])
     # traj splitting ev
-    trajs_splitting_point(df=df, ax=ax[10], connect_points=True)
-    mt_matrix_vs_ev_zt(df=df, ax=ax[7], silent_comparison=False,
+    trajs_splitting_point(df=df, ax=ax[13], connect_points=True)
+    mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
                        rt_bin=60, collapse_sides=True)
-    plot_mt_vs_stim(df, ax[8], prior_min=0.8, rt_max=50)
+    plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -3625,8 +3648,8 @@ def fig_7(df, df_sim):
     fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
-def plot_mt_vs_stim(df, ax, prior_min=0.8, rt_max=50):
-    subjects = df.subjid.unique()
+def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
+    subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
     subjid = df.subjid
     zt_cong = df.norm_allpriors.values * (df.R_response*2-1)
     coh_cong = df.coh2.values * (df.R_response*2-1)
@@ -3634,16 +3657,20 @@ def plot_mt_vs_stim(df, ax, prior_min=0.8, rt_max=50):
     spec_trial = df.special_trial.values
     mt = df.resp_len.values
     mt_mat = np.empty((len(subjects), len(np.unique(coh_cong))))
+    sil = []
     for i_s, subject in enumerate(subjects):
+        # silent
+        prior_min_quan = np.quantile(zt_cong[(subjid == subject) &
+                                             (~np.isnan(zt_cong))], prior_min)
+        sil.append(np.nanmean(mt[(zt_cong >= prior_min_quan) & (rt <= rt_max) &
+                                 (spec_trial == 2) & (subjid == subject)])*1e3)
         for iev, ev in enumerate(np.unique(coh_cong)):
-            index = (subjid == subject) & (zt_cong >= prior_min) & (rt <= rt_max) &\
-                (spec_trial == 0) & (coh_cong == ev)
+            index = (subjid == subject) & (zt_cong >= prior_min_quan) &\
+                (rt <= rt_max) & (spec_trial == 0) & (coh_cong == ev)
             mt_mat[i_s, iev] = np.nanmean(mt[index])*1e3
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
-    ax.axhline(np.nanmean(mt[(zt_cong >= prior_min) & (rt <= rt_max) &
-                             (spec_trial == 2)])*1e3,
-               color='k', linestyle='--', alpha=0.6)
+    ax.axhline(np.nanmean(sil), color='k', linestyle='--', alpha=0.6)
     coh_unq = np.unique(coh_cong)
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
@@ -4471,7 +4498,7 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = True
-    f3 = True
+    f3 = False
     f4 = False
     f5 = False
     f6 = False
@@ -4549,19 +4576,23 @@ if __name__ == '__main__':
 
     # fig 1
     if f1:
+        print('Plotting Figure 1')
         fig_rats_behav_1(df_data=df)
 
     # fig 2
     if f2:
+        print('Plotting Figure 2')
         fig_trajs_2(df=df.loc[df.soundrfail == 0])
 
     # fig 3
     if f3:
+        print('Plotting Figure 3')
         fig_CoMs_3(df=df, peak_com=peak_com, time_com=time_com)
         supp_com_marginal(df)
 
     # fig 5 (model)
     if f5:
+        print('Plotting Figure 5')
         n_sil = 0
         stim[df.soundrfail, :] = 0
         num_tr = int(7e4)
@@ -4632,6 +4663,7 @@ if __name__ == '__main__':
             fig_trajs_model_4(trajs_model=trajs, df_data=df,
                               reaction_time=reaction_time)
     if f6:
+        print('Plotting Figure 6')
         # human traj plots
         fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=600,
                      wanted_precision=12, nm='300')
