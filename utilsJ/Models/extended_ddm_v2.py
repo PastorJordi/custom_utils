@@ -1051,49 +1051,54 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
                                   resp_len=first_resp_len)
             init_trajs.append(prior0)  # + np.random.randn(len(prior0))*0.15)
             # TRAJ. UPDATE
-            velocities = np.gradient(prior0)
-            accelerations = np.gradient(velocities)  # acceleration
-            t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
-            t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
-            frst_traj_motor_time.append(t_updt)
-            vel = velocities[t_updt]  # velocity at the timepoint
-            acc = accelerations[t_updt]
-            pos = prior0[t_updt]  # position
-            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
-                                  0, 0]).reshape(-1, 1)
-            # new mu, considering new position/speed/acceleration
-            remaining_m_time = first_resp_len-t_updt
-            sign_ = resp_first[i_t]
-            # this sets the maximum updating evidence equal to the ev bound
-            # and avoids having negative second_resp_len (impossibly fast
-            # responses) bc of very strong confirmation evidence.
-            updt_ev = np.clip(second_ev[i_t], a_min=-bound, a_max=bound)
-            # second_response_len: motor time update influenced by difference
-            # between the evidence at second readout and the signed p_com_bound
-            com_bound_signed = (-sign_)*p_com_bound
-            difference = (updt_ev - first_ev[i_t])*sign_
-            # offset = 120
-            second_response_len =\
-                float(remaining_m_time -  # offset*com[i_t] -
-                      p_2nd_readout*(difference))
-            # SECOND readout
-            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
-                                    resp_len=second_response_len)
-            final_trajs.append(traj_fin)
-            # joined trajectories
-            traj_before_uptd = prior0[0:t_updt]
-            traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
-            # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
-            # traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
-            # np.random.randn(np.random.randint(15, 60))*0.2
-            total_traj.append(traj_updt)
-            if com[i_t]:
-                opp_side_values = traj_updt.copy()
-                opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
-                max_val_towards_opposite = np.max(np.abs(opp_side_values))
-                x_val_at_updt.append(max_val_towards_opposite)
-            else:
+            try:
+                velocities = np.gradient(prior0)
+                accelerations = np.gradient(velocities)  # acceleration
+                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
+                frst_traj_motor_time.append(t_updt)
+                vel = velocities[t_updt]  # velocity at the timepoint
+                acc = accelerations[t_updt]
+                pos = prior0[t_updt]  # position
+                mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                      0, 0]).reshape(-1, 1)
+                # new mu, considering new position/speed/acceleration
+                remaining_m_time = first_resp_len-t_updt
+                sign_ = resp_first[i_t]
+                # this sets the maximum updating evidence equal to the ev bound
+                # and avoids having negative second_resp_len (impossibly fast
+                # responses) bc of very strong confirmation evidence.
+                updt_ev = np.clip(second_ev[i_t], a_min=-bound, a_max=bound)
+                # second_response_len: motor time update influenced by difference
+                # between the evidence at second readout and the signed p_com_bound
+                com_bound_signed = (-sign_)*p_com_bound
+                difference = (updt_ev - first_ev[i_t])*sign_
+                # offset = 120
+                second_response_len =\
+                    float(remaining_m_time -  # offset*com[i_t] -
+                          p_2nd_readout*(difference))
+                # SECOND readout
+                traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                        resp_len=second_response_len)
+                # joined trajectories
+                traj_before_uptd = prior0[0:t_updt]
+                traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+                # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
+                # traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
+                # np.random.randn(np.random.randint(15, 60))*0.2
+                if com[i_t]:
+                    opp_side_values = traj_updt.copy()
+                    opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
+                    max_val_towards_opposite = np.max(np.abs(opp_side_values))
+                    x_val_at_updt.append(max_val_towards_opposite)
+                else:
+                    x_val_at_updt.append(0)
+            except Exception:
+                traj_fin = [np.nan]
+                traj_updt = np.concatenate((prior0, traj_fin))
                 x_val_at_updt.append(0)
+            total_traj.append(traj_updt)
+            final_trajs.append(traj_fin)
         if compute_mat_and_pcom:
             detect_CoMs_th = 8
             detected_com = np.abs(x_val_at_updt) > detect_CoMs_th

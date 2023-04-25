@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -591,20 +591,36 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                        color=colormap[i_tr], marker='o')
     if condition == 'choice_x_coh':
-        ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
-                     title='Stimulus \n evidence', loc='upper left',
-                     fontsize=6)
+        # ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
+        #              title='Stimulus \n evidence', loc='upper left',
+        #              fontsize=6)
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                                 label='-1'),
+                          Line2D([0], [0], color=colormap[1], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[3], lw=2,
+                                 label='0'),
+                          Line2D([0], [0], color=colormap[4], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[5], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[6], lw=2,
+                                 label='1')]
+        ax[1].legend(handles=legendelements, title='Stimulus \n evidence',
+                     loc='upper left', fontsize=7)
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
-        ax[0].set_ylim(240, 295)
-        ax[0].set_xticks([0])
+        ax[0].set_xticks([-1, 0, -1])
         ax[0].axhline(mean_mt_silent, color='k', linestyle='--', alpha=0.8)
-        ax[0].set_xticklabels(['Stimulus'], fontsize=9)
-        ax[0].xaxis.set_ticks_position('none')
+        ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
+        ax[0].set_xlabel('Stimulus')
+        # ax[0].xaxis.set_ticks_position('none')
         ax[2].set_xticks([0])
         ax[2].set_xticklabels(['Stimulus'], fontsize=9)
         ax[2].xaxis.set_ticks_position('none')
-        ax[0].set_ylim(235, 295)
+        ax[0].set_ylim(220, 295)
         ax[0].set_yticks([240, 275])
         ax[0].set_yticklabels(['240', '275'])
         ax[2].set_ylim([0.5, 0.8])
@@ -612,7 +628,6 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         # ax[2].set_yticklabels(['120', '130'])
     if condition == 'prior_x_coh':
         ax[0].set_yticklabels('')
-        ax[0].set_ylim(240, 340)
         ax[0].set_yticks([])
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
                                  label='congruent'),
@@ -631,12 +646,13 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         xpoints = (bins[:-1] + bins[1:]) / 2
         # ax[0].set_xticks([-0.65, xpoints[2], 0.65])
         # ax[0].set_xticklabels(['inc.', '\n zero', 'con.'])
-        ax[0].set_ylim(240, 340)
+        ax[0].set_ylim(230, 310)
         ax[0].set_yticks([250, 300])
         ax[0].set_yticklabels(['250', '300'])
-        ax[0].set_xticks([0])
-        ax[0].set_xticklabels(['Prior'], fontsize=9)
-        ax[0].xaxis.set_ticks_position('none')
+        ax[0].set_xticks([xpoints[0], 0, xpoints[-1]])
+        ax[0].set_xticklabels(['Incongruent', '0', 'Congruent'])
+        # ax[0].xaxis.set_ticks_position('none')
+        ax[0].set_xlabel('Prior')
         # ax[2].set_xticks([-0.65, xpoints[2], 0.65])
         # ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
         ax[2].set_ylim([0.5, 0.8])
@@ -701,7 +717,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     ax[3].set_ylabel('Velocity (pixels/ms)')
     # ax[2].set_xlabel(xlab)
     ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
-    ax[2].plot(xpoints, ypoints, color='k', ls=':')
+    ax[2].plot(xpoints, mt_time, color='k', ls=':')
     plt.show()
     if accel:
         # acceleration
@@ -1802,7 +1818,7 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
                              pos.height*1/2])
     for i_a, a in enumerate(ax):
-        if i_a != 7 and i_a != 8:
+        if i_a != 8:
             rm_top_right_lines(a)
     # TODO: the function below does not work with all subSjects
     # (see line 805 in function trajectory_thr in plotting.py)
@@ -1980,16 +1996,16 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 41),
         counts_com, bins = np.histogram(mt_com, bins=mtbins)
         counts_nocom, bins = np.histogram(mt_nocom, bins=mtbins)
         xvals = bins[:-1]+(bins[1]-bins[0])/2
-        ax.plot(xvals, counts_com/sum(counts_com), color='tab:olive', alpha=0.5,
-                linewidth=1.5)
-        ax.plot(xvals, counts_nocom/sum(counts_nocom), color='tab:cyan', alpha=0.5,
-                linewidth=1.5)
+        ax.plot(xvals, counts_com/sum(counts_com), color='tab:olive', alpha=0.3,
+                linewidth=1)
+        ax.plot(xvals, counts_nocom/sum(counts_nocom), color='tab:cyan', alpha=0.3,
+                linewidth=1)
         mt_com_mat[:, i_s] = counts_com/sum(counts_com)
         mt_nocom_mat[:, i_s] = counts_nocom/sum(counts_nocom)
     ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color='tab:olive',
-            label='Detected CoM', linewidth=2)
+            label='Detected CoM', linewidth=1.6)
     ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color='tab:cyan',
-            label='No-CoM', linewidth=2)
+            label='No-CoM', linewidth=1.6)
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
@@ -2373,8 +2389,8 @@ def mean_com_traj_simul(df_sim, ax):
     ax.text(200, -16, "Detection threshold", color='r')
 
 
-def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected, pro_vs_re,
+def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
+          decision_model, com, com_model, com_model_detected,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
           marginx=0.006, marginy=0.07, fgsz=(8, 12)):
     fig, ax = plt.subplots(ncols=3, nrows=5, gridspec_kw={'top': 0.95,
@@ -2439,8 +2455,11 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
                                  'subjid': subjid})
     subjects = np.unique(subjid)
     com_data = np.empty((len(subjects), len(BINS_RT)-1))
+    com_data[:] = np.nan
     com_model_all = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_all[:] = np.nan
     com_model_det = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_det[:] = np.nan
     for i_s, subject in enumerate(subjects):
         df_plot = df_plot_pcom.loc[subjid == subject]
         xpos_plot, median_pcom_dat, _ =\
@@ -2456,9 +2475,9 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
             binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
                          errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax2,
                          legend=False, return_data=True)
-        com_data[i_s, :] = median_pcom_dat
-        com_model_all[i_s, :] = median_pcom_mod_all
-        com_model_det[i_s, :] = median_pcom_mod_det
+        com_data[i_s, :len(median_pcom_dat)] = median_pcom_dat
+        com_model_all[i_s, :len(median_pcom_mod_all)] = median_pcom_mod_all
+        com_model_det[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
     ax[12].errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
                     yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
     ax[12].errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
@@ -2496,6 +2515,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     # P_right
     ax_pright = ax[7]
     im = ax_pright.imshow(np.flipud(mat_pright_avg), vmin=0., vmax=1, cmap='PRGn_r')
+    plt.sca(ax_pright)
     cbar = plt.colorbar(im, fraction=0.04)
     cbar.set_label('p(Right)', rotation=270)
     ax_pright.set_yticks([0, 3, 6])
@@ -2576,7 +2596,7 @@ def fig_5(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
     ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
     if sum(df_sim.special_trial == 2) > 0:
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
-                            median=True, prior=True)
+                            median=True, prior=True, rt_lim=300)
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt,
@@ -2633,81 +2653,116 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     # df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    bins_zt = [-1, -0.6, -0.15, 0.15, 0.6, 1]
-    xvals_zt = [-1, -0.5, 0, 0.5, 1]
+    bins_zt = [1.01]
+    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+        if i_p < 3:
+            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+        else:
+            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+    bins_zt.append(-1.01)
+    bins_zt = bins_zt[::-1]
+    xvals_zt = [-1, -0.666, -0.333, 0, 0.333, 0.666, 1]
     signed_response = df_sim.R_response.values
     df_sim['normallpriors'] = df_sim['allpriors'] /\
         np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
-    lens = []
     if ax is None:
         fig, ax = plt.subplots(nrows=2, ncols=2)
         ax = ax.flatten()
-    vals_thr_traj = []
-    vals_thr_vel = []
-    labels_zt = ['inc.', ' ', '0', ' ', 'cong.']
+    labels_zt = ['inc.', ' ', ' ', '0', ' ', ' ', 'cong.']
     labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     if prior:
         bins_ref = bins_zt
+        colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
     else:
         bins_ref = bins_coh
+        colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
     subjects = df_sim.subjid
-    # for i_s, subject in enumerate(subjects.unique()):
+    max_mt = 800
+    mat_trajs_subs = np.empty((len(bins_ref), max_mt,
+                               len(subjects.unique())))
+    mat_vel_subs = np.empty((len(bins_ref), max_mt,
+                             len(subjects.unique())))
+    if prior:
+        val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
+        val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
+    else:
+        val_traj_subs = np.empty((len(bins_ref), len(subjects.unique())))
+        val_vel_subs = np.empty((len(bins_ref), len(subjects.unique())))
+    for i_s, subject in enumerate(subjects.unique()):
+        vals_thr_traj = []
+        vals_thr_vel = []
+        lens = []
+        for i_ev, ev in enumerate(bins_ref):
+            if not prior:
+                index = (df_sim.choice_x_coh.values == ev) *\
+                    (df_sim.normallpriors.abs() <= prior_lim) *\
+                    (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
+                    (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                    (subjects == subject)
+            if prior:
+                if ev == 1.01:
+                    break
+                index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
+                    (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
+                    (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                    (subjects == subject)
+                if sum(index) == 0:
+                    continue
+                # * (df_sim.special_trial == 2)
+            lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
+            traj_all = np.empty((sum(index), max(lens)))
+            traj_all[:] = np.nan
+            vel_all = np.empty((sum(index), max(lens)))
+            vel_all[:] = np.nan
+            for tr in range(sum(index)):
+                vals_traj = df_sim.traj[index].values[tr] *\
+                    (signed_response[index][tr]*2 - 1)
+                if sum(vals_traj) == 0:
+                    continue
+                vals_traj = np.concatenate((vals_traj,
+                                            np.repeat(75, max(lens)-len(vals_traj))))
+                vals_vel = df_sim.traj_d1[index].values[tr] *\
+                    (signed_response[index][tr]*2 - 1)
+                vals_vel = np.diff(vals_traj)
+                traj_all[tr, :len(vals_traj)] = vals_traj
+                vel_all[tr, :len(vals_vel)] = vals_vel
+            try:
+                index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
+                                     > traj_all.shape[0] - 50)[0][0]
+                mean_traj = func_final(traj_all[:, :index_vel], axis=0)
+                std_traj = np.nanstd(traj_all[:, :index_vel],
+                                     axis=0) / np.sqrt(sum(index))
+            except Exception:
+                mean_traj = func_final(traj_all, axis=0)
+                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
+            val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
+            vals_thr_traj.append(val_traj)
+            mean_vel = func_final(vel_all, axis=0)
+            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
+            val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
+            vals_thr_vel.append(val_vel)
+            mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
+            mat_vel_subs[i_ev, :len(mean_vel), i_s] = mean_vel
+        val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
+        val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
     for i_ev, ev in enumerate(bins_ref):
-        if not prior:
-            index = (df_sim.choice_x_coh.values == ev) *\
-                (df_sim.normallpriors.abs() <= prior_lim) *\
-                (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
-                (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
-                (subjects == subject)
-            colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
         if prior:
-            if ev == 1:
+            if ev == 1.01:
                 break
-            index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
-                (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
-                (df_sim.R_response.values == 1) *\
-                (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
-                (subjects == subject)
-            # * (df_sim.special_trial == 2)
-            colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
-        lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
-        traj_all = np.empty((sum(index), max(lens)))
-        traj_all[:] = np.nan
-        vel_all = np.empty((sum(index), max(lens)))
-        vel_all[:] = np.nan
-        for tr in range(sum(index)):
-            vals_traj = df_sim.traj[index].values[tr] *\
-                (signed_response[index][tr]*2 - 1)
-            if sum(vals_traj) == 0:
-                continue
-            vals_traj = np.concatenate((vals_traj,
-                                        np.repeat(75, max(lens)-len(vals_traj))))
-            vals_vel = df_sim.traj_d1[index].values[tr] *\
-                (signed_response[index][tr]*2 - 1)
-            vals_vel = np.diff(vals_traj)
-            traj_all[tr, :len(vals_traj)] = vals_traj
-            vel_all[tr, :len(vals_vel)] = vals_vel
-        try:
-            index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
-                                 > traj_all.shape[0] - 50)[0][0]
-            mean_traj = func_final(traj_all[:, :index_vel], axis=0)
-            std_traj = np.nanstd(traj_all[:, :index_vel],
-                                 axis=0) / np.sqrt(sum(index))
-        except Exception:
-            mean_traj = func_final(traj_all, axis=0)
-            std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
-        val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
+        val_traj = np.nanmean(val_traj_subs[i_ev, :])
+        val_vel = np.nanmean(val_vel_subs[i_ev, :])
+        mean_traj = np.nanmean(mat_trajs_subs[i_ev, :, :], axis=1)
+        std_traj = np.std(mat_trajs_subs[i_ev, :, :], axis=1) /\
+            np.sqrt(len(subjects.unique()))
+        mean_vel = np.nanmean(mat_vel_subs[i_ev, :, :], axis=1)
+        std_vel = np.std(mat_vel_subs[i_ev, :, :], axis=1) /\
+            np.sqrt(len(subjects.unique()))
         if prior:
             xval = xvals_zt[i_ev]
         else:
             xval = ev
         ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='o', s=25)
-        vals_thr_traj.append(val_traj)
-        mean_vel = func_final(vel_all, axis=0)
-        std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
-        val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
         ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='o', s=25)
-        vals_thr_vel.append(val_vel)
         if not prior:
             label = labels_coh[i_ev]
         if prior:
@@ -2729,16 +2784,18 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     ax[1].set_xlim(-5, 460)
     if prior:
         leg_title = 'Prior'
-        ax[2].plot(xvals_zt, vals_thr_traj, color='k', linestyle='--',
-                   alpha=0.6)
-        ax[3].plot(xvals_zt, vals_thr_vel, color='k', linestyle='--',
-                   alpha=0.6)
+        ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
+                   color='k', linestyle='--', alpha=0.6)
+        ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
+                   color='k', linestyle='--', alpha=0.6)
         ax[2].set_xlabel('Prior', fontsize=8)
         ax[3].set_xlabel('Prior', fontsize=8)
     if not prior:
         leg_title = 'Stimulus\n evidence'
-        ax[2].plot(bins_coh, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-        ax[3].plot(bins_coh, vals_thr_vel, color='k', linestyle='--', alpha=0.6)
+        ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
+                   color='k', linestyle='--', alpha=0.6)
+        ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
+                   color='k', linestyle='--', alpha=0.6)
         ax[2].set_xlabel('Evidence', fontsize=8)
         ax[3].set_xlabel('Evidence', fontsize=8)
     ax[0].legend(title=leg_title, fontsize=7, loc='upper left')
@@ -3457,25 +3514,26 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
                 p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
                 p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
         jitters = len(conf)*[0]
-        print('Number of trials: ' + str(stim.shape[1]))
-        p_w_zt = conf[0]+jitters[0]*np.random.rand()
-        p_w_stim = conf[1]+jitters[1]*np.random.rand()
-        p_e_bound = conf[2]+jitters[2]*np.random.rand()
-        p_com_bound = conf[3]+jitters[3]*np.random.rand()
-        p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
-        p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
-        p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
-        p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
-        p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
-        p_a_bound = conf[9]+jitters[9]*np.random.rand()
-        p_1st_readout = conf[10]+jitters[10]*np.random.rand()
-        p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
-        p_leak = conf[12]+jitters[12]*np.random.rand()
-        p_mt_noise = conf[13]+jitters[13]*np.random.rand()
-        p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
-        p_MT_slope = conf[15]+jitters[15]*np.random.rand()
     else:
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        jitters = len(conf)*[0]
+    print('Number of trials: ' + str(stim.shape[1]))
+    p_w_zt = conf[0]+jitters[0]*np.random.rand()
+    p_w_stim = conf[1]+jitters[1]*np.random.rand()
+    p_e_bound = conf[2]+jitters[2]*np.random.rand()
+    p_com_bound = conf[3]+jitters[3]*np.random.rand()
+    p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
+    p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
+    p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
+    p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
+    p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+    p_a_bound = conf[9]+jitters[9]*np.random.rand()
+    p_1st_readout = conf[10]+jitters[10]*np.random.rand()
+    p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
+    p_leak = conf[12]+jitters[12]*np.random.rand()
+    p_mt_noise = conf[13]+jitters[13]*np.random.rand()
+    p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
+    p_MT_slope = conf[15]+jitters[15]*np.random.rand()
     stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
@@ -3517,7 +3575,7 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
-                                   subjid, num_tr=None, load_params=False):
+                                   subjid, num_tr=None, load_params=True):
     hit_model = np.empty((0))
     reaction_time = np.empty((0))
     detected_com = np.empty((0))
@@ -3676,8 +3734,8 @@ def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
         ax.errorbar(x, y, e, color=color)
-    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    ax.set_xticks(coh_vals)
+    # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    ax.set_xticks([-1, 0, 1])
     ax.set_xlabel('Stimulus')
     ax.set_ylabel('MT (ms)')
 
@@ -4493,6 +4551,36 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.set_xticks([0, 0.25, 0.5, 1])
 
 
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER):
+    fig, ax = plt.subplots(4, 4)
+    ax = ax.flatten()
+    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
+              't aff', 't eff', 'tAction', 'intercept AI',
+              'slope AI', 'AI bound', 'DV weight 1st readout',
+              'DV weight 2nd readout', 'leak', 'MT noise std',
+              'MT offset', 'MT slope T.I.']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_mat[:, i_s] = conf
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i])
+            ax[i].plot(conf_mat[i, :]*5,
+                       0.05*np.random.randn(len(conf_mat[i, :])),
+                       color='k', marker='o', linestyle='',
+                       markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+        else:
+            sns.violinplot(conf_mat[i, :], ax=ax[i])
+            ax[i].plot(conf_mat[i, :],
+                       0.1*np.random.randn(len(conf_mat[i, :])),
+                       color='k', marker='o', linestyle='',
+                       markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' ms'))
+            ax[i].set_xlabel(labels[i])
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -4507,7 +4595,6 @@ if __name__ == '__main__':
     if f1 or f2 or f3 or f5:
         all_rats = True
         if all_rats:
-            # subjects = ['LE37', 'LE84', 'LE43', 'LE44']
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
@@ -4593,9 +4680,11 @@ if __name__ == '__main__':
     # fig 5 (model)
     if f5:
         print('Plotting Figure 5')
+        # we can add extra silent to get cleaner fig5 prior traj
         n_sil = 0
+        # trials where there was no sound... i.e. silent for simul
         stim[df.soundrfail, :] = 0
-        num_tr = int(7e4)
+        num_tr = int(len(decision))
         decision = np.resize(decision[:int(num_tr)], num_tr + n_sil)
         zt = np.resize(zt[:int(num_tr)], num_tr + n_sil)
         sound_len = np.resize(sound_len[:int(num_tr)], num_tr + n_sil)
@@ -4612,7 +4701,7 @@ if __name__ == '__main__':
         stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
         stim[:, int(num_tr):] = 0  # for silent simulation
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            pro_vs_re, trajs, x_val_at_updt =\
+            _, trajs, x_val_at_updt =\
             run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                            trial_index=trial_index, num_tr=num_tr,
                                            subject_list=subjects, subjid=subjid)
@@ -4640,15 +4729,28 @@ if __name__ == '__main__':
                                          num_tr + n_sil)
         df_sim['allpriors'] = zt
         df_sim = df_sim[df_sim.sound_len.values >= 0]
-        df_sim['norm_allpriors'] = df_sim.allpriors.values \
-            / np.nanmax(np.abs(df_sim.allpriors.values))
+        df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
-        fig_5(coh=coh, hit=hit, sound_len=sound_len, decision=decision, zt=zt,
+        # memory save:
+        stim = []
+        traj_y = []
+        trial_index = []
+        special_trial = []
+        # df = []
+        gt = []
+        subjid = []
+        traj_stamps = []
+        fix_onset = []
+        fix_breaks = []
+        resp_len = []
+        time_trajs = []
+        # actual plot
+        fig_5(coh=coh, sound_len=sound_len, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time.astype(int),
               decision_model=resp_fin, com=com, com_model=com_model,
-              com_model_detected=com_model_detected, pro_vs_re=pro_vs_re,
+              com_model_detected=com_model_detected,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
         fig, ax = plt.subplots(ncols=2, nrows=2)
