@@ -612,7 +612,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                      loc='upper left', fontsize=7)
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
-        ax[0].set_xticks([-1, 0, -1])
+        ax[0].set_xticks([-1, 0, 1])
         ax[0].axhline(mean_mt_silent, color='k', linestyle='--', alpha=0.8)
         ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
         ax[0].set_xlabel('Stimulus')

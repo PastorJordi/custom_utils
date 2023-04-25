@@ -677,7 +677,7 @@ def get_x0():
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
-    p_mt_noise = 15
+    p_mt_noise = 20
     p_MT_intercept = 320
     p_MT_slope = 0.07
     return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
@@ -773,7 +773,7 @@ def get_pub():
     pub_1st_r = 50
     pub_2nd_r = 90
     pub_leak = 0.8
-    pub_mt_n = 20
+    pub_mt_n = 25
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -805,7 +805,7 @@ def get_plb():
     plb_1st_r = 40
     plb_2nd_r = 70
     plb_leak = 0.4
-    plb_mt_n = 5
+    plb_mt_n = 10
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
@@ -949,8 +949,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     # and compare distros
 
 
-def matrix_probs(x, bins_rt=np.arange(200, 600, 25),
-                 bins_mt=np.arange(100, 600, 50)):
+def matrix_probs(x, bins_rt=np.arange(200, 600, 26),
+                 bins_mt=np.arange(100, 600, 51)):
     mt = x[:, 0]
     rt = x[:, 1]
     n_total = len(mt)
@@ -988,6 +988,7 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     mat_0 = matrix_probs(x[x[:, 2] == 0])
     mat_1 = matrix_probs(x[x[:, 2] == 1])
     fig, ax = plt.subplots(ncols=2)
+    fig.suptitle('Model')
     ax[0].imshow(mat_0.T*len(x[x[:, 2] == 0])/len(x[:, 2]),
                  vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
                                       mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
@@ -1026,6 +1027,7 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                               len(grid_rt)).detach().numpy()
     fig, ax = plt.subplots(ncols=2)
+    fig.suptitle('Network')
     ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
     ax[0].set_title('Choice 0')
     ax[0].set_yticks(np.arange(len(grid_mt)), grid_mt)
@@ -1039,6 +1041,24 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     ax[1].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
     ax[1].set_xlabel('RT (ms)')
     plt.colorbar(im1)
+    fig, ax = plt.subplots(ncols=2)
+    fig.suptitle('Model vs Network(contour)')
+    ax[0].imshow(mat_0.T, vmin=0, vmax=np.max((mat_0, mat_1)))
+    ax[0].contour(mat_0_nn, cmap='hot')
+    ax[0].set_title('Choice 0')
+    ax[0].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[0].set_ylabel('MT (ms)')
+    ax[0].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[0].set_xlabel('RT (ms)')
+    im1 = ax[1].imshow(mat_1.T, vmin=0, vmax=np.max((mat_0, mat_1)))
+    plt.sca(ax[1])
+    ax[1].contour(mat_1_nn, cmap='hot')
+    ax[1].set_title('Choice 1')
+    ax[1].set_yticks(np.arange(len(grid_mt)), grid_mt)
+    ax[1].set_ylabel('MT (ms)')
+    ax[1].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
+    ax[1].set_xlabel('RT (ms)')
+    plt.colorbar(im1, fraction=0.04)
 
 
 # --- MAIN
@@ -1140,11 +1160,14 @@ if __name__ == '__main__':
         num_simulations = int(4e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-        #             'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-        #             'LE44']
-        subjects = ['LE43']  # to run only once and train
-        for subject in subjects:
+        subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                    'LE44']
+        # subjects = ['LE43']  # to run only once and train
+        training = True
+        for i_s, subject in enumerate(subjects):
+            if i_s > 0:
+                training = False
             # subject = 'LE43'
             print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
@@ -1153,7 +1176,7 @@ if __name__ == '__main__':
                                      srfail=True)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                      n_trials=n_trials, bads=True, training=True)
+                                      n_trials=n_trials, bads=True, training=training)
                 print('--------------')
                 print('p_w_zt: '+str(parameters[0]))
                 print('p_w_stim: '+str(parameters[1]))
