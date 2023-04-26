@@ -475,10 +475,10 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
         median_traj = np.nanmedian(mat[0], axis=0)
         all_trajs[i_s, :] = median_traj
         all_trajs[i_s, :] += -np.nanmean(median_traj[(interpolatespace > -100000) &
-                                       (interpolatespace < 0)])
+                                                     (interpolatespace < 0)])
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
+(df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
         xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
             trajectory_thr(df.loc[indx_trajs], condition, bins,
                            collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
@@ -2364,36 +2364,44 @@ def mean_com_traj_simul(df_sim, ax):
     dec = df_sim.R_response.values*2-1
     max_ind = max([len(tr) for tr in trajs_all])
     subjects = df_sim.subjid.unique()
-    matrix_com_tr = np.empty((sum(index_com), max_ind, len(subjects)))
+    matrix_com_tr = np.empty((len(subjects), max_ind))
     matrix_com_tr[:] = np.nan
-    matrix_com_und_tr = np.empty((sum(~index_com), max_ind, len(subjects)))
+    matrix_com_und_tr = np.empty((len(subjects), max_ind))
     matrix_com_und_tr[:] = np.nan
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
+        it_subs = np.where(df_sim.subjid.values == subject)[0][0]
         i_com = 0
         i_nocom = 0
         i_und_com = 0
         mat_nocom_erase = np.empty((sum(~(index_com & raw_com)), max_ind))
         mat_nocom_erase[:] = np.nan
+        mat_com_erase = np.empty((sum(index_com), max_ind))
+        mat_com_erase[:] = np.nan
+        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com)), max_ind))
+        mat_com_und_erase[:] = np.nan
         for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
-            if index_com[i_t]:
-                matrix_com_tr[i_com, :len(traj), i_s] = traj*dec[i_t]
+            if index_com[i_t+it_subs]:
+                mat_com_erase[i_com, :len(traj)] = traj*dec[i_t+it_subs]
                 i_com += 1
-            if not index_com[i_t] and not raw_com[i_t]:
-                mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t]
+            if not index_com[i_t+it_subs] and not raw_com[i_t]:
+                mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t+it_subs]
                 i_nocom += 1
-            if raw_com[i_t]:
-                matrix_com_und_tr[i_und_com, :len(traj), i_s] = traj*dec[i_t]
+            if raw_com[i_t+it_subs]:
+                mat_com_und_erase[i_und_com, :len(traj)] = traj*dec[i_t+it_subs]
                 i_und_com += 1
-        mean_com_traj = np.nanmean(matrix_com_tr[:, :, i_s], axis=0)
+        mean_com_traj = np.nanmean(mat_com_erase, axis=0)
+        matrix_com_tr[i_s, :len(mean_com_traj)] = mean_com_traj
         ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='tab:olive',
                 linewidth=1.4, alpha=0.25)
         mean_nocom_tr = np.nanmean(mat_nocom_erase, axis=0)
         matrix_nocom_tr[i_s, :len(mean_nocom_tr)] = mean_nocom_tr
-    mean_com_traj = np.nanmean(np.nanmean(matrix_com_tr, axis=2), axis=0)
-    mean_nocom_traj = np.nanmean(np.nanmean(matrix_nocom_tr, axis=2), axis=0)
-    mean_com_all_traj = np.nanmean(np.nanmean(matrix_com_und_tr, axis=2), axis=0)
+        mean_com_und_traj = np.nanmean(mat_com_und_erase, axis=0)
+        matrix_com_und_tr[i_s, :len(mean_com_und_traj)] = mean_com_und_traj
+    mean_com_traj = np.nanmean(matrix_com_tr, axis=0)
+    mean_nocom_traj = np.nanmean(matrix_nocom_tr, axis=0)
+    mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
     ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='tab:olive',
             linewidth=2)
     ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='tab:olive',
@@ -3905,8 +3913,8 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None,
                 ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
         else:
             ax0.set_title('Left')
-        ax0.set_yticks([0, 3, 6, 7], ['R', '0', 'L'])
-        ax0.set_xticks([0, 3, 6, 7], ['L', '0', 'R'])
+        ax0.set_yticks([0, 3, 6], ['R', '0', 'L'])
+        ax0.set_xticks([0, 3, 6], ['L', '0', 'R'])
         # SIDE 1
         ax1.set_title('Right')
         im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
@@ -4592,7 +4600,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o')
     ax.set_xlabel('Stimulus evidence')
     ax.set_ylabel('Fraction of correcting CoM')
-    ax.set_xticks([0, 0.25, 0.5, 1])
+    ax.set_xticklabels([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
 
 
 def plot_params_all_subs(subjects, sv_folder=SV_FOLDER):
@@ -4643,10 +4651,10 @@ def plot_trajs_dep_trial_index(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4811,11 +4819,14 @@ if __name__ == '__main__':
               com_model_detected=com_model_detected,
               means=means, errors=errors, means_model=means_model,
               errors_model=errors_model, df_sim=df_sim)
-        fig, ax = plt.subplots(ncols=2, nrows=2)
+        fig, ax = plt.subplots(ncols=2, nrows=1)
         ax = ax.flatten()
-        mt_matrix_vs_ev_zt(df, ax[0:2], silent_comparison=False)
-        mt_matrix_vs_ev_zt(df_sim, ax[2:4], silent_comparison=False)
-        fig.suptitle('DATA (top) vs MODEL (bottom)')
+        ax[0].set_title('Data')
+        mt_matrix_vs_ev_zt(df, ax[0], silent_comparison=False, collapse_sides=True)
+        ax[1].set_title('Model')
+        mt_matrix_vs_ev_zt(df_sim, ax[1], silent_comparison=False,
+                           collapse_sides=True)
+        # fig.suptitle('DATA (top) vs MODEL (bottom)')
         mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
         # model_vs_data_traj(trajs_model=trajs, df_data=df)

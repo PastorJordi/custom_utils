@@ -32,6 +32,7 @@ from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
+from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
@@ -1009,7 +1010,7 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     ax[1].set_xlabel('RT (ms)')
     plt.colorbar(im1)
     # we load estimator
-    # n_list = [10000, 50000, 100000, 4000000]
+    n_list = [10000, 50000]  # , 100000, 4000000]
     grid_rt = np.arange(-100, 300, 1) + 300
     grid_mt = np.arange(100, 600, 1)
     all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1168,7 +1169,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(5e5)  # number of simulations to train the network
+        num_simulations = int(25e4)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
