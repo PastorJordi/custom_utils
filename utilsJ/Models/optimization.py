@@ -1055,14 +1055,16 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
         plt.colorbar(im1)
         fig, ax = plt.subplots(ncols=2)
         fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
-        ax[0].imshow(mat_0.T, vmin=0, vmax=np.max((mat_0, mat_1)))
+        ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
+                     vmax=np.max((mat_0, mat_1)))
         ax[0].contour(mat_0_nn, cmap='hot')
         ax[0].set_title('Choice 0')
         ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
         ax[0].set_ylabel('MT (ms)')
         ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[0].set_xlabel('RT (ms)')
-        im1 = ax[1].imshow(mat_1.T, vmin=0, vmax=np.max((mat_0, mat_1)))
+        im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
+                           vmax=np.max((mat_0, mat_1)))
         plt.sca(ax[1])
         ax[1].contour(mat_1_nn, cmap='hot')
         ax[1].set_title('Choice 1')
