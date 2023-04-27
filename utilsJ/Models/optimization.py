@@ -112,7 +112,7 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
     return stim, zt, coh, gt, com, pright, trial_index
 
 
-def fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
+def rmse_fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
             results=False,
             detected_com=None, first_ind=None, p_t_eff=None,
             data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
@@ -459,7 +459,7 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
         # end_simu = time.time()
         # print('Trial {} simulation: '.format(i) + str(end_simu - start_simu))
         if rms_comparison:
-            diff_rms = fitting(detected_com=detected_com, p_t_eff=p_t_eff,
+            diff_rms = rmse_fitting(detected_com=detected_com, p_t_eff=p_t_eff,
                                first_ind=first_ind, data_path=DATA_FOLDER)
             diff_rms_list.append(diff_rms)
     if mnle:
@@ -950,8 +950,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     # and compare distros
 
 
-def matrix_probs(x, bins_rt=np.arange(200, 600, 26),
-                 bins_mt=np.arange(100, 600, 51)):
+def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
+                 bins_mt=np.arange(100, 600, 26)):
     mt = x[:, 0]
     rt = x[:, 1]
     n_total = len(mt)
@@ -965,9 +965,10 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 26),
 
 
 def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                  n_list=[4000000]):
-    grid_rt = np.arange(-100, 300, 25) + 300
-    grid_mt = np.arange(100, 600, 50)
+                                  n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
+                                  plot=False):
+    grid_rt = np.arange(-100, 300, 12) + 300
+    grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
     # all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
     # comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
@@ -975,42 +976,30 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     # generated data
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
-    stim = np.array([stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
-    theta = get_x0()
-    theta = torch.reshape(torch.tensor(theta),
-                          (1, len(theta))).to(torch.float32)
-    theta = theta.repeat(num_simulations, 1)
-    stim = np.array([np.concatenate((stim, stim)) for i in range(len(theta))])
-    trial_index = np.repeat(10, len(theta))
-    x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                             zt=np.repeat(0.5, len(theta)),
-                             coh=np.repeat(0.5, len(theta)),
-                             trial_index=trial_index)
-    # let's compute prob for each bin
-    mat_0 = matrix_probs(x[x[:, 2] == 0])
-    mat_1 = matrix_probs(x[x[:, 2] == 1])
-    fig, ax = plt.subplots(ncols=2)
-    fig.suptitle('Model')
-    ax[0].imshow(mat_0.T*len(x[x[:, 2] == 0])/len(x[:, 2]),
-                 vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
-                                      mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
-    ax[0].set_title('Choice 0')
-    ax[0].set_yticks(np.arange(len(grid_mt)), grid_mt)
-    ax[0].set_ylabel('MT (ms)')
-    ax[0].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
-    ax[0].set_xlabel('RT (ms)')
-    im1 = ax[1].imshow(mat_1.T*len(x[x[:, 2] == 1])/len(x[:, 2]),
-                       vmin=0,
-                       vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
-                                    mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
-    ax[1].set_title('Choice 1')
-    ax[1].set_yticks(np.arange(len(grid_mt)), grid_mt)
-    ax[1].set_ylabel('MT (ms)')
-    ax[1].set_xticks(np.arange(0, len(grid_rt), 2), grid_rt[::2]-300)
-    ax[1].set_xlabel('RT (ms)')
-    plt.colorbar(im1)
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                    [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                    [50, 50, 50, 50, 10, 500]):
+        stim = np.array([stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
+        theta = get_x0()
+        theta = torch.reshape(torch.tensor(theta),
+                              (1, len(theta))).to(torch.float32)
+        theta = theta.repeat(num_simulations, 1)
+        stim = np.array([np.concatenate((stim, stim)) for i in range(len(theta))])
+        trial_index = np.repeat(tival, len(theta))
+        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                 zt=np.repeat(ztval, len(theta)),
+                                 coh=np.repeat(cohval, len(theta)),
+                                 trial_index=trial_index)
+        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival), x)
+        # let's compute prob for each bin
+        mat_0 = matrix_probs(x[x[:, 2] == 0])
+        mat_1 = matrix_probs(x[x[:, 2] == 1])
+        np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival),
+                mat_0)
+        np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival),
+                mat_1)
     # we load estimator
-    n_list = [10000, 50000]  # , 100000, 4000000]
+    # n_list = [10000, 50000, 250000]  # , 100000, 4000000]
     grid_rt = np.arange(-100, 300, 1) + 300
     grid_mt = np.arange(100, 600, 1)
     all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1019,60 +1008,82 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
     # generated data
     x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
-    for n_sim_train in n_list:
-        with open(SV_FOLDER + "/mnle_n{}.p".format(n_sim_train), 'rb') as f:
-            estimator = pickle.load(f)
-        estimator = estimator['estimator']
-        theta = get_x0()
-        theta = torch.reshape(torch.tensor(theta),
-                              (1, len(theta))).to(torch.float32)
-        theta = theta.repeat(len(x_o), 1)
-        theta_tri_ind = torch.column_stack((theta[:len(x_o)],
-                                            torch.tensor(trial_index[
-                                                :len(x_o)]).to(torch.float32)))
-        lprobs = estimator.log_prob(x_o, theta_tri_ind)
-        lprobs = torch.exp(lprobs)
-        theta[:, 0] *= torch.tensor(0.5)
-        theta[:, 1] *= torch.tensor(0.5)
-        mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
-                                                  len(grid_rt)).detach().numpy()
-        mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
-                                                  len(grid_rt)).detach().numpy()
+    if plot:
+        for n_sim_train in n_list:
+            with open(SV_FOLDER + "/mnle_n{}.p".format(n_sim_train), 'rb') as f:
+                estimator = pickle.load(f)
+            estimator = estimator['estimator']
+            theta = get_x0()
+            theta = torch.reshape(torch.tensor(theta),
+                                  (1, len(theta))).to(torch.float32)
+            theta = theta.repeat(len(x_o), 1)
+            theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                                torch.tensor(trial_index[
+                                                    :len(x_o)]).to(torch.float32)))
+            lprobs = estimator.log_prob(x_o, theta_tri_ind)
+            lprobs = torch.exp(lprobs)
+            theta[:, 0] *= torch.tensor(0.5)
+            theta[:, 1] *= torch.tensor(0.5)
+            mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+            mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+            fig, ax = plt.subplots(ncols=2)
+            fig.suptitle('Network + {}'.format(n_sim_train))
+            ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+            ax[0].set_title('Choice 0')
+            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[0].set_ylabel('MT (ms)')
+            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+            ax[0].set_xlabel('RT (ms)')
+            im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+            ax[1].set_title('Choice 1')
+            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[1].set_ylabel('MT (ms)')
+            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+            ax[1].set_xlabel('RT (ms)')
+            plt.colorbar(im1)
+            fig, ax = plt.subplots(ncols=2)
+            fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
+            ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
+                         vmax=np.max((mat_0, mat_1)))
+            ax[0].contour(mat_0_nn, cmap='hot')
+            ax[0].set_title('Choice 0')
+            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[0].set_ylabel('MT (ms)')
+            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+            ax[0].set_xlabel('RT (ms)')
+            im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
+                               vmax=np.max((mat_0, mat_1)))
+            plt.sca(ax[1])
+            ax[1].contour(mat_1_nn, cmap='hot')
+            ax[1].set_title('Choice 1')
+            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[1].set_ylabel('MT (ms)')
+            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+            ax[1].set_xlabel('RT (ms)')
+            plt.colorbar(im1, fraction=0.04)
         fig, ax = plt.subplots(ncols=2)
-        fig.suptitle('Network + {}'.format(n_sim_train))
-        ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+        fig.suptitle('Model')
+        ax[0].imshow(resize(mat_0.T, mat_0_nn.shape)
+                     * len(x[x[:, 2] == 0])/len(x[:, 2]),
+                     vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
+                                          mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
         ax[0].set_title('Choice 0')
         ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
         ax[0].set_ylabel('MT (ms)')
         ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[0].set_xlabel('RT (ms)')
-        im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+        im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape)*len(x[x[:, 2] == 1])
+                           / len(x[:, 2]), vmin=0,
+                           vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
+                                        mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
         ax[1].set_title('Choice 1')
         ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
         ax[1].set_ylabel('MT (ms)')
         ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[1].set_xlabel('RT (ms)')
         plt.colorbar(im1)
-        fig, ax = plt.subplots(ncols=2)
-        fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
-        ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
-                     vmax=np.max((mat_0, mat_1)))
-        ax[0].contour(mat_0_nn, cmap='hot')
-        ax[0].set_title('Choice 0')
-        ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-        ax[0].set_ylabel('MT (ms)')
-        ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-        ax[0].set_xlabel('RT (ms)')
-        im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
-                           vmax=np.max((mat_0, mat_1)))
-        plt.sca(ax[1])
-        ax[1].contour(mat_1_nn, cmap='hot')
-        ax[1].set_title('Choice 1')
-        ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-        ax[1].set_ylabel('MT (ms)')
-        ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-        ax[1].set_xlabel('RT (ms)')
-        plt.colorbar(im1, fraction=0.04)
 
 
 # --- MAIN
@@ -1171,13 +1182,13 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(25e4)  # number of simulations to train the network
+        num_simulations = int(5e5)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
-        subjects = ['LE43']  # to run only once and train
+        # subjects = ['LE43']  # to run only once and train
         training = True
         for i_s, subject in enumerate(subjects):
             if i_s > 0:

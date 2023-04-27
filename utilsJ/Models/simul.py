@@ -223,6 +223,11 @@ def when_did_split_simul(
         # removed swifter
         .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
         .values.tolist())
+    for mat in [mata_0, mata_1]:
+        for i_t, t in enumerate(mat):
+            ind_last_val = np.where(t == t[~np.isnan(t)][-1])[0][0]
+            mat[i_t, ind_last_val:-1] = np.repeat(t[ind_last_val],
+                                                  len(t)-ind_last_val-1)
     mata = np.vstack([mata_0*-1, mata_1])
     matb_0 = np.vstack(
         dat.loc[(dat.coh2 == 0) & (dat.rewside == 0)]
@@ -234,6 +239,11 @@ def when_did_split_simul(
         # removed swifter
         .apply(lambda row: shortpad2(row, **shortpad_kws), axis=1)
         .values.tolist())
+    for mat in [matb_0, matb_1]:
+        for i_t, t in enumerate(mat):
+            ind_last_val = np.where(t == t[~np.isnan(t)][-1])[0][0]
+            mat[i_t, ind_last_val:-1] = np.repeat(t[ind_last_val],
+                                                  len(t)-ind_last_val-1)
     matb = np.vstack([matb_0*-1, matb_1])
 
     matlist = [mata, matb]
@@ -249,10 +259,10 @@ def when_did_split_simul(
         return mata, matb
 
     if ax is not None:
-        ax.plot(np.nanmedian(mata, axis=0), **plot_kwargs)
-        ax.plot(np.nanmedian(matb, axis=0), **plot_kwargs, ls=':')
-        ax.scatter(ind, np.nanmedian(mata[:, ind]), marker='x',
-                   color=plot_kwargs['color'], s=50, zorder=3)
+        ax.plot(np.nanmean(mata, axis=0), **plot_kwargs)
+        ax.plot(np.nanmean(matb, axis=0), **plot_kwargs, ls=':')
+        # ax.scatter(ind, np.nanmedian(mata[:, ind]), marker='x',
+        #            color=plot_kwargs['color'], s=50, zorder=3)
     return ind, mata, matb
 
 

@@ -868,7 +868,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
                  head_length=0.4)
         ax.text(ind-17, 3.4, 'Splitting Time', fontsize=8)
-        ax.set_ylabel("{}y dimension (px)".format("       "))
+        ax.set_ylabel("{} Snout position (px)".format("           "))
         plot_boxcar_rt(rt=rtbins[0], ax=ax)
     else:
         ax.set_title('RT < 15 ms', fontsize=8)
@@ -1083,7 +1083,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                            startfrom=700)
                 if sim:
-                    max_mt = 130 + i*10
+                    max_mt = 800
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
                                            startfrom=0)+1
@@ -4664,7 +4664,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE42', 'LE44']
+            subjects = ['LE37', 'LE42', 'LE44', 'LE39', 'LE86']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
