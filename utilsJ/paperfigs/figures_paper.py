@@ -3452,6 +3452,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
+    # xplot = rtbins[:-1] + np.diff(rtbins)/2
     out_data = np.array(out_data).reshape(np.unique(subjects).size,
                                           rtbins.size-1, -1)
     out_data = np.swapaxes(out_data, 0, 1)
