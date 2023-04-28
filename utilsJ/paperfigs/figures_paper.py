@@ -2433,8 +2433,12 @@ def mean_com_traj_simul(df_sim, ax):
 def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-          marginx=0.006, marginy=0.07, fgsz=(8, 12)):
-    fig, ax = plt.subplots(ncols=3, nrows=5, gridspec_kw={'top': 0.95,
+          marginx=0.006, marginy=0.07, fgsz=(8, 18)):
+    matplotlib.rcParams['font.size'] = 10
+    plt.rcParams['legend.title_fontsize'] = 9
+    plt.rcParams['xtick.labelsize'] = 9
+    plt.rcParams['ytick.labelsize'] = 9
+    fig, ax = plt.subplots(ncols=2, nrows=7, gridspec_kw={'top': 0.95,
                                                           'bottom': 0.055,
                                                           'left': 0.07,
                                                           'right': 0.95,
@@ -2442,34 +2446,36 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
                                                           'wspace': 0.4},
                            figsize=fgsz)
     ax = ax.flatten()
-    labs = ['a', 'c', '', 'b', 'd', '', 'e', 'f', 'g', 'h', 'i',
-            '', 'j', 'k', '']
-    ax[2].axis('off')
-    ax[5].axis('off')
-    ax[14].axis('off')
+    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', ' ', 'l',
+            'm']
+    # ax[2].axis('off')
+    # ax[5].axis('off')
+    # ax[14].axis('off')
     # set correct size for traj and velocity axis
     pos_ax_0 = ax[0].get_position()
-    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
+    ax[0].set_position([pos_ax_0.x0-pos_ax_0.x0/8, pos_ax_0.y0, pos_ax_0.width,
                         pos_ax_0.height])
-    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
-                        pos_ax_0.width*1.6, pos_ax_0.height])
-    pos_ax_3 = ax[3].get_position()
-    ax[3].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
-                        pos_ax_3.height])
-    ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
-                        pos_ax_3.width*1.6, pos_ax_3.height])
-    pos_ax_12 = ax[12].get_position()
-    ax[12].set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.4,
-                        pos_ax_12.height])
-    ax[13].set_position([pos_ax_12.x0 + pos_ax_12.width*2.4, pos_ax_12.y0,
-                        pos_ax_12.width*1.4, pos_ax_12.height])
+    # ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
+    #                     pos_ax_0.width*1.6, pos_ax_0.height])
+    # pos_ax_0 = ax[3].get_position()
+    # ax[3].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
+    #                     pos_ax_0.height])
+    # ax[4].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
+    #                     pos_ax_0.width*1.6, pos_ax_0.height])
+    # pos_ax_3 = ax[6].get_position()
+    # ax[6].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
+    #                     pos_ax_3.height])
+    # ax[7].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
+    #                     pos_ax_3.width*1.6, pos_ax_3.height])
+    # pos_ax_12 = ax[12].get_position()
+    # ax[12].set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.4,
+    #                     pos_ax_12.height])
+    # ax[13].set_position([pos_ax_12.x0 + pos_ax_12.width*2.4, pos_ax_12.y0,
+    #                     pos_ax_12.width*1.4, pos_ax_12.height])
     # letters for panels
     for n, ax_1 in enumerate(ax):
-        if n != 12:
-            rm_top_right_lines(ax_1)
-        if n == 12:
-            ax_1.spines['top'].set_visible(False)
-        ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+        rm_top_right_lines(ax_1)
+        ax_1.text(-0.1, 1.4, labs[n], transform=ax_1.transAxes, fontsize=16,
                   fontweight='bold', va='top', ha='right')
 
     # select RT > 0 (no FB, as in data)
@@ -2480,13 +2486,13 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     subjid = df_sim.subjid.values
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid, ax=ax[6], label='')
+                         subjid=subjid, ax=ax[1], label='')
     # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
     # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
     #          coh=coh[sound_len_model >= 0], yaxis=False)
     # ax[8].set_title('Data')
     # ax[9].set_title('Model')
-    ax2 = add_inset(ax=ax[12], inset_sz=inset_sz, fgsz=fgsz,
+    ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
                     marginx=marginx, marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
                                  'sound_len': sound_len[sound_len_model >= 0],
@@ -2505,37 +2511,39 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
         df_plot = df_plot_pcom.loc[subjid == subject]
         xpos_plot, median_pcom_dat, _ =\
             binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                         errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[12],
+                         errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[13],
                          legend=False, return_data=True)
         xpos_plot, median_pcom_mod_det, _ =\
             binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
                          xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                                    'color': 'red'}, ax=ax[12],
+                                                    'color': 'red'}, ax=ax[13],
                          legend=False, return_data=True)
         xpos_plot, median_pcom_mod_all, _ =\
-            binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                         errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax2,
-                         legend=False, return_data=True)
+            binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT,
+                         xpos=xpos_RT,
+                         errorbar_kw={'label': 'Model all', 'color': 'green'},
+                         ax=ax2, legend=False, return_data=True)
         com_data[i_s, :len(median_pcom_dat)] = median_pcom_dat
         com_model_all[i_s, :len(median_pcom_mod_all)] = median_pcom_mod_all
         com_model_det[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
-    ax[12].errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+    xpos_plot = (BINS_RT[:-1] + BINS_RT[1:]) / 2
+    ax[13].errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
                     yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
-    ax[12].errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
+    ax[13].errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
                     yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
     ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
-                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='k')
-    ax[12].xaxis.tick_top()
-    ax[12].xaxis.tick_bottom()
+                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='green')
+    ax[13].xaxis.tick_top()
+    ax[13].xaxis.tick_bottom()
     legendelements = [Line2D([0], [0], color='k', lw=2,
                              label='Data'),
                       Line2D([0], [0], color='r', lw=2,
                              label='Model Detected'),
                       Line2D([0], [0], color='green', lw=2,
                              label='Model All')]
-    ax[12].legend(handles=legendelements)
-    ax[12].set_xlabel('RT (ms)')
-    ax[12].set_ylabel('P(CoM)')
+    ax[13].legend(handles=legendelements)
+    ax[13].set_xlabel('RT (ms)')
+    ax[13].set_ylabel('P(CoM)')
     ax2.set_ylabel('P(CoM)')
     ax2.set_xlabel('RT (ms)')
     zt_model = zt[sound_len_model >= 0]
@@ -2547,14 +2555,14 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
             edd2.com_heatmap_jordi(zt_model[subjid == subject],
                                    coh_model[subjid == subject],
                                    decision_01_model[subjid == subject],
-                                   ax=ax[7],
+                                   ax=ax[0],
                                    flip=False, annotate=False, xlabel='prior',
                                    return_mat=True,
                                    ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
         mat_pright[:, :, i_s] = mat_per_subj
     mat_pright_avg = np.nanmean(mat_pright, axis=2)
     # P_right
-    ax_pright = ax[7]
+    ax_pright = ax[0]
     im = ax_pright.imshow(np.flipud(mat_pright_avg), vmin=0., vmax=1, cmap='PRGn_r')
     plt.sca(ax_pright)
     cbar = plt.colorbar(im, fraction=0.04)
@@ -2613,28 +2621,28 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
     ax[10].set_ylabel('Stimulus Evidence')
-    ax[7].set_ylabel('Stimulus Evidence')
+    ax[0].set_ylabel('Stimulus Evidence')
     # plot_bars(means=means, errors=errors, ax=ax[9], f5=True,
     #           means_model=means_model, errors_model=errors_model)
-    mt_distros(df=df_sim, ax=ax[9])
-    ax_cohs = np.array([ax[1], ax[4]])
-    ax_zt = np.array([ax[0], ax[3]])
+    mt_distros(df=df_sim, ax=ax[12])
+    ax_cohs = np.array([ax[5], ax[7], ax[3]])
+    ax_zt = np.array([ax[4], ax[6], ax[2]])
     # trajs. conditioned on coh
-    ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
-    ax_cohs = np.insert(ax_cohs, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+    # ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
+    #                      marginx=marginx, marginy=0.04, right=True)
+    # ax_cohs = np.insert(ax_cohs, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
-    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-    # trajs. conditioned on prior
-    ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
-    ax_zt = np.insert(ax_zt, 0, ax_inset)
-    ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+    ax_cohs = np.insert(ax_cohs, 3, ax_inset)
+    # # trajs. conditioned on prior
+    # ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
+    #                      marginx=marginx, marginy=0.04, right=True)
+    # ax_zt = np.insert(ax_zt, 0, ax_inset)
+    ax_inset = add_inset(ax=ax_zt[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
-    ax_zt = np.insert(ax_zt, 2, ax_inset)
-    ax_cohs = [ax_cohs[1], ax_cohs[3], ax_cohs[0], ax_cohs[2]]
-    ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
+    ax_zt = np.insert(ax_zt, 3, ax_inset)
+    # ax_cohs = [ax_cohs[1], ax_cohs[3], ax_cohs[0], ax_cohs[2]]
+    # ax_zt = [ax_zt[1], ax_zt[3], ax_zt[0], ax_zt[2]]
     if sum(df_sim.special_trial == 2) > 0:
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             median=True, prior=True, rt_lim=300)
@@ -2658,7 +2666,7 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     # ax[15].set_yscale('log')
     # ax[15].set_xlabel('CoM peak (px)')
     # ax[15].set_ylabel('Counts')
-    mean_com_traj_simul(df_sim, ax=ax[13])
+    mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
 
@@ -4654,14 +4662,25 @@ def plot_trajs_dep_trial_index(df):
                                   acceleration=('traj_d2', 1), accel=False)
 
 
+def plot_rt_sim(df_sim):
+    fig, ax = plt.subplots(nrows=4, ncols=4)
+    ax = ax.flatten()
+    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
+    for isub, subj in enumerate(df_sim.subjid.unique()):
+        for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+            sns.kdeplot(df_sim.loc[(df_sim.coh2.abs() == ev) &
+                                   (df_sim.subjid == subj), 'sound_len'],
+                        color=colormap[iev], ax=ax[isub])
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4752,6 +4771,7 @@ if __name__ == '__main__':
 
     # fig 5 (model)
     if f5:
+        with_fb = False
         print('Plotting Figure 5')
         # we can add extra silent to get cleaner fig5 prior traj
         n_sil = 0
@@ -4801,7 +4821,8 @@ if __name__ == '__main__':
         df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
                                          num_tr + n_sil)
         df_sim['allpriors'] = zt
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
+        if not with_fb:
+            df_sim = df_sim[df_sim.sound_len.values >= 0]
         df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)

@@ -966,7 +966,7 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
 
 def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
-                                  plot=False, simulate=False):
+                                  plot_nn=False, simulate=False, plot_model=True):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1023,7 +1023,9 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
     # generated data
     x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
-    if plot:
+    mat_0_nn = np.empty((len(grid_mt), len(grid_rt)))
+    mat_1_nn = np.copy(mat_0_nn)
+    if plot_nn:
         for n_sim_train in n_list:
             with open(SV_FOLDER + "/mnle_n{}.p".format(n_sim_train), 'rb') as f:
                 estimator = pickle.load(f)
@@ -1078,8 +1080,10 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
             ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
             ax[1].set_xlabel('RT (ms)')
             plt.colorbar(im1, fraction=0.04)
+    if plot_model:
         fig, ax = plt.subplots(ncols=2)
-        fig.suptitle('Model')
+        fig.suptitle('Model + coh {}, zt {}, t_ind {}'.format(cohval,
+                                                              ztval, tival))
         ax[0].imshow(resize(mat_0.T, mat_0_nn.shape)
                      * len(x[x[:, 2] == 0])/len(x[:, 2]),
                      vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),

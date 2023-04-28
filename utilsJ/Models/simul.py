@@ -207,7 +207,7 @@ def when_did_split_simul(
         coh1 = coh
     shortpad_kws = {}
     if align == 'sound':
-        shortpad_kws = dict(upto=1000, align='sound')
+        shortpad_kws = dict(upto=1200, align='sound')
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])
