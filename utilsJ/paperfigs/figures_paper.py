@@ -665,8 +665,13 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[2].set_xticklabels(['Prior'], fontsize=9)
         ax[2].xaxis.set_ticks_position('none')
     if condition == 'origidx':
-        ax[1].legend(labels=['100', '300', '500', '700', '900'],
-                     title='Trial index')
+        legendelements = []
+        labs = ['100', '300', '500', '700', '900']
+        for i in range(len(colormap)):
+            legendelements.append(Line2D([0], [0], color=colormap[i], lw=2,
+                                  label=labs[i]))
+        ax[1].legend(handles=legendelements, title='Trial index')
+        ax[2].set_xlabel('Trial index')
     ax[1].set_xlim([-20, 450])
     ax[1].set_xticklabels('')
     # ax[1].set_xlabel('Time from movement onset (MT, ms)')
@@ -897,7 +902,7 @@ def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
             y_vals.append(low_val)
     ax.step(x_vals, y_vals, color='k')
     ax.fill_between(x_vals, y_vals, np.repeat(0, len(y_vals)),
-                    color='grey')
+                    color='grey', alpha=0.6)
 
 
 def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
@@ -993,7 +998,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ax.set_ylabel('Splitting time (ms)')
     ax.plot([0, 155], [0, 155], color='k')
     ax.fill_between([0, 250], [0, 250], [0, 0],
-                    color='grey')
+                    color='grey', alpha=0.6)
     ax.set_xlim(-5, 155)
     plt.show()
 
@@ -1154,7 +1159,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
     ax.plot([0, 155], [0, 155], color='k')
     ax.fill_between([0, 250], [0, 250], [0, 0],
-                    color='grey')
+                    color='grey', alpha=0.6)
     ax.set_xlim(-5, 155)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
@@ -1689,18 +1694,20 @@ def plot_bars(means, errors, ax, f5=False, means_model=None, errors_model=None,
 def plot_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
     if t_index_w:
         labels = ['Prior', 'Stimulus', 'Trial index']  # ]
-        arr_weights = np.concatenate((w_zt, w_coh, w_t_i))  # 
+        arr_weights = np.concatenate((w_zt, w_coh, w_t_i))
+        palette = ['darkorange', 'red', 'steelblue']
     else:
         labels = ['Prior', 'Stimulus']  # ]
-        arr_weights = np.concatenate((w_zt, w_coh))  # 
+        arr_weights = np.concatenate((w_zt, w_coh))  #
+        palette = ['darkorange', 'red']
     label_1 = []
     for j in range(len(labels)):
         for i in range(len(w_coh)):
             label_1.append(labels[j])
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
+
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=['goldenrod', 'firebrick', 'steelblue'],
-                   linewidth=0.8)
+                   palette=palette, linewidth=0.8)
     if t_index_w:
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
@@ -1709,7 +1716,7 @@ def plot_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
-                markersize=1.6)
+                markersize=2)
         ax.collections[0].set_edgecolor('k')
     if t_index_w:
         ax.set_xlim(-0.5, 2.5)
@@ -2711,7 +2718,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
         bins_ref = bins_coh
         colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
     subjects = df_sim.subjid
-    max_mt = 800
+    max_mt = 1000
     mat_trajs_subs = np.empty((len(bins_ref), max_mt,
                                len(subjects.unique())))
     mat_vel_subs = np.empty((len(bins_ref), max_mt,
@@ -3462,7 +3469,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     # ax2.set_ylim(190, 410)
     ax2.plot([0, 250], [0, 250], color='k')
     ax2.fill_between([0, 250], [0, 250], [0, 0],
-                     color='grey')
+                     color='grey', alpha=0.6)
     ax2.set_ylabel('Splitting time (ms)')
     rm_top_right_lines(ax2)
 
@@ -4634,11 +4641,11 @@ def plot_params_all_subs(subjects, sv_folder=SV_FOLDER):
 
 
 def plot_trajs_dep_trial_index(df):
-    fig, ax = plt.subplots(nrows=3, ncols=2)
+    fig, ax = plt.subplots(nrows=2, ncols=2)
     ax = ax.flatten()
     for a in ax:
         rm_top_right_lines(a)
-    ax_ti = [ax[0], ax[2], ax[4], ax[1], ax[3], ax[5]]
+    ax_ti = [ax[1], ax[0], ax[3], ax[2]]
     trajs_cond_on_coh_computation(df, ax_ti, condition='origidx', cmap='jet',
                                   prior_limit=1, rt_lim=300,
                                   after_correct_only=True,
@@ -4651,10 +4658,10 @@ def plot_trajs_dep_trial_index(df):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4664,7 +4671,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE42', 'LE44', 'LE39', 'LE86']
+            subjects = ['LE37', 'LE43']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']

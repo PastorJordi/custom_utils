@@ -966,7 +966,7 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
 
 def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
-                                  plot=False):
+                                  plot=False, simulate=False):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -976,28 +976,43 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     # generated data
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
-    for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-                                    [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                    [50, 50, 50, 50, 10, 500]):
-        stim = np.array([stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
-        theta = get_x0()
-        theta = torch.reshape(torch.tensor(theta),
-                              (1, len(theta))).to(torch.float32)
-        theta = theta.repeat(num_simulations, 1)
-        stim = np.array([np.concatenate((stim, stim)) for i in range(len(theta))])
-        trial_index = np.repeat(tival, len(theta))
-        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                                 zt=np.repeat(ztval, len(theta)),
-                                 coh=np.repeat(cohval, len(theta)),
-                                 trial_index=trial_index)
-        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival), x)
-        # let's compute prob for each bin
-        mat_0 = matrix_probs(x[x[:, 2] == 0])
-        mat_1 = matrix_probs(x[x[:, 2] == 1])
-        np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival),
-                mat_0)
-        np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival),
-                mat_1)
+    if simulate:
+        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                        [50, 50, 50, 50, 10, 500]):
+            stim = np.array(
+                [stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
+            theta = get_x0()
+            theta = torch.reshape(torch.tensor(theta),
+                                  (1, len(theta))).to(torch.float32)
+            theta = theta.repeat(num_simulations, 1)
+            stim = np.array(
+                [np.concatenate((stim, stim)) for i in range(len(theta))])
+            trial_index = np.repeat(tival, len(theta))
+            x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                     zt=np.repeat(ztval, len(theta)),
+                                     coh=np.repeat(cohval, len(theta)),
+                                     trial_index=trial_index)
+            np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), x)
+            # let's compute prob for each bin
+            mat_0 = matrix_probs(x[x[:, 2] == 0])
+            mat_1 = matrix_probs(x[x[:, 2] == 1])
+            np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_0)
+            np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_1)
+            x = []
+            mat_0 = []
+            mat_1 = []
+    else:
+        trial_index = np.repeat(tival, num_simulations)
+        mat_0 = np.load(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
+        mat_1 = np.load(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
+        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival))
     # we load estimator
     # n_list = [10000, 50000, 250000]  # , 100000, 4000000]
     grid_rt = np.arange(-100, 300, 1) + 300
