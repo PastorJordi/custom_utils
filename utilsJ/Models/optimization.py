@@ -25,9 +25,9 @@ import scipy
 from pybads import BADS
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -36,13 +36,13 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995
@@ -1208,7 +1208,7 @@ if __name__ == '__main__':
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE43']  # to run only once and train
-        training = True
+        training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
