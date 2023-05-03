@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,11 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
+<<<<<<< HEAD
 pc_name = 'idibaps'
+=======
+pc_name = 'idibaps_alex'
+>>>>>>> 81439c1a95c5d808d911223e20b18cae025e2b04
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -4647,8 +4651,12 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.set_xticklabels([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
 
 
-def plot_params_all_subs(subjects, sv_folder=SV_FOLDER + 'opt_results/'):
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
     fig, ax = plt.subplots(4, 4)
+    if diff_col:
+        colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    else:
+        colors = ['k' for _ in range(len(subjects))]
     ax = ax.flatten()
     labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
               't aff', 't eff', 'tAction', 'intercept AI',
@@ -4662,17 +4670,19 @@ def plot_params_all_subs(subjects, sv_folder=SV_FOLDER + 'opt_results/'):
     for i in range(len(labels)):
         if i == 4 or i == 5 or i == 6:
             sns.violinplot(conf_mat[i, :]*5, ax=ax[i])
-            ax[i].plot(conf_mat[i, :]*5,
-                       0.05*np.random.randn(len(conf_mat[i, :])),
-                       color='k', marker='o', linestyle='',
-                       markersize=1.2)
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s]*5,
+                           0.05*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
         else:
             sns.violinplot(conf_mat[i, :], ax=ax[i])
-            ax[i].plot(conf_mat[i, :],
-                       0.1*np.random.randn(len(conf_mat[i, :])),
-                       color='k', marker='o', linestyle='',
-                       markersize=1.2)
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s],
+                           0.1*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
             ax[i].set_xlabel(labels[i] + str(' ms'))
             ax[i].set_xlabel(labels[i])
 
@@ -4696,6 +4706,7 @@ def plot_rt_sim(df_sim):
     ax = ax.flatten()
     colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     for isub, subj in enumerate(df_sim.subjid.unique()):
+        ax[isub].set_title(subj)
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             sns.kdeplot(df_sim.loc[(df_sim.coh2.abs() == ev) &
                                    (df_sim.subjid == subj), 'sound_len'],
@@ -4719,7 +4730,11 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
+<<<<<<< HEAD
             subjects = ['LE46']
+=======
+            subjects = ['LE43', 'LE42', 'LE38']
+>>>>>>> 81439c1a95c5d808d911223e20b18cae025e2b04
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
