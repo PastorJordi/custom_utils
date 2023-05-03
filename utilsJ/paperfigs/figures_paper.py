@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1421,19 +1421,22 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
-    labs = ['a', '',  'c', 'b', '', 'd', 'e', 'f', 'g']
+    labs = ['', '',  'c', '', 'b', 'd', 'e', 'f', 'g']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
-        ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+        ax_1.text(-0.15, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
                   fontweight='bold', va='top', ha='right')
     for i in [0, 1, 3]:
         ax[i].axis('off')
     # task panel
     ax_task = ax[0]
     pos = ax_task.get_position()
-    ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
+    factor = 1.75
+    ax_task.set_position([pos.x0+0.05, pos.y0-0.05, pos.width*factor, pos.height*factor])
     task = plt.imread(TASK_IMG)
     ax_task.imshow(task)
+    ax_task.text(0.1, 1.15, 'a', transform=ax_task.transAxes, fontsize=16,
+                  fontweight='bold', va='top', ha='right')
     # tracking screenshot
     rat = plt.imread(RAT_noCOM_IMG)
     ax_scrnsht = ax[6]
@@ -1454,7 +1457,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
                             pos.height*.9])
     cbar_ax = f.add_axes([pos.x0+pos.width/2.3, pos.y0+margin/2,
                           pos.width/10, pos.height/2])
-    cbar_ax.set_title('p(Right)')
+    cbar_ax.set_title('p(Right)', fontsize=9)
     f.colorbar(im_2, cax=cbar_ax)
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
@@ -1466,25 +1469,32 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
 
     # tachometrics
+    bin_size = 10
     ax_tach = ax[5]
     labels = ['0', '0.25', '0.5', '1']
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
-                labels=labels)
+                labels=labels, rtbins=np.arange(0, 201, bin_size))
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
+    ax_tach.set_xlim(-101, 201)
+    # plot vertical dashed line at 0
+    ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
     ax_tach.set_yticks([0.4, 0.6, 0.8, 1], ['0.4', '0.6', '0.8', '1'])
     rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0+margin/2, pos.width, pos.height])
-    ax_tach.legend()
+    # ax_tach.legend()
 
     # RTs
     ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
     plot_rt_cohs_with_fb(df=df, ax=ax_rts, subj='LE46')
     ax_rts.set_xlabel('')
+    ax_rts.set_xlim(-101, 201)
+    # plot vertical dashed line at 0
+    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
 
@@ -1502,6 +1512,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
             ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
     ax_ydim.set_xlim(-100, 800)
     ax_rawtr.set_xlim(-80, 20)
+    ax_ydim.set_ylim(-100, 100)
     ax_rawtr.set_ylim(-100, 100)
     ax_rawtr.set_xticklabels([])
     ax_rawtr.set_yticklabels([])
@@ -1509,23 +1520,20 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')  # , fontsize=14)
     ax_ydim.set_xlabel('Time from movement onset (ms)')  # , fontsize=14)
-    ax_rawtr.axhline(0, color='k')
-    ax_ydim.axhline(0, color='k')
-
     # adjust panels positions
     pos = ax_rawtr.get_position()
     factor = figsize[1]/figsize[0]
     width = pos.height*factor/2
-    ax_rawtr.set_position([pos.x0+width*0.9, pos.y0-margin, width,
+    ax_rawtr.set_position([pos.x0+width*0.5, pos.y0-margin, width,
                            pos.height])
     pos = ax_ydim.get_position()
     ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
     pos = ax_scrnsht.get_position()
-    ax_scrnsht.set_position([pos.x0+width*1.1, pos.y0-margin, pos.width,
+    ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
                              pos.height])
     # add colorbar for screenshot
     n_stps = 100
-    ax_clbr = plt.axes([pos.x0+width*1.1, pos.y0+pos.height-margin*0.9,
+    ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
                         pos.width*0.7, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     ax_clbr.set_xticks([0, n_stps-1])
@@ -1539,11 +1547,13 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     for i_a in [7, 8]:
         ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(y=-85, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(0, color='k', lw=.5)
     ax[6].axhline(y=200, linestyle='--', color='k', lw=.5)
     ax[6].axhline(y=600, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(400, color='k')
+    ax_scrnsht.axhline(400, color='k', lw=.5)
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
+    # plt.show()
 
 
 def groupby_binom_ci(x, method="beta"):
@@ -4695,11 +4705,11 @@ def plot_rt_sim(df_sim):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4709,7 +4719,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE43', 'LE42', 'LE38', 'LE39']
+            subjects = ['LE46']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -4760,16 +4770,16 @@ if __name__ == '__main__':
                                          traj_stamps=traj_stamps,
                                          fix_onset=fix_onset, com=com,
                                          sound_len=sound_len)
-        subjid = df.subjid.values
-        print('Computing CoMs')
-        _, time_com, peak_com, com =\
+        if f3 or f5:
+            subjid = df.subjid.values
+            print('Computing CoMs')
+            _, time_com, peak_com, com =\
             edd2.com_detection(trajectories=traj_y, decision=decision,
                                time_trajs=time_trajs, com_threshold=com_threshold)
-        print('Ended Computing CoMs')
-        com = np.array(com)  # new CoM list
-
+            print('Ended Computing CoMs')
+            com = np.array(com)  # new CoM list
+            df['CoM_sugg'] = com
         df['norm_allpriors'] = norm_allpriors_per_subj(df)
-        df['CoM_sugg'] = com
         df['time_trajs'] = time_trajs
 
     # fig 1
