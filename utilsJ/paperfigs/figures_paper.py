@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 
 from utilsJ.Models import simul
@@ -45,7 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -584,15 +584,24 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         mt_all[:, i_subj] = mt_time
     all_trajs = np.nanmean(mat_all, axis=2)
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
-    mt_time = np.nanmean(mt_all, axis=1)
+    mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
         ax[1].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[1].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-                       color=colormap[i_tr], marker='o')
+        if len(subjects) > 1:
+            c = colormap[i_tr]
+            xp = np.repeat(xpoints[i_tr], len(subjects))
+            ax[0].boxplot(mt_all[i_tr, :], positions=xp, 
+                          boxprops=dict(facecolor=c, color=c))
+            ax[0].plot(xp + np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr])
+        else:
+            ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                           color=colormap[i_tr], marker='o')
+
     if condition == 'choice_x_coh':
         # ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
         #              title='Stimulus \n evidence', loc='upper left',
@@ -701,15 +710,24 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         mt_all[:, i_subj] = ypoints
     all_trajs = np.nanmean(mat_all, axis=2)
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
-    mt_time = np.nanmean(mt_all, axis=1)
+    mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
         ax[3].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[3].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-                       color=colormap[i_tr], marker='o')
+        if len(subjects) > 1:
+            c = colormap[i_tr]
+            ax[2].boxplot(xpoints[i_tr], mt_all[i_tr, :],
+                          boxprops=dict(facecolor=c, color=c))
+            ax[2].plot(xpoints[i_tr] + np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr])
+        else:
+            ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                           color=colormap[i_tr], marker='o')
+        # errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+        #                color=colormap[i_tr], marker='o')
     # threshold = .2
     # xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
     #     df.loc[indx_trajs], condition, bins, collapse_sides=True,
@@ -4691,7 +4709,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE43']
+            subjects = ['LE37', 'LE43', 'LE42', 'LE38', 'LE39']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
