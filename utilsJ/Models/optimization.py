@@ -25,9 +25,9 @@ import scipy
 from pybads import BADS
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -36,13 +36,13 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995
@@ -464,7 +464,7 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             diff_rms_list.append(diff_rms)
     if mnle:
         # choice_and_com = com + choice*2
-        x = torch.column_stack((mt, rt+300, choice))
+        x = torch.column_stack((mt, rt+300, choice))  # add fixation
         return x
     mat_right_and_com = detected_com_mat*pright_mat
     mat_right_and_nocom = (1-detected_com_mat)*pright_mat
@@ -601,7 +601,7 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-5):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -614,13 +614,45 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-5):
     t_i = torch.tensor(
         trial_index[:n_trials]).to(torch.float32)
     theta = torch.column_stack((theta, t_i))
-    log_liks = estimator.log_prob(x_o[:n_trials], context=theta)
+    x_o = x_o[:n_trials]
+    # trials with RT >= 0
+    x_o_no_fb = torch.index_select(x_o, 0, (x_o[:, 1] >= 300).to(torch.int32))\
+        .to(torch.float32)
+    theta_no_fb = torch.index_select(theta, 0, (x_o[:, 1] >= 300).to(torch.int32))\
+        .to(torch.float32)
+    log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb)
     log_liks = torch.exp(log_liks)*(1-eps) + eps*CTE
     log_liks = torch.log(log_liks)
-    return -torch.nansum(log_liks).detach().numpy()
+    log_liks_no_fb = -torch.nansum(log_liks).detach().numpy()
+    # trials with RT < 0
+    x_o_with_fb = x_o[x_o[:, 1] < 300, :]
+    theta_fb = theta[x_o[:, 1] < 300, :]
+    log_liks_fb = []
+    grid_rt = np.arange(-300, 300, 10) + 300
+    grid_mt = np.arange(0, 600, 10)
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o_mat = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    for i_trial, trial in enumerate(x_o_with_fb):
+        theta_in = theta_fb[i_trial, :].repeat(len(x_o_mat), 1)
+        lprobs = estimator.log_prob(x_o_mat, theta_in)
+        lprobs = torch.exp(lprobs)
+        mat_0_nn = lprobs[x_o_mat[:, 2] == 0].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+        mat_1_nn = lprobs[x_o_mat[:, 2] == 1].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+        mat_final = torch.tensor(mat_0_nn + mat_1_nn)
+        marginal_rt = torch.nansum(mat_final, axis=0)
+        log_liks_fb.append(marginal_rt[grid_rt == round(int(trial[1]/10), 1)*10])
+    log_liks_fb = torch.tensor(log_liks_fb).to(torch.float32)
+    log_liks_fb = -torch.nansum(log_liks_fb).detach().numpy()
+    return log_liks_fb + log_liks_no_fb
 
 
-def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
+def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, max_it=5):
     # run simulations
     x = torch.tensor(())
     print('Starting simulation')
@@ -697,9 +729,9 @@ def get_lb():
         List with hard lower bounds.
 
     """
-    lb_aff = 1
-    lb_eff = 1
-    lb_t_a = 1
+    lb_aff = 3
+    lb_eff = 3
+    lb_t_a = 3
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.1
@@ -707,7 +739,7 @@ def get_lb():
     lb_w_intercept = 0
     lb_w_slope = 0
     lb_a_bound = 0.1
-    lb_1st_r = 15
+    lb_1st_r = 25
     lb_2nd_r = 1
     lb_leak = 0
     lb_mt_n = 1
@@ -731,7 +763,7 @@ def get_ub():
     """
     ub_aff = 15
     ub_eff = 15
-    ub_t_a = 20
+    ub_t_a = 22
     ub_w_zt = 1
     ub_w_st = 1
     ub_e_bound = 4
@@ -742,7 +774,7 @@ def get_ub():
     ub_1st_r = 150
     ub_2nd_r = 150
     ub_leak = 2
-    ub_mt_n = 70
+    ub_mt_n = 90
     ub_mt_int = 450
     ub_mt_slope = 0.15
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -763,7 +795,7 @@ def get_pub():
     """
     pub_aff = 6
     pub_eff = 6
-    pub_t_a = 15
+    pub_t_a = 16
     pub_w_zt = 0.7
     pub_w_st = 0.18
     pub_e_bound = 2.5
@@ -771,10 +803,10 @@ def get_pub():
     pub_w_intercept = 0.08
     pub_w_slope = 3e-5
     pub_a_bound = 2.8
-    pub_1st_r = 50
+    pub_1st_r = 60
     pub_2nd_r = 90
     pub_leak = 0.8
-    pub_mt_n = 25
+    pub_mt_n = 50
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -793,9 +825,9 @@ def get_plb():
         List with plausible lower bounds.
 
     """
-    plb_aff = 3
-    plb_eff = 3
-    plb_t_a = 10
+    plb_aff = 4
+    plb_eff = 4
+    plb_t_a = 12
     plb_w_zt = 0.3
     plb_w_st = 0.08
     plb_e_bound = 1.6
@@ -806,7 +838,7 @@ def get_plb():
     plb_1st_r = 40
     plb_2nd_r = 70
     plb_leak = 0.4
-    plb_mt_n = 10
+    plb_mt_n = 30
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
@@ -828,66 +860,66 @@ def gumbel_plotter():
 
 
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
-    mt = df.resp_len.values
-    choice = df.R_response.values
-    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-    stim = np.array([stim for stim in df.res_sound])
-    coh = np.array(df.coh2)
-    trial_index = np.array(df.origidx)
-    traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
-    traj_y = df.trajectory_y.values  # [after_correct_id]
-    fix_onset = df.fix_onset_dt.values  # [after_correct_id]
-    sound_len = np.array(df.sound_len)
-    time_trajs = get_trajs_time(resp_len=np.array(df.resp_len),
-                                traj_stamps=traj_stamps,
-                                fix_onset=fix_onset, com=None,
-                                sound_len=sound_len)
-    _, _, _, com =\
-        com_detection(trajectories=traj_y, decision=choice,
-                      time_trajs=time_trajs, com_threshold=8)
-    stim[df.soundrfail, :] = 0
-    # Prepare data:
-    coh = np.resize(coh, num_simulations)
-    zt = np.resize(zt, num_simulations)
-    trial_index = np.resize(trial_index, num_simulations)
-    stim = np.resize(stim, (num_simulations, 20))
-    mt = np.resize(mt, num_simulations)
-    choice = np.resize(choice, num_simulations)
-    # com = np.resize(com, num_simulations)
-    # choice_and_com = com + choice*2
-    rt = np.resize(sound_len + 300, num_simulations)
-    x_o = torch.column_stack((torch.tensor(mt*1e3),
-                              torch.tensor(rt),
-                              torch.tensor(choice)))
-    x_o = x_o.to(torch.float32)
-    # to save some memory
-    choice = []
-    rt = []
-    mt = []
-    data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
-                               torch.tensor(trial_index.astype(float)),
-                               x_o))
-    data = data.to(torch.float32)
-    data = data[:n_trials, :]
-    print('Data preprocessed, building prior distros')
-    # build prior
-    prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
-    # add zt, coh, trial index
-    theta_all_inp = theta_all.clone().detach()
-    theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
-    theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
-    theta_all_inp = torch.column_stack((
-        theta_all_inp, torch.tensor(
-            trial_index[:num_simulations].astype(float)).to(torch.float32)))
-    theta_all_inp = theta_all_inp.to(torch.float32)
     if training:
+        mt = df.resp_len.values
+        choice = df.R_response.values
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        stim = np.array([stim for stim in df.res_sound])
+        coh = np.array(df.coh2)
+        trial_index = np.array(df.origidx)
+        traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
+        traj_y = df.trajectory_y.values  # [after_correct_id]
+        fix_onset = df.fix_onset_dt.values  # [after_correct_id]
+        sound_len = np.array(df.sound_len)
+        time_trajs = get_trajs_time(resp_len=np.array(df.resp_len),
+                                    traj_stamps=traj_stamps,
+                                    fix_onset=fix_onset, com=None,
+                                    sound_len=sound_len)
+        _, _, _, com =\
+            com_detection(trajectories=traj_y, decision=choice,
+                          time_trajs=time_trajs, com_threshold=8)
+        stim[df.soundrfail, :] = 0
+        # Prepare data:
+        coh = np.resize(coh, num_simulations)
+        zt = np.resize(zt, num_simulations)
+        trial_index = np.resize(trial_index, num_simulations)
+        stim = np.resize(stim, (num_simulations, 20))
+        mt = np.resize(mt, num_simulations)
+        choice = np.resize(choice, num_simulations)
+        # com = np.resize(com, num_simulations)
+        # choice_and_com = com + choice*2
+        rt = np.resize(sound_len + 300, num_simulations)
+        x_o = torch.column_stack((torch.tensor(mt*1e3),
+                                  torch.tensor(rt),
+                                  torch.tensor(choice)))
+        x_o = x_o.to(torch.float32)
+        # to save some memory
+        choice = []
+        rt = []
+        mt = []
+        # data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
+        #                            torch.tensor(trial_index.astype(float)),
+        #                            x_o))
+        # data = data.to(torch.float32)
+        # data = data[:n_trials, :]
+        print('Data preprocessed, building prior distros')
+        # build prior
+        prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
+        # add zt, coh, trial index
+        theta_all_inp = theta_all.clone().detach()
+        theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
+        theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
+        theta_all_inp = torch.column_stack((
+            theta_all_inp, torch.tensor(
+                trial_index[:num_simulations].astype(float)).to(torch.float32)))
+        theta_all_inp = theta_all_inp.to(torch.float32)
         # simulate
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
         coh = []
         zt = []
         trial_index = []
         stim = []
-        nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)  # + (x[:, 1] < 0)
+        nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         # define network MNLE
         trainer = MNLE(prior=prior)
         time_start = time.time()
@@ -897,12 +929,11 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
                                                x[~nan_mask, :]).train(
                                                    show_train_summary=True)
         with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", "wb") as fh:
-            pickle.dump(dict(estimator=estimator, num_simulations=num_simulations), fh)
+            pickle.dump(dict(estimator=estimator,
+                             num_simulations=num_simulations), fh)
         print('For a batch of ' + str(num_simulations) +
               ' simulations, it took ' + str(int(time.time() - time_start)/60)
               + ' mins')
-        # x0 = theta_all_inp[torch.argmin(-estimator.log_prob(
-        #     x_o[:num_simulations], context=theta_all_inp)), :-1]
     else:
         x_o = []
         with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
@@ -910,27 +941,44 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         estimator = estimator['estimator']
     if bads:
         # find starting point
-        # x0 = np.array([np.float64(prior.dists[i].low/2) +
-        #                np.float64(prior.dists[i].high/2)
-        #                for i in range(len(prior.dists))])
-        # x0[0] = 0.5
-        # x0[1] = 0.5
         x0 = get_x0()
         print('Initial guess is: ' + str(x0))
         time_start = time.time()
-        # lb = np.array([np.float64(prior.dists[i].low/10)
-        #                for i in range(len(prior.dists))])
         lb = get_lb()
-        # ub = np.array([np.float64(prior.dists[i].high*100)
-        #                for i in range(len(prior.dists))])
         ub = get_ub()
         pub = get_pub()
         plb = get_plb()
+        print('Preparing FB data')
+        coh_vec = df.coh2.values
+        dwl_vec = df.dW_lat.values
+        dwt_vec = df.dW_trans.values
+        mt_vec = df.resp_len.values
+        ch_vec = df.R_response.values
+        tr_in_vec = df.origidx.values
+        for ifb, fb in enumerate(df.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
+                dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
+                dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
+                mt_vec = np.append(mt_vec, np.nan)
+                ch_vec = np.append(ch_vec, np.nan)
+                tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
+        rt_vec =\
+            np.vstack(np.concatenate([df.sound_len,
+                                      1e3*(np.concatenate(
+                                          df.fb.values)-0.3)])).reshape(-1)+300
+        zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
+        x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
+                                  torch.tensor(rt_vec),
+                                  torch.tensor(ch_vec)))
+        data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
+                                   torch.tensor(tr_in_vec.astype(float)),
+                                   x_o))
+        print('Optimizing')
+        n_trials = len(rt_vec)
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
-        # print('For ' + str(n_trials) + ' trials, it took' +
-        #       + str(int(time.time() - time_start)/60))
         print(optimize_result.total_time)
         return optimize_result.x
     else:
@@ -1034,13 +1082,13 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
             theta = torch.reshape(torch.tensor(theta),
                                   (1, len(theta))).to(torch.float32)
             theta = theta.repeat(len(x_o), 1)
+            theta[:, 0] *= torch.tensor(ztval)
+            theta[:, 1] *= torch.tensor(cohval)
             theta_tri_ind = torch.column_stack((theta[:len(x_o)],
                                                 torch.tensor(trial_index[
                                                     :len(x_o)]).to(torch.float32)))
             lprobs = estimator.log_prob(x_o, theta_tri_ind)
             lprobs = torch.exp(lprobs)
-            theta[:, 0] *= torch.tensor(0.5)
-            theta[:, 1] *= torch.tensor(0.5)
             mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
@@ -1202,7 +1250,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
         num_simulations = int(2e6)  # number of simulations to train the network
-        n_trials = 100000  # number of trials to evaluate the likelihood for fitting
+        n_trials = 230000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
