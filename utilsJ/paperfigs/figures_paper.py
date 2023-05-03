@@ -4619,7 +4619,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.set_xticklabels([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
 
 
-def plot_params_all_subs(subjects, sv_folder=SV_FOLDER):
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER + 'opt_results/'):
     fig, ax = plt.subplots(4, 4)
     ax = ax.flatten()
     labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',

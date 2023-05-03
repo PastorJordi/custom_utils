@@ -601,7 +601,7 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-5):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -979,7 +979,7 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     if simulate:
         for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
                                         [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                        [50, 50, 50, 50, 10, 500]):
+                                        [400, 400, 400, 400, 10, 800]):
             stim = np.array(
                 [stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
             theta = get_x0()
@@ -1201,7 +1201,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(5e5)  # number of simulations to train the network
+        num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
