@@ -601,7 +601,83 @@ def build_prior_sample_theta(num_simulations):
     return prior, theta_all
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3):
+def closest(lst, K):
+    # returns index of closest value of K in a list lst
+    return min(range(len(lst)), key=lambda i: abs(lst[i]-K))
+
+
+def get_log_likelihood_fb_nn(rt_fb, theta_fb, estimator, min_prob=1e-30, binsize=40,
+                             eps=1e-3):
+    """
+    Function that returns the log prob. of the NN (estimator) of having rt_fb
+    given theta_fb.
+
+    Parameters
+    ----------
+    x_o_with_fb : tensor
+        Tensor of 1 column (FB RT) and N rows (FB trials).
+    theta_fb : tensor
+        Tensor of 17 columns and N rows (FB trials).
+    estimator : dictionary
+        MNLE NN.
+    min_prob : float, optional
+        Min. probability so we don't have log(0). The default is 1e-12.
+
+    Returns
+    -------
+    log_liks_fb : float
+        Sum of -LLH.
+
+    """
+    log_liks_fb = []
+    # grid_rt = np.arange(-300, 301, binsize)[:-1] + 300 + binsize/2
+    grid_mt = np.arange(0, 901, binsize)[:-1] + binsize/2
+    all_rt = np.meshgrid([np.nan], grid_mt)[0].flatten()
+    all_mt = np.meshgrid([np.nan], grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o_mat = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    comb_0 = []
+    comb_1 = []
+    for i_trial, rt in enumerate(rt_fb):
+        theta_in = theta_fb[i_trial, :].repeat(len(x_o_mat), 1)
+        x_o_mat[:, 1] = rt
+        # get log prob of this trial log(P(data | theta))
+        lprobs = estimator.log_prob(x_o_mat, context=theta_in).detach().numpy()
+        # get prob P(data | theta, side_response)
+        lprobs = np.exp(lprobs)
+        mat_0_nn = lprobs[x_o_mat[:, 2] == 0].reshape(len(all_mt),
+                                                      1)
+        mat_1_nn = lprobs[x_o_mat[:, 2] == 1].reshape(len(all_mt),
+                                                      1)
+        # sum prob P(data | theta, 0, MT) + P(data | theta, 1, MT) so we can have
+        # P(RT | theta, 0, MT)
+        mat_final = (mat_0_nn + mat_1_nn)*2
+        # sum probs for all MT
+        marginal_rt = np.nansum(mat_final, axis=0)*binsize
+        marginal_rt += min_prob
+        log_liks_fb.append(np.log(marginal_rt))  # [closest(grid_rt, rt)]
+    log_liks_fb = -np.nansum(np.log(np.exp(log_liks_fb)*(1-eps) + eps*CTE))
+    return log_liks_fb
+
+
+def prob_rt_fb_action(t, v_a, t_a, bound_a):
+    return (bound_a / np.sqrt(2*np.pi*(t - t_a)**3)) *\
+        np.exp(- ((v_a**2)*((t-t_a) - bound_a/v_a)**2)/(2*(t-t_a)))
+
+
+def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps):
+    v_a = theta_fb[:, 8]*theta_fb[:, -1] + theta_fb[:, 7]
+    v_a = v_a.detach().numpy()
+    bound_a = theta_fb[:, 9].detach().numpy()
+    t_a = 5*theta_fb[:, 6].detach().numpy()
+    t = rt_fb.detach().numpy()
+    prob = prob_rt_fb_action(t=t, v_a=v_a, t_a=t_a, bound_a=bound_a)
+    return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
+
+
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -620,35 +696,18 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3):
         .to(torch.float32)
     theta_no_fb = torch.index_select(theta, 0, (x_o[:, 1] >= 300).to(torch.int32))\
         .to(torch.float32)
-    log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb)
-    log_liks = torch.exp(log_liks)*(1-eps) + eps*CTE
-    log_liks = torch.log(log_liks)
-    log_liks_no_fb = -torch.nansum(log_liks).detach().numpy()
+    log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb).detach().numpy()
+    log_liks = np.exp(log_liks)*(1-eps) + eps*CTE
+    log_liks = np.log(log_liks)
+    log_liks_no_fb = -np.nansum(log_liks)
     # trials with RT < 0
     x_o_with_fb = x_o[x_o[:, 1] < 300, :]
     theta_fb = theta[x_o[:, 1] < 300, :]
-    log_liks_fb = []
-    grid_rt = np.arange(-300, 300, 10) + 300
-    grid_mt = np.arange(0, 600, 10)
-    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
-    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
-    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
-    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
-    # generated data
-    x_o_mat = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
-    for i_trial, trial in enumerate(x_o_with_fb):
-        theta_in = theta_fb[i_trial, :].repeat(len(x_o_mat), 1)
-        lprobs = estimator.log_prob(x_o_mat, theta_in)
-        lprobs = torch.exp(lprobs)
-        mat_0_nn = lprobs[x_o_mat[:, 2] == 0].reshape(len(grid_mt),
-                                                      len(grid_rt)).detach().numpy()
-        mat_1_nn = lprobs[x_o_mat[:, 2] == 1].reshape(len(grid_mt),
-                                                      len(grid_rt)).detach().numpy()
-        mat_final = torch.tensor(mat_0_nn + mat_1_nn)
-        marginal_rt = torch.nansum(mat_final, axis=0)
-        log_liks_fb.append(marginal_rt[grid_rt == round(int(trial[1]/10), 1)*10])
-    log_liks_fb = torch.tensor(log_liks_fb).to(torch.float32)
-    log_liks_fb = -torch.nansum(log_liks_fb).detach().numpy()
+    # log_liks_fb = get_log_likelihood_fb_nn(rt_fb=x_o_with_fb[:, 1],
+    #                                        theta_fb=theta_fb, estimator=estimator,
+    #                                        binsize=binsize)
+    log_liks_fb = get_log_likelihood_fb_psiam(rt_fb=x_o_with_fb[:, 1],
+                                              theta_fb=theta_fb, eps=eps)
     return log_liks_fb + log_liks_no_fb
 
 
@@ -1255,8 +1314,8 @@ if __name__ == '__main__':
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
-        # subjects = ['LE43']  # to run only once and train
-        training = False
+        # subjects = ['LE85']  # to run only once and train
+        # training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
@@ -1268,7 +1327,8 @@ if __name__ == '__main__':
                                      srfail=True)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                      n_trials=n_trials, bads=True, training=training)
+                                      n_trials=n_trials, bads=True,
+                                      training=training)
                 print('--------------')
                 print('p_w_zt: '+str(parameters[0]))
                 print('p_w_stim: '+str(parameters[1]))
