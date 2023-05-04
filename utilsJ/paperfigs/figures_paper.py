@@ -1478,10 +1478,10 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     labels = ['0', '0.25', '0.5', '1']
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
                 labels=labels, rtbins=np.arange(0, 201, bin_size))
-    ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
+    # ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
-    ax_tach.set_ylim(0.3, 1.04)
+    ax_tach.set_ylim(0.5, 1.04)
     ax_tach.set_xlim(-101, 201)
     # plot vertical dashed line at 0
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
@@ -4730,11 +4730,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-<<<<<<< HEAD
             subjects = ['LE46']
-=======
-            subjects = ['LE43', 'LE42', 'LE38']
->>>>>>> 81439c1a95c5d808d911223e20b18cae025e2b04
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
