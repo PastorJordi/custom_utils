@@ -759,9 +759,9 @@ def get_x0():
     p_t_aff = 5
     p_t_eff = 4
     p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.5
-    p_w_stim = 0.14
-    p_e_bound = 2.
+    p_w_zt = 0.06
+    p_w_stim = 0.1
+    p_e_bound = 0.6
     p_com_bound = 0.1
     p_w_a_intercept = 0.056
     p_w_a_slope = 2e-5
@@ -791,9 +791,9 @@ def get_lb():
     lb_aff = 3
     lb_eff = 3
     lb_t_a = 3
-    lb_w_zt = 1e-3
-    lb_w_st = 1e-3
-    lb_e_bound = 0.1
+    lb_w_zt = 0
+    lb_w_st = 0
+    lb_e_bound = 0.2
     lb_com_bound = 0
     lb_w_intercept = 0
     lb_w_slope = 0
@@ -824,7 +824,7 @@ def get_ub():
     ub_eff = 15
     ub_t_a = 22
     ub_w_zt = 1
-    ub_w_st = 1
+    ub_w_st = 0.6
     ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.1
@@ -852,12 +852,12 @@ def get_pub():
         List with plausible upper bounds.
 
     """
-    pub_aff = 6
-    pub_eff = 6
+    pub_aff = 9
+    pub_eff = 9
     pub_t_a = 16
     pub_w_zt = 0.7
-    pub_w_st = 0.18
-    pub_e_bound = 2.5
+    pub_w_st = 0.2
+    pub_e_bound = 2.6
     pub_com_bound = 0.2
     pub_w_intercept = 0.08
     pub_w_slope = 3e-5
@@ -887,9 +887,9 @@ def get_plb():
     plb_aff = 4
     plb_eff = 4
     plb_t_a = 12
-    plb_w_zt = 0.3
-    plb_w_st = 0.08
-    plb_e_bound = 1.6
+    plb_w_zt = 1e-3
+    plb_w_st = 1e-3
+    plb_e_bound = 0.3
     plb_com_bound = 1e-3
     plb_w_intercept = 0.03
     plb_w_slope = 1.5e-5
@@ -987,7 +987,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                                x[~nan_mask, :]).train(
                                                    show_train_summary=True)
-        with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", "wb") as fh:
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", "wb") as fh:
             pickle.dump(dict(estimator=estimator,
                              num_simulations=num_simulations), fh)
         print('For a batch of ' + str(num_simulations) +
@@ -995,7 +995,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
               + ' mins')
     else:
         x_o = []
-        with open(SV_FOLDER + f"/mnle_n{num_simulations}.p", 'rb') as f:
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", 'rb') as f:
             estimator = pickle.load(f)
         estimator = estimator['estimator']
     if bads:
@@ -1309,14 +1309,14 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e6)  # number of simulations to train the network
-        n_trials = 230000  # number of trials to evaluate the likelihood for fitting
+        num_simulations = int(1e6)  # number of simulations to train the network
+        n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = False
+        training = True
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
