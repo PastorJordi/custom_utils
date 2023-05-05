@@ -145,7 +145,7 @@ def plot_fixation_breaks_single(subject, ax):
     ax.axvline(0, c='r')
     ax.set_xlabel('RT (s)')
     ax.set_ylabel('mean density (+/- std)')
-    plt.show()
+    # plt.show()
 
 
 def plot_rt_all_rats(subjects):
@@ -745,7 +745,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     # ax[2].set_xlabel(xlab)
     ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, mt_time, color='k', ls=':')
-    plt.show()
+    # plt.show()
     if accel:
         # acceleration
         threshold = .0015
@@ -765,7 +765,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[4].set_xlabel('ev. towards response')
         ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
         ax[4].plot(xpoints, ypoints, color='k', ls=':')
-        plt.show()
+        # plt.show()
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -865,6 +865,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     appb = True
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate(evs):
+        print(ev)
         indx = (df.special_trial == 0) & (df.subjid == subject)
         if np.sum(indx) > 0:
             _, matatmp, matb =\
@@ -908,7 +909,7 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7, loc='upper right')
-    plt.show()
+    # plt.show()
 
 
 def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
@@ -1019,7 +1020,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ax.fill_between([0, 250], [0, 250], [0, 0],
                     color='grey', alpha=0.6)
     ax.set_xlim(-5, 155)
-    plt.show()
+    # plt.show()
 
 
 def pCoM_vs_coh(df):
@@ -1183,7 +1184,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
     ax.set_title('Impact of stimulus', fontsize=9)
-    plt.show()
+    # plt.show()
 # 3d histogram-like*?
 
 
@@ -1407,11 +1408,12 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_title(str(title))
 
 # function to add letters to panel
-def add_text(ax, letter, x=-0.15, y=1.2, fontsize=16):
+def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
     ax.text(x, y, letter, transform=ax.transAxes, fontsize=fontsize,
                  fontweight='bold', va='top', ha='right')
 
-   
+def test():
+    print('test')
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright_all = np.zeros((7, 7))
@@ -1507,16 +1509,17 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
             ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
             time = trial['time_trajs']
             ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
-    ax_ydim.set_xlim(-100, 800)
     ax_rawtr.set_xlim(-80, 20)
-    ax_ydim.set_ylim(-100, 100)
     ax_rawtr.set_ylim(-100, 100)
     ax_rawtr.set_xticklabels([])
     ax_rawtr.set_yticklabels([])
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
-    ax_ydim.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')
+    add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
+    ax_ydim.set_xlim(-100, 800)
+    ax_ydim.set_ylim(-100, 100)
+    ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
     add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # tracking screenshot
@@ -1533,6 +1536,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_scrnsht.set_ylim([0, img.shape[0]])
     ax_scrnsht.set_xlabel('x dimension (pixels)')
     ax_scrnsht.set_ylabel('y dimension (pixels)')
+    add_text(ax=ax_scrnsht, letter='rat LE46', x=0.35, y=1., fontsize=8)
 
     # adjust panels positions
     pos = ax_rawtr.get_position()
@@ -1780,59 +1784,43 @@ def plot_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
 def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                 marginy=0.05):
     f = plt.figure(figsize=fgsz)
-    # plt.tight_layout()
-    # ax = ax.flatten()
-    ax_label = f.add_subplot(5, 3, 1)
-    # pos = ax_label.get_position()
-    # ax_label.set_position([pos.x0, pos.y0, pos.width*7/6, pos.height*7/6])
     # mt vs zt
-    ax_label.text(-0.1, 1.2, 'a', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    ax_label = f.add_subplot(5, 3, 1)
+    add_text(ax_label, 'a', x=-0.1, y=1.2)
     # mt vs stim
     ax_label = f.add_subplot(5, 3, 2)
-    ax_label.text(-0.1, 1.2, 'b', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'b', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 3)
     ax_label.axis('off')
     # trajs prior
     ax_label = f.add_subplot(5, 3, 4)
-    ax_label.text(-0.1, 1.2, 'c', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'c', x=-0.1, y=1.2)
     # trajs stim
     ax_label = f.add_subplot(5, 3, 5)
-    ax_label.text(-0.1, 1.2, 'd', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'd', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 6)
     ax_label.axis('off')
     # vel prior
     ax_label = f.add_subplot(5, 3, 7)
-    ax_label.text(-0.1, 1.2, 'e', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'e', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 8)
-    ax_label.text(-0.1, 1.2, 'f', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'f', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 9)
     ax_label.axis('off')
     ax_label = f.add_subplot(5, 3, 10)
-    ax_label.text(-0.1, 1.2, 'g', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'g', x=-0.1, y=1.2)
     # weights linear reg
     ax_label = f.add_subplot(5, 3, 11)
-    ax_label.text(-0.1, 1.2, 'h', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'h', x=-0.1, y=1.2)
     # mt mat
     ax_label = f.add_subplot(5, 3, 12)
-    ax_label.text(-0.1, 1.2, 'i', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'i', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 13)
-    ax_label.text(-0.1, 3., 'j', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'j', x=-0.1, y=3.0)
     ax_label = f.add_subplot(5, 3, 14)
-    ax_label.text(-0.1, 1.2, 'k', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'k', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 15)
-    ax_label.text(-0.1, 1.2, 'l', transform=ax_label.transAxes,
-                  fontsize=16, fontweight='bold', va='top', ha='right')
+    add_text(ax_label, 'l', x=-0.1, y=1.2)
     # plt.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
@@ -4597,7 +4585,7 @@ def mt_vs_ti_data_comparison(df, df_sim):
         sns.kdeplot(mt_model[index]*1e3, color=colormap[iev], ax=ax[5],
                     linestyle='--')
     ax[5].set_xlim(0, 600)
-    plt.show()
+    # plt.show()
     fig, ax = plt.subplots(ncols=3)
     sns.kdeplot(df_sim.sound_len.values, color='blue', label='Model', ax=ax[0])
     sns.kdeplot(df.sound_len.values, color='orange', label='Data', ax=ax[0])
@@ -4731,10 +4719,10 @@ def plot_rt_sim(df_sim):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4744,7 +4732,8 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE36', 'LE39', 'LE47']
+            subjects = ['LE37', 'LE36', 'LE39', 'LE47']
+            # subjects = ['LE46']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
