@@ -19,10 +19,11 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -45,11 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-<<<<<<< HEAD
 pc_name = 'idibaps'
-=======
-pc_name = 'idibaps_alex'
->>>>>>> 81439c1a95c5d808d911223e20b18cae025e2b04
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1409,6 +1406,12 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.legend(title='Coherence')
     ax.set_title(str(title))
 
+# function to add letters to panel
+def add_text(ax, letter, x=-0.15, y=1.2, fontsize=16):
+    ax.text(x, y, letter, transform=ax.transAxes, fontsize=fontsize,
+                 fontweight='bold', va='top', ha='right')
+
+   
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright_all = np.zeros((7, 7))
@@ -1425,11 +1428,10 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
     f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
-    labs = ['', '',  'c', '', 'b', 'd', 'e', 'f', 'g']
+    labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
-        ax_1.text(-0.15, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
-                  fontweight='bold', va='top', ha='right')
+        add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
     for i in [0, 1, 3]:
         ax[i].axis('off')
     # task panel
@@ -1439,22 +1441,10 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_task.set_position([pos.x0+0.05, pos.y0-0.05, pos.width*factor, pos.height*factor])
     task = plt.imread(TASK_IMG)
     ax_task.imshow(task)
-    ax_task.text(0.1, 1.15, 'a', transform=ax_task.transAxes, fontsize=16,
-                  fontweight='bold', va='top', ha='right')
-    # tracking screenshot
-    rat = plt.imread(RAT_noCOM_IMG)
-    ax_scrnsht = ax[6]
-    ax_scrnsht.imshow(np.flipud(rat))
-    ax_scrnsht.set_xticklabels([])
-    ax_scrnsht.set_yticklabels([])
-    ax_scrnsht.set_xticks([])
-    ax_scrnsht.set_yticks([])
-    ax_scrnsht.set_xlabel('x dimension (pixels)')  # , fontsize=14)
-    ax_scrnsht.set_ylabel('y dimension (pixels)')  # , fontsize=14)
+    add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
 
     # P_right
     ax_pright = ax[4]
-    # mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     pos = ax_pright.get_position()
     ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/1.5, pos.width*.9,
@@ -1470,7 +1460,21 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_pright.set_xlim([-0.5, 6.5])
     ax_pright.set_xticklabels(['Left', '', 'Right'])
     ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+    ax_pright.set_ylabel('Stimulus Evidence')
+    add_text(ax=ax_pright, letter='b', x=-0.2, y=1.15)
+
+    # RTs
+    ax_rts = ax[2]
+    rm_top_right_lines(ax=ax_rts)
+    plot_rt_cohs_with_fb(df=df, ax=ax_rts, subj='LE46')
+    ax_rts.set_xlabel('Reaction Time (ms)')
+    ax_rts.set_ylabel('Density')
+    ax_rts.set_xlim(-101, 201)
+    # plot vertical dashed line at 0
+    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
+    pos = ax_rts.get_position()
+    ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
+    add_text(ax=ax_rts, letter='rat LE46', x=0.32, y=1., fontsize=8)
 
     # tachometrics
     bin_size = 10
@@ -1478,35 +1482,24 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     labels = ['0', '0.25', '0.5', '1']
     tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
                 labels=labels, rtbins=np.arange(0, 201, bin_size))
-    # ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.5, 1.04)
     ax_tach.set_xlim(-101, 201)
-    # plot vertical dashed line at 0
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
-    ax_tach.set_yticks([0.4, 0.6, 0.8, 1], ['0.4', '0.6', '0.8', '1'])
+    ax_tach.set_yticks([0.5, 0.75, 1])
+    ax_tach.set_yticklabels(['0.5', '0.75', '1'])
     rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
-    ax_tach.set_position([pos.x0, pos.y0+margin/2, pos.width, pos.height])
+    ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
+    add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # ax_tach.legend()
-
-    # RTs
-    ax_rts = ax[2]
-    rm_top_right_lines(ax=ax_rts)
-    plot_rt_cohs_with_fb(df=df, ax=ax_rts, subj='LE46')
-    ax_rts.set_xlabel('')
-    ax_rts.set_xlim(-101, 201)
-    # plot vertical dashed line at 0
-    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
-    pos = ax_rts.get_position()
-    ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
 
     # raw trajectories
     ax_rawtr = ax[7]
     ax_ydim = ax[8]
     ran_max = 100
-    for tr in range(ran_max):  # len(df_rat)):
+    for tr in range(ran_max):
         if tr > (ran_max/2):
             trial = df.iloc[tr]
             traj_x = trial['trajectory_x']
@@ -1522,8 +1515,25 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_rawtr.set_yticklabels([])
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
-    ax_rawtr.set_xlabel('x dimension (pixels)')  # , fontsize=14)
-    ax_ydim.set_xlabel('Time from movement onset (ms)')  # , fontsize=14)
+    ax_ydim.set_yticks([])
+    ax_rawtr.set_xlabel('x dimension (pixels)')
+    ax_ydim.set_xlabel('Time from movement onset (ms)')
+    add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    # tracking screenshot
+    rat = plt.imread(RAT_noCOM_IMG)
+    ax_scrnsht = ax[6]
+    img = rat[150:646, 120:-10, :]
+    ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
+    ax_scrnsht.set_xticks([])
+    right_port_y = 50
+    center_port_y = 250
+    left_port_y = 460
+    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
+    ax_scrnsht.set_yticklabels([-85, 0, 85])
+    ax_scrnsht.set_ylim([0, img.shape[0]])
+    ax_scrnsht.set_xlabel('x dimension (pixels)')
+    ax_scrnsht.set_ylabel('y dimension (pixels)')
+
     # adjust panels positions
     pos = ax_rawtr.get_position()
     factor = figsize[1]/figsize[0]
@@ -1540,8 +1550,12 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
                         pos.width*0.7, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
-    ax_clbr.set_xticks([0, n_stps-1])
-    ax_clbr.set_xticklabels(['0', '400ms'])
+    x_tcks = np.linspace(0, n_stps, 6)
+    ax_clbr.set_xticks(x_tcks)
+    # pass xticks to strings
+    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
+    x_tcks_str[-1] += ' ms'
+    ax_clbr.set_xticklabels(x_tcks_str)
     ax_clbr.tick_params(labelsize=6)
     # ax_clbr.set_title('$N_{max}$', fontsize=6)
     ax_clbr.set_yticks([])
@@ -1550,11 +1564,11 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     # plot dashed lines
     for i_a in [7, 8]:
         ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
-        ax[i_a].axhline(y=-85, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(0, color='k', lw=.5)
-    ax[6].axhline(y=200, linestyle='--', color='k', lw=.5)
-    ax[6].axhline(y=600, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(400, color='k', lw=.5)
+    ax[6].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
+    ax[6].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
     # plt.show()
