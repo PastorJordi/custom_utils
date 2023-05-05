@@ -1945,6 +1945,10 @@ def tachometric(
                     (i+2)/(evidence_bins.size)),
                 marker=error_kws.get('marker', ''),
                 linestyle=linestyle)
+            cmp_face = list(cmap(i+2/(evidence_bins.size)))
+            cmp_face[-1] = 0.5
+            cmp_edge = list(cmap(i+2/(evidence_bins.size)))
+            cmp_edge[-1] = 0.
             if n_subs > 1:
                 ax.fill_between(
                     tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
@@ -1952,8 +1956,7 @@ def tachometric(
                     error_total[:len(tmp.rtbin.values)],
                     y2=vals_total[:len(tmp.rtbin.values)] -
                     error_total[:len(tmp.rtbin.values)],
-                    color=cmap(i+2/(evidence_bins.size)),
-                    alpha=error_kws.get('alpha', 0.3))
+                    facecolor=cmp_face, edgecolor=cmp_edge)
             else:
                 ax.fill_between(
                     tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
@@ -1961,8 +1964,7 @@ def tachometric(
                     tmp.groupby_binom_ci.apply(lambda x: x[1]),
                     y2=tmp['mean'].values -
                     tmp.groupby_binom_ci.apply(lambda x: x[0]),
-                    color=cmap(i+2/(evidence_bins.size)),
-                    alpha=error_kws.get('alpha', 0.3))
+                    facecolor=cmp_face, edgecolor=cmp_edge)
         if not fill_error and plot:
             ax.errorbar(
                 tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
