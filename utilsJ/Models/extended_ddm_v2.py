@@ -937,8 +937,10 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
     Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
     N = Ve.shape[0]
+    zero_or_noise_evidence = np.concatenate((np.repeat(0, fixation),
+                                             np.random.randn(N - fixation, num_tr)))
     # add noise
-    dW = np.random.randn(N, num_tr)*p_e_noise+Ve
+    dW = zero_or_noise_evidence*p_e_noise+Ve
     dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a_intercept +\
         p_w_a_slope*trial_index
     # zeros before p_t_a
