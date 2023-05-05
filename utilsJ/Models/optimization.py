@@ -672,7 +672,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps):
     v_a = v_a.detach().numpy()
     bound_a = theta_fb[:, 9].detach().numpy()
     t_a = 5*theta_fb[:, 6].detach().numpy()
-    t = rt_fb.detach().numpy()
+    t = rt_fb
     prob = prob_rt_fb_action(t=t, v_a=v_a, t_a=t_a, bound_a=bound_a)
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
@@ -690,19 +690,19 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
     t_i = torch.tensor(
         trial_index[:n_trials]).to(torch.float32)
     theta = torch.column_stack((theta, t_i))
-    x_o = x_o[:n_trials]
+    x_o = x_o[:n_trials].detach().numpy()
     # trials with RT >= 0
-    x_o_no_fb = torch.index_select(x_o, 0, (x_o[:, 1] >= 300).to(torch.int32))\
-        .to(torch.float32)
-    theta_no_fb = torch.index_select(theta, 0, (x_o[:, 1] >= 300).to(torch.int32))\
-        .to(torch.float32)
+    x_o_no_fb = torch.tensor(
+        x_o[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
+    theta_no_fb = torch.tensor(
+        theta.detach().numpy()[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
     log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb).detach().numpy()
     log_liks = np.exp(log_liks)*(1-eps) + eps*CTE
     log_liks = np.log(log_liks)
     log_liks_no_fb = -np.nansum(log_liks)
     # trials with RT < 0
-    x_o_with_fb = x_o[x_o[:, 1] < 300, :]
-    theta_fb = theta[x_o[:, 1] < 300, :]
+    x_o_with_fb = x_o[np.isnan(x_o).sum(axis=1) > 0, :]
+    theta_fb = theta[np.isnan(x_o).sum(axis=1) > 0, :]
     # log_liks_fb = get_log_likelihood_fb_nn(rt_fb=x_o_with_fb[:, 1],
     #                                        theta_fb=theta_fb, estimator=estimator,
     #                                        binsize=binsize)
@@ -791,8 +791,8 @@ def get_lb():
     lb_aff = 3
     lb_eff = 3
     lb_t_a = 3
-    lb_w_zt = 0
-    lb_w_st = 0
+    lb_w_zt = 1e-3
+    lb_w_st = 1e-3
     lb_e_bound = 0.1
     lb_com_bound = 0
     lb_w_intercept = 0
@@ -1025,16 +1025,17 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         rt_vec =\
             np.vstack(np.concatenate([df.sound_len,
                                       1e3*(np.concatenate(
-                                          df.fb.values)-0.3)])).reshape(-1)+300
+                                          df.fb.values)-0.3)])).reshape(-1)
         zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
         x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
-                                  torch.tensor(rt_vec),
+                                  torch.tensor(rt_vec+300),
                                   torch.tensor(ch_vec)))
         data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
                                    torch.tensor(tr_in_vec.astype(float)),
                                    x_o))
+        data = data[np.round(rt_vec) > -250, :]
         print('Optimizing')
-        n_trials = len(rt_vec)
+        n_trials = len(data)
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
         optimize_result = bads.optimize()
@@ -1315,7 +1316,7 @@ if __name__ == '__main__':
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        # training = False
+        training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False

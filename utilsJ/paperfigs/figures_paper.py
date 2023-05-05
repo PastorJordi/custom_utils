@@ -45,11 +45,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-<<<<<<< HEAD
-pc_name = 'idibaps'
-=======
 pc_name = 'idibaps_alex'
->>>>>>> 81439c1a95c5d808d911223e20b18cae025e2b04
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -4716,11 +4712,11 @@ def plot_rt_sim(df_sim):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -4730,7 +4726,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE46']
+            subjects = ['LE36', 'LE39', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
