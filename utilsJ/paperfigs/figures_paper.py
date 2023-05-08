@@ -649,6 +649,7 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
             mean_traj = traj_data['mean_traj']
             xpoints = traj_data['xpoints']
             mt_time = traj_data['mt_time']
+            ypoints = traj_data['ypoints']
         else:
             xpoints, ypoints, _, mat, _, mt_time =\
                 trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
@@ -658,7 +659,7 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                                cmap=cmap, bintype=bintype,
                                trajectory=velocity, plotmt=True, alpha_low=False)
             mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
-            data = {'xpoints': xpoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
+            data = {'xpoints': xpoints, 'ypoints': ypoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
             np.savez(traj_data, **data)
         mat_all[:, :, i_subj] = mean_traj
         mt_all[:, i_subj] = ypoints
@@ -3853,11 +3854,11 @@ def plot_rt_sim(df_sim):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = False
+    f2 = True
     f3 = False
     f4 = False
     f5 = False
-    f6 = True
+    f6 = False
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
