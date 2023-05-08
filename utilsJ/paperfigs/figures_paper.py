@@ -429,12 +429,12 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
     ax_zt = ax[0]
     ax_cohs = ax[1]
     ax_ti = ax[2]
-    trajs_cond_on_coh_computation(df=df_43.loc[df_43.special_trial == 2],
+    plots_trajs_conditioned(df=df_43.loc[df_43.special_trial == 2],
                                   ax=ax_zt, condition='choice_x_prior',
                                   prior_limit=1, cmap='copper')
-    trajs_cond_on_coh_computation(df=df_43, ax=ax_cohs, condition='choice_x_coh',
+    plots_trajs_conditioned(df=df_43, ax=ax_cohs, condition='choice_x_coh',
                                   cmap='coolwarm')
-    trajs_cond_on_coh_computation(df=df_43, ax=ax_ti, condition='origidx',
+    plots_trajs_conditioned(df=df_43, ax=ax_ti, condition='origidx',
                                   cmap='jet', prior_limit=1)
 
 
@@ -511,12 +511,12 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
     ax.text(20, -20, "Detection threshold", color='r')
 
 
-def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridis',
-                                  prior_limit=0.25, rt_lim=50,
-                                  after_correct_only=True,
-                                  trajectory="trajectory_y",
-                                  velocity=("traj_d1", 1),
-                                  acceleration=('traj_d2', 1), accel=False):
+def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
+                            prior_limit=0.25, rt_lim=50,
+                            after_correct_only=True,
+                            trajectory="trajectory_y",
+                            velocity=("traj_d1", 1),
+                            acceleration=('traj_d2', 1), accel=False):
     interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
@@ -1860,16 +1860,15 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     for i_a, a in enumerate(ax):
         if i_a != 8:
             rm_top_right_lines(a)
-    # TODO: the function below does not work with all subSjects
-    # (see line 805 in function trajectory_thr in plotting.py)
-    df_trajs = df.copy()  # df.loc[df.subjid == 'LE38']
-    trajs_cond_on_coh_computation(df=df_trajs.loc[df_trajs.special_trial == 2],
-                                  ax=ax_zt, condition='choice_x_prior',
-                                  prior_limit=1, cmap='copper')
-    trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs,
-                                  prior_limit=0.1,  # 10% quantile
-                                  condition='choice_x_coh',
-                                  cmap='coolwarm')
+
+    df_trajs = df.copy()
+    plots_trajs_conditioned(df=df_trajs.loc[df_trajs.special_trial == 2],
+                            ax=ax_zt, condition='choice_x_prior',
+                            prior_limit=1, cmap='copper')
+    plots_trajs_conditioned(df=df_trajs, ax=ax_cohs,
+                            prior_limit=0.1,  # 10% quantile
+                            condition='choice_x_coh',
+                            cmap='coolwarm')
     # regression weights
     mt_weights(df, ax=ax[9], plot=True, means_errs=False)
     # traj splitting prior
@@ -1900,7 +1899,7 @@ def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
     ax_ti = np.insert(ax_ti, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
-    trajs_cond_on_coh_computation(df=df, ax=ax_ti, condition='choice_x_prior',
+    plots_trajs_conditioned(df=df, ax=ax_ti, condition='choice_x_prior',
                                   prior_limit=1, cmap='copper')
     # splits
     mt_weights(df, ax=ax[3], plot=True, means_errs=False)
@@ -4675,7 +4674,7 @@ def plot_trajs_dep_trial_index(df):
     for a in ax:
         rm_top_right_lines(a)
     ax_ti = [ax[1], ax[0], ax[3], ax[2]]
-    trajs_cond_on_coh_computation(df, ax_ti, condition='origidx', cmap='jet',
+    plots_trajs_conditioned(df, ax_ti, condition='origidx', cmap='jet',
                                   prior_limit=1, rt_lim=300,
                                   after_correct_only=True,
                                   trajectory="trajectory_y",
