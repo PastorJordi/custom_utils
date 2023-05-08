@@ -1386,10 +1386,11 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.legend(title='Coherence')
     ax.set_title(str(title))
 
+
 # function to add letters to panel
 def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
     ax.text(x, y, letter, transform=ax.transAxes, fontsize=fontsize,
-                 fontweight='bold', va='top', ha='right')
+            fontweight='bold', va='top', ha='right')
 
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
@@ -1834,21 +1835,11 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
                     xlab=True)
     # trajs. conditioned on coh
-    # ax_inset = add_inset(ax=ax_cohs[0], inset_sz=inset_sz, fgsz=fgsz,
-    #                      marginx=marginx, marginy=0.04, right=True)
-    # ax_inset.yaxis.set_ticks_position('none')
-    # ax_inset.set_xlabel('Stimulus')
-    # ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
-    # ax_inset.set_xlabel('Stimulus')
     ax_cohs = np.insert(ax_cohs, 2, ax_inset)
     # trajs. conditioned on prior
-    # ax_inset = add_inset(ax=ax_zt[0], inset_sz=inset_sz, fgsz=fgsz,
-    #                      marginx=marginx, marginy=0.04, right=True)
-    # ax_inset.yaxis.set_ticks_position('none')
-    # ax_zt = np.insert(ax_zt, 0, ax_inset)
     ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
@@ -1986,11 +1977,8 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
         ax.set_xticks(ev_vals)
 
 
-def com_statistics(peak_com, time_com, ax):  # sound_len, com
-    # sound_len_com = sound_len[com]
-    # df2 = pd.DataFrame({'sound_len': sound_len_com, 'time_com': time_com,
-    #                     'peak_com': peak_com})
-    ax2, ax1 = ax  # , ax3, ax4
+def com_statistics(peak_com, time_com, ax):
+    ax2, ax1 = ax
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     peak_com = np.array(peak_com)
@@ -2004,16 +1992,6 @@ def com_statistics(peak_com, time_com, ax):  # sound_len, com
     ax2.set_ylabel('# Trials')
     ax2.hist(time_com, bins=80, range=(0, 500), color='tab:olive')
     ax2.set_xlabel('Deflection time (ms)', fontsize=8)
-    # bins_rt_com = np.linspace(0, 150, num=16)
-    # xpos_com = np.diff(bins_rt_com)[0]
-    # binned_curve(df2, 'peak_com', 'sound_len', bins=bins_rt_com, xpos=xpos_com,
-    #              ax=ax3, errorbar_kw={'color': 'k'})
-    # binned_curve(df2, 'time_com', 'sound_len', bins=bins_rt_com, xpos=xpos_com,
-    #              ax=ax4, errorbar_kw={'color': 'k'})
-    # ax3.set_xlabel('RT (ms)')
-    # ax3.set_ylabel('Peak CoM (px)')
-    # ax4.set_xlabel('RT (ms)')
-    # ax4.set_ylabel('Time to CoM (ms)')
 
 
 def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 41),
@@ -2091,7 +2069,6 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
                       fontweight='bold', va='top', ha='right')
     ax_mat = [ax[7], ax[8]]
     rm_top_right_lines(ax=ax[5])
-    # tach_1st_2nd_choice(df=df, ax=ax[5])
     plot_proportion_corr_com_vs_stim(df, ax[5])
     fig2.e(df, sv_folder=SV_FOLDER, ax=ax[6])
     ax[6].set_ylim(0, 0.075)
@@ -2135,11 +2112,6 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
     plt.sca(ax_mat[0])
     plt.colorbar(im, fraction=0.04)
-    # clbr1.ax.set_title('p(Detected CoM)')
-    # pos = ax_mat.get_position()
-    # ax_mat.set_position([pos.x0, pos.y0*2/3, pos.width, pos.height])
-    # ax_mat_1 = plt.axes([pos.x0+pos.width+0.05, pos.y0*2/3,
-    #                      pos.width, pos.height])
     ax_mat[1].set_title(pcomlabel_1)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
     ax_mat[1].yaxis.set_ticks_position('none')
@@ -2150,12 +2122,8 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticks([0, 3, 6], ['R', '0', 'L'])
         ax_i.set_xticks([0, 3, 6], ['L', '0', 'R'])
-        # ax_i.set_yticklabels(['R', '', '', '0', '', '', 'L'])
-        # ax_i.set_xticklabels(['L', '', '', '0', '', '', 'R'])
     for ax_i in [ax_mat[0]]:
-        ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
-    # ax_inset = add_inset(ax=ax[1], inset_sz=inset_sz, fgsz=(2, 2),
-    #                      marginx=marginx, marginy=marginy)
+        ax_i.set_ylabel('Stimulus Evidence')
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
     rm_top_right_lines(ax=ax[9])
     mt_distros(df=df, ax=ax[9])
@@ -2170,137 +2138,9 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         df_1 = df.loc[df.subjid == subj]
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
-    # ax_inset.plot(subjects, comlist_rats, 'o', color='k', markersize=4)
-    # ax_inset.violinplot(comlist_rats)
-    # ax_inset.plot(np.repeat(1, len(comlist_rats)) +
-    #               0.1*np.random.randn(len(comlist_rats)),
-    #               comlist_rats, color='k', linestyle='',
-    #               marker='o', alpha=0.5)
     ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k', alpha=0.6)
     ax_inset.set_xlabel('P(CoM)')
     ax_inset.set_ylabel('# Rats')
-    # ax_inset.set_xlabel('Rat')
-    # ax_inset.set_xticklabels([''])
-    # ax_inset.axhline(np.nanmean(comlist_rats), linestyle='--', color='k',
-    #                  alpha=0.8)
-    # ax_inset.set_xticklabels(subjects, rotation=90)
-    # ax_inset.set_xlim(0, 0.05)
-
-
-def fig_5_in(coh, hit, sound_len, decision, hit_model, sound_len_model, zt,
-             decision_model, com, com_model, com_model_detected, pro_vs_re):
-    """
-    Deprecated
-    """
-    fig, ax = plt.subplots(ncols=4, nrows=3, gridspec_kw={'top': 0.95,
-                                                          'bottom': 0.055,
-                                                          'left': 0.055,
-                                                          'right': 0.975,
-                                                          'hspace': 0.38,
-                                                          'wspace': 0.225})
-    ax = ax.flatten()
-    for ax_1 in ax:
-        rm_top_right_lines(ax_1)
-    psych_curve((decision+1)/2, coh, ret_ax=ax[1], kwargs_plot={'color': 'k'},
-                kwargs_error={'label': 'Data', 'color': 'k'})
-    ax[1].set_xlabel('Coherence')
-    ax[1].set_ylabel('Probability of right')
-    hit_model = hit_model[sound_len_model >= 0]
-    com_model_detected = com_model_detected[sound_len_model >= 0]
-    decision_model = decision_model[sound_len_model >= 0]
-    com_model = com_model[sound_len_model >= 0]
-    subjid = df_sim.subjid.values[sound_len_model >= 0]
-    psych_curve((decision_model+1)/2, coh[sound_len_model >= 0], ret_ax=ax[1],
-                kwargs_error={'label': 'Model', 'color': 'red'},
-                kwargs_plot={'color': 'red'})
-    ax[1].legend()
-    pos_tach_ax = tachometric_data(coh=coh, hit=hit, sound_len=sound_len,
-                                   subjid=subjid, ax=ax[2])
-    ax[2].set_title('Data')
-    pos_tach_ax_model = tachometric_data(coh=coh[sound_len_model >= 0],
-                                         hit=hit_model,
-                                         sound_len=sound_len_model[
-                                             sound_len_model >= 0],
-                                         ax=ax[3])
-    ax[3].set_title('Model')
-    reaction_time_histogram(sound_len=sound_len, label='Data', ax=ax[0],
-                            bins=np.linspace(-150, 300, 91))
-    reaction_time_histogram(sound_len=sound_len_model[sound_len_model >= 0],
-                            label='Model', ax=ax[0],
-                            bins=np.linspace(-150, 300, 91), pro_vs_re=pro_vs_re)
-    ax[0].legend()
-    express_performance(hit=hit, coh=coh, sound_len=sound_len,
-                        pos_tach_ax=pos_tach_ax, ax=ax[4], label='Data')
-    express_performance(hit=hit_model, coh=coh[sound_len_model >= 0],
-                        sound_len=sound_len_model[sound_len_model >= 0],
-                        pos_tach_ax=pos_tach_ax_model, ax=ax[4], label='Model')
-    df_plot = pd.DataFrame({'com': com[sound_len_model >= 0],
-                            'sound_len': sound_len[sound_len_model >= 0],
-                            'rt_model': sound_len_model[sound_len_model >= 0],
-                            'com_model': com_model,
-                            'com_model_detected': com_model_detected})
-    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[5])
-    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[5])
-    binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Model all', 'color': 'green'}, ax=ax[5])
-    ax[5].legend()
-    ax[5].set_xlabel('RT (ms)')
-    ax[5].set_ylabel('PCoM')
-    binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                 errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[6])
-    binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                 xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                            'color': 'red'}, ax=ax[6])
-    ax[6].legend()
-    ax[6].set_xlabel('RT (ms)')
-    ax[6].set_ylabel('PCoM')
-    decision_01 = (decision+1)/2
-    edd2.com_heatmap_jordi(zt, coh, decision_01, ax=ax[8], flip=True,
-                           annotate=False, xlabel='prior', ylabel='avg stim',
-                           cmap='PRGn_r', vmin=0., vmax=1)
-    cdfs(coh, sound_len, f5=True, ax=ax[7], label_title='Data', linestyle='solid')
-    cdfs(coh, sound_len_model, f5=True, ax=ax[7], label_title='Model',
-         linestyle='--', model=True)
-    ax[8].set_title('Pright Data')
-    zt_model = zt[sound_len_model >= 0]
-    coh_model = coh[sound_len_model >= 0]
-    decision_01_model = (decision_model+1)/2
-    edd2.com_heatmap_jordi(zt_model, coh_model, decision_01_model, ax=ax[9],
-                           flip=True, annotate=False, xlabel='prior',
-                           ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
-    ax[9].set_title('Pright Model')
-    edd2.com_heatmap_jordi(zt, coh, hit, ax=ax[10],
-                           flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='coolwarm', vmin=0.2, vmax=1)
-    ax[10].set_title('Pcorrect Data')
-    edd2.com_heatmap_jordi(zt_model, coh_model, hit_model, ax=ax[11],
-                           flip=True, xlabel='prior', annotate=False,
-                           ylabel='avg stim', cmap='coolwarm', vmin=0.2, vmax=1)
-    ax[11].set_title('Pcorrect Model')
-    df_data = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
-                            'norm_allpriors': zt/max(abs(zt)),
-                            'R_response': (decision+1)/2})
-    com_heatmap_paper_marginal_pcom_side(df_data, side=0)
-    com_heatmap_paper_marginal_pcom_side(df_data, side=1)
-    # matrix_data, _ = edd2.com_heatmap_jordi(zt, coh, com,
-    #                                         return_mat=True, flip=True)
-    # matrix_model, _ = edd2.com_heatmap_jordi(zt, coh, com_model,
-    #                                          return_mat=True, flip=True)
-    # sns.heatmap(matrix_data, ax=ax[8])
-    # ax[8].set_title('Data')
-    # sns.heatmap(matrix_model, ax=ax[9])
-    # ax[9].set_title('Model')
-    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
-                             'CoM_sugg':
-                                 com_model_detected,
-                             'norm_allpriors':
-                                 zt_model/max(abs(zt_model)),
-                             'R_response': (decision_model+1)/2})
-    com_heatmap_paper_marginal_pcom_side(df_model, side=0)
-    com_heatmap_paper_marginal_pcom_side(df_model, side=1)
 
 
 def com_heatmap_marginal_pcom_side_mat(
