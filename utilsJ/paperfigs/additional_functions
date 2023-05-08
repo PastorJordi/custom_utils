@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May  8 15:12:31 2023
+
+@author: Alex Garcia-Duran
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from scipy.stats import sem
+import sys, os
+from scipy.optimize import curve_fit
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
+from sklearn.metrics import confusion_matrix
+from scipy.stats import pearsonr, ttest_ind, ttest_rel, zscore
+from matplotlib.lines import Line2D
+from statsmodels.stats.proportion import proportion_confint
+# from scipy import interpolate
+# import shutil
+
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+
+from utilsJ.Models import simul
+from utilsJ.Models import extended_ddm_v2 as edd2
+from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
+    trajectory_thr, com_heatmap, interpolapply
+from utilsJ.Models import analyses_humans as ah
+import fig1, fig3, fig2
+import matplotlib
+import matplotlib.pylab as pl
+from scipy import interpolate
+
+matplotlib.rcParams['font.size'] = 9
+plt.rcParams['legend.title_fontsize'] = 8
+plt.rcParams['xtick.labelsize']= 8
+plt.rcParams['ytick.labelsize']= 8
+# matplotlib.rcParams['font.family'] = 'Arial'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'Helvetica'
+matplotlib.rcParams['lines.markersize'] = 3
+
+# ---GLOBAL VARIABLES
+pc_name = 'idibaps'
+if pc_name == 'alex':
+    RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+    SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
+    DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+    RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
+    TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
+    HUMAN_TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/g41085.png'
+elif pc_name == 'idibaps':
+    DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
+    SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/from_python/'  # Manuel
+    RAT_noCOM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/Figure_1/screenShot230120.png'
+    RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
+        'ChangesOfMind/figures/Figure_3/001965.png'
+    TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
+        'figures/Figure_1/panel_a.png'
+elif pc_name == 'idibaps_alex':
+    SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+    DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+    RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
+        'craft_vid/CoM/a/001965.png'
+    RAT_noCOM_IMG = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/' +\
+        'screenShot230120.png'
+    HUMAN_TASK_IMG = '/home/jordi/DATA/Documents/changes_of_mind/humans/g41085.png'
+elif pc_name == 'alex_CRM':
+    SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+    DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+    RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+    RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
+    HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
+    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
+
+FRAME_RATE = 14
+BINS_RT = np.linspace(1, 301, 11)
+xpos_RT = int(np.diff(BINS_RT)[0])
+COLOR_COM = 'tab:olive'
+COLOR_NO_COM = 'tab:cyan'
+
+
+def pcom_model_vs_data(detected_com, com, sound_len, reaction_time):
+    fig, ax = plt.subplots(1)
+    df = pd.DataFrame({'com_model': detected_com, 'CoM_sugg': com,
+                       'sound_len': sound_len, 'reaction_time': reaction_time})
+    binned_curve(df, 'CoM_sugg', 'sound_len', bins=BINS_RT, xpos=xpos_RT, ax=ax,
+                 errorbar_kw={'label': 'CoM data'})
+    binned_curve(df, 'com_model', 'reaction_time', bins=BINS_RT, xpos=xpos_RT,
+                 ax=ax, errorbar_kw={'label': 'Detected CoM model'})
+
+
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
+    fig, ax = plt.subplots(4, 4)
+    if diff_col:
+        colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    else:
+        colors = ['k' for _ in range(len(subjects))]
+    ax = ax.flatten()
+    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
+              't aff', 't eff', 'tAction', 'intercept AI',
+              'slope AI', 'AI bound', 'DV weight 1st readout',
+              'DV weight 2nd readout', 'leak', 'MT noise std',
+              'MT offset', 'MT slope T.I.']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_mat[:, i_s] = conf
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i])
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s]*5,
+                           0.05*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+        else:
+            sns.violinplot(conf_mat[i, :], ax=ax[i])
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s],
+                           0.1*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' ms'))
+            ax[i].set_xlabel(labels[i])
+
+
+def plot_tach_per_subj_from_df(df):
+    fig, ax = plt.subplots(5, 3)
+    ax = ax.flatten()
+    labels = ['0', '0.25', '0.5', '1']
+    subjects = df.subjid.unique()
+    for i_s, subj in enumerate(subjects):
+        df_1 = df[df.subjid == subj]
+        coh_vec = df_1.coh2.values
+        hits = df_1.hithistory.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+                hits = np.append(hits, np.nan)
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
+        fix_breaks = fix_breaks[:, 0]
+        df_data = pd.DataFrame({'hithistory': hits, 'avtrapz': coh_vec,
+                                'sound_len': fix_breaks*1e3,
+                                'subjid': np.repeat(subj, len(hits))})
+        tachometric(df_data, ax=ax[i_s], fill_error=True, cmap='gist_yarg',
+                    labels=labels)
+        ax[i_s].set_xlim(-5, 155)
+
+
+def plot_fb_per_subj_from_df(df):
+    fig, ax = plt.subplots(5, 3)
+    ax = ax.flatten()
+    colormap = pl.cm.gist_yarg(np.linspace(0.4, 1, 2))
+    subjects = df.subjid.unique()
+    for i_s, subj in enumerate(subjects):
+        df_1 = df[df.subjid == subj]
+        coh_vec = df_1.coh2.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        for iev, ev in enumerate([0, 1]):
+            index = np.abs(coh_vec) == ev
+            fix_breaks =\
+                np.vstack(np.concatenate([df_1.sound_len/1000,
+                                          np.concatenate(df_1.fb.values)-0.3]))
+            fix_breaks = fix_breaks[index]
+            counts_coh, bins = np.histogram(fix_breaks*1000,
+                                            bins=30, range=(-100, 200))
+            norm_counts = counts_coh/sum(counts_coh)
+            ax[i_s].plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
+                         color=colormap[iev])
+            ax[i_s].set_title(subj)
+
+
+def check_traj_decision(df):
+    incongruent = []
+    absurd_trajs = []
+    n = len(df.R_response.values)
+    for j, ch in enumerate(df.R_response.values*2 - 1):
+        traj = df.trajectory_y.values[j]
+        if len(traj) > 1:
+            if max(traj) > 100:
+                absurd_trajs.append(j)
+            elif np.sign(traj[-1]) != np.sign(ch):
+                incongruent.append(j)
+        else:
+            incongruent.append(j)
+    print('Incongruent trajs percentage:')
+    print(str(len(incongruent)*100/n)+'%')
+    print('"Absurd" trajs percentage:')
+    print(str(len(absurd_trajs)*100/n)+'%')
+
+
+def pdf_cohs_subj(df, bins=np.linspace(1, 301, 61), pval_max=0.001):
+    ev_vals = [0, 1]
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, len(ev_vals)))
+    num_subjects = len(df.subjid.unique())
+    density_matrix_0 = np.zeros((num_subjects, len(bins)-1))
+    density_matrix_1 = np.zeros((num_subjects, len(bins)-1))
+    xvals = bins[:-1]+(bins[1]-bins[0])/2
+    subjects = df.subjid.unique()
+    for i_sub, subj in enumerate(subjects):
+        df1 = df.loc[df.subjid == subj]
+        sound_len = df1.sound_len.values
+        coh = df1.coh2.values
+        for i_coh, ev in enumerate(ev_vals):
+            index = np.abs(coh) == ev
+            counts_coh, _ = np.histogram(sound_len[index], bins=bins)
+            norm_counts = counts_coh/sum(counts_coh)
+            if ev == 0:
+                density_matrix_0[i_sub, :] = norm_counts
+            else:
+                density_matrix_1[i_sub, :] = norm_counts
+    for i_rt, rt_bin in enumerate(xvals):
+        density_vals_0 = density_matrix_0[:, i_rt+1]
+        density_vals_1 = density_matrix_1[:, i_rt+1]
+        _, p_value = ttest_ind(density_vals_0, density_vals_1)
+        if p_value < pval_max:
+            ind = rt_bin
+            break
+    fig, ax = plt.subplots(1)
+    mean_density_0 = np.nanmean(density_matrix_0, axis=0)
+    mean_density_1 = np.nanmean(density_matrix_1, axis=0)
+    std_density_0 = np.nanstd(density_matrix_0, axis=0)/np.sqrt(num_subjects)
+    std_density_1 = np.nanstd(density_matrix_1, axis=0)/np.sqrt(num_subjects)
+    ax.plot(xvals, mean_density_0, color=colormap[0], linewidth=2, label='coh=0')
+    ax.plot(xvals, mean_density_1, color=colormap[1], linewidth=2, label='coh=1')
+    ax.fill_between(xvals, mean_density_0-std_density_0,
+                    mean_density_0+std_density_0, color=colormap[0], alpha=0.5)
+    ax.fill_between(xvals, mean_density_1-std_density_1,
+                    mean_density_1+std_density_1, color=colormap[1], alpha=0.3)
+    ax.axvline(ind, color='r', linestyle='--', alpha=0.8,
+               label='{} ms'.format(ind))
+    ax.legend()
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Density')
+
+
+def pcom_vs_prior_coh(df, bins_zt=np.linspace(-1, 1, 14),
+                      bins_coh=[-1, -0.5, -0.25, 0, 0.25, 0.5, 1]):
+    fig, ax = plt.subplots(2, 2)
+    ax = ax.flatten()
+    subjects = df.subjid.unique()
+    for j in [0, 2]:
+        com_vs_zt = np.zeros((len(subjects), len(bins_zt)-1))
+        error_com_vs_zt = np.zeros((len(subjects), len(bins_zt)-1))
+        for i_sub, subj in enumerate(subjects):
+            df_1 = df.loc[df.subjid == subj]
+            zt_tmp = df_1.allpriors.values
+            if j != 0:
+                zt_tmp *= (df_1.R_response.values*2-1)
+                ax[j].set_xlabel('Prior Congruency')
+            if j == 0:
+                ax[j].set_xlabel('Prior')
+            ax[j].set_ylabel('P(CoM)')
+            norm_zt = zt_tmp/max(abs(zt_tmp))
+            for i_b, bin_zt in enumerate(bins_zt[:-1]):
+                index_zt = (norm_zt >= bin_zt)*(norm_zt < bins_zt[i_b+1])
+                com_binned = np.nanmean(df_1.CoM_sugg.values[index_zt])
+                error_com = np.nanstd(df_1.CoM_sugg.values[index_zt]) /\
+                    np.sqrt(sum(index_zt))
+                com_vs_zt[i_sub, i_b] = com_binned
+                error_com_vs_zt[i_sub, i_b] = error_com
+            com_vs_zt[i_sub, :] /= np.max(com_vs_zt[i_sub, :])
+            ax[j].errorbar(bins_zt[:-1], com_vs_zt[i_sub, :],
+                           error_com_vs_zt[i_sub, :],
+                           color='k', alpha=0.5)
+        total_mean_com_zt = np.nanmean(com_vs_zt, axis=0)
+        total_error_com_zt = np.nanstd(com_vs_zt, axis=0)/np.sqrt(len(subjects))
+        ax[j].errorbar(bins_zt[:-1], total_mean_com_zt, total_error_com_zt,
+                       color='k', alpha=1, linewidth=3)
+    for j in [1, 3]:
+        com_vs_coh = np.zeros((len(subjects), len(bins_coh)))
+        error_com_vs_coh = np.zeros((len(subjects), len(bins_coh)))
+        for i_sub, subj in enumerate(subjects):
+            df_1 = df.loc[df.subjid == subj]
+            coh = df_1.coh2.values
+            if j != 1:
+                coh *= (df_1.R_response.values*2-1)
+                ax[j].set_xlabel('Stimulus Congruency')
+            if j == 1:
+                ax[j].set_xlabel('Stimulus')
+            for i_b, bin_coh in enumerate(bins_coh):
+                index_coh = coh == bin_coh
+                com_binned = np.nanmean(df_1.CoM_sugg.values[index_coh])
+                error_com = np.nanstd(df_1.CoM_sugg.values[index_coh]) /\
+                    np.sqrt(sum(index_coh))
+                com_vs_coh[i_sub, i_b] = com_binned
+                error_com_vs_coh[i_sub, i_b] = error_com
+            com_vs_coh[i_sub, :] /= np.max(com_vs_coh[i_sub, :])
+            ax[j].errorbar(bins_coh, com_vs_coh[i_sub, :],
+                           error_com_vs_coh[i_sub, :], color='k', alpha=0.5)
+        total_mean_com_coh = np.nanmean(com_vs_coh, axis=0)
+        total_error_com_coh = np.nanstd(com_vs_coh, axis=0)/np.sqrt(len(subjects))
+        ax[j].errorbar(bins_coh, total_mean_com_coh, total_error_com_coh,
+                       color='k', alpha=1, linewidth=3)
+
+
+def traj_mean_human_per_subject(df_data, mean=True):
+    max_mt = 400
+    fig, axh = plt.subplots(4, 4)
+    axh = axh.flatten()
+    index1 = ~df_data.CoM_sugg
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    decision = df_data.R_response.values
+    trajs = df_data.trajectory_y.values
+    times = df_data.times.values
+    # fig, ax = plt.subplots(1)
+    all_trajs = np.empty((sum(index1), max_mt))
+    all_trajs[:] = np.nan
+    # cont1 = 0
+    # cont2 = 0
+    precision = 16
+    if mean:
+        fun = np.nanmean
+    else:
+        fun = np.nanmedian
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        ax = axh[i_s]
+        index = index1 & (df_data.subjid == subj)
+        for tr in range(sum(index)):
+            vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            time = np.array(times[index][tr])[np.array(ind_time)].astype(float)
+            max_time = max(time)*1e3
+            if max_time > max_mt:
+                continue
+            if max_time > 300:
+                ax.plot(np.arange(len(vals))*precision, vals,
+                        color='r', linewidth=0.4, alpha=0.5)
+                # cont1 += 1
+            if max_time <= 300:
+                ax.plot(np.arange(len(vals))*precision, vals,
+                        color='b', linewidth=0.4, alpha=0.5)
+                # cont2 += 1
+            # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
+            #                      xp=time*1e3, fp=vals)
+            all_trajs[tr, :len(vals)] = vals  # - vals[0]
+        mean_traj = fun(all_trajs, axis=0)
+        # std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index1))
+        ax.plot(np.arange(len(mean_traj))*precision, mean_traj,
+                color='k', linewidth=2.5)
+        ax.set_ylabel('x-coord (px)')
+        ax.set_xlabel('Time (ms)')
+        ax.set_xlim(-5, 410)
+        ax.set_ylim(-125, 780)
+        ax.set_title('Subject '+str(int(subj)))
+
+
+def plot_human_trajs_per_subject(df_data):
+    fig, ax = plt.subplots(4, 4)
+    ax = ax.flatten()
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        index = (df_data.subjid == subj) & (~df_data.CoM_sugg)
+        for j in range(200, 500):
+            traj = df_data.trajectory_y.values[index][j]
+            ax[i_s].plot(np.arange(len(traj))*16.5,
+                         np.array(df_data.trajectory_y.values[index][j]) *
+                         (df_data.R_response.values[index][j]*2-1),
+                         linewidth=0.5, color='k')
+        ax[i_s].set_title('Subject ' + str(int(subj)))
+        ax[i_s].set_xlim(0, 500)
+        ax[i_s].set_ylabel('Position')
+    fig, ax = plt.subplots(4, 4)
+    ax = ax.flatten()
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        index = (df_data.subjid == subj) & (~df_data.CoM_sugg)
+        for j in range(200, 500):
+            traj_y = df_data.trajectory_y.values[index][j]
+            traj_x = df_data.traj_y.values[index][j]
+            ax[i_s].plot(traj_x,
+                         np.array(traj_y) *
+                         (df_data.R_response.values[index][j]*2-1),
+                         linewidth=0.5, color='k')
+        ax[i_s].set_title('Subject ' + str(int(subj)))
+        ax[i_s].set_xlabel('x-coord')
+        ax[i_s].set_ylabel('y-coord')
+
+
+def mt_distro_per_subject_human(df_data):
+    fig, axh = plt.subplots(4, 4)
+    axh = axh.flatten()
+    index1 = ~df_data.CoM_sugg
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    times = df_data.times.values
+    for i_s, subj in enumerate(df_data.subjid.unique()):
+        index = index1 & (df_data.subjid == subj)
+        mt = []
+        for tr in range(sum(index)):
+            ind_time = [True if t != '' else False for t in times[index][tr]]
+            mt.append(max(np.array(times[index][tr])
+                          [ind_time]).astype(float)*1e3)
+
+        axh[i_s].hist(mt, bins=40, range=(0, 800))
+        axh[i_s].set_xlabel('MT (ms)')
+        axh[i_s].set_ylabel('Counts')
+        axh[i_s].set_title('Subject ' + str(int(subj)))
+
+
+def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
+         model=False):
+    colors = ['k', 'darkred', 'darkorange', 'gold']
+    index_1 = (sound_len <= 300)*(sound_len > 0)
+    sound_len = sound_len[index_1]
+    coh = coh[index_1]
+    ev_vals = np.unique(np.abs(coh))
+    for i, ev in enumerate(ev_vals):
+        if f5:
+            if ev == 0 or ev == 1:
+                index = ev == np.abs(coh)
+                hist_data, bins = np.histogram(sound_len[index], bins=200)
+                cdf_vals = np.cumsum(hist_data)/np.sum(hist_data)
+                xvals = bins[:-1]+(bins[1]-bins[0])/2
+                if model:
+                    x_interp = np.arange(0, 300, 10)
+                    cdf_vals_interp = np.interp(x_interp, xvals, cdf_vals)
+                    ax.plot(x_interp, cdf_vals_interp,
+                            label=str(ev) + ' ' + label_title,
+                            color=colors[i], linewidth=2, linestyle=linestyle)
+                else:
+                    ax.plot(xvals, cdf_vals,
+                            label=str(ev) + ' ' + label_title,
+                            color=colors[i], linewidth=2, linestyle=linestyle)
+        else:
+            index = ev == np.abs(coh)
+            hist_data, bins = np.histogram(sound_len[index], bins=200)
+            ax.plot(bins[:-1]+(bins[1]-bins[0])/2,
+                    np.cumsum(hist_data)/np.sum(hist_data),
+                    label=str(ev) + ' ' + label_title,
+                    color=colors[i], linewidth=2, linestyle=linestyle)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('CDF')
+    ax.set_xlim(-1, 152)
+    ax.legend(title='Coherence')
+    ax.set_title(str(title))
