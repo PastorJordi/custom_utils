@@ -113,11 +113,11 @@ def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
 
 
 def rmse_fitting(res_path='C:/Users/Alexandre/Desktop/CRM/Results_LE38/',
-            results=False,
-            detected_com=None, first_ind=None, p_t_eff=None,
-            data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
-            metrics='mse', objective='curve', bin_size=30, det_th=8,
-            plot=False, stim_res=5):
+                 results=False,
+                 detected_com=None, first_ind=None, p_t_eff=None,
+                 data_path='C:/Users/Alexandre/Desktop/CRM/results_simul/',
+                 metrics='mse', objective='curve', bin_size=30, det_th=8,
+                 plot=False, stim_res=5):
     data_mat = np.load(data_path + 'CoM_vs_prior_and_stim.npy')
     data_mat_norm = data_mat / np.nanmax(data_mat)
     data_curve = pd.read_csv(data_path + 'pcom_vs_rt.csv')
@@ -667,13 +667,15 @@ def prob_rt_fb_action(t, v_a, t_a, bound_a):
         np.exp(- ((v_a**2)*((t-t_a) - bound_a/v_a)**2)/(2*(t-t_a)))
 
 
-def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps):
+def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     v_a = theta_fb[:, 8]*theta_fb[:, -1] + theta_fb[:, 7]
-    v_a = v_a.detach().numpy()
+    v_a = v_a.detach().numpy()/dt
     bound_a = theta_fb[:, 9].detach().numpy()
-    t_a = 5*theta_fb[:, 6].detach().numpy()
-    t = rt_fb
+    t_a = dt*(theta_fb[:, 6] + theta_fb[:, 5]).detach().numpy()
+    t = rt_fb*1e-3
     prob = prob_rt_fb_action(t=t, v_a=v_a, t_a=t_a, bound_a=bound_a)
+    if np.isnan(prob):
+        prob = 0
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
@@ -696,6 +698,10 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
         x_o[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
     theta_no_fb = torch.tensor(
         theta.detach().numpy()[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
+    theta_no_fb[:, 14] += theta_no_fb[:, 15]*theta_no_fb[:, -1]
+    theta_no_fb[:, 7] += theta_no_fb[:, 8]*theta_no_fb[:, -1]
+    theta_no_fb = torch.column_stack((theta_no_fb[:, :8],
+                                      theta_no_fb[:, 9:15]))
     log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb).detach().numpy()
     log_liks = np.exp(log_liks)*(1-eps) + eps*CTE
     log_liks = np.log(log_liks)
@@ -752,7 +758,31 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, max_it=5):
             x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
         x = torch.cat((x, x_temp))
     x = x.to(torch.float32)
+    # np.save(SV_FOLDER + 'simul_mnle_{}.npy'.format(i_t+1), x.detach().numpy())
     return x
+
+
+def theta_for_lh_plot():
+    p_t_aff = 5
+    p_t_eff = 4
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.5
+    p_w_stim = 0.14
+    p_e_bound = 2.
+    p_com_bound = 0.1
+    p_w_a_intercept = 0.056
+    p_w_a_slope = 2e-5
+    p_a_bound = 2.6
+    p_1st_readout = 40
+    p_2nd_readout = 80
+    p_leak = 0.5
+    p_mt_noise = 20
+    p_MT_intercept = 320
+    p_MT_slope = 0.07
+    return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+            p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+            p_MT_intercept, p_MT_slope]
 
 
 def get_x0():
@@ -974,6 +1004,10 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         theta_all_inp = theta_all_inp.to(torch.float32)
         # simulate
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+        theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
+        theta_all_inp[:, 7] += theta_all_inp[:, 8]*theta_all_inp[:, -1]
+        theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
+                                            theta_all_inp[:, 9:15]))
         coh = []
         zt = []
         trial_index = []
@@ -1085,34 +1119,34 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
     if simulate:
-        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                        [400, 400, 400, 400, 10, 800]):
-            stim = np.array(
-                [stim for stim in df.res_sound])[df.coh2.values == 0.5][0]
-            theta = get_x0()
-            theta = torch.reshape(torch.tensor(theta),
-                                  (1, len(theta))).to(torch.float32)
-            theta = theta.repeat(num_simulations, 1)
-            stim = np.array(
-                [np.concatenate((stim, stim)) for i in range(len(theta))])
-            trial_index = np.repeat(tival, len(theta))
-            x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                                     zt=np.repeat(ztval, len(theta)),
-                                     coh=np.repeat(cohval, len(theta)),
-                                     trial_index=trial_index)
-            np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
-                    .format(cohval, ztval, tival), x)
-            # let's compute prob for each bin
-            mat_0 = matrix_probs(x[x[:, 2] == 0])
-            mat_1 = matrix_probs(x[x[:, 2] == 1])
-            np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
-                    .format(cohval, ztval, tival), mat_0)
-            np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
-                    .format(cohval, ztval, tival), mat_1)
-            x = []
-            mat_0 = []
-            mat_1 = []
+        # for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+        #                                 [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+        #                                 [400, 400, 400, 400, 10, 800]):
+        stim = np.array(
+            [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+        theta = get_x0()
+        theta = torch.reshape(torch.tensor(theta),
+                              (1, len(theta))).to(torch.float32)
+        theta = theta.repeat(num_simulations, 1)
+        stim = np.array(
+            [np.concatenate((stim, stim)) for i in range(len(theta))])
+        trial_index = np.repeat(tival, len(theta))
+        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                 zt=np.repeat(ztval, len(theta)),
+                                 coh=np.repeat(cohval, len(theta)),
+                                 trial_index=trial_index)
+        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                .format(cohval, ztval, tival), x)
+        # let's compute prob for each bin
+        mat_0 = matrix_probs(x[x[:, 2] == 0])
+        mat_1 = matrix_probs(x[x[:, 2] == 1])
+        np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+                .format(cohval, ztval, tival), mat_0)
+        np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+                .format(cohval, ztval, tival), mat_1)
+        x = []
+        mat_0 = []
+        mat_1 = []
     else:
         trial_index = np.repeat(tival, num_simulations)
         mat_0 = np.load(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
@@ -1138,7 +1172,7 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
             with open(SV_FOLDER + "/mnle_n{}.p".format(n_sim_train), 'rb') as f:
                 estimator = pickle.load(f)
             estimator = estimator['estimator']
-            theta = get_x0()
+            theta = theta_for_lh_plot()
             theta = torch.reshape(torch.tensor(theta),
                                   (1, len(theta))).to(torch.float32)
             theta = theta.repeat(len(x_o), 1)

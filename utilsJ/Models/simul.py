@@ -252,10 +252,10 @@ def when_did_split_simul(
         matlist[i] = matlist[i][~np.isnan(matlist[i]).all(axis=1)]
     mata, matb = matlist
 
-    ind = get_when_t(mata, matb, startfrom=0)
+    # ind = get_when_t(mata, matb, startfrom=0)
 
     if return_mats:
-        print(ind)
+        # print(ind)
         return mata, matb
 
     if ax is not None:
@@ -263,7 +263,7 @@ def when_did_split_simul(
         ax.plot(np.nanmean(matb, axis=0), **plot_kwargs, ls=':')
         # ax.scatter(ind, np.nanmedian(mata[:, ind]), marker='x',
         #            color=plot_kwargs['color'], s=50, zorder=3)
-    return ind, mata, matb
+    return None, mata, matb
 
 
 def whole_splitting(df, rtbins=np.arange(0, 151, 25), simul=False, ax=None,
