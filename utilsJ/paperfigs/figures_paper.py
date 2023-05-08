@@ -3486,6 +3486,9 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
+    xvals = []
+    for irtb, rtb in enumerate(rtbins[:-1]):
+        xvals.append(rtb*0.5 + rtbins[irtb+1]*0.5)
     # xplot = rtbins[:-1] + np.diff(rtbins)/2
     out_data = np.array(out_data).reshape(np.unique(subjects).size,
                                           rtbins.size-1, -1)
@@ -3496,22 +3499,22 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     # fig2, ax2 = plt.subplots(1)
     for i in range(len(np.unique(subjects))):
         for j in range(out_data.shape[2]):
-            ax2.plot(rtbins[:-1],
+            ax2.plot(xvals,
                      out_data[:, i, j],
                      marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                      mew=1, color=(.6, .6, .6, .3))
     error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='firebrick', marker='o', label='mean & SEM')
-    ax2.errorbar(rtbins[:-1],
+    ax2.errorbar(xvals,
                  np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
                  yerr=sem(out_data.reshape(rtbins.size-1, -1),
-                 axis=1, nan_policy='omit'), **error_kws)
+                          axis=1, nan_policy='omit'), **error_kws)
     ax2.set_xlabel('RT (ms)')
     ax2.set_title('Impact of stimulus', fontsize=9)
     # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
     # ax2.set_ylim(190, 410)
-    ax2.plot([0, 250], [0, 250], color='k')
-    ax2.fill_between([0, 250], [0, 250], [0, 0],
+    ax2.plot([0, 310], [0, 310], color='k')
+    ax2.fill_between([0, 310], [0, 310], [0, 0],
                      color='grey', alpha=0.6)
     ax2.set_ylabel('Splitting time (ms)')
     rm_top_right_lines(ax2)
@@ -4719,11 +4722,11 @@ def plot_rt_sim(df_sim):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
     f5 = False
-    f6 = False
+    f6 = True
     f7 = False
     com_threshold = 8
     if f1 or f2 or f3 or f5:
@@ -4907,7 +4910,7 @@ if __name__ == '__main__':
     if f6:
         print('Plotting Figure 6')
         # human traj plots
-        fig_humans_6(user_id='Alex', sv_folder=SV_FOLDER, max_mt=600,
+        fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=600,
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
