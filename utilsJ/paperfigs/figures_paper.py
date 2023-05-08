@@ -421,23 +421,6 @@ def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.01, marginy=0.05,
     return ax_inset
 
 
-def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
-                      accel=False):
-    """median position and velocity in silent trials splitting by prior"""
-    # TODO: adapt for mean + sem
-    df_43 = df.loc[df.subjid == 'LE43']
-    ax_zt = ax[0]
-    ax_cohs = ax[1]
-    ax_ti = ax[2]
-    plots_trajs_conditioned(df=df_43.loc[df_43.special_trial == 2],
-                                  ax=ax_zt, condition='choice_x_prior',
-                                  prior_limit=1, cmap='copper')
-    plots_trajs_conditioned(df=df_43, ax=ax_cohs, condition='choice_x_coh',
-                                  cmap='coolwarm')
-    plots_trajs_conditioned(df=df_43, ax=ax_ti, condition='origidx',
-                                  cmap='jet', prior_limit=1)
-
-
 def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit=1,
                   after_correct_only=True, rt_lim=300,
                   trajectory='trajectory_y',
@@ -799,48 +782,6 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
     return np.nan
 
 
-def get_when_t(a, b, startfrom=700, tot_iter=1000, pval=0.01, nan_policy="omit"):
-    """a and b are traj matrices.
-    returns ms after motor onset when they split
-    startfrom: matrix index to start from (should be 0th position in ms
-    tot_iter= remaining)
-    if ax, it plots medians + splittime"""
-    # n = 0
-    # plist = []
-    for i in range(tot_iter):
-        pop_a = a[:, startfrom + i]
-        pop_b = b[:, startfrom + i]
-        _, p2 = ttest_ind(pop_a, pop_b, nan_policy=nan_policy)
-        # plist.append(p2)
-        if p2 < pval:
-            return i
-
-
-def traj_offset_computation(df, rtbin=0, rtbins=np.linspace(0, 400, 2),
-                            subject='LE37', startfrom=700):
-    subject = subject
-    lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
-    colors = pl.cm.gist_yarg(np.linspace(0.4, 1, 3))
-    mat0 = np.empty((1701,))
-    mat1 = np.empty((1701,))
-    fig, ax = plt.subplots(1)
-    indx = (df.special_trial == 0) & (df.subjid == subject)
-    if np.sum(indx) > 0:
-        _, mat0, _ =\
-            simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=False,
-                                     ax=ax, rtbin=rtbin, rtbins=rtbins,
-                                     color=colors[2], label=lbl, coh1=1)
-        _, mat1, _ =\
-            simul.when_did_split_dat(df=df[indx], side=1, collapse_sides=False,
-                                     ax=ax, rtbin=rtbin, rtbins=rtbins,
-                                     color=colors[2], label=lbl, coh1=1)
-    ind = get_when_t(a=mat0, b=mat1, pval=0.001)
-    if ax is not None:
-        ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
-        ax.set_xlim(-170, 355)
-    return ind
-
-
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                     subject='LE37', startfrom=700, xlab=False):
     """
@@ -1164,41 +1105,6 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     ax.set_ylabel('Splitting time (ms)')
     ax.set_title('Impact of stimulus', fontsize=9)
     plt.show()
-# 3d histogram-like*?
-
-
-def fig3_b(trajectories, motor_time, decision, com, coh, sound_len, traj_stamps,
-           fix_onset, fixation_us=300000):
-    'mean velocity and position for all trials'
-    # interpolatespace = np.linspace(-700000, 1000000, 1701)
-    ind_nocom = (~com.astype(bool))
-    # *(motor_time < 400)*(np.abs(coh) == 1) *\
-    #     (motor_time > 300)
-    mean_position_array = np.empty((len(motor_time[ind_nocom]),
-                                    max(motor_time)))
-    mean_position_array[:] = np.nan
-    mean_velocity_array = np.empty((len(motor_time[ind_nocom]), max(motor_time)))
-    mean_velocity_array[:] = np.nan
-    for i, traj in enumerate(trajectories[ind_nocom]):
-        xvec = traj_stamps[i] - np.datetime64(fix_onset[i])
-        xvec = (xvec -
-                np.timedelta64(int(fixation_us + (sound_len[i]*1e3)),
-                               "us")).astype(float)
-        # yvec = traj
-        # f = interpolate.interp1d(xvec, yvec, bounds_error=False)
-        # out = f(interpolatespace)
-        vel = np.diff(traj)
-        mean_position_array[i, :len(traj)] = -traj*decision[i]
-        mean_velocity_array[i, :len(vel)] = -vel*decision[i]
-    mean_pos = np.nanmean(mean_position_array, axis=0)
-    mean_vel = np.nanmean(mean_velocity_array, axis=0)
-    std_pos = np.nanstd(mean_position_array, axis=0)
-    fig, ax = plt.subplots(nrows=2)
-    ax = ax.flatten()
-    ax[0].plot(mean_pos)
-    ax[0].fill_between(np.arange(len(mean_pos)), mean_pos + std_pos,
-                       mean_pos - std_pos, alpha=0.4)
-    ax[1].plot(mean_vel)
 
 
 def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
@@ -4165,15 +4071,6 @@ def supp_com_threshold_matrices(df):
 
 
 def check_traj_decision(df):
-    # plt.figure()
-    # for j in range(200):
-    #     inde = np.random.randint(1e5)
-    #     if df.R_response.values[inde] > 0:
-    #         color = 'red'
-    #     else:
-    #         color = 'blue'
-    #     plt.plot(df.time_trajs.values[inde], df.trajectory_y.values[inde],
-    #              color=color)
     incongruent = []
     absurd_trajs = []
     n = len(df.R_response.values)
@@ -4515,11 +4412,11 @@ def plot_trajs_dep_trial_index(df):
         rm_top_right_lines(a)
     ax_ti = [ax[1], ax[0], ax[3], ax[2]]
     plots_trajs_conditioned(df, ax_ti, condition='origidx', cmap='jet',
-                                  prior_limit=1, rt_lim=300,
-                                  after_correct_only=True,
-                                  trajectory="trajectory_y",
-                                  velocity=("traj_d1", 1),
-                                  acceleration=('traj_d2', 1), accel=False)
+                            prior_limit=1, rt_lim=300,
+                            after_correct_only=True,
+                            trajectory="trajectory_y",
+                            velocity=("traj_d1", 1),
+                            acceleration=('traj_d2', 1), accel=False)
 
 
 def plot_rt_sim(df_sim):
