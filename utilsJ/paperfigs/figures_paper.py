@@ -573,7 +573,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
-        traj_data = DATA_FOLDER+subj+'/traj_data/'+subj+'_traj_pos_'+condition+'.csv'
+        traj_data = DATA_FOLDER+subj+'/traj_data/'+subj+'_traj_pos_'+condition+'.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(traj_data), exist_ok=True)
         if os.path.exists(traj_data):
@@ -698,7 +698,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
-        traj_data = DATA_FOLDER + subj + '/traj_data/' + subj + '_traj_vel_'+condition+'.csv'
+        traj_data = DATA_FOLDER + subj + '/traj_data/' + subj + '_traj_vel_'+condition+'.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(traj_data), exist_ok=True)
         if os.path.exists(traj_data):
