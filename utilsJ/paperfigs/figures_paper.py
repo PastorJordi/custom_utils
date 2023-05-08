@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
-import sys
+import sys, os
 from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
@@ -540,7 +540,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         mean_mt_silent = np.nanmean(mt[df.special_trial == 2])
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
-    if condition == 'prior_x_coh':
+    if condition == 'prior_x_coh':  # FIXME: this name is missleading 
         bins_zt = [-1.01]
         for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
             if i_p > 2:
@@ -573,14 +573,24 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
-        xpoints, _, _, mat, _, mt_time =\
-            trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
-                           condition, bins,
-                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap=cmap, bintype=bintype,
-                           trajectory=trajectory, plotmt=True, alpha_low=False)
-        mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+        traj_data = DATA_FOLDER+subj+'/traj_data/'+subj+'_traj_pos_'+condition+'.csv'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data):
+            traj_data = np.load(traj_data, allow_pickle=True)
+            mean_traj = traj_data['mean_traj']
+            xpoints = traj_data['xpoints']
+            mt_time = traj_data['mt_time']
+        else:
+            xpoints, _, _, mat, _, mt_time =\
+                trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                               condition, bins, collapse_sides=True, thr=30,
+                               ax=None, ax_traj=None, return_trash=True,
+                               error_kwargs=dict(marker='o'), cmap=cmap, bintype=bintype,
+                               trajectory=trajectory, plotmt=True, alpha_low=False)
+            mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+            data = {'xpoints': xpoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
+            np.savez(traj_data, **data)
         mat_all[:, :, i_subj] = mean_traj
         mt_all[:, i_subj] = mt_time
     all_trajs = np.nanmean(mat_all, axis=2)
@@ -594,33 +604,22 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                            alpha=0.5)
         if len(subjects) > 1:
             c = colormap[i_tr]
-            xp = np.repeat(xpoints[i_tr], len(subjects))
+            xp = [xpoints[i_tr]]
             ax[0].boxplot(mt_all[i_tr, :], positions=xp, 
-                          boxprops=dict(facecolor=c, color=c))
+                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
             ax[0].plot(xp + np.random.randn(len(subjects)),
-                       mt_all[i_tr, :], color=colormap[i_tr])
+                       mt_all[i_tr, :], color=colormap[i_tr], marker='o')
         else:
             ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
-
     if condition == 'choice_x_coh':
-        # ax[1].legend(labels=['-1', '', '', '0', '', '', '1'],
-        #              title='Stimulus \n evidence', loc='upper left',
-        #              fontsize=6)
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
-                                 label='-1'),
-                          Line2D([0], [0], color=colormap[1], lw=2,
-                                 label=''),
-                          Line2D([0], [0], color=colormap[2], lw=2,
-                                 label=''),
-                          Line2D([0], [0], color=colormap[3], lw=2,
-                                 label='0'),
-                          Line2D([0], [0], color=colormap[4], lw=2,
-                                 label=''),
-                          Line2D([0], [0], color=colormap[5], lw=2,
-                                 label=''),
-                          Line2D([0], [0], color=colormap[6], lw=2,
-                                 label='1')]
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
+                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[3], lw=2, label='0'),
+                          Line2D([0], [0], color=colormap[4], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[5], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[6], lw=2, label='1')]
         ax[1].legend(handles=legendelements, title='Stimulus \n evidence',
                      loc='upper left', fontsize=7)
         ax[0].set_yticklabels('')
@@ -699,14 +698,25 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
-        xpoints, ypoints, _, mat, _, mt_time =\
-            trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
-                           condition, bins,
-                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap=cmap, bintype=bintype,
-                           trajectory=velocity, plotmt=True, alpha_low=False)
-        mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+        traj_data = DATA_FOLDER + subj + '/traj_data/' + subj + '_traj_vel_'+condition+'.csv'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data):
+            traj_data = np.load(traj_data, allow_pickle=True)
+            mean_traj = traj_data['mean_traj']
+            xpoints = traj_data['xpoints']
+            mt_time = traj_data['mt_time']
+        else:
+            xpoints, ypoints, _, mat, _, mt_time =\
+                trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                               condition, bins,
+                               collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                               return_trash=True, error_kwargs=dict(marker='o'),
+                               cmap=cmap, bintype=bintype,
+                               trajectory=velocity, plotmt=True, alpha_low=False)
+            mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+            data = {'xpoints': xpoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
+            np.savez(traj_data, **data)
         mat_all[:, :, i_subj] = mean_traj
         mt_all[:, i_subj] = ypoints
     all_trajs = np.nanmean(mat_all, axis=2)
@@ -719,9 +729,10 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
         if len(subjects) > 1:
+            xp = [xpoints[i_tr]]
             c = colormap[i_tr]
-            ax[2].boxplot(xpoints[i_tr], mt_all[i_tr, :],
-                          boxprops=dict(facecolor=c, color=c))
+            ax[2].boxplot(mt_all[i_tr, :], positions=xp, 
+                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
             ax[2].plot(xpoints[i_tr] + np.random.randn(len(subjects)),
                        mt_all[i_tr, :], color=colormap[i_tr])
         else:
@@ -1184,7 +1195,7 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
     ax.set_title('Impact of stimulus', fontsize=9)
-    # plt.show()
+    plt.show()
 # 3d histogram-like*?
 
 
@@ -1412,8 +1423,6 @@ def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
     ax.text(x, y, letter, transform=ax.transAxes, fontsize=fontsize,
                  fontweight='bold', va='top', ha='right')
 
-def test():
-    print('test')
 
 def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     mat_pright_all = np.zeros((7, 7))
@@ -4714,7 +4723,7 @@ def plot_rt_sim(df_sim):
                                    (df_sim.subjid == subj), 'sound_len'],
                         color=colormap[iev], ax=ax[isub])
 
-
+# XXX: MAIN
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -4732,7 +4741,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE36', 'LE39', 'LE47']
+            # subjects = ['LE37', 'LE36', 'LE39', 'LE47']
             # subjects = ['LE46']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
