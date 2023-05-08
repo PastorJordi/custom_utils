@@ -908,43 +908,11 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     # plt.show()
 
 
-def pCoM_vs_coh(df):
-    """
-    It computes the pCoM vs the coherence
-    """
-    ev_vals = np.sort(np.abs(df.coh2.unique()))  # unique absolute value coh values
-    all_pcom_coh = np.zeros((len(df.subjid.unique()), len(ev_vals)+1))
-    for i, subj in enumerate(df.subjid.unique()):
-        df_sub = df.loc[df.subjid == subj]
-        # separating silent from nonsilent
-        silent = df_sub.loc[df_sub.special_trial == 2]
-        nonsilent = df_sub.loc[df_sub.special_trial == 0]
-        pcom_coh = []  # np.mean(silent.CoM_sugg)
-        num = np.array([len(silent)])
-        for ev in ev_vals:  # for each coherence, a pCoM for each subject
-            index = np.abs(nonsilent.coh2) == ev
-            pcom_coh.append(np.nanmean(nonsilent.CoM_sugg[index]))
-            num = np.concatenate([num, np.array([sum(index)])])
-        all_pcom_coh[i, 1::] = np.array(pcom_coh)
-        all_pcom_coh[i, 0] = np.nanmean(silent.CoM_sugg)
-    all_pcom_coh_sd = np.nanstd(all_pcom_coh, axis=0)/np.sqrt(num)
-    all_pcom_coh_mn = np.nanmean(all_pcom_coh, axis=0)
-    plt.figure()
-    ev_vals_sil = np.concatenate([np.array([-0.25]), ev_vals])
-    plt.errorbar(ev_vals, all_pcom_coh_mn[1::],
-                 yerr=all_pcom_coh_sd[1::], color='b')
-    plt.errorbar(-0.25, all_pcom_coh_mn[0],
-                 yerr=all_pcom_coh_sd[0], color='b')
-    plt.xticks(ticks=ev_vals_sil, labels=(['silent'] + list(ev_vals)))
-    plt.xlabel('coh')
-    plt.ylabel('pCoM')
-
-
-def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
-                          sim=False,
-                          rtbins=np.linspace(0, 150, 16), connect_points=False,
-                          draw_line=((0, 90), (90, 0)),
-                          trajectory="trajectory_y"):
+def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
+                         sim=False,
+                         rtbins=np.linspace(0, 150, 16), connect_points=False,
+                         draw_line=((0, 90), (90, 0)),
+                         trajectory="trajectory_y"):
 
     # split time/subject by coherence
     # threshold= bigger than that are turned to nan so it doesnt break figure range
@@ -1091,28 +1059,6 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
     return ax.get_position()
 
 
-def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
-                            pro_vs_re=None):
-    rm_top_right_lines(ax)
-    if label == 'Data':
-        color = 'k'
-    if label == 'Model':
-        color = 'red'
-        color_pro = 'coral'
-        color_re = 'maroon'
-        sound_len_pro = sound_len[pro_vs_re == 0]
-        sound_len_re = sound_len[pro_vs_re == 1]
-        ax.hist(sound_len_pro, bins=bins, alpha=0.3, density=False, linewidth=0.,
-                histtype='stepfilled', label=label + '-pro', color=color_pro)
-        ax.hist(sound_len_re, bins=bins, alpha=0.3, density=False, linewidth=0.,
-                histtype='stepfilled', label=label + '-reac', color=color_re)
-    ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
-            histtype='stepfilled', label=label, color=color)
-    ax.set_xlabel("RT (ms)")
-    ax.set_ylabel('Frequency')
-    # ax.set_xlim(0, max(bins))
-
-
 def pdf_cohs(df, ax, bins=np.linspace(0, 200, 41), yaxis=True):
     # ev_vals = np.unique(np.abs(coh))
     sound_len = df.sound_len.values
@@ -1158,33 +1104,6 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
                 color=colormap[iev])
     ax.set_ylabel('RT density')
     ax.set_xlabel('Reaction time (ms)')
-
-
-def stimulus_reversals_vs_com(df):
-    sound_len = df.sound_len.values
-    idx = sound_len > 100
-    sound_len = sound_len[idx]
-    stim = np.array([stim for stim in df.res_sound[idx]])
-    com = df.CoM_sugg.values[idx]
-    rev_list = []
-    rev_list_nocom = []
-    for i_rt, rt in enumerate(sound_len):
-        vals = stim[i_rt][:int(rt//50 + 1)]
-        if sum(np.abs(np.diff(np.sign(vals)))) > 0:
-            if com[i_rt]:
-                rev_list.append(True)
-            if not com[i_rt]:
-                rev_list_nocom.append(True)
-        else:
-            if com[i_rt]:
-                rev_list.append(False)
-            if not com[i_rt]:
-                rev_list_nocom.append(False)
-    print('RT > 100 ms')
-    print('Stimulus reversals in CoM trials: {} %'
-          .format(round(np.mean(rev_list), 3)*100))
-    print('Stimulus reversals in NO-CoM trials: {} %'
-          .format(round(np.mean(rev_list_nocom), 3)*100))
 
 
 # function to add letters to panel
@@ -1655,7 +1574,7 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     # traj splitting prior
     trajs_splitting_prior(df=df, ax=ax[14])
     # traj splitting ev
-    trajs_splitting_point(df=df, ax=ax[13], connect_points=True)
+    trajs_splitting_stim(df=df, ax=ax[13], connect_points=True)
     mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
                        rt_bin=60, collapse_sides=True)
     plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
@@ -1684,7 +1603,7 @@ def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
                             prior_limit=1, cmap='copper')
     # splits
     mt_weights(df, ax=ax[3], plot=True, means_errs=False)
-    trajs_splitting_point(df=df, ax=ax[7])
+    trajs_splitting_stim(df=df, ax=ax[7])
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -2282,7 +2201,7 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
                             median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1))
-    trajs_splitting_point(df_sim, ax=ax[8], collapse_sides=True, threshold=500,
+    trajs_splitting_stim(df_sim, ax=ax[8], collapse_sides=True, threshold=500,
                           sim=True,
                           rtbins=np.linspace(0, 150, 16), connect_points=True,
                           draw_line=((0, 90), (90, 0)),

@@ -446,3 +446,82 @@ def cdfs(coh, sound_len, ax, f5, title='', linestyle='solid', label_title='',
     ax.set_xlim(-1, 152)
     ax.legend(title='Coherence')
     ax.set_title(str(title))
+
+
+def stimulus_reversals_vs_com(df):
+    sound_len = df.sound_len.values
+    idx = sound_len > 100
+    sound_len = sound_len[idx]
+    stim = np.array([stim for stim in df.res_sound[idx]])
+    com = df.CoM_sugg.values[idx]
+    rev_list = []
+    rev_list_nocom = []
+    for i_rt, rt in enumerate(sound_len):
+        vals = stim[i_rt][:int(rt//50 + 1)]
+        if sum(np.abs(np.diff(np.sign(vals)))) > 0:
+            if com[i_rt]:
+                rev_list.append(True)
+            if not com[i_rt]:
+                rev_list_nocom.append(True)
+        else:
+            if com[i_rt]:
+                rev_list.append(False)
+            if not com[i_rt]:
+                rev_list_nocom.append(False)
+    print('RT > 100 ms')
+    print('Stimulus reversals in CoM trials: {} %'
+          .format(round(np.mean(rev_list), 3)*100))
+    print('Stimulus reversals in NO-CoM trials: {} %'
+          .format(round(np.mean(rev_list_nocom), 3)*100))
+
+
+def reaction_time_histogram(sound_len, label, ax, bins=np.linspace(1, 301, 61),
+                            pro_vs_re=None):
+    if label == 'Data':
+        color = 'k'
+    if label == 'Model':
+        color = 'red'
+        color_pro = 'coral'
+        color_re = 'maroon'
+        sound_len_pro = sound_len[pro_vs_re == 0]
+        sound_len_re = sound_len[pro_vs_re == 1]
+        ax.hist(sound_len_pro, bins=bins, alpha=0.3, density=False, linewidth=0.,
+                histtype='stepfilled', label=label + '-pro', color=color_pro)
+        ax.hist(sound_len_re, bins=bins, alpha=0.3, density=False, linewidth=0.,
+                histtype='stepfilled', label=label + '-reac', color=color_re)
+    ax.hist(sound_len, bins=bins, alpha=0.3, density=False, linewidth=0.,
+            histtype='stepfilled', label=label, color=color)
+    ax.set_xlabel("RT (ms)")
+    ax.set_ylabel('Frequency')
+
+
+def pCoM_vs_coh(df):
+    """
+    It computes the pCoM vs the coherence
+    """
+    ev_vals = np.sort(np.abs(df.coh2.unique()))  # unique absolute value coh values
+    all_pcom_coh = np.zeros((len(df.subjid.unique()), len(ev_vals)+1))
+    for i, subj in enumerate(df.subjid.unique()):
+        df_sub = df.loc[df.subjid == subj]
+        # separating silent from nonsilent
+        silent = df_sub.loc[df_sub.special_trial == 2]
+        nonsilent = df_sub.loc[df_sub.special_trial == 0]
+        pcom_coh = []  # np.mean(silent.CoM_sugg)
+        num = np.array([len(silent)])
+        for ev in ev_vals:  # for each coherence, a pCoM for each subject
+            index = np.abs(nonsilent.coh2) == ev
+            pcom_coh.append(np.nanmean(nonsilent.CoM_sugg[index]))
+            num = np.concatenate([num, np.array([sum(index)])])
+        all_pcom_coh[i, 1::] = np.array(pcom_coh)
+        all_pcom_coh[i, 0] = np.nanmean(silent.CoM_sugg)
+    all_pcom_coh_sd = np.nanstd(all_pcom_coh, axis=0)/np.sqrt(num)
+    all_pcom_coh_mn = np.nanmean(all_pcom_coh, axis=0)
+    plt.figure()
+    ev_vals_sil = np.concatenate([np.array([-0.25]), ev_vals])
+    plt.errorbar(ev_vals, all_pcom_coh_mn[1::],
+                 yerr=all_pcom_coh_sd[1::], color='b')
+    plt.errorbar(-0.25, all_pcom_coh_mn[0],
+                 yerr=all_pcom_coh_sd[0], color='b')
+    plt.xticks(ticks=ev_vals_sil, labels=(['silent'] + list(ev_vals)))
+    plt.xlabel('coh')
+    plt.ylabel('pCoM')
