@@ -514,7 +514,7 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
 
     # position
-    subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
+    subjects = df['subjid'].unique()
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
@@ -552,8 +552,9 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
             xp = [xpoints[i_tr]]
             ax[0].boxplot(mt_all[i_tr, :], positions=xp, 
                           boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[0].plot(xp + np.random.randn(len(subjects)),
-                       mt_all[i_tr, :], color=colormap[i_tr], marker='o')
+            ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
+                       linestyle='None')
         else:
             ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
@@ -660,10 +661,11 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         if len(subjects) > 1:
             xp = [xpoints[i_tr]]
             c = colormap[i_tr]
-            ax[2].boxplot(mt_all[i_tr, :], positions=xp, 
+            ax[2].boxplot(mt_all[i_tr, :], positions=xp,
                           boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[2].plot(xpoints[i_tr] + np.random.randn(len(subjects)),
-                       mt_all[i_tr, :], color=colormap[i_tr])
+            ax[2].plot(xpoints[i_tr] + 0.1*np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
+                       linestyle='None')
         else:
             ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
