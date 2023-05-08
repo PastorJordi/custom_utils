@@ -663,11 +663,13 @@ def get_log_likelihood_fb_nn(rt_fb, theta_fb, estimator, min_prob=1e-30, binsize
 
 
 def prob_rt_fb_action(t, v_a, t_a, bound_a):
+    # returns p(RT | theta) for RT < 0
     return (bound_a / np.sqrt(2*np.pi*(t - t_a)**3)) *\
         np.exp(- ((v_a**2)*((t-t_a) - bound_a/v_a)**2)/(2*(t-t_a)))
 
 
 def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
+    # returns -LLH ( RT | theta ) for RT < 0
     v_a = theta_fb[:, 8]*theta_fb[:, -1] + theta_fb[:, 7]
     v_a = v_a.detach().numpy()/dt
     bound_a = theta_fb[:, 9].detach().numpy()
@@ -694,6 +696,7 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
     theta = torch.column_stack((theta, t_i))
     x_o = x_o[:n_trials].detach().numpy()
     # trials with RT >= 0
+    # we have to pass the same parameters as for the training (14 columns)
     x_o_no_fb = torch.tensor(
         x_o[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
     theta_no_fb = torch.tensor(
@@ -705,15 +708,14 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
     log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb).detach().numpy()
     log_liks = np.exp(log_liks)*(1-eps) + eps*CTE
     log_liks = np.log(log_liks)
-    log_liks_no_fb = -np.nansum(log_liks)
+    log_liks_no_fb = -np.nansum(log_liks)  # -LLH (data | theta) for RT > 0
     # trials with RT < 0
+    # we use the analytical computation of p(RT | parameters) for FB
     x_o_with_fb = x_o[np.isnan(x_o).sum(axis=1) > 0, :]
     theta_fb = theta[np.isnan(x_o).sum(axis=1) > 0, :]
-    # log_liks_fb = get_log_likelihood_fb_nn(rt_fb=x_o_with_fb[:, 1],
-    #                                        theta_fb=theta_fb, estimator=estimator,
-    #                                        binsize=binsize)
     log_liks_fb = get_log_likelihood_fb_psiam(rt_fb=x_o_with_fb[:, 1],
                                               theta_fb=theta_fb, eps=eps)
+    # returns -LLH (data (RT > 0) | theta) + -LLH (data (RT < 0) | theta)
     return log_liks_fb + log_liks_no_fb
 
 
@@ -986,11 +988,6 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         choice = []
         rt = []
         mt = []
-        # data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
-        #                            torch.tensor(trial_index.astype(float)),
-        #                            x_o))
-        # data = data.to(torch.float32)
-        # data = data[:n_trials, :]
         print('Data preprocessed, building prior distros')
         # build prior
         prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
@@ -1041,6 +1038,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         ub = get_ub()
         pub = get_pub()
         plb = get_plb()
+        # get fixation break (FB) data
         print('Preparing FB data')
         coh_vec = df.coh2.values
         dwl_vec = df.dW_lat.values
@@ -1070,8 +1068,12 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         data = data[np.round(rt_vec) > -250, :]
         print('Optimizing')
         n_trials = len(data)
+        # define fun_target as function to optimize
+        # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
+        # define optimizer (BADS)
         bads = BADS(fun_target, x0, lb, ub, plb, pub)
+        # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
         return optimize_result.x

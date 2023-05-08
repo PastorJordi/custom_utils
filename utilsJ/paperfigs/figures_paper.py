@@ -681,13 +681,13 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
     # backwards in time
     # mat: trajectories (n trials x time)
     plist = []
-    for i in reversed(range(max_MT)):
+    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = evl[nan_idx]
         pop_a = pop_a[nan_idx]
         try:
-            _, p2 = pearsonr(pop_a, pop_evidence)
+            _, p2 = pearsonr(pop_a, pop_evidence)  # pvalue from pearson corr
             plist.append(p2)
         except Exception:
             continue
@@ -2149,10 +2149,10 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1))
     trajs_splitting_stim(df_sim, ax=ax[8], collapse_sides=True, threshold=500,
-                          sim=True,
-                          rtbins=np.linspace(0, 150, 16), connect_points=True,
-                          draw_line=((0, 90), (90, 0)),
-                          trajectory="trajectory_y")
+                         sim=True,
+                         rtbins=np.linspace(0, 150, 16), connect_points=True,
+                         draw_line=((0, 90), (90, 0)),
+                         trajectory="trajectory_y")
     mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
