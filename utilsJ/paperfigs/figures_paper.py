@@ -372,6 +372,7 @@ def tachometrics_data_and_model(coh, hit_history_model, hit_history_data,
 
 def add_inset(ax, inset_sz=0.2, fgsz=(4, 8), marginx=0.01, marginy=0.05,
               right=True):
+    # adds inset to an axis
     ratio = fgsz[0]/fgsz[1]
     pos = ax.get_position()
     ax_inset = plt.axes([pos.x1-inset_sz-marginx, pos.y0+marginy, inset_sz,
@@ -384,6 +385,7 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
                   after_correct_only=True, rt_lim=300,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700)):
+    # plots mean com trajectory and mean non-CoM trajectory
     rm_top_right_lines(ax)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
@@ -458,6 +460,10 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             trajectory="trajectory_y",
                             velocity=("traj_d1", 1),
                             acceleration=('traj_d2', 1)):
+    """
+    Plots mean trajectories, MT, velocity and peak velocity
+    conditioning on Coh/Zt/T.index,
+    """
     interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
@@ -564,7 +570,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         ax[0].set_xticks([-1, 0, 1])
-        # ax[0].axhline(mean_mt_silent, color='k', linestyle='--', alpha=0.8)
         ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
         ax[0].set_xlabel('Stimulus')
         ax[2].set_xticks([0])
@@ -672,6 +677,9 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
+    # Returns index at which the trajectories and coh vector become uncorrelated
+    # backwards in time
+    # mat: trajectories (n trials x time)
     plist = []
     for i in reversed(range(max_MT)):
         pop_a = mat[:, startfrom + i]
@@ -694,8 +702,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
 def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                     subject='LE37', startfrom=700, xlab=False):
     """
-    Plot moment at which median trajectories for coh=0 and coh=1 split, for RTs
-    between 0 and 90.
+    Plot trajectories depending on COH and the corresponding Splitting Time as arrow.
 
 
     Parameters
@@ -726,7 +733,6 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     appb = True
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate(evs):
-        print(ev)
         indx = (df.special_trial == 0) & (df.subjid == subject)
         if np.sum(indx) > 0:
             _, matatmp, matb =\
@@ -741,10 +747,6 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         mat = np.concatenate((mat, matatmp))
         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
-    # ax.axvline(ind, linestyle='--', alpha=0.4, color='red')
-
-    # ax.arrow(25, 1, ind-24, -0.5, width=0.01, color='k', head_width=0.1,
-    #          head_length=0.3)
     ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
     if xlab:
@@ -763,17 +765,16 @@ def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                  head_length=0.4)
         ax.set_xticklabels([''])
         plot_boxcar_rt(rt=rtbins[-1], ax=ax)
-        # ax.xaxis.set_ticks_position('none')
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
         for i_l, lab in enumerate(labels):
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7, loc='upper right')
-    # plt.show()
 
 
 def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
+    # plot box representing stimulus duration
     x_vals = np.linspace(-1, rt+5, num=100)
     y_vals = [low_val]
     for x in x_vals[:-1]:
@@ -788,6 +789,7 @@ def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
 
 def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                           trajectory='trajectory_y', threshold=300):
+    # split time/subject by prior
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "sound"}
     out_data = []
@@ -864,10 +866,6 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
                          trajectory="trajectory_y"):
 
     # split time/subject by coherence
-    # threshold= bigger than that are turned to nan so it doesnt break figure range
-    # this wont work if when_did_split_dat returns Nones instead of NaNs
-    # plot will not work fine with uneven bins
-    # sound_len_int = (df.sound_len.values).astype(int)
     if sim:
         splitfun = simul.when_did_split_simul
         df['traj'] = df.trajectory_y.values
