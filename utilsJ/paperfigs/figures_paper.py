@@ -4920,27 +4920,3 @@ if __name__ == '__main__':
                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)
-    # from utilsJ.Models import extended_ddm_v2 as edd2
-    # import numpy as np
-    # import matplotlib.pyplot as plt
-    # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-    # SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-    #     'ChangesOfMind/figures/from_python/'  # Manuel
-
-    # df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + 'LE43_',
-    #                               return_df=True, sv_folder=SV_FOLDER)
-
-    # coms = df.loc[df.CoM_sugg]
-    # rts = coms.sound_len
-
-    # max_ = 0
-    # for tr in range(len(coms)):
-    #     trial = df.iloc[tr]
-    #     traj = trial['trajectory_y']
-    #     plt.plot(traj, 'k')
-    #     max_temp = np.nanmax(traj)
-    #     if max_temp > max_:
-    #         max_ = max_temp
-    #         print(max_)
-    #     if np.nanmax(traj) > 200:
-    #         print(trial)
