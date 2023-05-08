@@ -430,7 +430,7 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
     ax_cohs = ax[1]
     ax_ti = ax[2]
     trajs_cond_on_coh_computation(df=df_43.loc[df_43.special_trial == 2],
-                                  ax=ax_zt, condition='prior_x_coh',
+                                  ax=ax_zt, condition='choice_x_prior',
                                   prior_limit=1, cmap='copper')
     trajs_cond_on_coh_computation(df=df_43, ax=ax_cohs, condition='choice_x_coh',
                                   cmap='coolwarm')
@@ -438,7 +438,7 @@ def trajs_cond_on_coh(df, ax, average=False, acceleration=('traj_d2', 1),
                                   cmap='jet', prior_limit=1)
 
 
-def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
+def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit=1,
                   after_correct_only=True, rt_lim=300,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700)):
@@ -447,7 +447,7 @@ def mean_com_traj(df, ax, condition='prior_x_coh', cmap='copper', prior_limit=1,
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
-    df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
+    df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
     bins = np.array([-1.1, 1.1])
     # xlab = 'prior towards response'
@@ -522,7 +522,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
-    df['prior_x_coh'] = (df.R_response*2-1) * df.norm_allpriors
+    df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
     # prior_lim = np.quantile(df.norm_allpriors, prior_limit)
     if after_correct_only:
@@ -540,7 +540,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         mean_mt_silent = np.nanmean(mt[df.special_trial == 2])
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
-    if condition == 'prior_x_coh':  # FIXME: this name is missleading 
+    if condition == 'choice_x_prior':
         bins_zt = [-1.01]
         for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
             if i_p > 2:
@@ -638,7 +638,7 @@ def trajs_cond_on_coh_computation(df, ax, condition='choice_x_coh', cmap='viridi
         ax[2].set_ylim([0.5, 0.8])
         # ax[2].set_yticks([120, 130])
         # ax[2].set_yticklabels(['120', '130'])
-    if condition == 'prior_x_coh':
+    if condition == 'choice_x_prior':
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
@@ -941,7 +941,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "sound"}
     out_data = []
-    df_1 = df.copy()  # .loc[df.special_trial == 2]
+    df_1 = df.copy()
     for subject in df_1.subjid.unique():
         for i in range(rtbins.size-1):
             dat = df_1.loc[(df_1.subjid == subject) &
@@ -958,13 +958,6 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
             matb = np.vstack([matb_0*-1, matb_1])
             mat = matb
             ztl = np.repeat(0, matb.shape[0])
-            # rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors < 0.1) &
-            #                                  (dat.norm_allpriors >= 0)]
-            # rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors > -0.1) &
-            #                                  (dat.norm_allpriors <= 0)]
-            # rt_b = np.concatenate((rt_temp_0, rt_temp_1))
-            # rt_b = rt_b[~np.isnan(matb).all(axis=1)]
-            # rt = rt_b
             for i_z, zt1 in enumerate(ztbins[:-1]):
                 mata_0 = np.vstack(
                     dat.loc[(dat.norm_allpriors > zt1) &
@@ -977,31 +970,11 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                     .apply(lambda x: interpolapply(x, **kw),
                            axis=1).values.tolist())
                 mata = np.vstack([mata_0*-1, mata_1])
-                # rt_temp_0 = dat.sound_len.values[(dat.norm_allpriors > zt1) &
-                #                                  (dat.norm_allpriors <=
-                #                                   ztbins[i_z+1])]
-                # rt_temp_1 = dat.sound_len.values[(dat.norm_allpriors < -zt1) &
-                #                                  (dat.norm_allpriors >=
-                #                                   -ztbins[i_z+1])]
-                # rt_a = np.concatenate((rt_temp_0, rt_temp_1))
-                # rt_a = rt_a[~np.isnan(mata).all(axis=1)]
-                # for a in [mata, matb]:  # discard all nan rows
-                #     a = a[~np.isnan(a).all(axis=1)]
                 ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                 mat = np.concatenate((mat, mata))
-                # rt = np.concatenate((rt, rt_a))
-            # rt = rt.astype(int)
-            # for i_traj in range(mat.shape[0]):
-            #     traj = mat[i_traj, :]
-            #     if np.isnan(traj).all():
-            #         continue
-            #     else:
-            #         traj = np.roll(traj, int(rt[i_traj]))
-            #         mat[i_traj, :] = traj
             current_split_index =\
                 get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                    startfrom=700)
-            # + (rtbins[i] + rtbins[i+1])/2
             if current_split_index >= rtbins[i]:
                 out_data += [current_split_index]
             else:
@@ -1110,10 +1083,6 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                         appb = False
                     mat = np.concatenate((mat, matatmp))
                     evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-                # for i_traj in range(mat.shape[0]):
-                #     traj = mat[i_traj, :]
-                #     traj = np.roll(traj, int(sound_len_int[i_traj]))
-                #     mat[i_traj, :] = traj
                 if not sim:
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
@@ -1123,7 +1092,6 @@ def trajs_splitting_point(df, ax, collapse_sides=True, threshold=300,
                     current_split_index =\
                         get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
                                            startfrom=0)+1
-                # + (rtbins[i] + rtbins[i+1])/2
                 if current_split_index >= rtbins[i]:
                     out_data += [current_split_index]
                 else:
@@ -1896,7 +1864,7 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     # (see line 805 in function trajectory_thr in plotting.py)
     df_trajs = df.copy()  # df.loc[df.subjid == 'LE38']
     trajs_cond_on_coh_computation(df=df_trajs.loc[df_trajs.special_trial == 2],
-                                  ax=ax_zt, condition='prior_x_coh',
+                                  ax=ax_zt, condition='choice_x_prior',
                                   prior_limit=1, cmap='copper')
     trajs_cond_on_coh_computation(df=df_trajs, ax=ax_cohs,
                                   prior_limit=0.1,  # 10% quantile
@@ -1932,7 +1900,7 @@ def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
     ax_ti = np.insert(ax_ti, 2, ax_inset)
     for a in ax:
         rm_top_right_lines(a)
-    trajs_cond_on_coh_computation(df=df, ax=ax_ti, condition='prior_x_coh',
+    trajs_cond_on_coh_computation(df=df, ax=ax_ti, condition='choice_x_prior',
                                   prior_limit=1, cmap='copper')
     # splits
     mt_weights(df, ax=ax[3], plot=True, means_errs=False)
@@ -2141,7 +2109,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
     rm_top_right_lines(ax=ax[2])
-    mean_com_traj(df=df, ax=ax[3], condition='prior_x_coh', cmap='copper',
+    mean_com_traj(df=df, ax=ax[3], condition='choice_x_prior', cmap='copper',
                   prior_limit=1, after_correct_only=True, rt_lim=400,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700))
