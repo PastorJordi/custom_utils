@@ -19,7 +19,7 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -302,7 +302,6 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
-    # ax_pright.set_title('Proportion of rightward responses')
 
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
@@ -422,7 +421,7 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
                                                      (interpolatespace < 0)])
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
-(df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
+                (df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
         xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
             trajectory_thr(df.loc[indx_trajs], condition, bins,
                            collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
@@ -444,7 +443,6 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
     ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
-    # ax.set_title('Mean CoM trajectory')
     legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
                              label='Detected CoM'),
                       Line2D([0], [0], color='tab:cyan', lw=2,
@@ -459,7 +457,7 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             after_correct_only=True,
                             trajectory="trajectory_y",
                             velocity=("traj_d1", 1),
-                            acceleration=('traj_d2', 1), accel=False):
+                            acceleration=('traj_d2', 1)):
     interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
@@ -480,7 +478,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
             ac_cond & (df.special_trial == 0) &\
             (df.sound_len < rt_lim)
         mt = df.resp_len.values*1e3
-        mean_mt_silent = np.nanmean(mt[df.special_trial == 2])
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     if condition == 'choice_x_prior':
@@ -503,7 +500,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
     if condition == 'origidx':
         bins = np.linspace(0, 1e3, num=6)
-        xlab = 'trial index'
         bintype = 'edges'
         n_iters = len(bins) - 1
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
@@ -571,7 +567,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         # ax[0].axhline(mean_mt_silent, color='k', linestyle='--', alpha=0.8)
         ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
         ax[0].set_xlabel('Stimulus')
-        # ax[0].xaxis.set_ticks_position('none')
         ax[2].set_xticks([0])
         ax[2].set_xticklabels(['Stimulus'], fontsize=9)
         ax[2].xaxis.set_ticks_position('none')
@@ -579,8 +574,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         ax[0].set_yticks([240, 275])
         ax[0].set_yticklabels(['240', '275'])
         ax[2].set_ylim([0.5, 0.8])
-        # ax[2].set_yticks([120, 130])
-        # ax[2].set_yticklabels(['120', '130'])
     if condition == 'choice_x_prior':
         ax[0].set_yticklabels('')
         ax[0].set_yticks([])
@@ -596,23 +589,14 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                                  label='incongruent')]
         ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
-        # ax[1].legend(labels=['incongruent', 'inc. low', '0', 'con. low',
-        #                      'congruent'], title='Prior', loc='upper left')
         xpoints = (bins[:-1] + bins[1:]) / 2
-        # ax[0].set_xticks([-0.65, xpoints[2], 0.65])
-        # ax[0].set_xticklabels(['inc.', '\n zero', 'con.'])
         ax[0].set_ylim(230, 310)
         ax[0].set_yticks([250, 300])
         ax[0].set_yticklabels(['250', '300'])
         ax[0].set_xticks([xpoints[0], 0, xpoints[-1]])
         ax[0].set_xticklabels(['Incongruent', '0', 'Congruent'])
-        # ax[0].xaxis.set_ticks_position('none')
         ax[0].set_xlabel('Prior')
-        # ax[2].set_xticks([-0.65, xpoints[2], 0.65])
-        # ax[2].set_xticklabels(['inc.', '\n zero', 'con.'])
         ax[2].set_ylim([0.5, 0.8])
-        # ax[2].set_yticks([100, 150])
-        # ax[2].set_yticklabels(['100', '150'])
         ax[2].set_xticks([0])
         ax[2].set_xticklabels(['Prior'], fontsize=9)
         ax[2].xaxis.set_ticks_position('none')
@@ -626,17 +610,13 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         ax[2].set_xlabel('Trial index')
     ax[1].set_xlim([-20, 450])
     ax[1].set_xticklabels('')
-    # ax[1].set_xlabel('Time from movement onset (MT, ms)')
     ax[1].axhline(0, c='gray')
     ax[1].set_ylabel('Position (pixels)')
-    # ax[0].set_xlabel(xlab)
     ax[0].set_ylabel('MT (ms)', fontsize=9)
     ax[1].set_ylim([-10, 85])
     ax[1].set_yticks([0, 25, 50, 75])
     ax[1].axhline(78, color='gray', linestyle=':')
-    # ax2 = ax[0].twinx()
     ax[0].plot(xpoints, mt_time, color='k', ls=':')
-    # ax2.set_label('Motor time')
     # velocities
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
@@ -682,45 +662,13 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
         else:
             ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
-        # errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-        #                color=colormap[i_tr], marker='o')
-    # threshold = .2
-    # xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
-    #     df.loc[indx_trajs], condition, bins, collapse_sides=True,
-    #     thr=threshold, ax=ax[2], ax_traj=ax[3], return_trash=True,
-    #     error_kwargs=dict(marker='o'), cmap=cmap,
-    #     bintype=bintype, trajectory=velocity, plotmt=False, alpha_low=False)
-    # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-    #              title='Coherence', loc='upper left')
     ax[3].set_xlim([-20, 450])
     ax[2].set_ylabel('Peak (pixels/ms)')
     ax[3].set_ylim([-0.05, 0.5])
     ax[3].axhline(0, c='gray')
     ax[3].set_ylabel('Velocity (pixels/ms)')
-    # ax[2].set_xlabel(xlab)
     ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, mt_time, color='k', ls=':')
-    # plt.show()
-    if accel:
-        # acceleration
-        threshold = .0015
-        xpoints, ypoints, _, mat, dic, _, _ = trajectory_thr(
-            df.loc[indx_trajs], condition, bins, collapse_sides=True,
-            thr=threshold, ax=ax[4], ax_traj=ax[5], return_trash=True,
-            error_kwargs=dict(marker='o'), cmap='viridis',
-            bintype=bintype, trajectory=acceleration)
-        # ax[3].legend(labels=['-1', '-0.5', '-0.25', '0', '0.25', '0.5', '1'],
-        #              title='Coherence', loc='upper left')
-        ax[5].set_xlim([-50, 500])
-        ax[5].set_xlabel('time from movement onset (MT, ms)')
-        ax[5].set_ylim([-0.003, 0.0035])
-        for i in [0, threshold]:
-            ax[5].axhline(i, ls=':', c='gray')
-        ax[5].set_ylabel('Position accelration (pixels/ms)')
-        ax[4].set_xlabel('ev. towards response')
-        ax[4].set_ylabel(f'time to threshold ({threshold} px/ms)')
-        ax[4].plot(xpoints, ypoints, color='k', ls=':')
-        # plt.show()
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -2279,7 +2227,6 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                     (subjects == subject)
                 if sum(index) == 0:
                     continue
-                # * (df_sim.special_trial == 2)
             lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
             traj_all = np.empty((sum(index), max(lens)))
             traj_all[:] = np.nan
@@ -2566,11 +2513,8 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
 
 
-def com_statistics_humans(peak_com, time_com, ax):  # sound_len, com
-    # sound_len_com = sound_len[com]
-    # df2 = pd.DataFrame({'sound_len': sound_len_com, 'time_com': time_com,
-    #                     'peak_com': peak_com})
-    ax2, ax1 = ax  # , ax3, ax4
+def com_statistics_humans(peak_com, time_com, ax):
+    ax2, ax1 = ax
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     ax1.hist(peak_com[peak_com != 0]/600*100, bins=67, range=(-100, -16.667),
@@ -2623,9 +2567,6 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
             vals = np.array(trajs[index][tr])*(decision[index][tr]*2-1)
-            # if decision[index][tr] == 0:
-            #     vals = vals*-1
-            # * (ground_truth[index][tr])
             ind_time = [True if t != '' else False for t in times[index][tr]]
             time = np.array(times[index][tr])[np.array(ind_time)].astype(float)*1e3
             f = interpolate.interp1d(time, vals, bounds_error=False)
@@ -2634,8 +2575,6 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
             max_time = max(time)
             if max_time > max_mt:
                 continue
-            # vals_fin = np.interp(np.arange(0, int(max_time), wanted_precision),
-            #                      xp=time*1e3, fp=vals)
             all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
             all_trajs[tr, len(vals_in):-1] = np.repeat(vals[-1],
                                                        int(max_mt - len(vals_in)-1))
@@ -2657,16 +2596,12 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
     ax[1].set_xlim(-0.1, 470)
     ax[1].set_ylim(-1, 620)
-    # ax[1].legend(labels=['0', '', '', '1'],
-    #              title='Stimulus \n evidence', loc='upper left',
-    #              fontsize=6)
     ax[1].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
     ax[1].set_ylabel('x-coord (px)')
     ax[1].set_xlabel('Time from movement onset (ms)')
     ax[2].set_xticks([])
     ax[2].set_xlabel('Stimulus')
     ax[2].set_ylabel('MT (ms)')
-    # rtbins = np.array([0, np.median(sound_len), 300])
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     split_ind = []
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
@@ -3849,6 +3784,7 @@ def plot_rt_sim(df_sim):
                                    (df_sim.subjid == subj), 'sound_len'],
                         color=colormap[iev], ax=ax[isub])
 
+
 # XXX: MAIN
 # ---MAIN
 if __name__ == '__main__':
@@ -3868,7 +3804,6 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE37', 'LE36', 'LE39', 'LE47']
-            # subjects = ['LE46']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3887,34 +3822,22 @@ if __name__ == '__main__':
             df = df_all
             df_all = []
         # XXX: can we remove the code below or move it to the fig5 part?
-        # after_correct_id = np.where((df.aftererror == 0))
-        # *(df.special_trial == 0))[0]
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         df['allpriors'] = zt
-        # zt = zt[after_correct_id]
         hit = np.array(df['hithistory'])
-        # hit = hit[after_correct_id]
         stim = np.array([stim for stim in df.res_sound])
-        # stim = stim[after_correct_id, :]
         coh = np.array(df.coh2)
-        # coh = coh[after_correct_id]
         com = df.CoM_sugg.values
-        # com = com[after_correct_id]
         decision = np.array(df.R_response) * 2 - 1
-        # decision = decision[after_correct_id]
-        traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
-        traj_y = df.trajectory_y.values  # [after_correct_id]
-        fix_onset = df.fix_onset_dt.values  # [after_correct_id]
+        traj_stamps = df.trajectory_stamps.values
+        traj_y = df.trajectory_y.values
+        fix_onset = df.fix_onset_dt.values
         fix_breaks = np.vstack(np.concatenate([df.sound_len/1000,
                                                np.concatenate(df.fb.values)-0.3]))
         sound_len = np.array(df.sound_len)
-        # sound_len = sound_len[after_correct_id]
         gt = np.array(df.rewside) * 2 - 1
-        # gt = gt[after_correct_id]
         trial_index = np.array(df.origidx)
-        # trial_index = trial_index[after_correct_id]
         resp_len = np.array(df.resp_len)
-        # resp_len = resp_len[after_correct_id]
         time_trajs = edd2.get_trajs_time(resp_len=resp_len,
                                          traj_stamps=traj_stamps,
                                          fix_onset=fix_onset, com=com,
@@ -3923,8 +3846,9 @@ if __name__ == '__main__':
             subjid = df.subjid.values
             print('Computing CoMs')
             _, time_com, peak_com, com =\
-            edd2.com_detection(trajectories=traj_y, decision=decision,
-                               time_trajs=time_trajs, com_threshold=com_threshold)
+                edd2.com_detection(trajectories=traj_y, decision=decision,
+                                   time_trajs=time_trajs,
+                                   com_threshold=com_threshold)
             print('Ended Computing CoMs')
             com = np.array(com)  # new CoM list
             df['CoM_sugg'] = com
