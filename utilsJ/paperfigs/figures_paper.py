@@ -21,9 +21,9 @@ from statsmodels.stats.proportion import proportion_confint
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -676,6 +676,7 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     ax[3].set_ylabel('Velocity (pixels/ms)')
     ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, mt_time, color='k', ls=':')
+    # plt.show()
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -797,7 +798,9 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     out_data = []
     df_1 = df.copy()
     for subject in df_1.subjid.unique():
+        print(subject)
         for i in range(rtbins.size-1):
+            print(i)
             dat = df_1.loc[(df_1.subjid == subject) &
                            (df_1.sound_len < rtbins[i + 1]) &
                            (df_1.sound_len >= rtbins[i])]
@@ -813,6 +816,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
             mat = matb
             ztl = np.repeat(0, matb.shape[0])
             for i_z, zt1 in enumerate(ztbins[:-1]):
+                print(i_z)
                 mata_0 = np.vstack(
                     dat.loc[(dat.norm_allpriors > zt1) &
                             (dat.norm_allpriors <= ztbins[i_z+1])]
@@ -875,13 +879,16 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
         splitfun = simul.when_did_split_dat
     out_data = []
     for subject in df.subjid.unique():
+        print(subject)
         for i in range(rtbins.size-1):
             if collapse_sides:
                 evs = [0.25, 0.5, 1]
                 mat = np.empty((1701,))
                 evl = np.empty(())
                 appb = True
+                print(i)
                 for iev, ev in enumerate(evs):
+                    print(iev)
                     if not sim:
                         _, matatmp, matb =\
                             splitfun(df=df.loc[(df.special_trial == 0)
@@ -981,7 +988,7 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
     ax.set_title('Impact of stimulus', fontsize=9)
-    plt.show()
+    # plt.show()
 
 
 def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
@@ -1420,6 +1427,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
 def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                 marginy=0.05):
     f = plt.figure(figsize=fgsz)
+    # FIGURE LAYOUT
     # mt vs zt
     ax_label = f.add_subplot(5, 3, 1)
     add_text(ax_label, 'a', x=-0.1, y=1.2)
@@ -1457,7 +1465,7 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     add_text(ax_label, 'k', x=-0.1, y=1.2)
     ax_label = f.add_subplot(5, 3, 15)
     add_text(ax_label, 'l', x=-0.1, y=1.2)
-    # plt.tight_layout()
+    # adjust panels positions
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
     ax = f.axes
@@ -1476,29 +1484,12 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                         pos_ax_5.height])
     ax[7].set_position([pos_ax_5.x0 + pos_ax_5.width*2.2, pos_ax_5.y0,
                         pos_ax_5.width*1.6, pos_ax_5.height])
-
     ax_cohs = np.array([ax[1], ax[4], ax[7]])
     ax_zt = np.array([ax[0], ax[3], ax[6]])
-    # splitting
-    ax_split = ax[12]
-    pos = ax_split.get_position()
-    ax_split.set_position([pos.x0, pos.y0, pos.width,
-                           pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
-                         pos.height*2/5])
-    axes_split = [ax_split, ax_inset]
-    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2),
-                                 xlab=False)
-    rm_top_right_lines(axes_split[1])
-    rm_top_right_lines(axes_split[0])
-    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
-                                 xlab=True)
-    # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
     ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-    # trajs. conditioned on prior
     ax_inset = add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
@@ -1512,22 +1503,40 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
             rm_top_right_lines(a)
 
     df_trajs = df.copy()
+    # TRAJECTORIES CONDITIONED ON PRIOR
     plots_trajs_conditioned(df=df_trajs.loc[df_trajs.special_trial == 2],
                             ax=ax_zt, condition='choice_x_prior',
                             prior_limit=1, cmap='copper')
+    # TRAJECTORIES CONDITIONED ON COH
     plots_trajs_conditioned(df=df_trajs, ax=ax_cohs,
                             prior_limit=0.1,  # 10% quantile
                             condition='choice_x_coh',
                             cmap='coolwarm')
-    # regression weights
+    # REGRESSION WEIGHTS
     mt_weights(df, ax=ax[9], plot=True, means_errs=False)
-    # traj splitting prior
-    trajs_splitting_prior(df=df, ax=ax[14])
-    # traj splitting ev
-    trajs_splitting_stim(df=df, ax=ax[13], connect_points=True)
+    # MT MATRIX
     mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
                        rt_bin=60, collapse_sides=True)
+    # SLOWING
     plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
+    # SPLITTING TIME EXAMPLE
+    ax_split = ax[12]
+    pos = ax_split.get_position()
+    ax_split.set_position([pos.x0, pos.y0, pos.width,
+                           pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                         pos.height*2/5])
+    axes_split = [ax_split, ax_inset]
+    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2),
+                                 xlab=False)
+    rm_top_right_lines(axes_split[1])
+    rm_top_right_lines(axes_split[0])
+    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
+                                 xlab=True)
+    # TRAJECTORY SPLITTING PRIOR
+    trajs_splitting_prior(df=df, ax=ax[14])
+    # TRAJECTORY SPLITTING STIMULUS
+    trajs_splitting_stim(df=df, ax=ax[13], connect_points=True)
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
@@ -3786,7 +3795,6 @@ def plot_rt_sim(df_sim):
                         color=colormap[iev], ax=ax[isub])
 
 
-# XXX: MAIN
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -3804,7 +3812,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE36', 'LE39', 'LE47']
+            subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
