@@ -676,7 +676,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     ax[3].set_ylabel('Velocity (pixels/ms)')
     ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
     ax[2].plot(xpoints, mt_time, color='k', ls=':')
-    # plt.show()
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -798,45 +797,52 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
     out_data = []
     df_1 = df.copy()
     for subject in df_1.subjid.unique():
-        print(subject)
-        for i in range(rtbins.size-1):
-            print(i)
-            dat = df_1.loc[(df_1.subjid == subject) &
-                           (df_1.sound_len < rtbins[i + 1]) &
-                           (df_1.sound_len >= rtbins[i])]
-            matb_0 = np.vstack(
-                dat.loc[(dat.norm_allpriors < 0.1) &
-                        (dat.norm_allpriors >= 0)]
-                .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-            matb_1 = np.vstack(
-                dat.loc[(dat.norm_allpriors > -0.1) &
-                        (dat.norm_allpriors <= 0)]
-                .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-            matb = np.vstack([matb_0*-1, matb_1])
-            mat = matb
-            ztl = np.repeat(0, matb.shape[0])
-            for i_z, zt1 in enumerate(ztbins[:-1]):
-                print(i_z)
-                mata_0 = np.vstack(
-                    dat.loc[(dat.norm_allpriors > zt1) &
-                            (dat.norm_allpriors <= ztbins[i_z+1])]
-                    .apply(lambda x: interpolapply(x, **kw),
-                           axis=1).values.tolist())
-                mata_1 = np.vstack(
-                    dat.loc[(dat.norm_allpriors < -zt1) &
-                            (dat.norm_allpriors >= -ztbins[i_z+1])]
-                    .apply(lambda x: interpolapply(x, **kw),
-                           axis=1).values.tolist())
-                mata = np.vstack([mata_0*-1, mata_1])
-                ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
-                mat = np.concatenate((mat, mata))
-            current_split_index =\
-                get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
-                                   startfrom=700)
-            if current_split_index >= rtbins[i]:
-                out_data += [current_split_index]
-            else:
-                out_data += [np.nan]
+        out_data_sbj = []
+        split_data = DATA_FOLDER + subject + '/traj_data/' + subject + '_traj_split_prior.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(split_data), exist_ok=True)
+        if os.path.exists(split_data):
+            split_data = np.load(split_data, allow_pickle=True)
+            out_data_sbj = split_data['out_data']
+        else:
+            for i in range(rtbins.size-1):
+                dat = df_1.loc[(df_1.subjid == subject) &
+                            (df_1.sound_len < rtbins[i + 1]) &
+                            (df_1.sound_len >= rtbins[i])]
+                matb_0 = np.vstack(
+                    dat.loc[(dat.norm_allpriors < 0.1) &
+                            (dat.norm_allpriors >= 0)]
+                    .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+                matb_1 = np.vstack(
+                    dat.loc[(dat.norm_allpriors > -0.1) &
+                            (dat.norm_allpriors <= 0)]
+                    .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+                matb = np.vstack([matb_0*-1, matb_1])
+                mat = matb
+                ztl = np.repeat(0, matb.shape[0])
+                for i_z, zt1 in enumerate(ztbins[:-1]):
+                    mata_0 = np.vstack(
+                        dat.loc[(dat.norm_allpriors > zt1) &
+                                (dat.norm_allpriors <= ztbins[i_z+1])]
+                        .apply(lambda x: interpolapply(x, **kw),
+                            axis=1).values.tolist())
+                    mata_1 = np.vstack(
+                        dat.loc[(dat.norm_allpriors < -zt1) &
+                                (dat.norm_allpriors >= -ztbins[i_z+1])]
+                        .apply(lambda x: interpolapply(x, **kw),
+                            axis=1).values.tolist())
+                    mata = np.vstack([mata_0*-1, mata_1])
+                    ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
+                    mat = np.concatenate((mat, mata))
+                current_split_index =\
+                    get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
+                                    startfrom=700)
+                if current_split_index >= rtbins[i]:
+                    out_data_sbj += [current_split_index]
+                else:
+                    out_data_sbj += [np.nan]
+            np.savez(split_data, out_data=out_data_sbj)
+        out_data += [out_data_sbj]
     out_data = np.array(out_data).reshape(
         df_1.subjid.unique().size, rtbins.size-1, -1)
     out_data = np.swapaxes(out_data, 0, 1)
@@ -879,55 +885,62 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
         splitfun = simul.when_did_split_dat
     out_data = []
     for subject in df.subjid.unique():
-        print(subject)
-        for i in range(rtbins.size-1):
-            if collapse_sides:
-                evs = [0.25, 0.5, 1]
-                mat = np.empty((1701,))
-                evl = np.empty(())
-                appb = True
-                print(i)
-                for iev, ev in enumerate(evs):
-                    print(iev)
+        out_data_sbj = []
+        split_data = DATA_FOLDER + subject + '/traj_data/' + subject + '_traj_split_stim.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(split_data), exist_ok=True)
+        if os.path.exists(split_data):
+            split_data = np.load(split_data, allow_pickle=True)
+            out_data_sbj = split_data['out_data_sbj']
+        else:
+            for i in range(rtbins.size-1):
+                if collapse_sides:
+                    evs = [0.25, 0.5, 1]
+                    mat = np.empty((1701,))
+                    evl = np.empty(())
+                    appb = True
+                    for ev in evs:
+                        if not sim:  # TODO: do this if within splitfun
+                            _, matatmp, matb =\
+                                splitfun(df=df.loc[(df.special_trial == 0)
+                                                & (df.subjid == subject)],
+                                        side=0, collapse_sides=True,
+                                        rtbin=i, rtbins=rtbins, coh1=ev,
+                                        trajectory=trajectory, align="sound")
+                        if sim:
+                            _, matatmp, matb =\
+                                splitfun(df=df.loc[(df.special_trial == 0)
+                                                & (df.subjid == subject)],
+                                        side=0, rtbin=i, rtbins=rtbins, coh=ev,
+                                        align="sound")
+                        if appb:
+                            mat = matb
+                            evl = np.repeat(0, matb.shape[0])
+                            appb = False
+                        mat = np.concatenate((mat, matatmp))
+                        evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                     if not sim:
-                        _, matatmp, matb =\
-                            splitfun(df=df.loc[(df.special_trial == 0)
-                                               & (df.subjid == subject)],
-                                     side=0, collapse_sides=True,
-                                     rtbin=i, rtbins=rtbins, coh1=ev,
-                                     trajectory=trajectory, align="sound")
+                        current_split_index =\
+                            get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
+                                            startfrom=700)
                     if sim:
-                        _, matatmp, matb =\
-                            splitfun(df=df.loc[(df.special_trial == 0)
-                                               & (df.subjid == subject)],
-                                     side=0, rtbin=i, rtbins=rtbins, coh=ev,
-                                     align="sound")
-                    if appb:
-                        mat = matb
-                        evl = np.repeat(0, matb.shape[0])
-                        appb = False
-                    mat = np.concatenate((mat, matatmp))
-                    evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-                if not sim:
-                    current_split_index =\
-                        get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
-                                           startfrom=700)
-                if sim:
-                    max_mt = 800
-                    current_split_index =\
-                        get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
-                                           startfrom=0)+1
-                if current_split_index >= rtbins[i]:
-                    out_data += [current_split_index]
+                        max_mt = 800
+                        current_split_index =\
+                            get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
+                                            startfrom=0)+1
+                    if current_split_index >= rtbins[i]:
+                        out_data_sbj += [current_split_index]
+                    else:
+                        out_data_sbj += [np.nan]
                 else:
-                    out_data += [np.nan]
-            else:
-                for j in [0, 1]:  # side values
-                    current_split_index, _, _ = splitfun(
-                        df.loc[df.subjid == subject],
-                        j,  # side has no effect because this is collapsing_sides
-                        rtbin=i, rtbins=rtbins, align='sound')
-                    out_data += [current_split_index]
+                    for j in [0, 1]:  # side values
+                        current_split_index, _, _ = splitfun(
+                            df.loc[df.subjid == subject],
+                            j,  # side has no effect because this is collapsing_sides
+                            rtbin=i, rtbins=rtbins, align='sound')
+                        out_data_sbj += [current_split_index]
+            np.savez(split_data, out_data_sbj=out_data_sbj)
+        out_data += [out_data_sbj]
 
     # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
     # ideally, make it NaN resilient
@@ -3812,7 +3825,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
+            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
