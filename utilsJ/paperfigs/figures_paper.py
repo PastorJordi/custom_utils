@@ -19,11 +19,11 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -689,7 +689,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         pop_evidence = evl[nan_idx]
         pop_a = pop_a[nan_idx]
         try:
-            _, p2 = pearsonr(pop_a, pop_evidence)  # pvalue from pearson corr
+            _, p2 = pearsonr(pop_a, pop_evidence)  # p2 = pvalue from pearson corr
             plist.append(p2)
         except Exception:
             continue
@@ -701,8 +701,8 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
     return np.nan
 
 
-def trajs_splitting(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                    subject='LE37', startfrom=700, xlab=False):
+def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
+                                 subject='LE37', startfrom=700, xlab=False):
     """
     Plot trajectories depending on COH and the corresponding Splitting Time as arrow.
 
@@ -827,7 +827,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                 ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                 mat = np.concatenate((mat, mata))
             current_split_index =\
-                get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
+                get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
                                    startfrom=700)
             if current_split_index >= rtbins[i]:
                 out_data += [current_split_index]
@@ -903,7 +903,7 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
                     evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                 if not sim:
                     current_split_index =\
-                        get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
+                        get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
                                            startfrom=700)
                 if sim:
                     max_mt = 800
@@ -1487,11 +1487,12 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
                          pos.height*2/5])
     axes_split = [ax_split, ax_inset]
-    trajs_splitting(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2), xlab=False)
+    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2),
+                                 xlab=False)
     rm_top_right_lines(axes_split[1])
     rm_top_right_lines(axes_split[0])
-    trajs_splitting(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
-                    xlab=True)
+    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
+                                 xlab=True)
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
