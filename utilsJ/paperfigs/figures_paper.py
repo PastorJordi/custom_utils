@@ -149,6 +149,7 @@ def plot_fixation_breaks_single(subject, ax):
 
 
 def plot_coms_single_session(df, ax):
+    rm_top_right_lines(ax)
     np.random.seed(1)
     sess = df.loc[df.sessid == 'LE37_p4_20190213-151548']
     coms = sess.CoM_sugg.values
@@ -170,6 +171,7 @@ def plot_coms_single_session(df, ax):
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
+    ax.set_yticks([-75, -50, -25, 0, 25, 50, 75])
 
 
 def plot_rt_all_rats(subjects):
@@ -303,12 +305,12 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_1)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
 
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[1].set_title(pcomlabel_0)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
@@ -434,9 +436,9 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
             (df.sound_len < rt_lim) & (df.CoM_sugg == True) & (df.subjid == subj)
-        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+        _, _, _, mat, _, _ =\
             trajectory_thr(df.loc[indx_trajs], condition, bins,
-                           collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=ax,
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False,
@@ -448,9 +450,9 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
                 (df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
-        xpoints, ypoints, _, mat, dic, mt_time, mt_time_err =\
+        _, _, _, mat, _, _ =\
             trajectory_thr(df.loc[indx_trajs], condition, bins,
-                           collapse_sides=True, thr=30, ax=ax, ax_traj=ax,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=ax,
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False, plot_traj=False,
@@ -1699,7 +1701,7 @@ def com_statistics(peak_com, time_com, ax):
     ax2.set_xlabel('Deflection time (ms)', fontsize=8)
 
 
-def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 41),
+def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
                sim=False):
     subjid = df.subjid
     mt_com_mat = np.empty((len(mtbins)-1, len(subjid.unique())))
@@ -1757,7 +1759,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     ax[2].set_position([pos_ax_2.x0 + pos_ax_0.width*0.2,
                         pos_ax_2.y0 + pos_ax_2.height/6,
                         pos_ax_2.width*0.8, pos_ax_2.height*4/6])
-    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '', 'h', '', '']
+    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', '', 'g', 'h', '', '']
     for n, axis in enumerate(ax):
         if n == 4:
             axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
@@ -1813,11 +1815,11 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=-3e-2, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
     plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=-3e-2, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
@@ -2102,10 +2104,10 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     cbar = plt.colorbar(im, fraction=0.04)
     cbar.set_label('p(Right)', rotation=270)
     ax_pright.set_yticks([0, 3, 6])
-    ax_pright.set_ylim([-0.5, 6.5])
+    # ax_pright.set_ylim([-0.5, 6.5])
     ax_pright.set_yticklabels(['L', '', 'R'])
     ax_pright.set_xticks([0, 3, 6])
-    ax_pright.set_xlim([-0.5, 6.5])
+    # ax_pright.set_xlim([-0.5, 6.5])
     ax_pright.set_xticklabels(['L', '', 'R'])
     ax_pright.set_xlabel('Prior Evidence')
     ax_pright.set_ylabel('Stimulus Evidence')
@@ -2140,11 +2142,11 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     # plt.sca(ax_mat[0])
     # plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
 
     for ax_i in [ax[10], ax_inset]:
@@ -3340,7 +3342,7 @@ def supp_com_marginal(df):
         plt.colorbar(im, fraction=0.04)
         # R -> L
         pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-        im = ax[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+        im = ax[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
         ax[i_ax*2+1].yaxis.set_ticks_position('none')
         plt.sca(ax[i_ax*2+1])
         plt.colorbar(im, fraction=0.04)
@@ -3401,12 +3403,12 @@ def different_com_thresholds(traj_y, time_trajs, decision, sound_len,
             # L-> R
             vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
             pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-            im = ax1[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax)
+            im = ax1[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
             plt.sca(ax1[i_ax*2])
             plt.colorbar(im, fraction=0.04)
             # R -> L
             pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-            im = ax1[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax)
+            im = ax1[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
             ax1[i_ax*2+1].yaxis.set_ticks_position('none')
             plt.sca(ax1[i_ax*2+1])
             plt.colorbar(im, fraction=0.04)
@@ -3567,7 +3569,7 @@ def supp_com_threshold_matrices(df):
         plt.colorbar(im, fraction=0.04)
         # R -> L
         pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-        im = ax[i_th+len(thlist)].imshow(matrix_side_0, vmin=0, vmax=vmax)
+        im = ax[i_th+len(thlist)].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
         ax[i_th+len(thlist)].yaxis.set_ticks_position('none')
         plt.sca(ax[i_th+len(thlist)])
         plt.colorbar(im, fraction=0.04)
@@ -3858,14 +3860,24 @@ def sess_t_index_stats(df, subjects):
     print(', '.join(list(subs_no_silent)))
 
 
+def mean_traj_per_deflection_time(df, time_com, ax,
+                                  bins=np.arange(100, 401, 100)):
+    df_1 = df.loc[df.CoM_sugg]
+    all_trajs = np.empty((len(df.subjid.unique()), 1700))
+    all_trajs[:] = np.nan
+    for ind_b, min_b in enumerate(bins[:-1]):
+        index = (time_com >= min_b) * (time_com < bins[ind_b+1])
+        df_2 = df_1.loc[index]
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = False
-    f3 = True
+    f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -3876,7 +3888,7 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
-            subjects = ['LE37', 'LE46', 'LE47']
+            subjects = ['LE43', 'LE42']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']

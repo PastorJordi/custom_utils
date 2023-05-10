@@ -676,8 +676,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     t_a = dt*(theta_fb[:, 6] + theta_fb[:, 5]).detach().numpy()
     t = rt_fb*1e-3
     prob = prob_rt_fb_action(t=t, v_a=v_a, t_a=t_a, bound_a=bound_a)
-    if np.isnan(prob):
-        prob = 0
+    prob[np.isnan(prob)] = 0
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
@@ -1171,7 +1170,8 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     mat_1_nn = np.copy(mat_0_nn)
     if plot_nn:
         for n_sim_train in n_list:
-            with open(SV_FOLDER + "/mnle_n{}.p".format(n_sim_train), 'rb') as f:
+            with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_sim_train),
+                      'rb') as f:
                 estimator = pickle.load(f)
             estimator = estimator['estimator']
             theta = theta_for_lh_plot()
@@ -1352,7 +1352,7 @@ if __name__ == '__main__':
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = True
+        training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False

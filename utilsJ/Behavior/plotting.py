@@ -944,7 +944,7 @@ def trajectory_thr(
                 )
             if cmap is None and alpha_low:
                 traj_kws["color"] = color_tr
-                traj_kws["alpha"] = 0.15
+                traj_kws["alpha"] = 0.3
             ytoplot = np.nanmedian(matrix_dic[b], axis=0)
             # if not alpha_low:
             #     y_points += [np.nanmax(ytoplot)]
