@@ -19,11 +19,11 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1741,17 +1741,17 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
         elif n == 1:
             axis.text(-0.1, 1.05, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-        elif n == 7:
+        elif n == 6:
             axis.text(-0.1, 1.3, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         else:
             axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    ax_mat = [ax[7], ax[8]]
+    ax_mat = [ax[6], ax[7]]
     rm_top_right_lines(ax=ax[5])
     plot_proportion_corr_com_vs_stim(df, ax[5])
-    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[6])
-    ax[6].set_ylim(0, 0.075)
+    fig2.e(df, sv_folder=SV_FOLDER, ax=ax[8])
+    ax[8].set_ylim(0, 0.075)
     plot_coms(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
@@ -1976,32 +1976,20 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
                                                           'wspace': 0.4},
                            figsize=fgsz)
     ax = ax.flatten()
-    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', ' ', 'l',
-            'm']
-    # ax[2].axis('off')
-    # ax[5].axis('off')
-    # ax[14].axis('off')
+    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+            'n']
     # set correct size for traj and velocity axis
     pos_ax_0 = ax[0].get_position()
     ax[0].set_position([pos_ax_0.x0-pos_ax_0.x0/8, pos_ax_0.y0, pos_ax_0.width,
                         pos_ax_0.height])
-    # ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
-    #                     pos_ax_0.width*1.6, pos_ax_0.height])
-    # pos_ax_0 = ax[3].get_position()
-    # ax[3].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
-    #                     pos_ax_0.height])
-    # ax[4].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
-    #                     pos_ax_0.width*1.6, pos_ax_0.height])
-    # pos_ax_3 = ax[6].get_position()
-    # ax[6].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
-    #                     pos_ax_3.height])
-    # ax[7].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
-    #                     pos_ax_3.width*1.6, pos_ax_3.height])
-    # pos_ax_12 = ax[12].get_position()
-    # ax[12].set_position([pos_ax_12.x0, pos_ax_12.y0, pos_ax_12.width*1.4,
-    #                     pos_ax_12.height])
-    # ax[13].set_position([pos_ax_12.x0 + pos_ax_12.width*2.4, pos_ax_12.y0,
-    #                     pos_ax_12.width*1.4, pos_ax_12.height])
+    pos_ax_0 = ax[10].get_position()
+    ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
+                         pos_ax_0.width/2,
+                         pos_ax_0.height])
+    ax_inset = plt.axes([pos_ax_0.x0 + pos_ax_0.width*0.8 + pos_ax_0.width/10,
+                         pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.2 + pos_ax_0.width/10,
+                         pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
     # letters for panels
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
@@ -2016,12 +2004,8 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     subjid = df_sim.subjid.values
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid, ax=ax[1], label='')
-    # pdf_cohs(sound_len=sound_len, ax=ax[8], coh=coh, yaxis=True)
-    # pdf_cohs(sound_len=sound_len_model[sound_len_model >= 0], ax=ax[9],
-    #          coh=coh[sound_len_model >= 0], yaxis=False)
-    # ax[8].set_title('Data')
-    # ax[9].set_title('Model')
+                         subjid=subjid,
+                         ax=ax[1], label='')
     ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
                     marginx=marginx, marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
@@ -2076,19 +2060,15 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     ax[13].set_ylabel('P(CoM)')
     ax2.set_ylabel('P(CoM)')
     ax2.set_xlabel('RT (ms)')
-    zt_model = zt[sound_len_model >= 0]
+    zt_model = df_sim.norm_allpriors.values
     coh_model = coh[sound_len_model >= 0]
     decision_01_model = (decision_model+1)/2
     mat_pright = np.zeros((7, 7, len(subjects)))
     for i_s, subject in enumerate(subjects):
-        mat_per_subj, _ =\
-            edd2.com_heatmap_jordi(zt_model[subjid == subject],
-                                   coh_model[subjid == subject],
-                                   decision_01_model[subjid == subject],
-                                   ax=ax[0],
-                                   flip=False, annotate=False, xlabel='prior',
-                                   return_mat=True,
-                                   ylabel='avg stim', cmap='PRGn_r', vmin=0., vmax=1)
+        mat_per_subj, _ = com_heatmap(zt_model[subjid == subject],
+                                      coh_model[subjid == subject],
+                                      decision_01_model[subjid == subject],
+                                      return_mat=True, annotate=False)
         mat_pright[:, :, i_s] = mat_per_subj
     mat_pright_avg = np.nanmean(mat_pright, axis=2)
     # P_right
@@ -2116,7 +2096,7 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     df_model = df_model.loc[~df_model.norm_allpriors.isna()]
     nbins = 7
     # plot Pcoms matrices
-    ax_mat = [ax[10], ax[11]]
+    ax_mat = [ax[10], ax_inset]
     n_subjs = len(df.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
@@ -2137,22 +2117,29 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax)
-    plt.sca(ax_mat[0])
-    plt.colorbar(im, fraction=0.04)
+    # plt.sca(ax_mat[0])
+    # plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax)
     ax_mat[1].yaxis.set_ticks_position('none')
-    plt.sca(ax_mat[1])
-    cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(detected CoM)', rotation=270)
 
-    for ax_i in [ax[10], ax[11]]:
+    for ax_i in [ax[10], ax_inset]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
     ax[10].set_ylabel('Stimulus Evidence')
     ax[0].set_ylabel('Stimulus Evidence')
-
+    mt_matrix_vs_ev_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
+    ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
+                         pos_ax_0.width/2,
+                         pos_ax_0.height])
+    ax_inset.set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
+                           pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+    plt.sca(ax_mat[1])
+    cbar = plt.colorbar(im, fraction=0.04)
+    cbar.set_label('p(detected CoM)', rotation=270)
+    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
+                         pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
     mt_distros(df=df_sim, ax=ax[12])
     ax_cohs = np.array([ax[5], ax[7], ax[3]])
     ax_zt = np.array([ax[4], ax[6], ax[2]])
@@ -3009,25 +2996,44 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
     resp_fin = np.empty((0))
     com_model = np.empty((0))
     pro_vs_re = np.empty((0))
-    total_traj = np.empty((0))
+    total_traj = []
     x_val_at_updt = np.empty((0))
     for subject in subject_list:
         if subject_list[0] is not None:
             index = subjid == subject
         else:
             index = range(num_tr)
-        hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
-            com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
-            run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
-                      gt=gt[index], trial_index=trial_index[index],
-                      subject=subject, load_params=load_params)
+        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(sim_data), exist_ok=True)
+        if os.path.exists(sim_data):
+            data_simulation = np.load(sim_data, allow_pickle=True)
+            hit_model_tmp = data_simulation['hit_model_tmp']
+            reaction_time_tmp = data_simulation['reaction_time_tmp']
+            detected_com_tmp = data_simulation['detected_com_tmp']
+            resp_fin_tmp = data_simulation['resp_fin_tmp']
+            com_model_tmp = data_simulation['com_model_tmp']
+            pro_vs_re_tmp = data_simulation['pro_vs_re_tmp']
+            total_traj_tmp = data_simulation['total_traj_tmp']
+            x_val_at_updt_tmp = data_simulation['x_val_at_updt_tmp']
+        else:
+            hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
+                com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
+                run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
+                          gt=gt[index], trial_index=trial_index[index],
+                          subject=subject, load_params=load_params)
+            data_simulation = {'hit_model_tmp': hit_model_tmp, 'reaction_time_tmp': reaction_time_tmp,
+                               'detected_com_tmp': detected_com_tmp, 'resp_fin_tmp': resp_fin_tmp,
+                               'com_model_tmp': com_model_tmp, 'pro_vs_re_tmp': pro_vs_re_tmp,
+                               'total_traj_tmp': total_traj_tmp, 'x_val_at_updt_tmp': x_val_at_updt_tmp}
+            pd.to_pickle(data_simulation, sim_data)
         hit_model = np.concatenate((hit_model, hit_model_tmp))
         reaction_time = np.concatenate((reaction_time, reaction_time_tmp))
         detected_com = np.concatenate((detected_com, detected_com_tmp))
         resp_fin = np.concatenate((resp_fin, resp_fin_tmp))
         com_model = np.concatenate((com_model, com_model_tmp))
         pro_vs_re = np.concatenate((pro_vs_re, pro_vs_re_tmp))
-        total_traj = np.concatenate((total_traj, total_traj_tmp))
+        total_traj = total_traj + total_traj_tmp
         x_val_at_updt = np.concatenate((x_val_at_updt, x_val_at_updt_tmp))
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
         pro_vs_re, total_traj, x_val_at_updt
@@ -3276,14 +3282,14 @@ def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None,
         ax1.set_position([ax1pos.x0-ax1pos.width*0.2,
                           ax1pos.y0, ax1pos.width, ax1pos.height])
     else:
-        im_s = ax.imshow(mat_s, cmap='RdGy')
+        im_s = ax.imshow(np.flip(mat_s).T, cmap='RdGy')
         plt.sca(ax)
         cbar_s = plt.colorbar(im_s, fraction=0.04)
         cbar_s.set_label(r'$MT \;(ms)$')
-        ax.set_yticks([0, 3, 6], ['Congruent', '0', 'Incongruent'])
-        ax.set_xticks([0, 3, 6], ['Incongruent', '0', 'Congruent'])
-        ax.set_xlabel('Evidence')
-        ax.set_ylabel('Prior')
+        ax.set_yticks([0, 3, 6], ['1', '0', '-1'])
+        ax.set_xticks([0, 3, 6], ['-1', '0', '1'])
+        ax.set_xlabel('Prior Evidence')
+        ax.set_ylabel('Stimulus Evidence')
 
 
 def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
@@ -3812,10 +3818,10 @@ def plot_rt_sim(df_sim):
 if __name__ == '__main__':
     plt.close('all')
     f1 = False
-    f2 = True
+    f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -3825,7 +3831,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
+            subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3945,12 +3951,12 @@ if __name__ == '__main__':
         df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
                                          num_tr + n_sil)
         df_sim['allpriors'] = zt
-        if not with_fb:
-            df_sim = df_sim[df_sim.sound_len.values >= 0]
         df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
         # simulation plots
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
+        if not with_fb:
+            df_sim = df_sim[df_sim.sound_len.values >= 0]
         # memory save:
         stim = []
         traj_y = []
