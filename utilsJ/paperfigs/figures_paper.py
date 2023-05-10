@@ -83,7 +83,7 @@ elif pc_name == 'alex_CRM':
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
-COLOR_COM = 'tab:olive'
+COLOR_COM = 'tab:orange'
 COLOR_NO_COM = 'tab:cyan'
 
 
@@ -102,23 +102,23 @@ def plot_coms(df, ax, human=False):
             traj = trial['trajectory_y']
             if not human:
                 time = df.time_trajs.values[tr]
-                ax.plot(time, traj, color='tab:cyan', lw=.5)
+                ax.plot(time, traj, color=COLOR_NO_COM, lw=.5)
                 ax.set_xlim(-100, 800)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.1:
-                    ax.plot(time*1e3, traj, color='tab:cyan', lw=.5)
+                    ax.plot(time*1e3, traj, color=COLOR_NO_COM, lw=.5)
         elif tr < (ran_max/2-1) and coms[tr] and decision[tr] == 0:
             trial = df.iloc[tr]
             traj = trial['trajectory_y']
             if not human:
                 time = df.time_trajs.values[tr]
-                ax.plot(time, traj, color='tab:olive', lw=2)
+                ax.plot(time, traj, color=COLOR_COM, lw=2)
                 ax.set_xlim(-100, 800)
             if human:
                 time = np.array(trial['times'])
                 if time[-1] < 0.3 and time[-1] > 0.2:
-                    ax.plot(time*1e3, traj, color='tab:olive', lw=2)
+                    ax.plot(time*1e3, traj, color=COLOR_COM, lw=2)
     rm_top_right_lines(ax)
     if human:
         var = 'x'
@@ -416,7 +416,7 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
                            return_trash=True, error_kwargs=dict(marker='o'),
                            cmap=None, bintype=bintype,
                            trajectory=trajectory, plotmt=False,
-                           color_tr='tab:olive', alpha_low=True)
+                           color_tr=COLOR_COM, alpha_low=True)
         median_traj = np.nanmedian(mat[0], axis=0)
         all_trajs[i_s, :] = median_traj
         all_trajs[i_s, :] += -np.nanmean(median_traj[(interpolatespace > -100000) &
@@ -438,16 +438,16 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
     mean_traj_nocom = np.nanmedian(all_trajs_nocom, axis=0)
     mean_traj_nocom += -np.nanmean(mean_traj_nocom[(interpolatespace > -100000) &
                                                    (interpolatespace < 0)])
-    ax.plot((interpolatespace)/1000, mean_traj, color='tab:olive', linewidth=2)
-    ax.plot((interpolatespace)/1000, mean_traj_nocom, color='tab:cyan', linewidth=2,
+    ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
+    ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2,
             label='No-CoM')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
-    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+    legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
                              label='Detected CoM'),
-                      Line2D([0], [0], color='tab:cyan', lw=2,
+                      Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                              label='No-CoM')]
     ax.legend(handles=legendelements)
     ax.axhline(-8, color='r', linestyle=':')
@@ -835,7 +835,7 @@ def trajs_splitting_prior(df, ax, rtbins=np.linspace(0, 150, 16),
                     ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
                     mat = np.concatenate((mat, mata))
                 current_split_index =\
-                    get_split_ind_corr(mat, ztl, pval=0.001, max_MT=400,
+                    get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
                                     startfrom=700)
                 if current_split_index >= rtbins[i]:
                     out_data_sbj += [current_split_index]
@@ -921,12 +921,12 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
                         evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                     if not sim:
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.001, max_MT=400,
+                            get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
                                             startfrom=700)
                     if sim:
                         max_mt = 800
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.001, max_MT=max_mt,
+                            get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
                                             startfrom=0)+1
                     if current_split_index >= rtbins[i]:
                         out_data_sbj += [current_split_index]
@@ -1611,7 +1611,7 @@ def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
             ax.plot(xvals[:, j], yvals2[:, j], color=colormap[j], linestyle='--',
                     linewidth=1.5)
             ax.fill_between(xvals[:, j], yvals1[:, j], yvals2[:, j],
-                            color='tab:olive', alpha=0.8)
+                            color=COLOR_COM, alpha=0.8)
         ax.set_xlabel('RT (ms)')
         ax.set_ylabel('Accuracy')
         ax.set_ylim(0.3, 1)
@@ -1663,15 +1663,15 @@ def com_statistics(peak_com, time_com, ax):
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     peak_com = np.array(peak_com)
-    ax1.hist(peak_com/75*100, bins=70, range=(-100, -8/75*100), color='tab:olive')
-    ax1.hist(peak_com/75*100, bins=10, range=(-8/75*100, -0), color='tab:cyan')
+    ax1.hist(peak_com/75*100, bins=70, range=(-100, -8/75*100), color=COLOR_COM)
+    ax1.hist(peak_com/75*100, bins=10, range=(-8/75*100, -0), color=COLOR_NO_COM)
     ax1.set_yscale('log')
     ax1.axvline(-8/75*100, linestyle=':', color='r')
     ax1.set_xlim(-100, 5)
     ax1.set_xlabel('Deflection point (%)', fontsize=8)
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
-    ax2.hist(time_com, bins=80, range=(0, 500), color='tab:olive')
+    ax2.hist(time_com, bins=80, range=(0, 500), color=COLOR_COM)
     ax2.set_xlabel('Deflection time (ms)', fontsize=8)
 
 
@@ -1694,15 +1694,15 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 41),
         counts_com, bins = np.histogram(mt_com, bins=mtbins)
         counts_nocom, bins = np.histogram(mt_nocom, bins=mtbins)
         xvals = bins[:-1]+(bins[1]-bins[0])/2
-        ax.plot(xvals, counts_com/sum(counts_com), color='tab:olive', alpha=0.3,
+        ax.plot(xvals, counts_com/sum(counts_com), color=COLOR_COM, alpha=0.3,
                 linewidth=1)
-        ax.plot(xvals, counts_nocom/sum(counts_nocom), color='tab:cyan', alpha=0.3,
+        ax.plot(xvals, counts_nocom/sum(counts_nocom), color=COLOR_NO_COM, alpha=0.3,
                 linewidth=1)
         mt_com_mat[:, i_s] = counts_com/sum(counts_com)
         mt_nocom_mat[:, i_s] = counts_nocom/sum(counts_nocom)
-    ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color='tab:olive',
+    ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color=COLOR_COM,
             label='Detected CoM', linewidth=1.6)
-    ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color='tab:cyan',
+    ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color=COLOR_NO_COM,
             label='No-CoM', linewidth=1.6)
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
@@ -1818,9 +1818,12 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         df_1 = df.loc[df.subjid == subj]
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
-    ax_inset.hist(comlist_rats, bins=12, range=(0, 0.05), color='k', alpha=0.6)
-    ax_inset.set_xlabel('P(CoM)')
-    ax_inset.set_ylabel('# Rats')
+    ax_inset.boxplot(comlist_rats)
+    ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.2, comlist_rats, 'o',
+                  color='grey', alpha=0.4)
+    ax_inset.set_xticks([])
+    ax_inset.set_ylabel('P(CoM)')
+    # ax_inset.set_ylabel('# Rats')
 
 
 def com_heatmap_marginal_pcom_side_mat(
@@ -1930,7 +1933,7 @@ def mean_com_traj_simul(df_sim, ax):
                 i_und_com += 1
         mean_com_traj = np.nanmean(mat_com_erase, axis=0)
         matrix_com_tr[i_s, :len(mean_com_traj)] = mean_com_traj
-        ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='tab:olive',
+        ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color=COLOR_COM,
                 linewidth=1.4, alpha=0.25)
         mean_nocom_tr = np.nanmean(mat_nocom_erase, axis=0)
         matrix_nocom_tr[i_s, :len(mean_nocom_tr)] = mean_nocom_tr
@@ -1939,17 +1942,17 @@ def mean_com_traj_simul(df_sim, ax):
     mean_com_traj = np.nanmean(matrix_com_tr, axis=0)
     mean_nocom_traj = np.nanmean(matrix_nocom_tr, axis=0)
     mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
-    ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color='tab:olive',
+    ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color=COLOR_COM,
             linewidth=2)
-    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='tab:olive',
+    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color=COLOR_COM,
             linewidth=1.4, linestyle='--')
-    ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color='tab:cyan',
+    ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color=COLOR_NO_COM,
             linewidth=2)
-    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+    legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
                              label='Detected CoM'),
-                      Line2D([0], [0], color='tab:olive', lw=1.5,  linestyle='--',
+                      Line2D([0], [0], color=COLOR_COM, lw=1.5,  linestyle='--',
                              label='All CoM'),
-                      Line2D([0], [0], color='tab:cyan', lw=2,
+                      Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                              label='No-CoM')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.set_xlabel('Time (ms)')
@@ -1968,12 +1971,9 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     plt.rcParams['legend.title_fontsize'] = 9
     plt.rcParams['xtick.labelsize'] = 9
     plt.rcParams['ytick.labelsize'] = 9
-    fig, ax = plt.subplots(ncols=2, nrows=7, gridspec_kw={'top': 0.95,
-                                                          'bottom': 0.055,
-                                                          'left': 0.07,
-                                                          'right': 0.95,
-                                                          'hspace': 0.5,
-                                                          'wspace': 0.4},
+    fig, ax = plt.subplots(ncols=2, nrows=7,
+                           gridspec_kw={'top': 0.95, 'bottom': 0.055, 'left': 0.07,
+                                        'right': 0.95, 'hspace': 0.5, 'wspace': 0.4},
                            figsize=fgsz)
     ax = ax.flatten()
     labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -2490,10 +2490,10 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
         mean_traj = np.nanmean(all_trajs, axis=0)
         xvals = np.arange(len(mean_traj))*precision
         yvals = mean_traj
-        ax.plot(xvals, yvals, color='tab:olive', alpha=0.1)
+        ax.plot(xvals, yvals, color=COLOR_COM, alpha=0.1)
         mat_mean_trajs_subjs[i_s, :] = yvals
     mean_traj_across_subjs = np.nanmean(mat_mean_trajs_subjs, axis=0)
-    ax.plot(xvals, mean_traj_across_subjs, color='tab:olive', linewidth=2)
+    ax.plot(xvals, mean_traj_across_subjs, color=COLOR_COM, linewidth=2)
     index = ~com
     all_trajs = np.empty((sum(index), max_mt))
     all_trajs[:] = np.nan
@@ -2510,12 +2510,12 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     mean_traj = np.nanmean(all_trajs, axis=0)
     xvals = np.arange(len(mean_traj))*precision
     yvals = mean_traj
-    ax.plot(xvals, yvals, color='tab:cyan', linewidth=2)
+    ax.plot(xvals, yvals, color=COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('x-coord. (px)')
-    legendelements = [Line2D([0], [0], color='tab:olive', lw=2,
+    legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
                              label='CoM'),
-                      Line2D([0], [0], color='tab:cyan', lw=2,
+                      Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                              label='No-CoM')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-100, color='r', linestyle=':')
@@ -2528,9 +2528,9 @@ def com_statistics_humans(peak_com, time_com, ax):
     rm_top_right_lines(ax1)
     rm_top_right_lines(ax2)
     ax1.hist(peak_com[peak_com != 0]/600*100, bins=67, range=(-100, -16.667),
-             color='tab:olive')
+             color=COLOR_COM)
     ax1.hist(peak_com[peak_com != 0]/600*100, bins=14, range=(-16.667, 0),
-             color='tab:cyan')
+             color=COLOR_NO_COM)
     ax1.set_yscale('log')
     ax1.axvline(-100/6, linestyle=':', color='r')
     ax1.set_xlim(-100, 1)
@@ -2538,7 +2538,7 @@ def com_statistics_humans(peak_com, time_com, ax):
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
     ax2.hist(time_com[time_com != -1]*1e3, bins=30, range=(0, 510),
-             color='tab:olive')
+             color=COLOR_COM)
     ax2.set_xlabel('Deflection time (ms)')
 
 
@@ -2655,7 +2655,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
                 # ax1.set_xlim(0, 650)
                 # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
             ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                     max_MT=max_mt+300, pval=0.001)
+                                     max_MT=max_mt+300, pval=0.01)
             if ind < 410:
                 split_ind.append(ind)
             else:
@@ -2708,7 +2708,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
         ax1.set_ylim(-2, 400)
         ax1.set_title(labs[i])
         ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                 max_MT=max_mt+300, pval=0.001)
+                                 max_MT=max_mt+300, pval=0.01)
         # ax1.axvline(ind, color='r')
         ax1.set_xlabel('Time (ms)')
         if i == 0:
@@ -3785,7 +3785,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o')
     ax.set_xlabel('Stimulus evidence')
     ax.set_ylabel('Fraction of correcting CoM')
-    ax.set_xticklabels([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
+    ax.set_xticks([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
 
 
 def supp_plot_trajs_dep_trial_index(df):
@@ -3819,9 +3819,9 @@ if __name__ == '__main__':
     plt.close('all')
     f1 = False
     f2 = False
-    f3 = False
+    f3 = True
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
@@ -3831,7 +3831,8 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
+            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
+            # subjects = ['LE37', 'LE46', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3839,7 +3840,7 @@ if __name__ == '__main__':
         df_all = pd.DataFrame()
         for sbj in subjects:
             df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=False,
+                                          sv_folder=SV_FOLDER, after_correct=True,
                                           silent=True, all_trials=True,
                                           srfail=True)
             if all_rats:
