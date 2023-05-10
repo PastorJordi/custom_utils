@@ -83,7 +83,7 @@ elif pc_name == 'alex_CRM':
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
-COLOR_COM = 'tab:orange'
+COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
@@ -146,6 +146,30 @@ def plot_fixation_breaks_single(subject, ax):
     ax.set_xlabel('RT (s)')
     ax.set_ylabel('mean density (+/- std)')
     # plt.show()
+
+
+def plot_coms_single_session(df, ax):
+    np.random.seed(1)
+    sess = df.loc[df.sessid == 'LE37_p4_20190213-151548']
+    coms = sess.CoM_sugg.values
+    decision = sess.R_response.values
+    index = np.random.choice(np.arange(len(decision)), 100)
+    for itr, traj in enumerate(sess.trajectory_y.values[index]):
+        time = sess.time_trajs.values[index][itr]
+        if time[-1] > 600:
+            continue
+        if not coms[index][itr] and decision[index][itr] == 1:
+            ax.plot(time, traj, color=COLOR_NO_COM)
+    for itr, traj in enumerate(sess.trajectory_y.values[index]):
+        time = sess.time_trajs.values[index][itr]
+        if coms[index][itr] and decision[index][itr] == 0:
+            ax.plot(time, traj, color=COLOR_COM)
+    ax.set_xlim(-100, 650)
+    ax.set_ylabel('y-coord (pixels)')
+    ax.set_xlabel('Time from movement onset (ms)')
+    ax.axhline(y=75, linestyle='--', color='Green', lw=1)
+    ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
+    ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
 def plot_rt_all_rats(subjects):
@@ -1752,7 +1776,7 @@ def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     plot_proportion_corr_com_vs_stim(df, ax[5])
     fig2.e(df, sv_folder=SV_FOLDER, ax=ax[8])
     ax[8].set_ylim(0, 0.075)
-    plot_coms(df=df, ax=ax[1])
+    plot_coms_single_session(df=df, ax=ax[1])
     ax_trck = ax[0]
     tracking_image(ax_trck)
     ax_com_stat = ax[4]
@@ -3814,6 +3838,26 @@ def plot_rt_sim(df_sim):
                         color=colormap[iev], ax=ax[isub])
 
 
+def sess_t_index_stats(df, subjects):
+    subs_spec_trial = df.loc[df.special_trial == 2, 'subjid'].unique()
+    subs_no_silent = list(set(subjects)-set(subs_spec_trial))
+    ses_st = []
+    ntr_sil = []
+    ntr_only_sil = []
+    for sub_sil in subs_spec_trial:
+        ses_st.append(len(df.loc[df.subjid == sub_sil, 'sessid'].unique()))
+        ntr_sil.append(len(df.loc[df.subjid == sub_sil]))
+        ntr_only_sil.append(len(
+            df.loc[(df.special_trial == 2) & (df.subjid == sub_sil)]))
+    ses_n_st = []
+    ntr_n_sil = []
+    for sub_n_sil in subs_no_silent:
+        ses_n_st.append(len(df.loc[df.subjid == sub_n_sil, 'sessid'].unique()))
+        ntr_n_sil.append(len(df.loc[df.subjid == sub_n_sil]))
+    print(', '.join(list(subs_spec_trial)))
+    print(', '.join(list(subs_no_silent)))
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -3832,7 +3876,7 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
-            # subjects = ['LE37', 'LE46', 'LE47']
+            subjects = ['LE37', 'LE46', 'LE47']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
