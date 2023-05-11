@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -466,15 +466,15 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
                                                    (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2,
-            label='No-CoM')
+            label='No-Rev.')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='Detected CoM'),
+                             label='Detected Rev.'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-CoM')]
+                             label='No-Rev.')]
     ax.legend(handles=legendelements)
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(20, -20, "Detection threshold", color='r')
@@ -1727,9 +1727,9 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         mt_com_mat[:, i_s] = counts_com/sum(counts_com)
         mt_nocom_mat[:, i_s] = counts_nocom/sum(counts_nocom)
     ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color=COLOR_COM,
-            label='Detected CoM', linewidth=1.6)
+            label='Detected Rev.', linewidth=1.6)
     ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color=COLOR_NO_COM,
-            label='No-CoM', linewidth=1.6)
+            label='No-Rev.', linewidth=1.6)
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
@@ -1975,11 +1975,11 @@ def mean_com_traj_simul(df_sim, ax):
     ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color=COLOR_NO_COM,
             linewidth=2)
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='Detected CoM'),
+                             label='Detected Rev.'),
                       Line2D([0], [0], color=COLOR_COM, lw=1.5,  linestyle='--',
-                             label='All CoM'),
+                             label='All Rev.'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-CoM')]
+                             label='No-Rev.')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Position (pixels)')
@@ -2186,7 +2186,8 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
                             median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1))
-    trajs_splitting_stim(df_sim, ax=ax[8], collapse_sides=True, threshold=500,
+    trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
+                         ax=ax[8], collapse_sides=True, threshold=500,
                          sim=True,
                          rtbins=np.linspace(0, 150, 16), connect_points=True,
                          draw_line=((0, 90), (90, 0)),
@@ -2540,9 +2541,9 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('x-coord. (px)')
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='CoM'),
+                             label='Rev.'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-CoM')]
+                             label='No-Rev.')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
@@ -3798,20 +3799,32 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     m_corr = []
     std_corr = []
+    m_corr_norm = []
+    std_corr_norm = []
     for iev, ev in enumerate(np.unique(coh)):
         index = coh == ev
         m_corr_ev = []
+        m_corr_normal = []
         for subj in df.subjid.unique():
             ch_sub = ch_com[index & (df.subjid == subj) & com]
+            ch_norm_sub = ch[(~com) & (df.subjid == subj) & index]
             gt_sub = gt[index & (df.subjid == subj) & com]
+            gt_norm_sub = gt[(~com) & (df.subjid == subj) & index]
             num_correct = sum(ch_sub == gt_sub)
+            mean_corr_norm = np.mean(ch_norm_sub == gt_norm_sub)
             m_corr_ev.append(num_correct/sum(index & (df.subjid == subj) & com))
+            m_corr_normal.append(mean_corr_norm)
         m_corr.append(np.nanmean(m_corr_ev))
+        m_corr_norm.append(np.nanmean(m_corr_normal))
         std_corr.append(np.nanstd(m_corr_ev))
-    ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o')
+        std_corr_norm.append(np.nanstd(m_corr_normal))
+    ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o', label='Rev.')
+    ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
+                marker='o', label='No-Rev.')
     ax.set_xlabel('Stimulus evidence')
-    ax.set_ylabel('Fraction of correcting CoM')
+    ax.set_ylabel('Fraction of correcting Rev.')
     ax.set_xticks([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
+    ax.legend()
 
 
 def supp_plot_trajs_dep_trial_index(df):
@@ -3838,6 +3851,8 @@ def plot_rt_sim(df_sim):
             sns.kdeplot(df_sim.loc[(df_sim.coh2.abs() == ev) &
                                    (df_sim.subjid == subj), 'sound_len'],
                         color=colormap[iev], ax=ax[isub])
+            ax[isub].set_xlabel('RT (ms)')
+            ax[isub].set_title(subj)
 
 
 def sess_t_index_stats(df, subjects):
@@ -3870,6 +3885,18 @@ def mean_traj_per_deflection_time(df, time_com, ax,
         df_2 = df_1.loc[index]
 
 
+def mt_diff_rev_nonrev(df):
+    mt_x_sub_rev = []
+    for subj in df.subjid.unique():
+        mt_x_sub_rev.append(
+            np.nanmean(df.loc[(df.subjid == subj) & (df.CoM_sugg), 'resp_len']) -
+            np.nanmean(df.loc[(~df.CoM_sugg) & (df.subjid == subj), 'resp_len']))
+    print('Mean +- SEM of difference in MT rev vs non_rev')
+    print(np.nanmean(mt_x_sub_rev)*1e3)
+    print('+-')
+    print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
+
+
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -3887,8 +3914,9 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
-            subjects = ['LE43', 'LE42']
+            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47', 'LE85', 'LE43',
+            #             'LE40']
+            # subjects = ['LE43', 'LE42']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3976,6 +4004,7 @@ if __name__ == '__main__':
         special_trial = np.resize(df.special_trial[:int(num_tr)], num_tr + n_sil)
         subjid = np.resize(np.array(df.subjid)[:int(num_tr)], num_tr + n_sil)
         special_trial[int(num_tr):] = 2
+        # special_trial[df.soundrfail.values] = 2
         if stim.shape[0] != 20:
             stim = stim.T
         stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
