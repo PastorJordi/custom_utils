@@ -1269,12 +1269,12 @@ def plot_lh_model_network(df):
     ax[0].set_title('Choice 0')
     for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
                                     [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                    [50, 50, 50, 50, 10, 500]):
+                                    [400, 400, 400, 400, 10, 500]):
         if i == 5:
             xt = True
         plot_network_model_comparison(df, ax[2*i:2*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                      n_list=[2000000], cohval=cohval,
+                                      n_list=[1000000], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
