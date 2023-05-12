@@ -937,6 +937,12 @@ def get_plb():
             plb_mt_int, plb_mt_slope]
 
 
+def nonbox_constraints_bads(x):
+    cond1 = x[6] + x[7]/x[9] < 49  # RT peak < -55 ms
+    cond2 = x[2] * x[10] < 20  # effect on MT for REACTIVE < 20ms
+    return bool(cond1+cond2)
+
+
 def gumbel_plotter():
     # fits = scipy.stats.gumbel_r.fit(df.resp_len.values*1000)
     fig, ax = plt.subplots(1)
@@ -1071,7 +1077,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub,
+                    non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
