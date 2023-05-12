@@ -567,7 +567,7 @@ def build_prior_sample_theta(num_simulations):
             Uniform(torch.tensor([1e-3]),
                     torch.tensor([0.8])),  # stim weight
             Uniform(torch.tensor([1e-2]),
-                    torch.tensor([3.5])),  # evidence integrator bound
+                    torch.tensor([4])),  # evidence integrator bound
             Uniform(torch.tensor([1e-8]),
                     torch.tensor([1.])),  # CoM bound
             Uniform(torch.tensor([3.]),
@@ -575,24 +575,24 @@ def build_prior_sample_theta(num_simulations):
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
             Uniform(torch.tensor([9.]),
-                    torch.tensor([16.])),  # time offset action
+                    torch.tensor([20.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
                     torch.tensor([0.08])),  # intercept trial index for action drift
-            Uniform(torch.tensor([1e-7]),
+            Uniform(torch.tensor([1e-5]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
             Uniform(torch.tensor([0.5]),
                     torch.tensor([4.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
-                    torch.tensor([150.])),  # weight of evidence at first readout (for MT reduction)
+                    torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
             Uniform(torch.tensor([1.]),
-                    torch.tensor([150.])),  # weight of evidence at second readout
+                    torch.tensor([500.])),  # weight of evidence at second readout
             Uniform(torch.tensor([1e-6]),
                     torch.tensor([0.9])),  # leak
             Uniform(torch.tensor([1.]),
-                    torch.tensor([50.])),  # std of the MT noise
+                    torch.tensor([90.])),  # std of the MT noise
             Uniform(torch.tensor([120.]),
                     torch.tensor([400.])),  # MT offset
-            Uniform(torch.tensor([0.06]),
+            Uniform(torch.tensor([0.01]),
                     torch.tensor([0.5]))],  # MT slope with trial index
             validate_args=False)
 
@@ -821,20 +821,20 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 8
+    lb_t_a = 9
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.2
     lb_com_bound = 0
-    lb_w_intercept = 0
-    lb_w_slope = 0
+    lb_w_intercept = 0.01
+    lb_w_slope = 1e-5
     lb_a_bound = 0.1
     lb_1st_r = 25
     lb_2nd_r = 1
     lb_leak = 0
     lb_mt_n = 1
-    lb_mt_int = 100
-    lb_mt_slope = 0.001
+    lb_mt_int = 120
+    lb_mt_slope = 0.01
     return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
             lb_eff, lb_t_a, lb_w_intercept, lb_w_slope, lb_a_bound,
             lb_1st_r, lb_2nd_r, lb_leak, lb_mt_n,
@@ -853,20 +853,20 @@ def get_ub():
     """
     ub_aff = 15
     ub_eff = 15
-    ub_t_a = 22
+    ub_t_a = 20
     ub_w_zt = 1
     ub_w_st = 0.6
     ub_e_bound = 4
     ub_com_bound = 1
-    ub_w_intercept = 0.1
-    ub_w_slope = 0.01
+    ub_w_intercept = 0.08
+    ub_w_slope = 5e-5
     ub_a_bound = 3.5
     ub_1st_r = 500
     ub_2nd_r = 500
     ub_leak = 2
     ub_mt_n = 80
-    ub_mt_int = 450
-    ub_mt_slope = 0.15
+    ub_mt_int = 400
+    ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
             ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
             ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
@@ -1274,7 +1274,7 @@ def plot_lh_model_network(df):
             xt = True
         plot_network_model_comparison(df, ax[2*i:2*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                      n_list=[1000000], cohval=cohval,
+                                      n_list=[2000000], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
@@ -1377,14 +1377,14 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(1e6)  # number of simulations to train the network
+        num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = False
+        training = True
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False

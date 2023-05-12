@@ -3933,10 +3933,10 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85']
+            subjects = ['LE43']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
-            subjects = ['LE43']
+            subjects = ['LE43', 'LE42']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
