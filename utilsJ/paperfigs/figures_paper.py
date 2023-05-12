@@ -929,16 +929,16 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
                         if not sim:  # TODO: do this if within splitfun
                             _, matatmp, matb =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
-                                                & (df.subjid == subject)],
-                                        side=0, collapse_sides=True,
-                                        rtbin=i, rtbins=rtbins, coh1=ev,
-                                        trajectory=trajectory, align="sound")
+                                                   & (df.subjid == subject)],
+                                         side=0, collapse_sides=True,
+                                         rtbin=i, rtbins=rtbins, coh1=ev,
+                                         trajectory=trajectory, align="sound")
                         if sim:
                             _, matatmp, matb =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
-                                                & (df.subjid == subject)],
-                                        side=0, rtbin=i, rtbins=rtbins, coh=ev,
-                                        align="sound")
+                                                   & (df.subjid == subject)],
+                                         side=0, rtbin=i, rtbins=rtbins, coh=ev,
+                                         align="sound")
                         if appb:
                             mat = matb
                             evl = np.repeat(0, matb.shape[0])
@@ -3933,10 +3933,10 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE43']
+            # subjects = ['LE43']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
-            subjects = ['LE43', 'LE42']
+            subjects = ['LE43']
             # good ones for fitting: 42, 43, 38
         df_all = pd.DataFrame()
         for sbj in subjects:
