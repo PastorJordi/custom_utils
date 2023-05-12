@@ -861,10 +861,10 @@ def get_ub():
     ub_w_intercept = 0.1
     ub_w_slope = 0.01
     ub_a_bound = 3.5
-    ub_1st_r = 150
-    ub_2nd_r = 150
+    ub_1st_r = 500
+    ub_2nd_r = 500
     ub_leak = 2
-    ub_mt_n = 90
+    ub_mt_n = 80
     ub_mt_int = 450
     ub_mt_slope = 0.15
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -893,8 +893,8 @@ def get_pub():
     pub_w_intercept = 0.08
     pub_w_slope = 3e-5
     pub_a_bound = 2.8
-    pub_1st_r = 60
-    pub_2nd_r = 90
+    pub_1st_r = 400
+    pub_2nd_r = 400
     pub_leak = 0.8
     pub_mt_n = 40
     pub_mt_int = 350
@@ -926,7 +926,7 @@ def get_plb():
     plb_w_slope = 1.5e-5
     plb_a_bound = 2.2
     plb_1st_r = 40
-    plb_2nd_r = 70
+    plb_2nd_r = 40
     plb_leak = 0.4
     plb_mt_n = 20
     plb_mt_int = 290
@@ -1107,9 +1107,10 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
     return mat_final
 
 
-def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5),
+def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
-                                  plot_nn=False, simulate=False, plot_model=True):
+                                  plot_nn=False, simulate=False, plot_model=True,
+                                  plot_nn_alone=False, xt=False):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1120,34 +1121,34 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
     if simulate:
-        # for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-        #                                 [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-        #                                 [400, 400, 400, 400, 10, 800]):
-        stim = np.array(
-            [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
-        theta = get_x0()
-        theta = torch.reshape(torch.tensor(theta),
-                              (1, len(theta))).to(torch.float32)
-        theta = theta.repeat(num_simulations, 1)
-        stim = np.array(
-            [np.concatenate((stim, stim)) for i in range(len(theta))])
-        trial_index = np.repeat(tival, len(theta))
-        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                                 zt=np.repeat(ztval, len(theta)),
-                                 coh=np.repeat(cohval, len(theta)),
-                                 trial_index=trial_index)
-        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), x)
-        # let's compute prob for each bin
-        mat_0 = matrix_probs(x[x[:, 2] == 0])
-        mat_1 = matrix_probs(x[x[:, 2] == 1])
-        np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), mat_0)
-        np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), mat_1)
-        x = []
-        mat_0 = []
-        mat_1 = []
+        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                        [400, 400, 400, 400, 10, 800]):
+            stim = np.array(
+                [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+            theta = get_x0()
+            theta = torch.reshape(torch.tensor(theta),
+                                  (1, len(theta))).to(torch.float32)
+            theta = theta.repeat(num_simulations, 1)
+            stim = np.array(
+                [np.concatenate((stim, stim)) for i in range(len(theta))])
+            trial_index = np.repeat(tival, len(theta))
+            x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                     zt=np.repeat(ztval, len(theta)),
+                                     coh=np.repeat(cohval, len(theta)),
+                                     trial_index=trial_index)
+            np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), x)
+            # let's compute prob for each bin
+            mat_0 = matrix_probs(x[x[:, 2] == 0])
+            mat_1 = matrix_probs(x[x[:, 2] == 1])
+            np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_0)
+            np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_1)
+            x = []
+            mat_0 = []
+            mat_1 = []
     else:
         trial_index = np.repeat(tival, num_simulations)
         mat_0 = np.load(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
@@ -1183,47 +1184,57 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
             theta_tri_ind = torch.column_stack((theta[:len(x_o)],
                                                 torch.tensor(trial_index[
                                                     :len(x_o)]).to(torch.float32)))
+            theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+            theta_tri_ind[:, 7] += theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+            theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                                theta_tri_ind[:, 9:15]))
             lprobs = estimator.log_prob(x_o, theta_tri_ind)
             lprobs = torch.exp(lprobs)
             mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
-            fig, ax = plt.subplots(ncols=2)
-            fig.suptitle('Network + {}'.format(n_sim_train))
-            ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-            ax[0].set_title('Choice 0')
-            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[0].set_ylabel('MT (ms)')
-            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[0].set_xlabel('RT (ms)')
-            im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-            ax[1].set_title('Choice 1')
-            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[1].set_ylabel('MT (ms)')
-            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[1].set_xlabel('RT (ms)')
-            plt.colorbar(im1)
-            fig, ax = plt.subplots(ncols=2)
-            fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
+            if plot_nn_alone:
+                fig, ax = plt.subplots(ncols=2)
+                fig.suptitle('Network + {}'.format(n_sim_train))
+                ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax[0].set_title('Choice 0')
+                ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax[0].set_ylabel('MT (ms)')
+                ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax[0].set_xlabel('RT (ms)')
+                im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax[1].set_title('Choice 1')
+                ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax[1].set_ylabel('MT (ms)')
+                ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax[1].set_xlabel('RT (ms)')
+                plt.colorbar(im1)
+            # fig, ax = plt.subplots(ncols=2)
+            # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
             ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
                          vmax=np.max((mat_0, mat_1)))
             ax[0].contour(mat_0_nn, cmap='hot')
-            ax[0].set_title('Choice 0')
-            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
             ax[0].set_ylabel('MT (ms)')
-            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[0].set_xlabel('RT (ms)')
+            if xt:
+                ax[0].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[0].set_xlabel('RT (ms)')
+            else:
+                ax[0].set_xticks([])
             im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
                                vmax=np.max((mat_0, mat_1)))
             plt.sca(ax[1])
-            ax[1].contour(mat_1_nn, cmap='hot')
-            ax[1].set_title('Choice 1')
-            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[1].set_ylabel('MT (ms)')
-            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[1].set_xlabel('RT (ms)')
+            im2 = ax[1].contour(mat_1_nn, cmap='hot')
+            ax[1].set_yticks([])
+            # ax[1].set_ylabel('MT (ms)')
+            if xt:
+                ax[1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[1].set_xlabel('RT (ms)')
+            else:
+                ax[1].set_xticks([])
             plt.colorbar(im1, fraction=0.04)
+            plt.colorbar(im2, fraction=0.04)
     if plot_model:
         fig, ax = plt.subplots(ncols=2)
         fig.suptitle('Model + coh {}, zt {}, t_ind {}'.format(cohval,
@@ -1247,6 +1258,27 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
         ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[1].set_xlabel('RT (ms)')
         plt.colorbar(im1)
+
+
+def plot_lh_model_network(df):
+    fig, ax = plt.subplots(6, 2, figsize=(8, 12))
+    ax = ax.flatten()
+    i = 0
+    xt = False
+    ax[1].set_title('Choice 1')
+    ax[0].set_title('Choice 0')
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                    [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                    [50, 50, 50, 50, 10, 500]):
+        if i == 5:
+            xt = True
+        plot_network_model_comparison(df, ax[2*i:2*(i+1)],
+                                      sv_folder=SV_FOLDER, num_simulations=int(5e5),
+                                      n_list=[1000000], cohval=cohval,
+                                      ztval=ztval, tival=tival,
+                                      plot_nn=True, simulate=False, plot_model=False,
+                                      plot_nn_alone=False, xt=xt)
+        i += 1
 
 
 # --- MAIN
