@@ -3888,7 +3888,7 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47']
-            subjects = ['LE43', 'LE42']
+            # subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']

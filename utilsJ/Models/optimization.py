@@ -821,7 +821,7 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 3
+    lb_t_a = 8
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.2
@@ -896,7 +896,7 @@ def get_pub():
     pub_1st_r = 60
     pub_2nd_r = 90
     pub_leak = 0.8
-    pub_mt_n = 50
+    pub_mt_n = 40
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -928,7 +928,7 @@ def get_plb():
     plb_1st_r = 40
     plb_2nd_r = 70
     plb_leak = 0.4
-    plb_mt_n = 30
+    plb_mt_n = 20
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
