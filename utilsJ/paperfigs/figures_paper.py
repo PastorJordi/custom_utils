@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -3933,7 +3933,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE43']
+            subjects = ['LE42']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']

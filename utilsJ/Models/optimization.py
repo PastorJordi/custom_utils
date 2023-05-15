@@ -23,11 +23,12 @@ from sbi.analysis import pairplot
 import pickle
 import scipy
 from pybads import BADS
+# from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -36,16 +37,16 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
-CTE = 1/2 * 1/600 * 1/995
+CTE = 1/2 * 1/600 * 1/995  # contaminants
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -858,7 +859,7 @@ def get_ub():
     ub_w_st = 0.6
     ub_e_bound = 4
     ub_com_bound = 1
-    ub_w_intercept = 0.08
+    ub_w_intercept = 0.12
     ub_w_slope = 5e-5
     ub_a_bound = 3.5
     ub_1st_r = 500
@@ -938,9 +939,13 @@ def get_plb():
 
 
 def nonbox_constraints_bads(x):
-    cond1 = x[6] + x[7]/x[9] < 49  # RT peak < -55 ms
-    cond2 = x[2] * x[10] < 20  # effect on MT for REACTIVE < 20ms
-    return bool(cond1+cond2)
+    x_1 = np.atleast_2d(x)
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 60  # RT peak < 0 ms
+    # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
+    # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
+    # cond3 = x_1[:, 2] * x_1[:, 10] < 30
+    # effect on MT for Reactive responses < 30 ms
+    return np.bool8(cond1)
 
 
 def gumbel_plotter():
@@ -953,6 +958,37 @@ def gumbel_plotter():
             fff.append(v*np.random.gumbel())
         sns.kdeplot(np.array(fff)[~np.isnan(fff)], ax=ax, label=v)
     ax.legend()
+
+
+def prepare_fb_data(df):
+    print('Preparing FB data')
+    coh_vec = df.coh2.values
+    dwl_vec = df.dW_lat.values
+    dwt_vec = df.dW_trans.values
+    mt_vec = df.resp_len.values
+    ch_vec = df.R_response.values
+    tr_in_vec = df.origidx.values
+    for ifb, fb in enumerate(df.fb):
+        for j in range(len(fb)):
+            coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
+            dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
+            dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
+            mt_vec = np.append(mt_vec, np.nan)
+            ch_vec = np.append(ch_vec, np.nan)
+            tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
+    rt_vec =\
+        np.vstack(np.concatenate([df.sound_len,
+                                  1e3*(np.concatenate(
+                                      df.fb.values)-0.3)])).reshape(-1)
+    zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
+    x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
+                              torch.tensor(rt_vec+300),
+                              torch.tensor(ch_vec)))
+    data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
+                               torch.tensor(tr_in_vec.astype(float)),
+                               x_o))
+    data = data[np.round(rt_vec) > -250, :]
+    return data
 
 
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
@@ -1044,33 +1080,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         pub = get_pub()
         plb = get_plb()
         # get fixation break (FB) data
-        print('Preparing FB data')
-        coh_vec = df.coh2.values
-        dwl_vec = df.dW_lat.values
-        dwt_vec = df.dW_trans.values
-        mt_vec = df.resp_len.values
-        ch_vec = df.R_response.values
-        tr_in_vec = df.origidx.values
-        for ifb, fb in enumerate(df.fb):
-            for j in range(len(fb)):
-                coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
-                dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
-                dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
-                mt_vec = np.append(mt_vec, np.nan)
-                ch_vec = np.append(ch_vec, np.nan)
-                tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
-        rt_vec =\
-            np.vstack(np.concatenate([df.sound_len,
-                                      1e3*(np.concatenate(
-                                          df.fb.values)-0.3)])).reshape(-1)
-        zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
-        x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
-                                  torch.tensor(rt_vec+300),
-                                  torch.tensor(ch_vec)))
-        data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
-                                   torch.tensor(tr_in_vec.astype(float)),
-                                   x_o))
-        data = data[np.round(rt_vec) > -250, :]
+        data = prepare_fb_data(df=df)
         print('Optimizing')
         n_trials = len(data)
         # define fun_target as function to optimize
@@ -1241,7 +1251,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             else:
                 ax[1].set_xticks([])
             plt.colorbar(im1, fraction=0.04)
-            plt.colorbar(im2, fraction=0.04)
+            # plt.colorbar(im2, fraction=0.04)
     if plot_model:
         fig, ax = plt.subplots(ncols=2)
         fig.suptitle('Model + coh {}, zt {}, t_ind {}'.format(cohval,
@@ -1273,8 +1283,11 @@ def plot_lh_model_network(df):
     i = 0
     xt = False
     ax[1].set_title('Choice 1')
-    ax[0].set_title('Choice 0')
-    for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+    # ax[0].set_title('Choice 0')
+    labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
+              'mid stim, high zt', 'inc. stim with zt', 'cong. low t.i.',
+              'cong. higher t.i.']
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.25, 0.25],
                                     [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
                                     [400, 400, 400, 400, 10, 500]):
         if i == 5:
@@ -1285,6 +1298,7 @@ def plot_lh_model_network(df):
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
+        ax[2*i].set_title(labels[i])
         i += 1
 
 
@@ -1384,21 +1398,21 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e6)  # number of simulations to train the network
+        num_simulations = int(1e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = True
+        training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
             # subject = 'LE43'
             print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
-                                     sv_folder=SV_FOLDER, after_correct=False,
+                                     sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
             try:
