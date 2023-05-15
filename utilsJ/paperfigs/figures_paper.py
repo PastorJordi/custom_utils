@@ -3016,7 +3016,7 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
-                                   subjid, num_tr=None, load_params=True):
+                                   subjid, num_tr=None, load_params=True, simulate=True):
     hit_model = np.empty((0))
     reaction_time = np.empty((0))
     detected_com = np.empty((0))
@@ -3033,7 +3033,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(sim_data), exist_ok=True)
-        if os.path.exists(sim_data):
+        if os.path.exists(sim_data) and not simulate:
             data_simulation = np.load(sim_data, allow_pickle=True)
             hit_model_tmp = data_simulation['hit_model_tmp']
             reaction_time_tmp = data_simulation['reaction_time_tmp']
@@ -3933,7 +3933,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE42']
+            subjects = ['LE43']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
