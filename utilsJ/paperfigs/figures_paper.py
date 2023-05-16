@@ -485,10 +485,12 @@ def binning_mt_prior(df, bins):
     mat_mt = np.empty((len(df.subjid.unique()), len(bins)-1))
     for i_s, subject in enumerate(df.subjid.unique()):
         df_sub = df.loc[df.subjid == subject]
-        for i_zt, bin_zt in enumerate(bins[:-1]):
-            mt_sub = df_sub.loc[(df_sub.choice_x_prior >= bin_zt) &
-                                (df_sub.choice_x_prior < bins[i_zt+1]), 'resp_len']
-            mat_mt[i_s, i_zt] = np.nanmean(mt_sub)
+        for bin in range(len(bins)-1):
+            mt_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
+                                (df_sub.choice_x_prior < bins[bin+1]), 'resp_len']
+            mat_mt[i_s, bin] = np.nanmean(mt_sub)
+            if np.isnan(mat_mt[i_s, bin]):
+                print(1)
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
 
@@ -507,8 +509,9 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
     elif condition == 'choice_x_prior':
         # FIXME: bins should be define taking into account the filtered trials (indx_trajs)
         bins_zt = [-1.01]
-        for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
-            if i_p > 2:
+        percentiles = [0.5, 0.25, 0.25, 0.5]
+        for i_p, perc in enumerate(percentiles):
+            if i_p >= len(percentiles)/2:
                 bins_zt.append(df.norm_allpriors.abs().quantile(perc))
             else:
                 bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
@@ -530,16 +533,17 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
 
-def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after_correct_only=True):
+def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after_correct_only=True):
     subjects = df['subjid'].unique()
     # interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
-    bins, _, _, _, colormap =\
+    bins, _, indx_trajs, _, colormap =\
           get_bin_info(condition=condition, prior_limit=prior_limit,
                         after_correct_only=after_correct_only,
                         rt_lim=rt_lim)
+    df = df.loc[indx_trajs]
     if condition == 'choice_x_coh':
         # compute median MT for each subject and each stim strength
         df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
@@ -548,8 +552,7 @@ def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after
         mt_time = mt_time.unstack(fill_value=np.nan).values.T
         plot_bins = sorted(df.coh2.unique())
     elif condition == 'choice_x_prior':
-        norm_allpriors = norm_allpriors_per_subj(df)
-        df['choice_x_prior'] = (df.R_response*2-1) * norm_allpriors
+        df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
         mt_time = binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
@@ -1210,11 +1213,11 @@ def fig_1_rats_behav(df_data, figsize=(6, 8), margin=.05):
     add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
     
     # MT VS COH
-    plot_mt(df=df, ax=ax[7], prior_limit=0.1,  # 10% quantile
-            condition='choice_x_coh')
+    plot_mt_vs_evidence(df=df, ax=ax[7], prior_limit=0.1,  # 10% quantile
+                        condition='choice_x_coh')
     # MT VS PRIOR
-    plot_mt(df=df.loc[df.special_trial == 2], ax=ax[6], condition='choice_x_prior',
-            prior_limit=1)
+    plot_mt_vs_evidence(df=df.loc[df.special_trial == 2], ax=ax[6],
+                        condition='choice_x_prior', prior_limit=1)
     # REGRESSION WEIGHTS
     mt_weights(df, ax=ax[8], plot=True, means_errs=False)
     # MT MATRIX
