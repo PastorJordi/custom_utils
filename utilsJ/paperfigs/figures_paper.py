@@ -505,6 +505,7 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     elif condition == 'choice_x_prior':
+        # FIXME: bins should be define taking into account the filtered trials (indx_trajs)
         bins_zt = [-1.01]
         for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
             if i_p > 2:
@@ -514,7 +515,6 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         bins_zt.append(1.01)
         bins = np.array(bins_zt)
         bintype = 'edges'
-        rt_lim = 200
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 2) &\
             (df.sound_len < rt_lim)
@@ -530,31 +530,33 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
 
-def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50,
-            after_correct_only=True):
-    bins, _, _, _, colormap = get_bin_info(condition=condition, prior_limit=prior_limit,
-                                            after_correct_only=after_correct_only,
-                                            rt_lim=rt_lim)
+def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after_correct_only=True):
+    bins, _, _, _, colormap =\
+          get_bin_info(condition=condition, prior_limit=prior_limit,
+                        after_correct_only=after_correct_only,
+                        rt_lim=rt_lim)
+
     if condition == 'choice_x_coh':
-        mt_time = df.groupby('coh2').resp_len.median()
+        mt_time = df.groupby(['coh2', 'subjid']).resp_len.median()
+        bins = df.coh2.unique()
     elif condition == 'choice_x_prior':
         mt_time = binning_mt_prior(df, bins)
-    for i_tr, traj in enumerate(mt_time):
-        
-        if len(subjects) > 1:
-            c = colormap[i_tr]
-            xp = bins+bins[1]/2
-            ax[0].boxplot(mt_time[i_tr, :], positions=xp, 
+    mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
+    for i_tr in range(len(bins)):  
+        c = colormap[i_tr]  
+        xp = bins[i_tr]+(bins[1]-bins[0])/2
+        if len(subjects) > 1:            
+            ax[0].boxplot(mt_time[:, i_tr], positions=xp, 
                             boxprops=dict(markerfacecolor=c, markeredgecolor=c))
             ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
-                       mt_time[i_tr, :], color=colormap[i_tr], marker='o',
+                       mt_time[:, i_tr], color=colormap[i_tr], marker='o',
                        linestyle='None')
         else:
-            ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-                            color=colormap[i_tr], marker='o')
+            ax[0].errorbar(xp, mt_time[:, i_tr], yerr=mt_time_err[i_tr],
+                            color=c, marker='o')
 
         ax[0].set_ylabel('MT (ms)', fontsize=9)
-        ax[0].plot(xpoints, mt_time, color='k', ls=':')
+        ax[0].plot(xp, mt_time, color='k', ls=':')
 
 def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             prior_limit=0.25, rt_lim=50,
@@ -604,7 +606,6 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     all_trajs = np.nanmean(mat_all, axis=2)
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
     mt_time = np.nanmedian(mt_all, axis=1)
-    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
         ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
@@ -1115,7 +1116,7 @@ def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
             fontweight='bold', va='top', ha='right')
 
 
-def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
+def fig_1_rats_behav(df_data, figsize=(6, 6), margin=.05):
     mat_pright_all = np.zeros((7, 7))
     for subject in df_data.subjid.unique():
         df_sbj = df_data.loc[(df_data.special_trial == 0) &
@@ -1194,6 +1195,14 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
     add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    
+    # MT VS PRIOR
+    plot_mt(df=df.loc[df.special_trial == 2], ax=ax[6], condition='choice_x_prior',
+            prior_limit=1, cmap='copper')
+    # MT VS COH
+    plot_mt(df=df, ax=ax[7], prior_limit=0.1,  # 10% quantile
+            condition='choice_x_coh', cmap='coolwarm')
+
     # REGRESSION WEIGHTS
     mt_weights(df, ax=ax[9], plot=True, means_errs=False)
     # MT MATRIX
@@ -1201,6 +1210,8 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
                        rt_bin=60, collapse_sides=True)
     # SLOWING
     plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
+
+
 
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
@@ -1400,7 +1411,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
-def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
+def fig_2_trajs(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                 marginy=0.05):
     f = plt.figure(figsize=fgsz)
     # FIGURE LAYOUT
@@ -1745,7 +1756,7 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
     ax.set_ylabel('Density')
 
 
-def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
+def fig_3_CoMs(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
                marginy=0.05, figsize=(8, 10), com_th=8):
     if com_th != 8:
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
@@ -1995,7 +2006,7 @@ def mean_com_traj_simul(df_sim, ax):
     ax.text(200, -16, "Detection threshold", color='r')
 
 
-def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
+def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
           decision_model, com, com_model, com_model_detected,
           df_sim, means, errors, means_model, errors_model, inset_sz=.06,
           marginx=0.006, marginy=0.07, fgsz=(8, 18)):
@@ -3925,7 +3936,7 @@ def mt_diff_rev_nonrev(df):
 # ---MAIN
 if __name__ == '__main__':
     plt.close('all')
-    f1 = False
+    f1 = True
     f2 = False
     f3 = False
     f4 = False
@@ -3994,17 +4005,17 @@ if __name__ == '__main__':
     # fig 1
     if f1:
         print('Plotting Figure 1')
-        fig_rats_behav_1(df_data=df)
+        fig_1_rats_behav(df_data=df)
 
     # fig 2
     if f2:
         print('Plotting Figure 2')
-        fig_trajs_2(df=df.loc[df.soundrfail == 0])
+        fig_2_trajs(df=df.loc[df.soundrfail == 0])
 
     # fig 3
     if f3:
         print('Plotting Figure 3')
-        fig_CoMs_3(df=df, peak_com=peak_com, time_com=time_com)
+        fig_3_CoMs(df=df, peak_com=peak_com, time_com=time_com)
         supp_com_marginal(df)
 
     # fig 5 (model)
@@ -4080,7 +4091,7 @@ if __name__ == '__main__':
         resp_len = []
         time_trajs = []
         # actual plot
-        fig_5(coh=coh, sound_len=sound_len, zt=zt,
+        fig_5_model(coh=coh, sound_len=sound_len, zt=zt,
               hit_model=hit_model, sound_len_model=reaction_time.astype(int),
               decision_model=resp_fin, com=com, com_model=com_model,
               com_model_detected=com_model_detected,
