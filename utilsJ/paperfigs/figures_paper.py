@@ -21,9 +21,9 @@ from statsmodels.stats.proportion import proportion_confint
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -480,12 +480,87 @@ def mean_com_traj(df, ax, condition='choice_x_prior', cmap='copper', prior_limit
     ax.text(20, -20, "Detection threshold", color='r')
 
 
+def binning_mt_prior(df, bins):
+    # matrix with rows for subjects and columns for bins
+    mat_mt = np.empty((len(df.subjid.unique()), len(bins)-1))
+    for i_s, subject in enumerate(df.subjid.unique()):
+        df_sub = df.loc[df.subjid == subject]
+        for i_zt, bin_zt in enumerate(bins[:-1]):
+            mt_sub = df_sub.loc[(df_sub.norm_allpriors >= bin_zt) &
+                                (df_sub.norm_allpriors < bins[i_zt+1]), 'resp_len']
+            mat_mt[i_s, i_zt] = np.nanmean(mt_sub)
+    return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
+
+
+def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=300):
+    # after correct condition
+    ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
+    # define bins, bin type, trajectory index and colormap depending on condition
+    if condition == 'choice_x_coh':
+        bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+        bintype = 'categorical'
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim)
+        n_iters = len(bins)
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
+    elif condition == 'choice_x_prior':
+        bins_zt = [-1.01]
+        for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
+            if i_p > 2:
+                bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+            else:
+                bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+        bins_zt.append(1.01)
+        bins = np.array(bins_zt)
+        bintype = 'edges'
+        rt_lim = 200
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 2) &\
+            (df.sound_len < rt_lim)
+        n_iters = len(bins)-1
+        colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
+    elif condition == 'origidx':
+        bins = np.linspace(0, 1e3, num=6)
+        bintype = 'edges'
+        n_iters = len(bins) - 1
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim)
+        colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
+    return bins, bintype, indx_trajs, n_iters, colormap
+
+def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50,
+            after_correct_only=True):
+    bins, _, _, _, colormap = get_bin_info(condition=condition, prior_limit=prior_limit,
+                                            after_correct_only=after_correct_only,
+                                            rt_lim=rt_lim)
+    if condition == 'choice_x_coh':
+        mt_time = df.groupby('coh2').resp_len.median()
+    elif condition == 'choice_x_prior':
+        mt_time = binning_mt_prior(df, bins)
+    for i_tr, traj in enumerate(mt_time):
+        
+        if len(subjects) > 1:
+            c = colormap[i_tr]
+            xp = bins+bins[1]/2
+            ax[0].boxplot(mt_time[i_tr, :], positions=xp, 
+                            boxprops=dict(markerfacecolor=c, markeredgecolor=c))
+            ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
+                       mt_time[i_tr, :], color=colormap[i_tr], marker='o',
+                       linestyle='None')
+        else:
+            ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                            color=colormap[i_tr], marker='o')
+
+        ax[0].set_ylabel('MT (ms)', fontsize=9)
+        ax[0].plot(xpoints, mt_time, color='k', ls=':')
+
 def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             prior_limit=0.25, rt_lim=50,
                             after_correct_only=True,
                             trajectory="trajectory_y",
-                            velocity=("traj_d1", 1),
-                            acceleration=('traj_d2', 1)):
+                            velocity=("traj_d1", 1)):
     """
     Plots mean trajectories, MT, velocity and peak velocity
     conditioning on Coh/Zt/T.index,
@@ -497,49 +572,11 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     df['norm_allpriors'] = norm_allpriors_per_subj(df)
     df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
-    # prior_lim = np.quantile(df.norm_allpriors, prior_limit)
-    if after_correct_only:
-        ac_cond = df.aftererror == False
-    else:
-        ac_cond = (df.aftererror*1) >= 0
-    if condition == 'choice_x_coh':
-        bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-        xlab = 'ev. resp.'
-        bintype = 'categorical'
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim)
-        mt = df.resp_len.values*1e3
-        n_iters = len(bins)
-        colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
-    if condition == 'choice_x_prior':
-        bins_zt = [-1.01]
-        for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
-            if i_p > 2:
-                bins_zt.append(df.norm_allpriors.abs().quantile(perc))
-            else:
-                bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
-        bins_zt.append(1.01)
-        bins = np.array(bins_zt)
-        bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
-        xlab = 'prior resp.'
-        bintype = 'edges'
-        rt_lim = 200
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 2) &\
-            (df.sound_len < rt_lim)
-        n_iters = len(bins)-1
-        colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
-    if condition == 'origidx':
-        bins = np.linspace(0, 1e3, num=6)
-        bintype = 'edges'
-        n_iters = len(bins) - 1
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim)
-        colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
-
-    # position
+    bins, bintype, indx_trajs, n_iters, colormap =\
+          get_bin_info(condition=condition, prior_limit=prior_limit,
+                        after_correct_only=after_correct_only,
+                        rt_lim=rt_lim)
+    # POSITION
     subjects = df['subjid'].unique()
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
@@ -569,21 +606,10 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
-        ax[1].plot(interpolatespace/1000, traj, color=colormap[i_tr])
-        ax[1].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+        ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        if len(subjects) > 1:
-            c = colormap[i_tr]
-            xp = [xpoints[i_tr]]
-            ax[0].boxplot(mt_all[i_tr, :], positions=xp, 
-                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
-                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
-                       linestyle='None')
-        else:
-            ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-                           color=colormap[i_tr], marker='o')
     if condition == 'choice_x_coh':
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
@@ -592,23 +618,13 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                           Line2D([0], [0], color=colormap[4], lw=2, label=''),
                           Line2D([0], [0], color=colormap[5], lw=2, label=''),
                           Line2D([0], [0], color=colormap[6], lw=2, label='1')]
-        ax[1].legend(handles=legendelements, title='Stimulus \n evidence',
+        ax[0].legend(handles=legendelements, title='Stimulus \n evidence',
                      loc='upper left', fontsize=7)
-        ax[0].set_yticklabels('')
-        ax[0].set_yticks([])
-        ax[0].set_xticks([-1, 0, 1])
-        ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
-        ax[0].set_xlabel('Stimulus')
-        ax[2].set_xticks([0])
-        ax[2].set_xticklabels(['Stimulus'], fontsize=9)
-        ax[2].xaxis.set_ticks_position('none')
-        ax[0].set_ylim(220, 285)
-        ax[0].set_yticks([240, 275])
-        ax[0].set_yticklabels(['240', '275'])
-        ax[2].set_ylim([0.5, 0.8])
+        ax[1].set_xticks([0])
+        ax[1].set_xticklabels(['Stimulus'], fontsize=9)
+        ax[1].xaxis.set_ticks_position('none')
+        ax[1].set_ylim([0.5, 0.8])
     if condition == 'choice_x_prior':
-        ax[0].set_yticklabels('')
-        ax[0].set_yticks([])
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
                                  label='congruent'),
                           Line2D([0], [0], color=colormap[3], lw=2,
@@ -619,37 +635,29 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                                  label=''),
                           Line2D([0], [0], color=colormap[0], lw=2,
                                  label='incongruent')]
-        ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
+        ax[0].legend(handles=legendelements, title='Prior', loc='upper left',
                      fontsize=7)
         xpoints = (bins[:-1] + bins[1:]) / 2
-        ax[0].set_ylim(230, 310)
-        ax[0].set_yticks([250, 300])
-        ax[0].set_yticklabels(['250', '300'])
-        ax[0].set_xticks([xpoints[0], 0, xpoints[-1]])
-        ax[0].set_xticklabels(['Incongruent', '0', 'Congruent'])
-        ax[0].set_xlabel('Prior')
-        ax[2].set_ylim([0.5, 0.8])
-        ax[2].set_xticks([0])
-        ax[2].set_xticklabels(['Prior'], fontsize=9)
-        ax[2].xaxis.set_ticks_position('none')
+        ax[1].set_ylim([0.5, 0.8])
+        ax[1].set_xticks([0])
+        ax[1].set_xticklabels(['Prior'], fontsize=9)
+        ax[1].xaxis.set_ticks_position('none')
     if condition == 'origidx':
         legendelements = []
         labs = ['100', '300', '500', '700', '900']
         for i in range(len(colormap)):
             legendelements.append(Line2D([0], [0], color=colormap[i], lw=2,
                                   label=labs[i]))
-        ax[1].legend(handles=legendelements, title='Trial index')
-        ax[2].set_xlabel('Trial index')
-    ax[1].set_xlim([-20, 450])
-    ax[1].set_xticklabels('')
-    ax[1].axhline(0, c='gray')
-    ax[1].set_ylabel('Position (pixels)')
-    ax[0].set_ylabel('MT (ms)', fontsize=9)
-    ax[1].set_ylim([-10, 85])
-    ax[1].set_yticks([0, 25, 50, 75])
-    ax[1].axhline(78, color='gray', linestyle=':')
-    ax[0].plot(xpoints, mt_time, color='k', ls=':')
-    # velocities
+        ax[0].legend(handles=legendelements, title='Trial index')
+        ax[1].set_xlabel('Trial index')
+    ax[0].set_xlim([-20, 450])
+    ax[0].set_xticklabels('')
+    ax[0].axhline(0, c='gray')
+    ax[0].set_ylabel('Position (pixels)')
+    ax[0].set_ylim([-10, 85])
+    ax[0].set_yticks([0, 25, 50, 75])
+    ax[0].axhline(78, color='gray', linestyle=':')
+    # VELOCITIES
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
     for i_subj, subj in enumerate(subjects):
@@ -680,28 +688,28 @@ def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
     mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
-        ax[3].plot(interpolatespace/1000, traj, color=colormap[i_tr])
-        ax[3].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+        ax[2].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
         if len(subjects) > 1:
             xp = [xpoints[i_tr]]
             c = colormap[i_tr]
-            ax[2].boxplot(mt_all[i_tr, :], positions=xp,
+            ax[1].boxplot(mt_all[i_tr, :], positions=xp,
                           boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[2].plot(xpoints[i_tr] + 0.1*np.random.randn(len(subjects)),
+            ax[1].plot(xpoints[i_tr] + 0.1*np.random.randn(len(subjects)),
                        mt_all[i_tr, :], color=colormap[i_tr], marker='o',
                        linestyle='None')
         else:
-            ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+            ax[1].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
-    ax[3].set_xlim([-20, 450])
-    ax[2].set_ylabel('Peak (pixels/ms)')
-    ax[3].set_ylim([-0.05, 0.5])
-    ax[3].axhline(0, c='gray')
-    ax[3].set_ylabel('Velocity (pixels/ms)')
-    ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
-    ax[2].plot(xpoints, mt_time, color='k', ls=':')
+    ax[2].set_xlim([-20, 450])
+    ax[1].set_ylabel('Peak (pixels/ms)')
+    ax[2].set_ylim([-0.05, 0.5])
+    ax[2].axhline(0, c='gray')
+    ax[2].set_ylabel('Velocity (pixels/ms)')
+    ax[2].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    ax[1].plot(xpoints, mt_time, color='k', ls=':')
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -1120,7 +1128,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
                                     return_mat=True, annotate=False)
         mat_pright_all += mat_pright
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
-    f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
+    f, ax = plt.subplots(nrows=4, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
     labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g']
     for n, ax_1 in enumerate(ax):
@@ -1128,7 +1136,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
         add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
     for i in [0, 1, 3]:
         ax[i].axis('off')
-    # task panel
+    # TASK PANEL
     ax_task = ax[0]
     pos = ax_task.get_position()
     factor = 1.75
@@ -1137,7 +1145,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_task.imshow(task)
     add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
 
-    # P_right
+    # P(RIGHT) MATRIX
     ax_pright = ax[4]
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     pos = ax_pright.get_position()
@@ -1164,13 +1172,12 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
     ax_rts.set_xlim(-101, 201)
-    # plot vertical dashed line at 0
     ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
     pos = ax_rts.get_position()
     ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
     add_text(ax=ax_rts, letter='rat LE46', x=0.32, y=1., fontsize=8)
 
-    # tachometrics
+    # TACHOMETRICS
     bin_size = 10
     ax_tach = ax[5]
     labels = ['0', '0.25', '0.5', '1']
@@ -1187,84 +1194,14 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
     add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
-    # ax_tach.legend()
+    # REGRESSION WEIGHTS
+    mt_weights(df, ax=ax[9], plot=True, means_errs=False)
+    # MT MATRIX
+    mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
+                       rt_bin=60, collapse_sides=True)
+    # SLOWING
+    plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
 
-    # raw trajectories
-    ax_rawtr = ax[7]
-    ax_ydim = ax[8]
-    ran_max = 100
-    for tr in range(ran_max):
-        if tr > (ran_max/2):
-            trial = df.iloc[tr]
-            traj_x = trial['trajectory_x']
-            traj_y = trial['trajectory_y']
-            ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
-            time = trial['time_trajs']
-            ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
-    ax_rawtr.set_xlim(-80, 20)
-    ax_rawtr.set_ylim(-100, 100)
-    ax_rawtr.set_xticklabels([])
-    ax_rawtr.set_yticklabels([])
-    ax_rawtr.set_xticks([])
-    ax_rawtr.set_yticks([])
-    ax_rawtr.set_xlabel('x dimension (pixels)')
-    add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
-    ax_ydim.set_xlim(-100, 800)
-    ax_ydim.set_ylim(-100, 100)
-    ax_ydim.set_yticks([])
-    ax_ydim.set_xlabel('Time from movement onset (ms)')
-    add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
-    # tracking screenshot
-    rat = plt.imread(RAT_noCOM_IMG)
-    ax_scrnsht = ax[6]
-    img = rat[150:646, 120:-10, :]
-    ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
-    ax_scrnsht.set_xticks([])
-    right_port_y = 50
-    center_port_y = 250
-    left_port_y = 460
-    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
-    ax_scrnsht.set_yticklabels([-85, 0, 85])
-    ax_scrnsht.set_ylim([0, img.shape[0]])
-    ax_scrnsht.set_xlabel('x dimension (pixels)')
-    ax_scrnsht.set_ylabel('y dimension (pixels)')
-    add_text(ax=ax_scrnsht, letter='rat LE46', x=0.35, y=1., fontsize=8)
-
-    # adjust panels positions
-    pos = ax_rawtr.get_position()
-    factor = figsize[1]/figsize[0]
-    width = pos.height*factor/2
-    ax_rawtr.set_position([pos.x0+width*0.5, pos.y0-margin, width,
-                           pos.height])
-    pos = ax_ydim.get_position()
-    ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
-    pos = ax_scrnsht.get_position()
-    ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
-                             pos.height])
-    # add colorbar for screenshot
-    n_stps = 100
-    ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
-                        pos.width*0.7, pos.height/15])
-    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
-    x_tcks = np.linspace(0, n_stps, 6)
-    ax_clbr.set_xticks(x_tcks)
-    # pass xticks to strings
-    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
-    x_tcks_str[-1] += ' ms'
-    ax_clbr.set_xticklabels(x_tcks_str)
-    ax_clbr.tick_params(labelsize=6)
-    # ax_clbr.set_title('$N_{max}$', fontsize=6)
-    ax_clbr.set_yticks([])
-    ax_clbr.xaxis.set_ticks_position("top")
-    # ax_clbr.yaxis.tick_right()
-    # plot dashed lines
-    for i_a in [7, 8]:
-        ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
-        ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
-        ax[i_a].axhline(0, color='k', lw=.5)
-    ax[6].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
-    ax[6].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
     # plt.show()
@@ -1540,6 +1477,82 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     for i_a, a in enumerate(ax):
         if i_a != 8:
             rm_top_right_lines(a)
+    # TRACKING SCREENSHOT
+    rat = plt.imread(RAT_noCOM_IMG)
+    ax_scrnsht = ax[6]
+    img = rat[150:646, 120:-10, :]
+    ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
+    ax_scrnsht.set_xticks([])
+    right_port_y = 50
+    center_port_y = 250
+    left_port_y = 460
+    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
+    ax_scrnsht.set_yticklabels([-85, 0, 85])
+    ax_scrnsht.set_ylim([0, img.shape[0]])
+    ax_scrnsht.set_xlabel('x dimension (pixels)')
+    ax_scrnsht.set_ylabel('y dimension (pixels)')
+
+    # RAW TRAJECTORIES
+    ax_rawtr = ax[7]
+    ax_ydim = ax[8]
+    ran_max = 100
+    for tr in range(ran_max):
+        if tr > (ran_max/2):
+            trial = df.iloc[tr]
+            traj_x = trial['trajectory_x']
+            traj_y = trial['trajectory_y']
+            ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
+            time = trial['time_trajs']
+            ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
+    ax_rawtr.set_xlim(-80, 20)
+    ax_rawtr.set_ylim(-100, 100)
+    ax_rawtr.set_xticklabels([])
+    ax_rawtr.set_yticklabels([])
+    ax_rawtr.set_xticks([])
+    ax_rawtr.set_yticks([])
+    ax_rawtr.set_xlabel('x dimension (pixels)')
+    add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
+    ax_ydim.set_xlim(-100, 800)
+    ax_ydim.set_ylim(-100, 100)
+    ax_ydim.set_yticks([])
+    ax_ydim.set_xlabel('Time from movement onset (ms)')
+    add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    # adjust panels positions
+    pos = ax_rawtr.get_position()
+    factor = figsize[1]/figsize[0]
+    width = pos.height*factor/2
+    ax_rawtr.set_position([pos.x0+width*0.5, pos.y0-margin, width,
+                           pos.height])
+    pos = ax_ydim.get_position()
+    ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
+    pos = ax_scrnsht.get_position()
+    ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
+                             pos.height])
+    # add colorbar for screenshot
+    n_stps = 100
+    ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
+                        pos.width*0.7, pos.height/15])
+    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
+    x_tcks = np.linspace(0, n_stps, 6)
+    ax_clbr.set_xticks(x_tcks)
+    # pass xticks to strings
+    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
+    x_tcks_str[-1] += ' ms'
+    ax_clbr.set_xticklabels(x_tcks_str)
+    ax_clbr.tick_params(labelsize=6)
+    # ax_clbr.set_title('$N_{max}$', fontsize=6)
+    ax_clbr.set_yticks([])
+    ax_clbr.xaxis.set_ticks_position("top")
+    # ax_clbr.yaxis.tick_right()
+    # plot dashed lines
+    for i_a in [7, 8]:
+        ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(0, color='k', lw=.5)
+    ax[6].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
+    ax[6].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
+
 
     df_trajs = df.copy()
     # TRAJECTORIES CONDITIONED ON PRIOR
@@ -1551,13 +1564,6 @@ def fig_trajs_2(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                             prior_limit=0.1,  # 10% quantile
                             condition='choice_x_coh',
                             cmap='coolwarm')
-    # REGRESSION WEIGHTS
-    mt_weights(df, ax=ax[9], plot=True, means_errs=False)
-    # MT MATRIX
-    mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
-                       rt_bin=60, collapse_sides=True)
-    # SLOWING
-    plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
     # SPLITTING TIME EXAMPLE
     ax_split = ax[12]
     pos = ax_split.get_position()
@@ -3904,7 +3910,7 @@ if __name__ == '__main__':
     f2 = False
     f3 = False
     f4 = False
-    f5 = True
+    f5 = False
     f6 = False
     f7 = False
     com_threshold = 8
