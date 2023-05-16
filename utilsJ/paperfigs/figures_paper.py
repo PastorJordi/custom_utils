@@ -486,8 +486,8 @@ def binning_mt_prior(df, bins):
     for i_s, subject in enumerate(df.subjid.unique()):
         df_sub = df.loc[df.subjid == subject]
         for i_zt, bin_zt in enumerate(bins[:-1]):
-            mt_sub = df_sub.loc[(df_sub.norm_allpriors >= bin_zt) &
-                                (df_sub.norm_allpriors < bins[i_zt+1]), 'resp_len']
+            mt_sub = df_sub.loc[(df_sub.choice_x_prior >= bin_zt) &
+                                (df_sub.choice_x_prior < bins[i_zt+1]), 'resp_len']
             mat_mt[i_s, i_zt] = np.nanmean(mt_sub)
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
@@ -531,32 +531,45 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
     return bins, bintype, indx_trajs, n_iters, colormap
 
 def plot_mt(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after_correct_only=True):
+    subjects = df['subjid'].unique()
+    # interpolatespace = np.linspace(-700000, 1000000, 1700)
+    nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
+    df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df.loc[nanidx, 'allpriors'] = np.nan
     bins, _, _, _, colormap =\
           get_bin_info(condition=condition, prior_limit=prior_limit,
                         after_correct_only=after_correct_only,
                         rt_lim=rt_lim)
-
     if condition == 'choice_x_coh':
-        mt_time = df.groupby(['coh2', 'subjid']).resp_len.median()
-        bins = df.coh2.unique()
+        # compute median MT for each subject and each stim strength
+        df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
+        mt_time = df.groupby(['choice_x_coh', 'subjid']).resp_len.median()
+        # unstack to have a matrix with rows for subjects and columns for bins
+        mt_time = mt_time.unstack(fill_value=np.nan).values.T
+        plot_bins = sorted(df.coh2.unique())
     elif condition == 'choice_x_prior':
+        norm_allpriors = norm_allpriors_per_subj(df)
+        df['choice_x_prior'] = (df.R_response*2-1) * norm_allpriors
         mt_time = binning_mt_prior(df, bins)
+        plot_bins = bins[:-1] + np.diff(bins)/2
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
-    for i_tr in range(len(bins)):  
+    # mt_time_med = np.nanmedian(mt_time, axis=0)
+    for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
-        xp = bins[i_tr]+(bins[1]-bins[0])/2
         if len(subjects) > 1:            
-            ax[0].boxplot(mt_time[:, i_tr], positions=xp, 
-                            boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
-                       mt_time[:, i_tr], color=colormap[i_tr], marker='o',
-                       linestyle='None')
+            ax.boxplot(mt_time[:, i_tr], positions=[bin], 
+                       boxprops=dict(markerfacecolor=c, markeredgecolor=c))
+            ax.plot(bin + 0.1*np.random.randn(len(subjects)),
+                    mt_time[:, i_tr], color=colormap[i_tr], marker='o',
+                    linestyle='None')
         else:
-            ax[0].errorbar(xp, mt_time[:, i_tr], yerr=mt_time_err[i_tr],
+            ax.errorbar(bin, mt_time[:, i_tr], yerr=mt_time_err[i_tr],
                             color=c, marker='o')
 
-        ax[0].set_ylabel('MT (ms)', fontsize=9)
-        ax[0].plot(xp, mt_time, color='k', ls=':')
+        ax.set_ylabel('MT (ms)', fontsize=9)
+    # plt.show()
+    # adsasd
+        # ax.plot(xp, mt_time, color='k', ls=':')
 
 def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             prior_limit=0.25, rt_lim=50,
@@ -1116,7 +1129,7 @@ def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
             fontweight='bold', va='top', ha='right')
 
 
-def fig_1_rats_behav(df_data, figsize=(6, 6), margin=.05):
+def fig_1_rats_behav(df_data, figsize=(6, 8), margin=.05):
     mat_pright_all = np.zeros((7, 7))
     for subject in df_data.subjid.unique():
         df_sbj = df_data.loc[(df_data.special_trial == 0) &
@@ -1131,7 +1144,7 @@ def fig_1_rats_behav(df_data, figsize=(6, 6), margin=.05):
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
     f, ax = plt.subplots(nrows=4, ncols=3, figsize=figsize)  # figsize=(4, 3))
     ax = ax.flatten()
-    labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g']
+    labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g', '', '', '']
     for n, ax_1 in enumerate(ax):
         rm_top_right_lines(ax_1)
         add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
@@ -1196,26 +1209,22 @@ def fig_1_rats_behav(df_data, figsize=(6, 6), margin=.05):
     ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
     add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
     
-    # MT VS PRIOR
-    plot_mt(df=df.loc[df.special_trial == 2], ax=ax[6], condition='choice_x_prior',
-            prior_limit=1, cmap='copper')
     # MT VS COH
     plot_mt(df=df, ax=ax[7], prior_limit=0.1,  # 10% quantile
-            condition='choice_x_coh', cmap='coolwarm')
-
+            condition='choice_x_coh')
+    # MT VS PRIOR
+    plot_mt(df=df.loc[df.special_trial == 2], ax=ax[6], condition='choice_x_prior',
+            prior_limit=1)
     # REGRESSION WEIGHTS
-    mt_weights(df, ax=ax[9], plot=True, means_errs=False)
+    mt_weights(df, ax=ax[8], plot=True, means_errs=False)
     # MT MATRIX
-    mt_matrix_vs_ev_zt(df=df, ax=ax[10], silent_comparison=False,
+    mt_matrix_vs_ev_zt(df=df, ax=ax[9], silent_comparison=False,
                        rt_bin=60, collapse_sides=True)
     # SLOWING
-    plot_mt_vs_stim(df, ax[11], prior_min=0.8, rt_max=50)
-
-
+    plot_mt_vs_stim(df, ax[10], prior_min=0.8, rt_max=50)
 
     f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
-    # plt.show()
 
 
 def groupby_binom_ci(x, method="beta"):
@@ -3933,7 +3942,6 @@ def mt_diff_rev_nonrev(df):
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
 
 
-# ---MAIN
 if __name__ == '__main__':
     plt.close('all')
     f1 = True
@@ -3950,7 +3958,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE43']
+            # subjects = ['LE43', 'LE37', 'LE46']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
