@@ -937,16 +937,16 @@ def trajs_splitting_stim(df, ax, collapse_sides=True, threshold=300,
                         if not sim:  # TODO: do this if within splitfun
                             _, matatmp, matb =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
-                                                & (df.subjid == subject)],
-                                        side=0, collapse_sides=True,
-                                        rtbin=i, rtbins=rtbins, coh1=ev,
-                                        trajectory=trajectory, align="sound")
+                                                   & (df.subjid == subject)],
+                                         side=0, collapse_sides=True,
+                                         rtbin=i, rtbins=rtbins, coh1=ev,
+                                         trajectory=trajectory, align="sound")
                         if sim:
                             _, matatmp, matb =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
-                                                & (df.subjid == subject)],
-                                        side=0, rtbin=i, rtbins=rtbins, coh=ev,
-                                        align="sound")
+                                                   & (df.subjid == subject)],
+                                         side=0, rtbin=i, rtbins=rtbins, coh=ev,
+                                         align="sound")
                         if appb:
                             mat = matb
                             evl = np.repeat(0, matb.shape[0])
@@ -3022,7 +3022,7 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
-                                   subjid, num_tr=None, load_params=True):
+                                   subjid, num_tr=None, load_params=True, simulate=True):
     hit_model = np.empty((0))
     reaction_time = np.empty((0))
     detected_com = np.empty((0))
@@ -3039,7 +3039,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(sim_data), exist_ok=True)
-        if os.path.exists(sim_data):
+        if os.path.exists(sim_data) and not simulate:
             data_simulation = np.load(sim_data, allow_pickle=True)
             hit_model_tmp = data_simulation['hit_model_tmp']
             reaction_time_tmp = data_simulation['reaction_time_tmp']
@@ -3330,6 +3330,25 @@ def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
     mt_matrix_vs_ev_zt(df, ax, rt_bin=big_rt, silent_comparison=True)
     fig, ax = plt.subplots(ncols=2)
     mt_matrix_vs_ev_zt(df, ax, rt_bin=small_rt, silent_comparison=True)
+
+
+def binning_mt(df):
+    bins_zt = [-1.01]
+    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+        if i_p > 2:
+            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+        else:
+            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+    bins_zt.append(1.01)
+    # matrix with rows for subjects and columns for bins
+    mat_mt = np.empty((len(df.subjid.unique()), len(bins_zt)-1))
+    for i_s, subject in enumerate(df.subjid.unique()):
+        df_sub = df.loc[df.subjid == subject]
+        for i_zt, bin_zt in enumerate(bins_zt[:-1]):
+            mt_sub = df_sub.loc[(df_sub.norm_allpriors >= bin_zt) &
+                                (df_sub.norm_allpriors < bins_zt[i_zt+1]), 'resp_len']
+            mat_mt[i_s, i_zt] = np.nanmean(mt_sub)
+    return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
 
 def supp_com_marginal(df):
@@ -3920,9 +3939,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE37', 'LE36', 'LE39', 'LE46', 'LE47', 'LE85', 'LE43',
-            #             'LE40']
-            # subjects = ['LE43', 'LE42']
+            subjects = ['LE43']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']

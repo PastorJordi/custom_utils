@@ -23,6 +23,7 @@ from sbi.analysis import pairplot
 import pickle
 import scipy
 from pybads import BADS
+# from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
@@ -45,7 +46,7 @@ DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
-CTE = 1/2 * 1/600 * 1/995
+CTE = 1/2 * 1/600 * 1/995  # contaminants
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -567,7 +568,7 @@ def build_prior_sample_theta(num_simulations):
             Uniform(torch.tensor([1e-3]),
                     torch.tensor([0.8])),  # stim weight
             Uniform(torch.tensor([1e-2]),
-                    torch.tensor([3.5])),  # evidence integrator bound
+                    torch.tensor([4])),  # evidence integrator bound
             Uniform(torch.tensor([1e-8]),
                     torch.tensor([1.])),  # CoM bound
             Uniform(torch.tensor([3.]),
@@ -575,24 +576,24 @@ def build_prior_sample_theta(num_simulations):
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
             Uniform(torch.tensor([9.]),
-                    torch.tensor([16.])),  # time offset action
+                    torch.tensor([20.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
                     torch.tensor([0.08])),  # intercept trial index for action drift
-            Uniform(torch.tensor([1e-7]),
+            Uniform(torch.tensor([1e-5]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
             Uniform(torch.tensor([0.5]),
                     torch.tensor([4.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
-                    torch.tensor([150.])),  # weight of evidence at first readout (for MT reduction)
+                    torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
             Uniform(torch.tensor([1.]),
-                    torch.tensor([150.])),  # weight of evidence at second readout
+                    torch.tensor([500.])),  # weight of evidence at second readout
             Uniform(torch.tensor([1e-6]),
                     torch.tensor([0.9])),  # leak
             Uniform(torch.tensor([1.]),
-                    torch.tensor([50.])),  # std of the MT noise
+                    torch.tensor([90.])),  # std of the MT noise
             Uniform(torch.tensor([120.]),
                     torch.tensor([400.])),  # MT offset
-            Uniform(torch.tensor([0.06]),
+            Uniform(torch.tensor([0.01]),
                     torch.tensor([0.5]))],  # MT slope with trial index
             validate_args=False)
 
@@ -821,20 +822,20 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 3
+    lb_t_a = 9
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.2
     lb_com_bound = 0
-    lb_w_intercept = 0
-    lb_w_slope = 0
+    lb_w_intercept = 0.01
+    lb_w_slope = 1e-5
     lb_a_bound = 0.1
     lb_1st_r = 25
     lb_2nd_r = 1
     lb_leak = 0
     lb_mt_n = 1
-    lb_mt_int = 100
-    lb_mt_slope = 0.001
+    lb_mt_int = 120
+    lb_mt_slope = 0.01
     return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
             lb_eff, lb_t_a, lb_w_intercept, lb_w_slope, lb_a_bound,
             lb_1st_r, lb_2nd_r, lb_leak, lb_mt_n,
@@ -853,20 +854,20 @@ def get_ub():
     """
     ub_aff = 15
     ub_eff = 15
-    ub_t_a = 22
+    ub_t_a = 20
     ub_w_zt = 1
     ub_w_st = 0.6
     ub_e_bound = 4
     ub_com_bound = 1
-    ub_w_intercept = 0.1
-    ub_w_slope = 0.01
+    ub_w_intercept = 0.12
+    ub_w_slope = 5e-5
     ub_a_bound = 3.5
-    ub_1st_r = 150
-    ub_2nd_r = 150
+    ub_1st_r = 500
+    ub_2nd_r = 500
     ub_leak = 2
-    ub_mt_n = 90
-    ub_mt_int = 450
-    ub_mt_slope = 0.15
+    ub_mt_n = 80
+    ub_mt_int = 400
+    ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
             ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
             ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
@@ -893,10 +894,10 @@ def get_pub():
     pub_w_intercept = 0.08
     pub_w_slope = 3e-5
     pub_a_bound = 2.8
-    pub_1st_r = 60
-    pub_2nd_r = 90
+    pub_1st_r = 400
+    pub_2nd_r = 400
     pub_leak = 0.8
-    pub_mt_n = 50
+    pub_mt_n = 40
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -926,15 +927,25 @@ def get_plb():
     plb_w_slope = 1.5e-5
     plb_a_bound = 2.2
     plb_1st_r = 40
-    plb_2nd_r = 70
+    plb_2nd_r = 40
     plb_leak = 0.4
-    plb_mt_n = 30
+    plb_mt_n = 20
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
             plb_eff, plb_t_a, plb_w_intercept, plb_w_slope, plb_a_bound,
             plb_1st_r, plb_2nd_r, plb_leak, plb_mt_n,
             plb_mt_int, plb_mt_slope]
+
+
+def nonbox_constraints_bads(x):
+    x_1 = np.atleast_2d(x)
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 60  # RT peak < 0 ms
+    # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
+    # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
+    # cond3 = x_1[:, 2] * x_1[:, 10] < 30
+    # effect on MT for Reactive responses < 30 ms
+    return np.bool8(cond1)
 
 
 def gumbel_plotter():
@@ -947,6 +958,37 @@ def gumbel_plotter():
             fff.append(v*np.random.gumbel())
         sns.kdeplot(np.array(fff)[~np.isnan(fff)], ax=ax, label=v)
     ax.legend()
+
+
+def prepare_fb_data(df):
+    print('Preparing FB data')
+    coh_vec = df.coh2.values
+    dwl_vec = df.dW_lat.values
+    dwt_vec = df.dW_trans.values
+    mt_vec = df.resp_len.values
+    ch_vec = df.R_response.values
+    tr_in_vec = df.origidx.values
+    for ifb, fb in enumerate(df.fb):
+        for j in range(len(fb)):
+            coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
+            dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
+            dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
+            mt_vec = np.append(mt_vec, np.nan)
+            ch_vec = np.append(ch_vec, np.nan)
+            tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
+    rt_vec =\
+        np.vstack(np.concatenate([df.sound_len,
+                                  1e3*(np.concatenate(
+                                      df.fb.values)-0.3)])).reshape(-1)
+    zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
+    x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
+                              torch.tensor(rt_vec+300),
+                              torch.tensor(ch_vec)))
+    data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
+                               torch.tensor(tr_in_vec.astype(float)),
+                               x_o))
+    data = data[np.round(rt_vec) > -250, :]
+    return data
 
 
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
@@ -1038,40 +1080,15 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         pub = get_pub()
         plb = get_plb()
         # get fixation break (FB) data
-        print('Preparing FB data')
-        coh_vec = df.coh2.values
-        dwl_vec = df.dW_lat.values
-        dwt_vec = df.dW_trans.values
-        mt_vec = df.resp_len.values
-        ch_vec = df.R_response.values
-        tr_in_vec = df.origidx.values
-        for ifb, fb in enumerate(df.fb):
-            for j in range(len(fb)):
-                coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
-                dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
-                dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
-                mt_vec = np.append(mt_vec, np.nan)
-                ch_vec = np.append(ch_vec, np.nan)
-                tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
-        rt_vec =\
-            np.vstack(np.concatenate([df.sound_len,
-                                      1e3*(np.concatenate(
-                                          df.fb.values)-0.3)])).reshape(-1)
-        zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
-        x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
-                                  torch.tensor(rt_vec+300),
-                                  torch.tensor(ch_vec)))
-        data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
-                                   torch.tensor(tr_in_vec.astype(float)),
-                                   x_o))
-        data = data[np.round(rt_vec) > -250, :]
+        data = prepare_fb_data(df=df)
         print('Optimizing')
         n_trials = len(data)
         # define fun_target as function to optimize
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub,
+                    non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
@@ -1107,9 +1124,10 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
     return mat_final
 
 
-def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5e5),
+def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
-                                  plot_nn=False, simulate=False, plot_model=True):
+                                  plot_nn=False, simulate=False, plot_model=True,
+                                  plot_nn_alone=False, xt=False):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1120,34 +1138,34 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
     if simulate:
-        # for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-        #                                 [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-        #                                 [400, 400, 400, 400, 10, 800]):
-        stim = np.array(
-            [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
-        theta = get_x0()
-        theta = torch.reshape(torch.tensor(theta),
-                              (1, len(theta))).to(torch.float32)
-        theta = theta.repeat(num_simulations, 1)
-        stim = np.array(
-            [np.concatenate((stim, stim)) for i in range(len(theta))])
-        trial_index = np.repeat(tival, len(theta))
-        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                                 zt=np.repeat(ztval, len(theta)),
-                                 coh=np.repeat(cohval, len(theta)),
-                                 trial_index=trial_index)
-        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), x)
-        # let's compute prob for each bin
-        mat_0 = matrix_probs(x[x[:, 2] == 0])
-        mat_1 = matrix_probs(x[x[:, 2] == 1])
-        np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), mat_0)
-        np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
-                .format(cohval, ztval, tival), mat_1)
-        x = []
-        mat_0 = []
-        mat_1 = []
+        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                        [400, 400, 400, 400, 10, 800]):
+            stim = np.array(
+                [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+            theta = get_x0()
+            theta = torch.reshape(torch.tensor(theta),
+                                  (1, len(theta))).to(torch.float32)
+            theta = theta.repeat(num_simulations, 1)
+            stim = np.array(
+                [np.concatenate((stim, stim)) for i in range(len(theta))])
+            trial_index = np.repeat(tival, len(theta))
+            x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                     zt=np.repeat(ztval, len(theta)),
+                                     coh=np.repeat(cohval, len(theta)),
+                                     trial_index=trial_index)
+            np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), x)
+            # let's compute prob for each bin
+            mat_0 = matrix_probs(x[x[:, 2] == 0])
+            mat_1 = matrix_probs(x[x[:, 2] == 1])
+            np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_0)
+            np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival), mat_1)
+            x = []
+            mat_0 = []
+            mat_1 = []
     else:
         trial_index = np.repeat(tival, num_simulations)
         mat_0 = np.load(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
@@ -1193,41 +1211,47 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
                                                       len(grid_rt)).detach().numpy()
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
-            fig, ax = plt.subplots(ncols=2)
-            fig.suptitle('Network + {}'.format(n_sim_train))
-            ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-            ax[0].set_title('Choice 0')
-            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[0].set_ylabel('MT (ms)')
-            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[0].set_xlabel('RT (ms)')
-            im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-            ax[1].set_title('Choice 1')
-            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[1].set_ylabel('MT (ms)')
-            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[1].set_xlabel('RT (ms)')
-            plt.colorbar(im1)
-            fig, ax = plt.subplots(ncols=2)
-            fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
+            if plot_nn_alone:
+                fig, ax = plt.subplots(ncols=2)
+                fig.suptitle('Network + {}'.format(n_sim_train))
+                ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax[0].set_title('Choice 0')
+                ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax[0].set_ylabel('MT (ms)')
+                ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax[0].set_xlabel('RT (ms)')
+                im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax[1].set_title('Choice 1')
+                ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax[1].set_ylabel('MT (ms)')
+                ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax[1].set_xlabel('RT (ms)')
+                plt.colorbar(im1)
+            # fig, ax = plt.subplots(ncols=2)
+            # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
             ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
                          vmax=np.max((mat_0, mat_1)))
             ax[0].contour(mat_0_nn, cmap='hot')
-            ax[0].set_title('Choice 0')
-            ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+            ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
             ax[0].set_ylabel('MT (ms)')
-            ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[0].set_xlabel('RT (ms)')
+            if xt:
+                ax[0].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[0].set_xlabel('RT (ms)')
+            else:
+                ax[0].set_xticks([])
             im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
                                vmax=np.max((mat_0, mat_1)))
             plt.sca(ax[1])
-            ax[1].contour(mat_1_nn, cmap='hot')
-            ax[1].set_title('Choice 1')
-            ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-            ax[1].set_ylabel('MT (ms)')
-            ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-            ax[1].set_xlabel('RT (ms)')
+            im2 = ax[1].contour(mat_1_nn, cmap='hot')
+            ax[1].set_yticks([])
+            # ax[1].set_ylabel('MT (ms)')
+            if xt:
+                ax[1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[1].set_xlabel('RT (ms)')
+            else:
+                ax[1].set_xticks([])
             plt.colorbar(im1, fraction=0.04)
+            # plt.colorbar(im2, fraction=0.04)
     if plot_model:
         fig, ax = plt.subplots(ncols=2)
         fig.suptitle('Model + coh {}, zt {}, t_ind {}'.format(cohval,
@@ -1251,6 +1275,31 @@ def plot_network_model_comparison(df, sv_folder=SV_FOLDER, num_simulations=int(5
         ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[1].set_xlabel('RT (ms)')
         plt.colorbar(im1)
+
+
+def plot_lh_model_network(df):
+    fig, ax = plt.subplots(6, 2, figsize=(8, 12))
+    ax = ax.flatten()
+    i = 0
+    xt = False
+    ax[1].set_title('Choice 1')
+    # ax[0].set_title('Choice 0')
+    labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
+              'mid stim, high zt', 'inc. stim with zt', 'cong. low t.i.',
+              'cong. higher t.i.']
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.25, 0.25],
+                                    [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                    [400, 400, 400, 400, 10, 500]):
+        if i == 5:
+            xt = True
+        plot_network_model_comparison(df, ax[2*i:2*(i+1)],
+                                      sv_folder=SV_FOLDER, num_simulations=int(5e5),
+                                      n_list=[1000000], cohval=cohval,
+                                      ztval=ztval, tival=tival,
+                                      plot_nn=True, simulate=False, plot_model=False,
+                                      plot_nn_alone=False, xt=xt)
+        ax[2*i].set_title(labels[i])
+        i += 1
 
 
 # --- MAIN
@@ -1363,7 +1412,7 @@ if __name__ == '__main__':
             # subject = 'LE43'
             print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
-                                     sv_folder=SV_FOLDER, after_correct=False,
+                                     sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
             try:
