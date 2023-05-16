@@ -494,7 +494,7 @@ def binning_mt_prior(df, bins):
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
 
-def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=300,
+def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
                  fpsmin=29):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
@@ -513,6 +513,7 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     elif condition == 'choice_x_prior':
         # FIXME: bins should be define taking into account the filtered trials (indx_trajs)
+        # also, equipopulated bins should be done in the congruent-incongruent plane
         bins_zt = [-1.01]
         percentiles = [0.5, 0.25, 0.25, 0.5]
         for i_p, perc in enumerate(percentiles):
@@ -1220,10 +1221,11 @@ def fig_1_rats_behav(df_data, figsize=(7, 9), margin=.05):
     
     # MT VS COH
     plot_mt_vs_evidence(df=df, ax=ax[7], prior_limit=0.1,  # 10% quantile
-                        condition='choice_x_coh')
+                        condition='choice_x_coh', rt_lim=50)
     # MT VS PRIOR
     plot_mt_vs_evidence(df=df.loc[df.special_trial == 2], ax=ax[6],
-                        condition='choice_x_prior', prior_limit=1)
+                        condition='choice_x_prior', prior_limit=1,
+                        rt_lim=200)
     # REGRESSION WEIGHTS
     mt_weights(df, ax=ax[8], plot=True, means_errs=False)
     # MT MATRIX
@@ -1431,6 +1433,8 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
 
 def fig_2_trajs(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
                 marginy=0.05):
+    margin = 0.05
+    figsize = (8, 12)
     f = plt.figure(figsize=fgsz)
     # FIGURE LAYOUT
     # mt vs zt
