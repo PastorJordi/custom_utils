@@ -494,16 +494,21 @@ def binning_mt_prior(df, bins):
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
 
-def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=300):
+def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=300,
+                 fpsmin=29):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
+    # filter by frame rate
+    fr_cond = df.framerate >= fpsmin
+    # common condition 
+    # TODO: put together all common conditions
     # define bins, bin type, trajectory index and colormap depending on condition
     if condition == 'choice_x_coh':
         bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
         bintype = 'categorical'
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim)
+            ac_cond & (df.special_trial == 0) & (df.sound_len < rt_lim) &\
+            fr_cond
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     elif condition == 'choice_x_prior':
@@ -519,8 +524,8 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         bins = np.array(bins_zt)
         bintype = 'edges'
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 2) &\
-            (df.sound_len < rt_lim)
+            ac_cond & (df.special_trial == 2) & (df.sound_len < rt_lim) &\
+            fr_cond
         n_iters = len(bins)-1
         colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
     elif condition == 'origidx':
@@ -529,11 +534,12 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=30
         n_iters = len(bins) - 1
         indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
             ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim)
+            (df.sound_len < rt_lim) & fr_cond
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
 
-def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25, rt_lim=50, after_correct_only=True):
+def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
+                        rt_lim=50, after_correct_only=True):
     subjects = df['subjid'].unique()
     # interpolatespace = np.linspace(-700000, 1000000, 1700)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
@@ -1132,7 +1138,7 @@ def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
             fontweight='bold', va='top', ha='right')
 
 
-def fig_1_rats_behav(df_data, figsize=(6, 8), margin=.05):
+def fig_1_rats_behav(df_data, figsize=(7, 9), margin=.05):
     mat_pright_all = np.zeros((7, 7))
     for subject in df_data.subjid.unique():
         df_sbj = df_data.loc[(df_data.special_trial == 0) &
