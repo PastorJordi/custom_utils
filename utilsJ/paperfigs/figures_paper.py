@@ -19,9 +19,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -46,7 +46,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -1160,7 +1160,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     # RTs
     ax_rts = ax[2]
     rm_top_right_lines(ax=ax_rts)
-    plot_rt_cohs_with_fb(df=df, ax=ax_rts, subj='LE46')
+    plot_rt_cohs_with_fb(df=df_data, ax=ax_rts, subj='LE46')
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
     ax_rts.set_xlim(-101, 201)
@@ -1195,7 +1195,7 @@ def fig_rats_behav_1(df_data, figsize=(6, 6), margin=.05):
     ran_max = 100
     for tr in range(ran_max):
         if tr > (ran_max/2):
-            trial = df.iloc[tr]
+            trial = df_data.iloc[tr]
             traj_x = trial['trajectory_x']
             traj_y = trial['trajectory_y']
             ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
@@ -1742,6 +1742,9 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
 def fig_CoMs_3(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
                marginy=0.05, figsize=(8, 10), com_th=8):
     if com_th != 8:
+        traj_y = df.traj_y
+        decision = df.R_response
+        time_trajs = df.time_trajs
         _, _, _, com = edd2.com_detection(trajectories=traj_y, decision=decision,
                                           time_trajs=time_trajs)
         com = np.array(com)  # new CoM list
@@ -2123,7 +2126,7 @@ def fig_5(coh, sound_len, hit_model, sound_len_model, zt,
     nbins = 7
     # plot Pcoms matrices
     ax_mat = [ax[10], ax_inset]
-    n_subjs = len(df.subjid.unique())
+    n_subjs = len(df_sim.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
     for i_s, subj in enumerate(df_sim.subjid.unique()):
@@ -2212,9 +2215,9 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     bins_zt = [1.01]
     for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
         if i_p < 3:
-            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+            bins_zt.append(df_sim.norm_allpriors.abs().quantile(perc))
         else:
-            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+            bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
     bins_zt.append(-1.01)
     bins_zt = bins_zt[::-1]
     xvals_zt = [-1, -0.666, -0.333, 0, 0.333, 0.666, 1]
@@ -2233,7 +2236,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
         bins_ref = bins_coh
         colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
     subjects = df_sim.subjid
-    max_mt = 1000
+    max_mt = 1200
     mat_trajs_subs = np.empty((len(bins_ref), max_mt,
                                len(subjects.unique())))
     mat_vel_subs = np.empty((len(bins_ref), max_mt,
@@ -2265,9 +2268,9 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                 if sum(index) == 0:
                     continue
             lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
-            traj_all = np.empty((sum(index), max(lens)))
+            traj_all = np.empty((sum(index), max_mt))
             traj_all[:] = np.nan
-            vel_all = np.empty((sum(index), max(lens)))
+            vel_all = np.empty((sum(index), max_mt))
             vel_all[:] = np.nan
             for tr in range(sum(index)):
                 vals_traj = df_sim.traj[index].values[tr] *\
@@ -2275,7 +2278,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                 if sum(vals_traj) == 0:
                     continue
                 vals_traj = np.concatenate((vals_traj,
-                                            np.repeat(75, max(lens)-len(vals_traj))))
+                                            np.repeat(75, max_mt-len(vals_traj))))
                 vals_vel = df_sim.traj_d1[index].values[tr] *\
                     (signed_response[index][tr]*2 - 1)
                 vals_vel = np.diff(vals_traj)
@@ -2369,7 +2372,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
     signed_response = df_sim.R_response.values
     nanidx = df_sim.loc[df_sim[['dW_trans',
                                 'dW_lat']].isna().sum(axis=1) == 2].index
-    df_sim['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df_sim['allpriors'] = np.nansum(df_sim[['dW_trans', 'dW_lat']].values, axis=1)
     df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['normallpriors'] = df_sim['allpriors'] /\
         np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
@@ -2910,7 +2913,7 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
     popt, pcov = curve_fit(f=linear_fun, xdata=xdata, ydata=ydata)
     if plot:
         df = pd.DataFrame({'coh': coh/max(coh), 'prior': prior/max(prior),
-                           'MT': resp_len,
+                           'MT': mt,
                            'trial_index': trial_index/max(trial_index)})
         plt.figure()
         sns.pointplot(data=df, x='coh', y='MT', label='coh')
@@ -3689,7 +3692,7 @@ def model_vs_data_traj(trajs_model, df_data):
             break
 
 
-def fig_trajs_model_4(trajs_model, df_data, reaction_time):
+def fig_trajs_model_4(trajs_model, df, reaction_time):
     fig, ax = plt.subplots(4, 4)
     ax = ax.flatten()
     ev_vals = [0, 0.25, 0.5, 1]
@@ -3700,15 +3703,15 @@ def fig_trajs_model_4(trajs_model, df_data, reaction_time):
         for izt, ztbin in enumerate(norm_zt_vals):
             if ztbin == 1:
                 break
-            indx = (df_data.coh2.values == ev) &\
+            indx = (df.coh2.values == ev) &\
                 (df.norm_allpriors.values > ztbin)\
                 & (df.norm_allpriors.values < norm_zt_vals[izt+1])
             pl = True
             while pl:
                 ind = np.random.randint(0, sum(indx)-1)
-                time_traj = df_data.time_trajs.values[indx][ind]
-                traj_data = df_data.trajectory_y.values[indx][ind]
-                rt_rat = df_data.sound_len.values[indx][ind]
+                time_traj = df.time_trajs.values[indx][ind]
+                traj_data = df.trajectory_y.values[indx][ind]
+                rt_rat = df.sound_len.values[indx][ind]
                 if abs(rt_rat - reaction_time[indx][ind]) < 30:
                     ax[j].plot(np.arange(len(trajs_model[indx][ind])),
                                trajs_model[indx][ind], color='r')
@@ -3933,7 +3936,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE43']
+            # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
@@ -3963,22 +3966,22 @@ if __name__ == '__main__':
         traj_y = df.trajectory_y.values
         fix_onset = df.fix_onset_dt.values
         fix_breaks = np.vstack(np.concatenate([df.sound_len/1000,
-                                               np.concatenate(df.fb.values)-0.3]))
+                                                np.concatenate(df.fb.values)-0.3]))
         sound_len = np.array(df.sound_len)
         gt = np.array(df.rewside) * 2 - 1
         trial_index = np.array(df.origidx)
         resp_len = np.array(df.resp_len)
         time_trajs = edd2.get_trajs_time(resp_len=resp_len,
-                                         traj_stamps=traj_stamps,
-                                         fix_onset=fix_onset, com=com,
-                                         sound_len=sound_len)
+                                          traj_stamps=traj_stamps,
+                                          fix_onset=fix_onset, com=com,
+                                          sound_len=sound_len)
         if f3 or f5:
             subjid = df.subjid.values
             print('Computing CoMs')
             _, time_com, peak_com, com =\
                 edd2.com_detection(trajectories=traj_y, decision=decision,
-                                   time_trajs=time_trajs,
-                                   com_threshold=com_threshold)
+                                    time_trajs=time_trajs,
+                                    com_threshold=com_threshold)
             print('Ended Computing CoMs')
             com = np.array(com)  # new CoM list
             df['CoM_sugg'] = com
@@ -4029,17 +4032,17 @@ if __name__ == '__main__':
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
-                                           trial_index=trial_index, num_tr=num_tr,
-                                           subject_list=subjects, subjid=subjid)
+                                            trial_index=trial_index, num_tr=num_tr,
+                                            subject_list=subjects, subjid=subjid, simulate=False)
         # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
         # basic_statistics(com, com_model_detected)  # com
         # basic_statistics(hit, hit_model)  # hit
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
-                               'sound_len': reaction_time,
-                               'rewside': (gt + 1)/2,
-                               'R_response': (resp_fin+1)/2,
-                               'resp_len': np.array(MT)*1e-3})
+                                'sound_len': reaction_time,
+                                'rewside': (gt + 1)/2,
+                                'R_response': (resp_fin+1)/2,
+                                'resp_len': np.array(MT)*1e-3})
         df_sim['CoM_sugg'] = com_model.astype(bool)
         df_sim['traj_d1'] = [np.diff(t) for t in trajs]
         df_sim['aftererror'] =\
@@ -4052,10 +4055,11 @@ if __name__ == '__main__':
         df_sim['peak_com'] = np.array(x_val_at_updt)
         df_sim['hithistory'] = np.array(resp_fin == gt)
         df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
-                                         num_tr + n_sil)
+                                          num_tr + n_sil)
         df_sim['allpriors'] = zt
         df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
         # simulation plots
+        plot_rt_sim(df_sim)
         means, errors = mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
         if not with_fb:
@@ -4086,7 +4090,7 @@ if __name__ == '__main__':
         mt_matrix_vs_ev_zt(df, ax[0], silent_comparison=False, collapse_sides=True)
         ax[1].set_title('Model')
         mt_matrix_vs_ev_zt(df_sim, ax[1], silent_comparison=False,
-                           collapse_sides=True)
+                            collapse_sides=True)
         # fig.suptitle('DATA (top) vs MODEL (bottom)')
         mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
         # supp_trajs_prior_cong(df_sim, ax=None)
@@ -4098,6 +4102,6 @@ if __name__ == '__main__':
         print('Plotting Figure 6')
         # human traj plots
         fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=600,
-                     wanted_precision=12, nm='300')
+                      wanted_precision=12, nm='300')
     if f7:
         fig_7(df, df_sim)

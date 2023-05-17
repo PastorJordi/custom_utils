@@ -26,9 +26,9 @@ from pybads import BADS
 # from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -37,13 +37,13 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -825,7 +825,7 @@ def get_lb():
     lb_t_a = 9
     lb_w_zt = 0
     lb_w_st = 0
-    lb_e_bound = 0.2
+    lb_e_bound = 0.3
     lb_com_bound = 0
     lb_w_intercept = 0.01
     lb_w_slope = 1e-5
@@ -865,7 +865,7 @@ def get_ub():
     ub_1st_r = 500
     ub_2nd_r = 500
     ub_leak = 2
-    ub_mt_n = 80
+    ub_mt_n = 50
     ub_mt_int = 400
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -897,7 +897,7 @@ def get_pub():
     pub_1st_r = 400
     pub_2nd_r = 400
     pub_leak = 0.8
-    pub_mt_n = 40
+    pub_mt_n = 30
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -919,9 +919,9 @@ def get_plb():
     plb_aff = 4
     plb_eff = 4
     plb_t_a = 12
-    plb_w_zt = 1e-3
-    plb_w_st = 1e-3
-    plb_e_bound = 0.3
+    plb_w_zt = 2e-2
+    plb_w_st = 8e-3
+    plb_e_bound = 0.5
     plb_com_bound = 1e-3
     plb_w_intercept = 0.03
     plb_w_slope = 1.5e-5
@@ -945,7 +945,11 @@ def nonbox_constraints_bads(x):
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
     # effect on MT for Reactive responses < 30 ms
-    return np.bool8(cond1)
+    cond4 = x_1[:, 0] < 1e-2  # lb for prior
+    cond5 = x_1[:, 1] < 1e-2  # lb for stim
+    cond6 = x_1[:, 4] + x_1[:, 5] < 7  # aff + eff < 35 ms
+    cond7 = x_1[:, 11] < 30
+    return np.bool_(cond1+cond4+cond5+cond6+cond7)
 
 
 def gumbel_plotter():
@@ -1294,7 +1298,7 @@ def plot_lh_model_network(df):
             xt = True
         plot_network_model_comparison(df, ax[2*i:2*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                      n_list=[1000000], cohval=cohval,
+                                      n_list=[2000000], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
@@ -1398,10 +1402,13 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(1e6)  # number of simulations to train the network
+        num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                    'LE44']
+        subjects = ['LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train

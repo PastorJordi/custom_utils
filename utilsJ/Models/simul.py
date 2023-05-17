@@ -178,7 +178,7 @@ def shortpad(traj, upto=1000, pad_value=np.nan):
     return np.pad(traj, ((0, missing)), "constant", constant_values=pad_value)
 
 
-def shortpad2(row, upto=1200, align='movement', pad_value=np.nan, pad_pre=0):
+def shortpad2(row, upto=1400, align='movement', pad_value=np.nan, pad_pre=0):
     """pads nans to trajectories so it can be stacked in a matrix
     align can be either 'movement' (0 is movement onset), or 'sound'
     """
