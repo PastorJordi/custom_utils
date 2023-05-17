@@ -9,11 +9,10 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import sem
 import sys, os
-from scipy.optimize import curve_fit
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
-from scipy.stats import pearsonr, ttest_ind, ttest_rel, zscore
+from scipy.stats import pearsonr, ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
@@ -27,10 +26,11 @@ sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
-from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
+from utilsJ.Behavior.plotting import binned_curve, tachometric,\
     trajectory_thr, com_heatmap, interpolapply
 from utilsJ.Models import analyses_humans as ah
-import fig1, fig3, fig2
+from utilsJ.paperfigs import figure_1 as fig_1
+import fig2
 import matplotlib
 import matplotlib.pylab as pl
 from scipy import interpolate
@@ -494,7 +494,7 @@ def binning_mt_prior(df, bins):
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
 
-def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
+def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
                  fpsmin=29):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
@@ -538,48 +538,6 @@ def get_bin_info(condition, prior_limit=0.25, after_correct_only=True, rt_lim=50
             (df.sound_len < rt_lim) & fr_cond
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
-
-def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
-                        rt_lim=50, after_correct_only=True):
-    subjects = df['subjid'].unique()
-    # interpolatespace = np.linspace(-700000, 1000000, 1700)
-    nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
-    df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
-    df.loc[nanidx, 'allpriors'] = np.nan
-    bins, _, indx_trajs, _, colormap =\
-          get_bin_info(condition=condition, prior_limit=prior_limit,
-                        after_correct_only=after_correct_only,
-                        rt_lim=rt_lim)
-    df = df.loc[indx_trajs]
-    if condition == 'choice_x_coh':
-        # compute median MT for each subject and each stim strength
-        df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
-        mt_time = df.groupby(['choice_x_coh', 'subjid']).resp_len.median()
-        # unstack to have a matrix with rows for subjects and columns for bins
-        mt_time = mt_time.unstack(fill_value=np.nan).values.T
-        plot_bins = sorted(df.coh2.unique())
-    elif condition == 'choice_x_prior':
-        df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
-        mt_time = binning_mt_prior(df, bins)
-        plot_bins = bins[:-1] + np.diff(bins)/2
-    mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
-    # mt_time_med = np.nanmedian(mt_time, axis=0)
-    for i_tr, bin in enumerate(plot_bins):
-        c = colormap[i_tr]  
-        if len(subjects) > 1:            
-            ax.boxplot(mt_time[:, i_tr], positions=[bin], 
-                       boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax.plot(bin + 0.1*np.random.randn(len(subjects)),
-                    mt_time[:, i_tr], color=colormap[i_tr], marker='o',
-                    linestyle='None')
-        else:
-            ax.errorbar(bin, mt_time[:, i_tr], yerr=mt_time_err[i_tr],
-                            color=c, marker='o')
-
-        ax.set_ylabel('MT (ms)', fontsize=9)
-    # plt.show()
-    # adsasd
-        # ax.plot(xp, mt_time, color='k', ls=':')
 
 def plots_trajs_conditioned(df, ax, condition='choice_x_coh', cmap='viridis',
                             prior_limit=0.25, rt_lim=50,
@@ -1111,131 +1069,10 @@ def pdf_cohs(df, ax, bins=np.linspace(0, 200, 41), yaxis=True):
     ax.legend()
 
 
-def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
-    colormap = pl.cm.gist_yarg(np.linspace(0.3, 1, 4))
-    df_1 = df[df.subjid == subj]
-    coh_vec = df_1.coh2.values
-    for ifb, fb in enumerate(df_1.fb):
-        for j in range(len(fb)):
-            coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
-    for iev, ev in enumerate([0, 0.25, 0.5, 1]):
-        index = np.abs(coh_vec) == ev
-        fix_breaks =\
-            np.vstack(np.concatenate([df_1.sound_len/1000,
-                                      np.concatenate(df_1.fb.values)-0.3]))
-        fix_breaks = fix_breaks[index]
-        counts_coh, bins = np.histogram(fix_breaks*1000,
-                                        bins=30, range=(-100, 200))
-        norm_counts = counts_coh/sum(counts_coh)
-        ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
-                color=colormap[iev])
-    ax.set_ylabel('RT density')
-    ax.set_xlabel('Reaction time (ms)')
-
-
 # function to add letters to panel
 def add_text(ax, letter, x=-0.1, y=1.2, fontsize=16):
     ax.text(x, y, letter, transform=ax.transAxes, fontsize=fontsize,
             fontweight='bold', va='top', ha='right')
-
-
-def fig_1_rats_behav(df_data, figsize=(7, 9), margin=.05):
-    mat_pright_all = np.zeros((7, 7))
-    for subject in df_data.subjid.unique():
-        df_sbj = df_data.loc[(df_data.special_trial == 0) &
-                             (df_data.subjid == subject)]
-        choice = df_sbj['R_response'].values
-        coh = df_sbj['coh2'].values
-        prior = df_sbj['norm_allpriors'].values
-        indx = ~np.isnan(prior)
-        mat_pright, _ = com_heatmap(prior[indx], coh[indx], choice[indx],
-                                    return_mat=True, annotate=False)
-        mat_pright_all += mat_pright
-    mat_pright = mat_pright_all / len(df_data.subjid.unique())
-    f, ax = plt.subplots(nrows=4, ncols=3, figsize=figsize)  # figsize=(4, 3))
-    ax = ax.flatten()
-    labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g', '', '', '']
-    for n, ax_1 in enumerate(ax):
-        rm_top_right_lines(ax_1)
-        add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
-    for i in [0, 1, 3]:
-        ax[i].axis('off')
-    # TASK PANEL
-    ax_task = ax[0]
-    pos = ax_task.get_position()
-    factor = 1.75
-    ax_task.set_position([pos.x0+0.05, pos.y0-0.05, pos.width*factor, pos.height*factor])
-    task = plt.imread(TASK_IMG)
-    ax_task.imshow(task)
-    add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
-
-    # P(RIGHT) MATRIX
-    ax_pright = ax[4]
-    im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
-    pos = ax_pright.get_position()
-    ax_pright.set_position([pos.x0-pos.width/1.6, pos.y0+margin/1.5, pos.width*.9,
-                            pos.height*.9])
-    cbar_ax = f.add_axes([pos.x0+pos.width/2.3, pos.y0+margin/2,
-                          pos.width/10, pos.height/2])
-    cbar_ax.set_title('p(Right)', fontsize=9)
-    f.colorbar(im_2, cax=cbar_ax)
-    ax_pright.set_yticks([0, 3, 6])
-    ax_pright.set_ylim([-0.5, 6.5])
-    ax_pright.set_yticklabels(['L', '', 'R'])
-    ax_pright.set_xticks([0, 3, 6])
-    ax_pright.set_xlim([-0.5, 6.5])
-    ax_pright.set_xticklabels(['Left', '', 'Right'])
-    ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_ylabel('Stimulus Evidence')
-    add_text(ax=ax_pright, letter='b', x=-0.2, y=1.15)
-
-    # RTs
-    ax_rts = ax[2]
-    rm_top_right_lines(ax=ax_rts)
-    plot_rt_cohs_with_fb(df=df_data, ax=ax_rts, subj='LE46')
-    ax_rts.set_xlabel('Reaction Time (ms)')
-    ax_rts.set_ylabel('Density')
-    ax_rts.set_xlim(-101, 201)
-    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
-    pos = ax_rts.get_position()
-    ax_rts.set_position([pos.x0, pos.y0+margin, pos.width, pos.height])
-    add_text(ax=ax_rts, letter='rat LE46', x=0.32, y=1., fontsize=8)
-
-    # TACHOMETRICS
-    bin_size = 10
-    ax_tach = ax[5]
-    labels = ['0', '0.25', '0.5', '1']
-    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
-                labels=labels, rtbins=np.arange(0, 201, bin_size))
-    ax_tach.set_xlabel('Reaction Time (ms)')
-    ax_tach.set_ylabel('Accuracy')
-    ax_tach.set_ylim(0.5, 1.04)
-    ax_tach.set_xlim(-101, 201)
-    ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
-    ax_tach.set_yticks([0.5, 0.75, 1])
-    ax_tach.set_yticklabels(['0.5', '0.75', '1'])
-    rm_top_right_lines(ax_tach)
-    pos = ax_tach.get_position()
-    ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
-    add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
-
-    # MT VS COH
-    plot_mt_vs_evidence(df=df_data, ax=ax[7], prior_limit=0.1,  # 10% quantile
-                        condition='choice_x_coh', rt_lim=50)
-    # MT VS PRIOR
-    plot_mt_vs_evidence(df=df_data.loc[df_data.special_trial == 2], ax=ax[6],
-                        condition='choice_x_prior', prior_limit=1,
-                        rt_lim=200)
-    # REGRESSION WEIGHTS
-    mt_weights(df_data, ax=ax[8], plot=True, means_errs=False)
-    # MT MATRIX
-    mt_matrix_vs_ev_zt(df=df_data, ax=ax[9], silent_comparison=False,
-                       rt_bin=60, collapse_sides=True)
-    # SLOWING
-    plot_mt_vs_stim(df_data, ax[10], prior_min=0.8, rt_max=50)
-
-    f.savefig(SV_FOLDER+'fig1.svg', dpi=400, bbox_inches='tight')
-    f.savefig(SV_FOLDER+'fig1.png', dpi=400, bbox_inches='tight')
 
 
 def groupby_binom_ci(x, method="beta"):
@@ -1272,163 +1109,6 @@ def tachs_values(df, evidence_bins=np.array([0, 0.15, 0.30, 0.60, 1.05]),
     xvals = xvals[:len(tmp['mean'].values), :]
     yvals = yvals[:len(tmp['mean'].values), :]
     return xvals, yvals, yerr
-
-
-def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
-    w_coh = []
-    w_t_i = []
-    w_zt = []
-    if ax is None and plot:
-        fig, ax = plt.subplots(1)
-    for subject in df.subjid.unique():
-        df_1 = df.loc[df.subjid == subject]
-        if mt:
-            var = zscore(np.array(df_1.resp_len))
-        else:
-            var = zscore(np.array(df_1.sound_len))
-        decision = np.array(df_1.R_response)*2 - 1
-        coh = np.array(df_1.coh2)
-        trial_index = np.array(df_1.origidx)
-        com = df_1.CoM_sugg.values
-        zt = df_1.allpriors.values
-        params = mt_linear_reg(mt=var[~np.isnan(zt)],
-                               coh=zscore(coh[~np.isnan(zt)] *
-                                          decision[~np.isnan(zt)]),
-                               trial_index=zscore(trial_index[~np.isnan(zt)].
-                                                  astype(float)),
-                               prior=zscore(zt[~np.isnan(zt)] *
-                                            decision[~np.isnan(zt)]),
-                               plot=False,
-                               com=com[~np.isnan(zt)])
-        w_coh.append(params[1])
-        w_t_i.append(params[2])
-        w_zt.append(params[3])
-    mean_2 = np.nanmean(w_coh)
-    mean_1 = np.nanmean(w_zt)
-    std_2 = np.nanstd(w_coh)/np.sqrt(len(w_coh))
-    std_1 = np.nanstd(w_zt)/np.sqrt(len(w_zt))
-    errors = [std_1, std_2]  # , std_3
-    means = [mean_1, mean_2]  # , mean_3
-    if t_index_w:
-        errors = [std_1, std_2, np.nanstd(w_t_i)/np.sqrt(len(w_t_i))]
-        means = [mean_1, mean_2, np.nanmean(w_t_i)]
-    if plot:
-        if means_errs:
-            plot_mt_weights_bars(means=means, errors=errors, ax=ax)
-            rm_top_right_lines(ax=ax)
-        else:
-            plot_mt_weights_violins(w_coh=w_coh, w_t_i=w_t_i, w_zt=w_zt,
-                                    ax=ax, mt=mt, t_index_w=t_index_w)
-    if means_errs:
-        return means, errors
-    else:
-        return w_coh, w_t_i, w_zt
-
-
-def mt_weights_rt_bins(df, ax):
-    n_subjects = len(df.subjid.unique())
-    rtlims = [0, 30, 60, 150]
-    nbins = len(rtlims) - 1
-    w_coh = np.zeros((n_subjects, nbins))
-    w_t_i = np.zeros((n_subjects, nbins))
-    w_zt = np.zeros((n_subjects, nbins))
-    if ax is None:
-        fig, ax = plt.subplots(1)
-    for irt, rt_lim in enumerate(rtlims[:-1]):
-        for i_s, subject in enumerate(df.subjid.unique()):
-            df_1 = df.loc[(df.subjid == subject) & (df.sound_len > rt_lim) &
-                          (df.sound_len <= rtlims[irt+1])]
-            resp_len = np.array(df_1.resp_len)
-            decision = np.array(df_1.R_response)*2 - 1
-            coh = np.array(df_1.coh2)
-            trial_index = np.array(df_1.origidx)
-            com = df_1.CoM_sugg.values
-            zt = df_1.allpriors.values
-            params = mt_linear_reg(mt=resp_len/max(resp_len),
-                                   coh=coh*decision/max(np.abs(coh)),
-                                   trial_index=trial_index/max(trial_index),
-                                   prior=zt*decision/max(np.abs(zt)), plot=False,
-                                   com=com)
-            w_coh[i_s, irt] = params[1]
-            w_t_i[i_s, irt] = params[2]
-            w_zt[i_s, irt] = params[3]
-    labels = ['RT < 30 ms', '30 < RT < 60 ms  \n Prior', '60 < RT < 150 ms',
-              'RT < 30 ms ', '30 < RT < 60 ms  \n Stimulus', '60 < RT < 150 ms ']
-    label_1 = []
-    for j in range(len(labels)):
-        for i in range(len(w_coh)):
-            label_1.append(labels[j])
-    ax.axhline(0, color='gray', alpha=0.4)
-    arr_weights = np.concatenate((w_zt.flatten(), w_coh.flatten()))
-    df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
-    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=['goldenrod', 'goldenrod', 'goldenrod', 'firebrick',
-                            'firebrick', 'firebrick'],
-                   linewidth=0.8)
-    med_stim = np.nanmean(w_coh, axis=0)
-    med_zt = np.nanmean(w_zt, axis=0)
-    ax.plot([3, 4, 5], med_stim, color='k')
-    ax.plot([0, 1, 2], med_zt, color='k')
-    ax.set_ylabel('Impact on MT (weights, a.u)')
-
-
-def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
-                         errors_model=None, width=0.35):
-    labels = ['Prior', 'Stimulus']  # , 'Trial index'
-    if not f5:
-        ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='gray',
-               ecolor='blue')
-        ax.set_ylabel('Impact on MT (weights, a.u)')
-    if f5:
-        x = np.arange(len(labels))
-        ax.bar(x=x-width/2, height=means, yerr=errors, width=width,
-               capsize=3, color='k', label='Data', ecolor='blue')
-        ax.bar(x=x+width/2, height=means_model, yerr=errors_model, width=width,
-               capsize=3, color='red', label='Model')
-        ax.set_ylabel('Impact on MT (weights, a.u)')
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels)
-        ax.legend(fontsize=8)
-
-
-def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
-    if t_index_w:
-        labels = ['Prior', 'Stimulus', 'Trial index']  # ]
-        arr_weights = np.concatenate((w_zt, w_coh, w_t_i))
-        palette = ['darkorange', 'red', 'steelblue']
-    else:
-        labels = ['Prior', 'Stimulus']  # ]
-        arr_weights = np.concatenate((w_zt, w_coh))  #
-        palette = ['darkorange', 'red']
-    label_1 = []
-    for j in range(len(labels)):
-        for i in range(len(w_coh)):
-            label_1.append(labels[j])
-    df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
-
-    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=palette, linewidth=0.8)
-    if t_index_w:
-        arr_weights = np.array((w_zt, w_coh, w_t_i))
-    else:
-        arr_weights = np.array((w_zt, w_coh))
-    for i in range(len(labels)):
-        ax.plot(np.repeat(i, len(arr_weights[i])) +
-                0.1*np.random.randn(len(arr_weights[i])),
-                arr_weights[i], color='k', marker='o', linestyle='',
-                markersize=2)
-        ax.collections[0].set_edgecolor('k')
-    if t_index_w:
-        ax.set_xlim(-0.5, 2.5)
-        ax.set_xticklabels([labels[0], labels[1], labels[2]], fontsize=9)
-    else:
-        ax.set_xlim(-0.5, 1.5)
-        ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
-    if mt:
-        ax.set_ylabel('Impact on MT (weights, a.u)')
-    else:
-        ax.set_ylabel('Impact on RT (weights, a.u)')
-    ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 
 def fig_2_trajs(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
@@ -1618,31 +1298,6 @@ def fig_2_trajs(df, fgsz=(8, 12), accel=False, inset_sz=.06, marginx=0.008,
     f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
-
-def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
-                         marginy=0.05):
-    fgsz = fgsz
-    inset_sz = 0.08
-    f, ax = plt.subplots(nrows=2, ncols=1, figsize=fgsz)
-    ax = ax.flatten()
-    ax_ti = np.array([ax[0], ax[1]])
-
-    # trajs. conditioned on trial index
-    ax_inset = add_inset(ax=ax[0], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
-    ax_ti = np.insert(ax_ti, 0, ax_inset)
-    ax_inset = add_inset(ax=ax[2], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy)
-    ax_ti = np.insert(ax_ti, 2, ax_inset)
-    for a in ax:
-        rm_top_right_lines(a)
-    plots_trajs_conditioned(df=df, ax=ax_ti, condition='choice_x_prior',
-                            prior_limit=1, cmap='copper')
-    # splits
-    mt_weights(df, ax=ax[3], plot=True, means_errs=False)
-    trajs_splitting_stim(df=df, ax=ax[7])
-    f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
-    f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
 def tach_1st_2nd_choice(df, ax, model=False, tachometric=False):
@@ -2197,7 +1852,7 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
         ax_i.set_xticklabels(['']*nbins)
     ax[10].set_ylabel('Stimulus Evidence')
     ax[0].set_ylabel('Stimulus Evidence')
-    mt_matrix_vs_ev_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
     ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
                          pos_ax_0.width/2,
                          pos_ax_0.height])
@@ -2920,50 +2575,6 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     rm_top_right_lines(ax2)
 
 
-def linear_fun(x, a, b, c, d):
-    return a + b*x[0] + c*x[1] + d*x[2]
-
-
-def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
-    """
-
-    Parameters
-    ----------
-    mt : array
-        DESCRIPTION.
-    coh : array (abs)
-        DESCRIPTION.
-    trial_index : array
-        DESCRIPTION.
-    prior : array (abs)
-        congruent prior with final decision.
-
-    Returns
-    -------
-    popt : TYPE
-        DESCRIPTION.
-
-    """
-    trial_index = trial_index.astype(float)[~com.astype(bool)]
-    xdata = np.array([[coh[~com.astype(bool)]],
-                      [trial_index],
-                      [prior[~com.astype(bool)]]]).reshape(3, sum(~com))
-    ydata = np.array(mt[~com.astype(bool)])
-    popt, pcov = curve_fit(f=linear_fun, xdata=xdata, ydata=ydata)
-    if plot:
-        df = pd.DataFrame({'coh': coh/max(coh), 'prior': prior/max(prior),
-                           'MT': mt,
-                           'trial_index': trial_index/max(trial_index)})
-        plt.figure()
-        sns.pointplot(data=df, x='coh', y='MT', label='coh')
-        sns.pointplot(data=df, x='prior', y='MT', label='prior')
-        sns.pointplot(data=df, x='trial_index', y='MT', label='trial_index')
-        plt.ylabel('MT (ms)')
-        plt.xlabel('normalized variables')
-        plt.legend()
-    return popt
-
-
 def basic_statistics(decision, resp_fin):
     mat = confusion_matrix(decision, resp_fin)
     print(mat)
@@ -3156,216 +2767,13 @@ def fig_7(df, df_sim):
     fig.savefig(SV_FOLDER+'fig7.png', dpi=400, bbox_inches='tight')
 
 
-def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
-    subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
-    subjid = df.subjid
-    zt_cong = df.norm_allpriors.values * (df.R_response*2-1)
-    coh_cong = df.coh2.values * (df.R_response*2-1)
-    rt = df.sound_len.values
-    spec_trial = df.special_trial.values
-    mt = df.resp_len.values
-    mt_mat = np.empty((len(subjects), len(np.unique(coh_cong))))
-    sil = []
-    for i_s, subject in enumerate(subjects):
-        # silent
-        prior_min_quan = np.quantile(zt_cong[(subjid == subject) &
-                                             (~np.isnan(zt_cong))], prior_min)
-        sil.append(np.nanmean(mt[(zt_cong >= prior_min_quan) & (rt <= rt_max) &
-                                 (spec_trial == 2) & (subjid == subject)])*1e3)
-        for iev, ev in enumerate(np.unique(coh_cong)):
-            index = (subjid == subject) & (zt_cong >= prior_min_quan) &\
-                (rt <= rt_max) & (spec_trial == 0) & (coh_cong == ev)
-            mt_mat[i_s, iev] = np.nanmean(mt[index])*1e3
-    mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
-    sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
-    ax.axhline(np.nanmean(sil), color='k', linestyle='--', alpha=0.6)
-    coh_unq = np.unique(coh_cong)
-    colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
-    for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
-        ax.plot(x, y, 'o', color=color)
-        ax.errorbar(x, y, e, color=color)
-    # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    ax.set_xticks([-1, 0, 1])
-    ax.set_xlabel('Stimulus')
-    ax.set_ylabel('MT (ms)')
-
-
-def mt_matrix_vs_ev_zt(df, ax, silent_comparison=False, rt_bin=None,
-                       collapse_sides=False):
-    coh_raw = df.coh2.copy()
-    norm_allp_raw = df.norm_allpriors.copy()
-    df['norm_allpriors'] *= df.R_response.values*2-1
-    df['coh2'] *= df.R_response.values*2-1
-    if not collapse_sides:
-        ax0, ax1 = ax
-    if rt_bin is not None:
-        if rt_bin > 100:
-            df_fil = df.loc[df.sound_len > rt_bin]
-        if rt_bin < 100:
-            df_fil = df.loc[df.sound_len < rt_bin]
-        if not collapse_sides:
-            df_0 = df_fil.loc[(df_fil.R_response == 0)]
-            df_1 = df_fil.loc[(df_fil.R_response == 1)]
-        else:
-            df_s = df_fil
-    else:
-        if not collapse_sides:
-            df_0 = df.loc[(df.R_response == 0)]
-            df_1 = df.loc[(df.R_response == 1)]
-        else:
-            df_s = df.copy()
-    bins_zt = [1.01]
-    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
-        if i_p < 3:
-            bins_zt.append(df.norm_allpriors.abs().quantile(perc))
-        else:
-            bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
-    bins_zt.append(-1.01)
-    # bins_zt = [1.01, 0.65, 0.35, 0.1, -0.1, -0.35, -0.65, -1.01]
-    # np.linspace(1.01, -1.01, 8)
-    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    nsubs = len(df.subjid.unique())
-    if not collapse_sides:
-        mat_0 = np.zeros((len(bins_zt)-1, 7, nsubs))
-        mat_1 = np.zeros((len(bins_zt)-1, 7, nsubs))
-        silent_mat_per_rows_0 = np.zeros((len(bins_zt)-1, 7))
-        silent_mat_per_rows_1 = np.zeros((len(bins_zt)-1, 7))
-    else:
-        mat_s = np.zeros((len(bins_zt)-1, 7, nsubs))
-        silent_mat_per_rows = np.zeros((len(bins_zt)-1, 7))
-    # reference MT computation
-    for i_zt, zt in enumerate(bins_zt[:-1]):
-        if not collapse_sides:
-            mt_sil_per_sub_0 = []
-            mt_sil_per_sub_1 = []
-        else:
-            mt_sil_per_sub = []
-        for subj in df.subjid.unique():
-            if not collapse_sides:
-                mt_silent_0 = df_0.loc[(df_0.special_trial == 2) &
-                                       (df_0.norm_allpriors < zt) &
-                                       (df_0.subjid == subj) &
-                                       (df_0.norm_allpriors > bins_zt[i_zt+1]),
-                                       'resp_len']
-                mt_silent_1 = df_1.loc[(df_1.special_trial == 2) &
-                                       (df_1.norm_allpriors < zt) &
-                                       (df_1.subjid == subj) &
-                                       (df_1.norm_allpriors > bins_zt[i_zt+1]),
-                                       'resp_len']
-                mt_sil_per_sub_0.append(np.nanmean(mt_silent_0))
-                mt_sil_per_sub_1.append(np.nanmean(mt_silent_1))
-            else:
-                mt_silent = df_s.loc[(df_s.special_trial == 2) &
-                                     (df_s.norm_allpriors < zt) &
-                                     (df_s.subjid == subj) &
-                                     (df_s.norm_allpriors > bins_zt[i_zt+1]),
-                                     'resp_len']
-                mt_sil_per_sub.append(np.nanmean(mt_silent))
-        if not collapse_sides:
-            silent_mat_per_rows_0[i_zt, :] = np.nanmean(mt_sil_per_sub_0)*1e3
-            silent_mat_per_rows_1[i_zt, :] = np.nanmean(mt_sil_per_sub_1)*1e3
-        else:
-            silent_mat_per_rows[i_zt, :] = np.nanmean(mt_sil_per_sub)*1e3
-    # MT matrix computation, reference MT can be substracted if desired
-    for i_s, subj in enumerate(df.subjid.unique()):
-        if not collapse_sides:
-            df_sub_0 = df_0.loc[(df_0.subjid == subj)]
-            df_sub_1 = df_1.loc[(df_1.subjid == subj)]
-        else:
-            df_sub = df_s.loc[df_s.subjid == subj]
-        for i_ev, ev in enumerate(coh_vals):
-            for i_zt, zt in enumerate(bins_zt[:-1]):
-                if not collapse_sides:
-                    mt_vals_0 = df_sub_0.loc[(df_sub_0.coh2 == ev) &
-                                             (df_sub_0.norm_allpriors < zt)
-                                             & (df_sub_0.norm_allpriors >=
-                                                bins_zt[i_zt+1]),
-                                             'resp_len']
-                    mt_vals_1 = df_sub_1.loc[(df_sub_1.coh2 == ev) &
-                                             (df_sub_1.norm_allpriors < zt)
-                                             & (df_sub_1.norm_allpriors >=
-                                                bins_zt[i_zt+1]),
-                                             'resp_len']
-                    mat_0[i_zt, i_ev, i_s] = np.nanmean(mt_vals_0)*1e3
-                    mat_1[i_zt, i_ev, i_s] = np.nanmean(mt_vals_1)*1e3
-                else:
-                    mt_vals = df_sub.loc[(df_sub.coh2 == ev) &
-                                         (df_sub.norm_allpriors < zt)
-                                         & (df_sub.norm_allpriors >=
-                                            bins_zt[i_zt+1]),
-                                         'resp_len']
-                    mat_s[i_zt, i_ev, i_s] = np.nanmean(mt_vals)*1e3
-    if not collapse_sides:
-        mat_0 = np.nanmean(mat_0, axis=2)
-        mat_1 = np.nanmean(mat_1, axis=2)
-    else:
-        mat_s = np.nanmean(mat_s, axis=2)
-    if silent_comparison:
-        if not collapse_sides:
-            # We substract reference MT (in silent trials) at each row
-            mat_0 -= silent_mat_per_rows_0
-            mat_1 -= silent_mat_per_rows_1
-        else:
-            mat_s -= silent_mat_per_rows
-    # else:
-    #     if collapse_sides:
-    #         mat_s = np.column_stack((mat_s, silent_mat_per_rows[:, 0]))
-    df['norm_allpriors'] = norm_allp_raw
-    df['coh2'] = coh_raw
-    if not collapse_sides:
-        # SIDE 0
-        im_0 = ax0.imshow(mat_0, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
-                          vmax=np.nanmax((mat_1, mat_0)))
-        plt.sca(ax0)
-        cbar_0 = plt.colorbar(im_0, fraction=0.04)
-        cbar_0.remove()
-        # cbar_0.set_label(r'$MT \; - MT_{silent}(ms)$')
-        ax0.set_xlabel('Evidence')
-        ax0.set_ylabel('Prior')
-        if rt_bin is not None:
-            if rt_bin > 100:
-                ax0.set_title('Left, RT > ' + str(rt_bin) + ' ms')
-            else:
-                ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
-        else:
-            ax0.set_title('Left')
-        ax0.set_yticks([0, 3, 6], ['R', '0', 'L'])
-        ax0.set_xticks([0, 3, 6], ['L', '0', 'R'])
-        # SIDE 1
-        ax1.set_title('Right')
-        im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
-                          vmax=np.nanmax((mat_1, mat_0)))
-        plt.sca(ax1)
-        ax1.set_xlabel('Evidence')
-        # ax1.set_ylabel('Prior')
-        cbar_1 = plt.colorbar(im_1, fraction=0.04, pad=-0.05)
-        if silent_comparison:
-            cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
-        else:
-            cbar_1.set_label(r'$MT \;(ms)$')
-        ax1.set_yticks([0, 3, 6], ['', '', ''])
-        ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
-        ax0pos = ax0.get_position()
-        ax1pos = ax1.get_position()
-        ax0.set_position([ax0pos.x0, ax1pos.y0, ax1pos.width, ax1pos.height])
-        ax1.set_position([ax1pos.x0-ax1pos.width*0.2,
-                          ax1pos.y0, ax1pos.width, ax1pos.height])
-    else:
-        im_s = ax.imshow(np.flip(mat_s).T, cmap='RdGy')
-        plt.sca(ax)
-        cbar_s = plt.colorbar(im_s, fraction=0.04)
-        cbar_s.set_label(r'$MT \;(ms)$')
-        ax.set_yticks([0, 3, 6], ['1', '0', '-1'])
-        ax.set_xticks([0, 3, 6], ['-1', '0', '1'])
-        ax.set_xlabel('Prior Evidence')
-        ax.set_ylabel('Stimulus Evidence')
 
 
 def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
     fig, ax = plt.subplots(ncols=2)
-    mt_matrix_vs_ev_zt(df, ax, rt_bin=big_rt, silent_comparison=True)
+    fig_1.mt_matrix_ev_vs_zt(df, ax, rt_bin=big_rt, silent_comparison=True)
     fig, ax = plt.subplots(ncols=2)
-    mt_matrix_vs_ev_zt(df, ax, rt_bin=small_rt, silent_comparison=True)
+    fig_1.mt_matrix_ev_vs_zt(df, ax, rt_bin=small_rt, silent_comparison=True)
 
 
 def binning_mt(df):
@@ -3566,45 +2974,6 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
     ax.set_title(title)
 
 
-def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
-    fig, ax = plt.subplots(nrows=2)
-    for a in ax:
-        rm_top_right_lines(a)
-    coh_weights = []
-    zt_weights = []
-    ti_weights = []
-    coh_err = []
-    zt_err = []
-    ti_err = []
-    for irt, rtbin in enumerate(rtbins[:-1]):
-        df_rt = df.loc[(df.sound_len >= rtbin) &
-                       (df.sound_len < rtbins[irt+1])]
-        mean_sub, err_sub = mt_weights(df_rt, ax=None, plot=False,
-                                       means_errs=True, mt=True, t_index_w=True)
-        coh_weights.append(mean_sub[1])
-        zt_weights.append(mean_sub[0])
-        ti_weights.append(mean_sub[2])
-        coh_err.append(err_sub[1])
-        zt_err.append(err_sub[0])
-        ti_err.append(err_sub[2])
-    error_kws = dict(ecolor='goldenrod', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='goldenrod', marker='o', label='Prior')
-    ax[0].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, zt_weights, zt_err,
-                   **error_kws)
-    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='firebrick', marker='o', label='Stimulus')
-    ax[0].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, coh_weights, coh_err,
-                   **error_kws)
-    error_kws = dict(ecolor='steelblue', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='steelblue', marker='o', label='Trial index')
-    ax[1].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, ti_weights, ti_err,
-                   **error_kws)
-    ax[0].set_ylabel('MT weight')
-    ax[0].set_xlabel('RT (ms)')
-    ax[0].legend()
-    ax[1].set_ylabel('MT weight')
-    ax[1].set_xlabel('RT (ms)')
-    ax[1].legend()
 
 
 def supp_com_threshold_matrices(df):
@@ -3978,190 +3347,3 @@ def mt_diff_rev_nonrev(df):
     print(np.nanmean(mt_x_sub_rev)*1e3)
     print('+-')
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
-
-
-if __name__ == '__main__':
-    plt.close('all')
-    f1 = False
-    f2 = False
-    f3 = False
-    f4 = False
-    f5 = True
-    f6 = False
-    f7 = False
-    com_threshold = 8
-    if f1 or f2 or f3 or f5:
-        all_rats = True
-        if all_rats:
-            subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-                        'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-                        'LE44']
-            subjects = ['LE39']
-            # with silent: 42, 43, 44, 45, 46, 47
-        else:
-            subjects = ['LE43']
-            # good ones for fitting: 42, 43, 38
-        df_all = pd.DataFrame()
-        for sbj in subjects:
-            df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
-                                          sv_folder=SV_FOLDER, after_correct=True,
-                                          silent=True, all_trials=True,
-                                          srfail=True)
-            if all_rats:
-                df_all = pd.concat((df_all, df), ignore_index=True)
-            else:
-                subjects = [None]
-        if all_rats:
-            df = df_all
-            df_all = []
-        # XXX: can we remove the code below or move it to the fig5 part?
-        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
-        df['allpriors'] = zt
-        hit = np.array(df['hithistory'])
-        stim = np.array([stim for stim in df.res_sound])
-        coh = np.array(df.coh2)
-        com = df.CoM_sugg.values
-        decision = np.array(df.R_response) * 2 - 1
-        traj_stamps = df.trajectory_stamps.values
-        traj_y = df.trajectory_y.values
-        fix_onset = df.fix_onset_dt.values
-        fix_breaks = np.vstack(np.concatenate([df.sound_len/1000,
-                                                np.concatenate(df.fb.values)-0.3]))
-        sound_len = np.array(df.sound_len)
-        gt = np.array(df.rewside) * 2 - 1
-        trial_index = np.array(df.origidx)
-        resp_len = np.array(df.resp_len)
-        time_trajs = edd2.get_trajs_time(resp_len=resp_len,
-                                          traj_stamps=traj_stamps,
-                                          fix_onset=fix_onset, com=com,
-                                          sound_len=sound_len)
-        if f3 or f5:
-            subjid = df.subjid.values
-            print('Computing CoMs')
-            _, time_com, peak_com, com =\
-                edd2.com_detection(trajectories=traj_y, decision=decision,
-                                    time_trajs=time_trajs,
-                                    com_threshold=com_threshold)
-            print('Ended Computing CoMs')
-            com = np.array(com)  # new CoM list
-            df['CoM_sugg'] = com
-        df['norm_allpriors'] = norm_allpriors_per_subj(df)
-        df['time_trajs'] = time_trajs
-
-    # fig 1
-    if f1:
-        print('Plotting Figure 1')
-        fig_1_rats_behav(df_data=df)
-
-    # fig 2
-    if f2:
-        print('Plotting Figure 2')
-        fig_2_trajs(df=df.loc[df.soundrfail == 0])
-
-    # fig 3
-    if f3:
-        print('Plotting Figure 3')
-        fig_3_CoMs(df=df, peak_com=peak_com, time_com=time_com)
-        supp_com_marginal(df)
-
-    # fig 5 (model)
-    if f5:
-        with_fb = False
-        print('Plotting Figure 5')
-        # we can add extra silent to get cleaner fig5 prior traj
-        n_sil = 0
-        # trials where there was no sound... i.e. silent for simul
-        stim[df.soundrfail, :] = 0
-        num_tr = int(len(decision))
-        decision = np.resize(decision[:int(num_tr)], num_tr + n_sil)
-        zt = np.resize(zt[:int(num_tr)], num_tr + n_sil)
-        sound_len = np.resize(sound_len[:int(num_tr)], num_tr + n_sil)
-        coh = np.resize(coh[:int(num_tr)], num_tr + n_sil)
-        com = np.resize(com[:int(num_tr)], num_tr + n_sil)
-        gt = np.resize(gt[:int(num_tr)], num_tr + n_sil)
-        trial_index = np.resize(trial_index[:int(num_tr)], num_tr + n_sil)
-        hit = np.resize(hit[:int(num_tr)], num_tr + n_sil)
-        special_trial = np.resize(df.special_trial[:int(num_tr)], num_tr + n_sil)
-        subjid = np.resize(np.array(df.subjid)[:int(num_tr)], num_tr + n_sil)
-        special_trial[int(num_tr):] = 2
-        # special_trial[df.soundrfail.values] = 2
-        if stim.shape[0] != 20:
-            stim = stim.T
-        stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
-        stim[:, int(num_tr):] = 0  # for silent simulation
-        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            _, trajs, x_val_at_updt =\
-            run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
-                                            trial_index=trial_index, num_tr=num_tr,
-                                            subject_list=subjects, subjid=subjid, simulate=False)
-        # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-        # basic_statistics(com, com_model_detected)  # com
-        # basic_statistics(hit, hit_model)  # hit
-        MT = [len(t) for t in trajs]
-        df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
-                                'sound_len': reaction_time,
-                                'rewside': (gt + 1)/2,
-                                'R_response': (resp_fin+1)/2,
-                                'resp_len': np.array(MT)*1e-3})
-        df_sim['CoM_sugg'] = com_model.astype(bool)
-        df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-        df_sim['aftererror'] =\
-            np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
-        df_sim['subjid'] = subjid
-        df_sim['origidx'] = trial_index
-        df_sim['special_trial'] = special_trial
-        df_sim['traj'] = df_sim['trajectory_y']
-        df_sim['com_detected'] = com_model_detected.astype(bool)
-        df_sim['peak_com'] = np.array(x_val_at_updt)
-        df_sim['hithistory'] = np.array(resp_fin == gt)
-        df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
-                                          num_tr + n_sil)
-        df_sim['allpriors'] = zt
-        df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
-        # simulation plots
-        plot_rt_sim(df_sim)
-        means, errors = mt_weights(df, means_errs=True, ax=None)
-        means_model, errors_model = mt_weights(df_sim, means_errs=True, ax=None)
-        if not with_fb:
-            df_sim = df_sim[df_sim.sound_len.values >= 0]
-        # memory save:
-        stim = []
-        traj_y = []
-        trial_index = []
-        special_trial = []
-        # df = []
-        gt = []
-        subjid = []
-        traj_stamps = []
-        fix_onset = []
-        fix_breaks = []
-        resp_len = []
-        time_trajs = []
-        # actual plot
-        fig_5_model(coh=coh, sound_len=sound_len, zt=zt,
-                    hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                    decision_model=resp_fin, com=com, com_model=com_model,
-                    com_model_detected=com_model_detected,
-                    means=means, errors=errors, means_model=means_model,
-                    errors_model=errors_model, df_sim=df_sim)
-        fig, ax = plt.subplots(ncols=2, nrows=1)
-        ax = ax.flatten()
-        ax[0].set_title('Data')
-        mt_matrix_vs_ev_zt(df, ax[0], silent_comparison=False, collapse_sides=True)
-        ax[1].set_title('Model')
-        mt_matrix_vs_ev_zt(df_sim, ax[1], silent_comparison=False,
-                            collapse_sides=True)
-        # fig.suptitle('DATA (top) vs MODEL (bottom)')
-        mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
-        # supp_trajs_prior_cong(df_sim, ax=None)
-        # model_vs_data_traj(trajs_model=trajs, df_data=df)
-        if f4:
-            fig_trajs_model_4(trajs_model=trajs, df_data=df,
-                              reaction_time=reaction_time)
-    if f6:
-        print('Plotting Figure 6')
-        # human traj plots
-        fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=600,
-                      wanted_precision=12, nm='300')
-    if f7:
-        fig_7(df, df_sim)

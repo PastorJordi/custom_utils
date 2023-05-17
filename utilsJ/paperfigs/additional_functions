@@ -10,15 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from scipy.stats import sem
-import sys, os
-from scipy.optimize import curve_fit
-from sklearn.metrics import roc_curve
-from sklearn.metrics import RocCurveDisplay
-from sklearn.metrics import confusion_matrix
-from scipy.stats import pearsonr, ttest_ind, ttest_rel, zscore
-from matplotlib.lines import Line2D
-from statsmodels.stats.proportion import proportion_confint
+import sys
+from scipy.stats import ttest_ind
 # from scipy import interpolate
 # import shutil
 
@@ -27,16 +20,12 @@ from statsmodels.stats.proportion import proportion_confint
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
-
-from utilsJ.Models import simul
+from utilsJ.paperfigs import figure_1 as f1
 from utilsJ.Models import extended_ddm_v2 as edd2
-from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
-    trajectory_thr, com_heatmap, interpolapply
-from utilsJ.Models import analyses_humans as ah
-import fig1, fig3, fig2
+from utilsJ.Behavior.plotting import binned_curve, tachometric
+
 import matplotlib
 import matplotlib.pylab as pl
-from scipy import interpolate
 
 matplotlib.rcParams['font.size'] = 9
 plt.rcParams['legend.title_fontsize'] = 8
@@ -525,3 +514,50 @@ def pCoM_vs_coh(df):
     plt.xticks(ticks=ev_vals_sil, labels=(['silent'] + list(ev_vals)))
     plt.xlabel('coh')
     plt.ylabel('pCoM')
+
+
+def mt_weights_rt_bins(df, ax):
+    n_subjects = len(df.subjid.unique())
+    rtlims = [0, 30, 60, 150]
+    nbins = len(rtlims) - 1
+    w_coh = np.zeros((n_subjects, nbins))
+    w_t_i = np.zeros((n_subjects, nbins))
+    w_zt = np.zeros((n_subjects, nbins))
+    if ax is None:
+        fig, ax = plt.subplots(1)
+    for irt, rt_lim in enumerate(rtlims[:-1]):
+        for i_s, subject in enumerate(df.subjid.unique()):
+            df_1 = df.loc[(df.subjid == subject) & (df.sound_len > rt_lim) &
+                          (df.sound_len <= rtlims[irt+1])]
+            resp_len = np.array(df_1.resp_len)
+            decision = np.array(df_1.R_response)*2 - 1
+            coh = np.array(df_1.coh2)
+            trial_index = np.array(df_1.origidx)
+            com = df_1.CoM_sugg.values
+            zt = df_1.allpriors.values
+            params = f1.mt_linear_reg(mt=resp_len/max(resp_len),
+                                   coh=coh*decision/max(np.abs(coh)),
+                                   trial_index=trial_index/max(trial_index),
+                                   prior=zt*decision/max(np.abs(zt)), plot=False,
+                                   com=com)
+            w_coh[i_s, irt] = params[1]
+            w_t_i[i_s, irt] = params[2]
+            w_zt[i_s, irt] = params[3]
+    labels = ['RT < 30 ms', '30 < RT < 60 ms  \n Prior', '60 < RT < 150 ms',
+              'RT < 30 ms ', '30 < RT < 60 ms  \n Stimulus', '60 < RT < 150 ms ']
+    label_1 = []
+    for j in range(len(labels)):
+        for i in range(len(w_coh)):
+            label_1.append(labels[j])
+    ax.axhline(0, color='gray', alpha=0.4)
+    arr_weights = np.concatenate((w_zt.flatten(), w_coh.flatten()))
+    df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
+    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
+                   palette=['goldenrod', 'goldenrod', 'goldenrod', 'firebrick',
+                            'firebrick', 'firebrick'],
+                   linewidth=0.8)
+    med_stim = np.nanmean(w_coh, axis=0)
+    med_zt = np.nanmean(w_zt, axis=0)
+    ax.plot([3, 4, 5], med_stim, color='k')
+    ax.plot([0, 1, 2], med_zt, color='k')
+    ax.set_ylabel('Impact on MT (weights, a.u)')
