@@ -828,7 +828,7 @@ def get_lb():
     lb_e_bound = 0.3
     lb_com_bound = 0
     lb_w_intercept = 0.01
-    lb_w_slope = 1e-5
+    lb_w_slope = 1e-6
     lb_a_bound = 0.1
     lb_1st_r = 25
     lb_2nd_r = 1
@@ -860,7 +860,7 @@ def get_ub():
     ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.12
-    ub_w_slope = 5e-5
+    ub_w_slope = 1e-3
     ub_a_bound = 3.5
     ub_1st_r = 500
     ub_2nd_r = 500
@@ -892,7 +892,7 @@ def get_pub():
     pub_e_bound = 2.6
     pub_com_bound = 0.2
     pub_w_intercept = 0.08
-    pub_w_slope = 3e-5
+    pub_w_slope = 1e-4
     pub_a_bound = 2.8
     pub_1st_r = 400
     pub_2nd_r = 400
@@ -948,7 +948,7 @@ def nonbox_constraints_bads(x):
     cond4 = x_1[:, 0] < 1e-2  # lb for prior
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
     cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
-    cond7 = x_1[:, 11] < 30
+    cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
     return np.bool_(cond1+cond4+cond5+cond6+cond7)
 
 
@@ -991,7 +991,7 @@ def prepare_fb_data(df):
     data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
                                torch.tensor(tr_in_vec.astype(float)),
                                x_o))
-    data = data[np.round(rt_vec) > -250, :]
+    data = data[np.round(rt_vec) > 50, :]
     return data
 
 
@@ -1406,9 +1406,6 @@ if __name__ == '__main__':
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-                    'LE44']
-        subjects = ['LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
