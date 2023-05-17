@@ -790,14 +790,14 @@ def theta_for_lh_plot():
 def get_x0():
     p_t_aff = 5
     p_t_eff = 4
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_a = 15  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.06
     p_w_stim = 0.1
     p_e_bound = 0.6
     p_com_bound = 0.1
-    p_w_a_intercept = 0.056
+    p_w_a_intercept = 0.05
     p_w_a_slope = 2e-5
-    p_a_bound = 2.6
+    p_a_bound = 2.8
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
@@ -861,7 +861,7 @@ def get_ub():
     ub_com_bound = 1
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
-    ub_a_bound = 3.5
+    ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
     ub_leak = 2
@@ -940,16 +940,16 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 60  # RT peak < 0 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 65  # RT peak < 0 ms
     # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
     # effect on MT for Reactive responses < 30 ms
-    cond4 = x_1[:, 0] < 1e-2  # lb for prior
-    cond5 = x_1[:, 1] < 1e-2  # lb for stim
-    cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
-    cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
-    return np.bool_(cond1+cond4+cond5+cond6+cond7)
+    # cond4 = x_1[:, 0] < 1e-2  # lb for prior
+    # cond5 = x_1[:, 1] < 1e-2  # lb for stim
+    # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
+    # cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
+    return np.bool_(cond1)
 
 
 def gumbel_plotter():

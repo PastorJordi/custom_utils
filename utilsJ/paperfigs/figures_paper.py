@@ -3982,11 +3982,11 @@ def mt_diff_rev_nonrev(df):
 
 if __name__ == '__main__':
     plt.close('all')
-    f1 = True
+    f1 = False
     f2 = False
     f3 = False
     f4 = False
-    f5 = False
+    f5 = True
     f6 = False
     f7 = False
     com_threshold = 8
@@ -3996,7 +3996,7 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45']
+            subjects = ['LE39']
             # with silent: 42, 43, 44, 45, 46, 47
         else:
             subjects = ['LE43']
