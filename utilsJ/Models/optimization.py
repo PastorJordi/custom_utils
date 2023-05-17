@@ -947,7 +947,7 @@ def nonbox_constraints_bads(x):
     # effect on MT for Reactive responses < 30 ms
     cond4 = x_1[:, 0] < 1e-2  # lb for prior
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
-    cond6 = x_1[:, 4] + x_1[:, 5] < 7  # aff + eff < 35 ms
+    cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
     cond7 = x_1[:, 11] < 30
     return np.bool_(cond1+cond4+cond5+cond6+cond7)
 
