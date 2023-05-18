@@ -575,14 +575,14 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([12.])),  # afferent time
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
-            Uniform(torch.tensor([4.]),
-                    torch.tensor([30.])),  # time offset action
+            Uniform(torch.tensor([5.]),
+                    torch.tensor([25.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
                     torch.tensor([0.08])),  # intercept trial index for action drift
             Uniform(torch.tensor([1e-5]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
             Uniform(torch.tensor([0.5]),
-                    torch.tensor([6.])),  # bound for action integrator
+                    torch.tensor([4.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
                     torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
             Uniform(torch.tensor([1.]),
@@ -944,7 +944,7 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 80  # RT peak < 25 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 60  # RT peak < 25 ms
     # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
@@ -1001,7 +1001,8 @@ def prepare_fb_data(df):
 
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     if training:
-        mt = df.resp_len.values
+        # 1st: loading data
+        mt = df.resp_len.values  # motor time: in seconds (must be multiplied then by 1e3)
         choice = df.R_response.values
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         stim = np.array([stim for stim in df.res_sound])
@@ -1028,8 +1029,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         choice = np.resize(choice, num_simulations)
         # com = np.resize(com, num_simulations)
         # choice_and_com = com + choice*2
-        rt = np.resize(sound_len + 300, num_simulations)
-        x_o = torch.column_stack((torch.tensor(mt*1e3),
+        rt = np.resize(sound_len + 300, num_simulations)  # respect to fixation onset
+        x_o = torch.column_stack((torch.tensor(mt*1e3),  # MT in ms
                                   torch.tensor(rt),
                                   torch.tensor(choice)))
         x_o = x_o.to(torch.float32)
@@ -1050,7 +1051,10 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         theta_all_inp = theta_all_inp.to(torch.float32)
         # simulate
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+        # transform parameters related to trial index. 14 params instead of 17
+        # MT_in = MT_0 + MT_1*trial_index
         theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
+        # V_A = vA_0 + vA_1*trial_index
         theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
         theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
                                             theta_all_inp[:, 9:15]))
@@ -1060,7 +1064,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim = []
         nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         # define network MNLE
-        trainer = MNLE(prior=prior)
+        trainer = MNLE()  # prior=prior
         time_start = time.time()
         print('Starting network training')
         # network training
