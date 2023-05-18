@@ -1002,42 +1002,35 @@ def prepare_fb_data(df):
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     if training:
         # 1st: loading data
-        mt = df.resp_len.values  # motor time: in seconds (must be multiplied then by 1e3)
-        choice = df.R_response.values
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         stim = np.array([stim for stim in df.res_sound])
         coh = np.array(df.coh2)
         trial_index = np.array(df.origidx)
-        traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
-        traj_y = df.trajectory_y.values  # [after_correct_id]
-        fix_onset = df.fix_onset_dt.values  # [after_correct_id]
-        sound_len = np.array(df.sound_len)
-        time_trajs = get_trajs_time(resp_len=np.array(df.resp_len),
-                                    traj_stamps=traj_stamps,
-                                    fix_onset=fix_onset, com=None,
-                                    sound_len=sound_len)
-        _, _, _, com =\
-            com_detection(trajectories=traj_y, decision=choice,
-                          time_trajs=time_trajs, com_threshold=8)
         stim[df.soundrfail, :] = 0
         # Prepare data:
         coh = np.resize(coh, num_simulations)
         zt = np.resize(zt, num_simulations)
         trial_index = np.resize(trial_index, num_simulations)
         stim = np.resize(stim, (num_simulations, 20))
-        mt = np.resize(mt, num_simulations)
-        choice = np.resize(choice, num_simulations)
-        # com = np.resize(com, num_simulations)
-        # choice_and_com = com + choice*2
-        rt = np.resize(sound_len + 300, num_simulations)  # respect to fixation onset
-        x_o = torch.column_stack((torch.tensor(mt*1e3),  # MT in ms
-                                  torch.tensor(rt),
-                                  torch.tensor(choice)))
-        x_o = x_o.to(torch.float32)
-        # to save some memory
-        choice = []
-        rt = []
-        mt = []
+        if not bads:
+            # motor time: in seconds (must be multiplied then by 1e3)
+            mt = df.resp_len.values
+            choice = df.R_response.values
+            sound_len = np.array(df.sound_len)
+            mt = np.resize(mt, num_simulations)
+            choice = np.resize(choice, num_simulations)
+            # com = np.resize(com, num_simulations)
+            # choice_and_com = com + choice*2
+            rt = np.resize(sound_len + 300, num_simulations)
+            # w.r.t fixation onset
+            x_o = torch.column_stack((torch.tensor(mt*1e3),  # MT in ms
+                                      torch.tensor(rt),
+                                      torch.tensor(choice)))
+            x_o = x_o.to(torch.float32)
+            # to save some memory
+            choice = []
+            rt = []
+            mt = []
         print('Data preprocessed, building prior distros')
         # build prior: ALL PARAMETERS ASSUMED POSITIVE
         prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
