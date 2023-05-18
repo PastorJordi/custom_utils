@@ -17,9 +17,10 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
+from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figures_paper as fp
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -56,10 +57,10 @@ elif pc_name == 'alex_CRM':
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 com_threshold = 8
@@ -69,7 +70,7 @@ if f1 or f2 or f3 or f5:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
-        subjects = ['LE43']
+        # subjects = ['LE43']
         # with silent: 42, 43, 44, 45, 46, 47
     else:
         subjects = ['LE43']
@@ -129,7 +130,8 @@ if f1:
 # fig 2
 if f2:
     print('Plotting Figure 2')
-    fp.fig_2_trajs(df=df.loc[df.soundrfail == 0])
+    fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
+                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG)
 
 # fig 3
 if f3:

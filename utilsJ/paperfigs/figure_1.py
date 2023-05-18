@@ -15,40 +15,6 @@ sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import tachometric
 
-# ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
-if pc_name == 'alex':
-    RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-    SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-    DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-    RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
-    TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
-    HUMAN_TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/g41085.png'
-elif pc_name == 'idibaps':
-    DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-    SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
-        'ChangesOfMind/figures/from_python/'  # Manuel
-    RAT_noCOM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-        'ChangesOfMind/figures/Figure_1/screenShot230120.png'
-    RAT_COM_IMG = '/home/molano/Dropbox/project_Barna/' +\
-        'ChangesOfMind/figures/Figure_3/001965.png'
-    TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
-        'figures/Figure_1/panel_a.png'
-elif pc_name == 'idibaps_alex':
-    SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
-    DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-    RAT_COM_IMG = '/home/jordi/Documents/changes_of_mind/demo/materials/' +\
-        'craft_vid/CoM/a/001965.png'
-    RAT_noCOM_IMG = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/' +\
-        'screenShot230120.png'
-    HUMAN_TASK_IMG = '/home/jordi/DATA/Documents/changes_of_mind/humans/g41085.png'
-elif pc_name == 'alex_CRM':
-    SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-    DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-    RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
-    RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
-    HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
-    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
 
 # ---FUNCTIONS
 def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
@@ -568,7 +534,7 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
 
 
 
-def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
+def supp_fig_traj_tr_idx(df, sv_folder, fgsz=(15, 5), accel=False, marginx=0.01,
                          marginy=0.05):
     fgsz = fgsz
     inset_sz = 0.08
@@ -590,8 +556,8 @@ def supp_fig_traj_tr_idx(df, fgsz=(15, 5), accel=False, marginx=0.01,
     # splits
     mt_weights(df, ax=ax[3], plot=True, means_errs=False)
     fp.trajs_splitting_stim(df=df, ax=ax[7])
-    f.savefig(SV_FOLDER+'/Fig2.png', dpi=400, bbox_inches='tight')
-    f.savefig(SV_FOLDER+'/Fig2.svg', dpi=400, bbox_inches='tight')
+    f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
+    f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
 def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
