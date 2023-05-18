@@ -22,7 +22,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -2619,7 +2619,7 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
     p_w_stim = conf[1]+jitters[1]*np.random.rand()
     p_e_bound = conf[2]+jitters[2]*np.random.rand()
-    p_com_bound = conf[3]+jitters[3]*np.random.rand()
+    p_com_bound = conf[3]*p_e_bound+jitters[3]*np.random.rand()
     p_t_aff = int(round(conf[4]+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
@@ -3278,11 +3278,12 @@ def plot_rt_sim(df_sim):
     for isub, subj in enumerate(df_sim.subjid.unique()):
         ax[isub].set_title(subj)
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
-            sns.kdeplot(df_sim.loc[(df_sim.coh2.abs() == ev) &
-                                   (df_sim.subjid == subj), 'sound_len'],
+            rts = df_sim.loc[(df_sim.coh2.abs() == ev) &
+                             (df_sim.subjid == subj), 'sound_len']
+            sns.kdeplot(rts,
                         color=colormap[iev], ax=ax[isub])
             ax[isub].set_xlabel('RT (ms)')
-            ax[isub].set_title(subj)
+            ax[isub].set_title(subj + ' ' + str(np.round(np.mean(rts < 0), 4)))
 
 
 def plot_fb_per_subj_from_df(df):

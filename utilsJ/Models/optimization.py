@@ -575,14 +575,14 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([12.])),  # afferent time
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
-            Uniform(torch.tensor([9.]),
-                    torch.tensor([20.])),  # time offset action
+            Uniform(torch.tensor([4.]),
+                    torch.tensor([30.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
                     torch.tensor([0.08])),  # intercept trial index for action drift
             Uniform(torch.tensor([1e-5]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
             Uniform(torch.tensor([0.5]),
-                    torch.tensor([4.])),  # bound for action integrator
+                    torch.tensor([6.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
                     torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
             Uniform(torch.tensor([1.]),
@@ -681,7 +681,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, binsize=300):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=0.1):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -795,9 +795,9 @@ def get_x0():
     p_w_stim = 0.1
     p_e_bound = 0.6
     p_com_bound = 0.1
-    p_w_a_intercept = 0.05
+    p_w_a_intercept = 0.04
     p_w_a_slope = 2e-5
-    p_a_bound = 2.8
+    p_a_bound = 4
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
@@ -822,7 +822,7 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 9
+    lb_t_a = 4
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.3
@@ -854,10 +854,10 @@ def get_ub():
     """
     ub_aff = 15
     ub_eff = 15
-    ub_t_a = 20
+    ub_t_a = 25
     ub_w_zt = 1
     ub_w_st = 0.6
-    ub_e_bound = 4
+    ub_e_bound = 6
     ub_com_bound = 1
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
@@ -886,14 +886,14 @@ def get_pub():
     """
     pub_aff = 9
     pub_eff = 9
-    pub_t_a = 16
+    pub_t_a = 18
     pub_w_zt = 0.7
     pub_w_st = 0.2
     pub_e_bound = 2.6
     pub_com_bound = 0.2
     pub_w_intercept = 0.08
     pub_w_slope = 1e-4
-    pub_a_bound = 2.8
+    pub_a_bound = 3
     pub_1st_r = 400
     pub_2nd_r = 400
     pub_leak = 0.8
@@ -940,7 +940,7 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 65  # RT peak < 0 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 80  # RT peak < 25 ms
     # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30

@@ -13,13 +13,13 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figures_paper as fp
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -55,11 +55,11 @@ elif pc_name == 'alex_CRM':
 
 
 plt.close('all')
-f1 = True
+f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
 f7 = False
 com_threshold = 8
@@ -69,7 +69,7 @@ if f1 or f2 or f3 or f5:
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
-        # subjects = ['LE39']
+        subjects = ['LE43']
         # with silent: 42, 43, 44, 45, 46, 47
     else:
         subjects = ['LE43']
@@ -166,7 +166,7 @@ if f5:
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=False)
+                                          subject_list=subjects, subjid=subjid, simulate=True)
     # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
     # basic_statistics(com, com_model_detected)  # com
     # basic_statistics(hit, hit_model)  # hit
