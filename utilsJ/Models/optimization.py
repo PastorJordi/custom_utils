@@ -1049,8 +1049,12 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
             theta_all_inp, torch.tensor(
                 trial_index[:num_simulations].astype(float)).to(torch.float32)))
         theta_all_inp = theta_all_inp.to(torch.float32)
-        # simulate
+        # SIMULATION
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+        # now we have a matrix of (num_simulations x 3):
+        # MT, RT, CHOICE for each simulation
+
+        # NETWORK TRAINING
         # transform parameters related to trial index. 14 params instead of 17
         # MT_in = MT_0 + MT_1*trial_index
         theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
@@ -1064,13 +1068,14 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim = []
         nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         # define network MNLE
-        trainer = MNLE()  # prior=prior
+        trainer = MNLE()
         time_start = time.time()
         print('Starting network training')
         # network training
         estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                                x[~nan_mask, :]).train(
                                                    show_train_summary=True)
+        # save the network
         with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", "wb") as fh:
             pickle.dump(dict(estimator=estimator,
                              num_simulations=num_simulations), fh)
@@ -1421,7 +1426,6 @@ if __name__ == '__main__':
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
-            # subject = 'LE43'
             print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
                                      sv_folder=SV_FOLDER, after_correct=True,
