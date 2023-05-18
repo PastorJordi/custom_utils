@@ -671,7 +671,7 @@ def prob_rt_fb_action(t, v_a, t_a, bound_a):
 
 def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     # returns -LLH ( RT | theta ) for RT < 0
-    v_a = theta_fb[:, 8]*theta_fb[:, -1] + theta_fb[:, 7]
+    v_a = -theta_fb[:, 8]*theta_fb[:, -1] + theta_fb[:, 7]  # v_a = b_o - b_1*t_index
     v_a = v_a.detach().numpy()/dt
     bound_a = theta_fb[:, 9].detach().numpy()
     t_a = dt*(theta_fb[:, 6] + theta_fb[:, 5]).detach().numpy()
@@ -681,7 +681,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=0.1):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -702,7 +702,7 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=0.1):
     theta_no_fb = torch.tensor(
         theta.detach().numpy()[np.isnan(x_o).sum(axis=1) == 0, :]).to(torch.float32)
     theta_no_fb[:, 14] += theta_no_fb[:, 15]*theta_no_fb[:, -1]
-    theta_no_fb[:, 7] += theta_no_fb[:, 8]*theta_no_fb[:, -1]
+    theta_no_fb[:, 7] -= theta_no_fb[:, 8]*theta_no_fb[:, -1]
     theta_no_fb = torch.column_stack((theta_no_fb[:, :8],
                                       theta_no_fb[:, 9:15]))
     log_liks = estimator.log_prob(x_o_no_fb, context=theta_no_fb).detach().numpy()
@@ -715,8 +715,12 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=0.1):
     theta_fb = theta[np.isnan(x_o).sum(axis=1) > 0, :]
     log_liks_fb = get_log_likelihood_fb_psiam(rt_fb=x_o_with_fb[:, 1],
                                               theta_fb=theta_fb, eps=eps)
+    # print('-LLH ( FB )')
+    # print(log_liks_fb)
+    # print('-LLH ( RT > 0 )')
+    # print(log_liks_no_fb)
     # returns -LLH (data (RT > 0) | theta) + -LLH (data (RT < 0) | theta)
-    return log_liks_fb + log_liks_no_fb
+    return log_liks_fb*weight_LLH_fb + log_liks_no_fb
 
 
 def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, max_it=5):
@@ -1047,7 +1051,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # simulate
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
         theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
-        theta_all_inp[:, 7] += theta_all_inp[:, 8]*theta_all_inp[:, -1]
+        theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
         theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
                                             theta_all_inp[:, 9:15]))
         coh = []
@@ -1206,7 +1210,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                                                 torch.tensor(trial_index[
                                                     :len(x_o)]).to(torch.float32)))
             theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
-            theta_tri_ind[:, 7] += theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+            theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
             theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
                                                 theta_tri_ind[:, 9:15]))
             lprobs = estimator.log_prob(x_o, theta_tri_ind)
