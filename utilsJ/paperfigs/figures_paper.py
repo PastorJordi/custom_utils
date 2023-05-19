@@ -1598,10 +1598,8 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.plot(xvals, yvals, color=COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('x-coord. (px)')
-    legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='Rev.'),
-                      Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-Rev.')]
+    legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2, label='Rev.'),
+                      Line2D([0], [0], color=COLOR_NO_COM, lw=2, label='No-Rev.')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
@@ -1772,7 +1770,6 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
     ground_truth = (df_data.R_response.values*2-1) *\
         (df_data.hithistory.values*2-1)
     ground_truth = ground_truth[index1]
-    bins = ev_vals
     congruent_coh = np.round(coh, 2) * (decision*2 - 1)
     colormap = pl.cm.coolwarm(np.linspace(0., 1, len(ev_vals)))
     vals_thr_traj = []
@@ -1811,7 +1808,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
                            y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
-    ax[2].plot(bins, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[2].plot(ev_vals, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
     ax[1].set_xlim(-0.1, 470)
     ax[1].set_ylim(-1, 620)
     ax[1].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
