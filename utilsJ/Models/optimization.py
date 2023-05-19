@@ -563,7 +563,7 @@ def build_prior_sample_theta(num_simulations):
     # 1. Parameters' prior distro definition
     prior =\
         MultipleIndependent([
-            Uniform(torch.tensor([1e-2]),
+            Uniform(torch.tensor([1e-3]),
                     torch.tensor([1])),  # prior weight
             Uniform(torch.tensor([1e-3]),
                     torch.tensor([0.8])),  # stim weight
@@ -575,14 +575,14 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([12.])),  # afferent time
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
-            Uniform(torch.tensor([4.]),
-                    torch.tensor([30.])),  # time offset action
+            Uniform(torch.tensor([5.]),
+                    torch.tensor([25.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
-                    torch.tensor([0.08])),  # intercept trial index for action drift
-            Uniform(torch.tensor([1e-5]),
+                    torch.tensor([0.1])),  # intercept trial index for action drift
+            Uniform(torch.tensor([1e-6]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
-            Uniform(torch.tensor([0.5]),
-                    torch.tensor([6.])),  # bound for action integrator
+            Uniform(torch.tensor([1]),
+                    torch.tensor([4.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
                     torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
             Uniform(torch.tensor([1.]),
@@ -590,7 +590,7 @@ def build_prior_sample_theta(num_simulations):
             Uniform(torch.tensor([1e-6]),
                     torch.tensor([0.9])),  # leak
             Uniform(torch.tensor([1.]),
-                    torch.tensor([90.])),  # std of the MT noise
+                    torch.tensor([80.])),  # std of the MT noise
             Uniform(torch.tensor([120.]),
                     torch.tensor([400.])),  # MT offset
             Uniform(torch.tensor([0.01]),
@@ -794,14 +794,14 @@ def theta_for_lh_plot():
 def get_x0():
     p_t_aff = 5
     p_t_eff = 4
-    p_t_a = 15  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.06
-    p_w_stim = 0.1
-    p_e_bound = 0.6
+    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.2
+    p_w_stim = 0.12
+    p_e_bound = 2.
     p_com_bound = 0.1
-    p_w_a_intercept = 0.04
+    p_w_a_intercept = 0.056
     p_w_a_slope = 2e-5
-    p_a_bound = 4
+    p_a_bound = 2.6
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.5
@@ -861,7 +861,7 @@ def get_ub():
     ub_t_a = 25
     ub_w_zt = 1
     ub_w_st = 0.6
-    ub_e_bound = 6
+    ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
@@ -901,7 +901,7 @@ def get_pub():
     pub_1st_r = 400
     pub_2nd_r = 400
     pub_leak = 0.8
-    pub_mt_n = 30
+    pub_mt_n = 40
     pub_mt_int = 350
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -944,7 +944,7 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 80  # RT peak < 25 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 50  # ~ max. action RT peak < -50 ms
     # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
@@ -1001,44 +1001,38 @@ def prepare_fb_data(df):
 
 def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
     if training:
-        mt = df.resp_len.values
-        choice = df.R_response.values
+        # 1st: loading data
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
         stim = np.array([stim for stim in df.res_sound])
         coh = np.array(df.coh2)
         trial_index = np.array(df.origidx)
-        traj_stamps = df.trajectory_stamps.values  # [after_correct_id]
-        traj_y = df.trajectory_y.values  # [after_correct_id]
-        fix_onset = df.fix_onset_dt.values  # [after_correct_id]
-        sound_len = np.array(df.sound_len)
-        time_trajs = get_trajs_time(resp_len=np.array(df.resp_len),
-                                    traj_stamps=traj_stamps,
-                                    fix_onset=fix_onset, com=None,
-                                    sound_len=sound_len)
-        _, _, _, com =\
-            com_detection(trajectories=traj_y, decision=choice,
-                          time_trajs=time_trajs, com_threshold=8)
         stim[df.soundrfail, :] = 0
         # Prepare data:
         coh = np.resize(coh, num_simulations)
         zt = np.resize(zt, num_simulations)
         trial_index = np.resize(trial_index, num_simulations)
         stim = np.resize(stim, (num_simulations, 20))
-        mt = np.resize(mt, num_simulations)
-        choice = np.resize(choice, num_simulations)
-        # com = np.resize(com, num_simulations)
-        # choice_and_com = com + choice*2
-        rt = np.resize(sound_len + 300, num_simulations)
-        x_o = torch.column_stack((torch.tensor(mt*1e3),
-                                  torch.tensor(rt),
-                                  torch.tensor(choice)))
-        x_o = x_o.to(torch.float32)
-        # to save some memory
-        choice = []
-        rt = []
-        mt = []
+        if not bads:
+            # motor time: in seconds (must be multiplied then by 1e3)
+            mt = df.resp_len.values
+            choice = df.R_response.values
+            sound_len = np.array(df.sound_len)
+            mt = np.resize(mt, num_simulations)
+            choice = np.resize(choice, num_simulations)
+            # com = np.resize(com, num_simulations)
+            # choice_and_com = com + choice*2
+            rt = np.resize(sound_len + 300, num_simulations)
+            # w.r.t fixation onset
+            x_o = torch.column_stack((torch.tensor(mt*1e3),  # MT in ms
+                                      torch.tensor(rt),
+                                      torch.tensor(choice)))
+            x_o = x_o.to(torch.float32)
+            # to save some memory
+            choice = []
+            rt = []
+            mt = []
         print('Data preprocessed, building prior distros')
-        # build prior
+        # build prior: ALL PARAMETERS ASSUMED POSITIVE
         prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
         # add zt, coh, trial index
         theta_all_inp = theta_all.clone().detach()
@@ -1048,9 +1042,16 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
             theta_all_inp, torch.tensor(
                 trial_index[:num_simulations].astype(float)).to(torch.float32)))
         theta_all_inp = theta_all_inp.to(torch.float32)
-        # simulate
+        # SIMULATION
         x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+        # now we have a matrix of (num_simulations x 3):
+        # MT, RT, CHOICE for each simulation
+
+        # NETWORK TRAINING
+        # transform parameters related to trial index. 14 params instead of 17
+        # MT_in = MT_0 + MT_1*trial_index
         theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
+        # V_A = vA_0 - vA_1*trial_index
         theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
         theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
                                             theta_all_inp[:, 9:15]))
@@ -1060,13 +1061,14 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim = []
         nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         # define network MNLE
-        trainer = MNLE(prior=prior)
+        trainer = MNLE()
         time_start = time.time()
         print('Starting network training')
         # network training
         estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
                                                x[~nan_mask, :]).train(
                                                    show_train_summary=True)
+        # save the network
         with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", "wb") as fh:
             pickle.dump(dict(estimator=estimator,
                              num_simulations=num_simulations), fh)
@@ -1413,11 +1415,10 @@ if __name__ == '__main__':
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = False
+        training = True
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
-            # subject = 'LE43'
             print('Fitting rat ' + str(subject))
             df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
                                      sv_folder=SV_FOLDER, after_correct=True,
