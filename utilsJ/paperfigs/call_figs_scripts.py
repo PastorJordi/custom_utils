@@ -13,7 +13,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
@@ -125,7 +125,8 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER)
+    fig_1.fig_1_rats_behav(df_data=df.loc[df.soundrfail == 0],
+                           task_img=TASK_IMG, sv_folder=SV_FOLDER)
 
 # fig 2
 if f2:
