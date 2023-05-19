@@ -487,7 +487,9 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     # RTs
     ax_rts = ax[2]
     fp.rm_top_right_lines(ax=ax_rts)
-    plot_rt_cohs_with_fb(df=df_data, ax=ax_rts, subj='LE46')
+    df_rts = df_data.copy()
+    plot_rt_cohs_with_fb(df=df_rts, ax=ax_rts, subj='LE46')
+    del df_rts
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
     ax_rts.set_xlim(-101, 201)
@@ -500,8 +502,10 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     bin_size = 10
     ax_tach = ax[5]
     labels = ['0', '0.25', '0.5', '1']
-    tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg',
+    df_tachos = df_data.copy()
+    tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
                 labels=labels, rtbins=np.arange(0, 201, bin_size))
+    del df_tachos
     ax_tach.set_xlabel('Reaction Time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.5, 1.04)
@@ -515,20 +519,29 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     fp.add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
 
     # MT VS COH
-    plot_mt_vs_evidence(df=df_data, ax=ax[7], prior_limit=0.1,  # 10% quantile
+    df_mt = df_data.copy()
+    plot_mt_vs_evidence(df=df_mt, ax=ax[7], prior_limit=0.1,  # 10% quantile
                         condition='choice_x_coh', rt_lim=50)
+    del df_mt
     # MT VS PRIOR
+    df_mt = df_data.copy()
     plot_mt_vs_evidence(df=df_data.loc[df_data.special_trial == 2], ax=ax[6],
                         condition='choice_x_prior', prior_limit=1,
                         rt_lim=200)
+    del df_mt
     # REGRESSION WEIGHTS
-    mt_weights(df_data, ax=ax[8], plot=True, means_errs=False)
+    df_wghts = df_data.copy()
+    mt_weights(df=df_wghts, ax=ax[8], plot=True, means_errs=False)
+    del df_wghts
     # MT MATRIX
-    mt_matrix_ev_vs_zt(df=df_data, ax=ax[9], silent_comparison=False,
+    df_mtx = df_data.copy()
+    mt_matrix_ev_vs_zt(df=df_mtx, ax=ax[9], silent_comparison=False,
                           rt_bin=60, collapse_sides=True)
+    del df_mtx
     # SLOWING
-    plot_mt_vs_stim(df_data, ax[10], prior_min=0.8, rt_max=50)
-
+    df_slow = df_data.copy()
+    plot_mt_vs_stim(df=df_slow, ax=ax[10], prior_min=0.8, rt_max=50)
+    del df_slow
     f.savefig(sv_folder+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'fig1.png', dpi=400, bbox_inches='tight')
 
