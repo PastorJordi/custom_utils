@@ -1880,16 +1880,11 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
     ax[1].set_xlim(-0.1, 470)
     ax[3].set_ylim(-1, 620)
     colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
-    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
-                             label='cong.'),
-                      Line2D([0], [0], color=colormap[1], lw=2,
-                             label=''),
-                      Line2D([0], [0], color=colormap[2], lw=2,
-                             label='0'),
-                      Line2D([0], [0], color=colormap[2], lw=2,
-                             label=''),
-                      Line2D([0], [0], color=colormap[4], lw=2,
-                             label='inc.')]
+    legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='cong.'),
+                      Line2D([0], [0], color=colormap[1], lw=2, label=''),
+                      Line2D([0], [0], color=colormap[2], lw=2, label='0'),
+                      Line2D([0], [0], color=colormap[2], lw=2, label=''),
+                      Line2D([0], [0], color=colormap[4], lw=2, label='inc.')]
     ax[3].legend(handles=legendelements, title='Prior', loc='upper left',
                  fontsize=7)
     ax[3].set_ylabel('x-coord (px)')
@@ -1899,13 +1894,16 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
     ax[4].set_xticks([])
     if plotxy:
         cont = 0
+        subj_xy = 1
+        index_sub = df_data.subjid == subj_xy
         for traj in range(800):
-            tr_ind = np.random.randint(0, len(df_data['trajectory_y'])-1)
+            np.seed(1)
+            tr_ind = np.random.randint(0, len(df_data['trajectory_y'][index_sub])-1)
             x_coord = df_data['trajectory_y'][tr_ind]
             y_coord = df_data['traj_y'][tr_ind]
             time_max = df_data['times'][tr_ind][-1]
             if time_max != '':
-                if time_max < 0.3 and time_max > 0.1:
+                if time_max < 0.3 and time_max > 0.1 and not df_data.CoM_sugg[tr_ind]:
                     time = df_data['times'][tr_ind]
                     ind_time = [True if t != '' else False for t in time]
                     time = np.array(time)[np.array(ind_time)]
