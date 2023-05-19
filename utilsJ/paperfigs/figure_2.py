@@ -801,7 +801,7 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
-                inset_sz=.06, marginx=0.008, marginy=0.05):
+                inset_sz=.06, marginx=0.008, marginy=0.05, subj='LE46'):
     f, ax = plt.subplots(4, 3, figsize=fgsz)
     letters = 'abcdeXfgXhij'
     ax = ax.flatten()
@@ -863,7 +863,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     # add colorbar for screenshot
     n_stps = 100
     pos = ax_scrnsht.get_position()
-    ax_clbr = plt.axes([pos.x0+margin/2, pos.y0+pos.height+margin/4,
+    ax_clbr = plt.axes([pos.x0+margin/4, pos.y0+pos.height+margin/8,
                         pos.width*0.7, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     x_tcks = np.linspace(0, n_stps, 6)
@@ -876,12 +876,13 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_clbr.xaxis.set_ticks_position("top")
 
     # TRAJECTORIES
+    df_subj = df[df.subjid == subj]
     ax_rawtr = ax[1]
     ax_ydim = ax[2]
     ran_max = 100
     for tr in range(ran_max):
         if tr > (ran_max/2):
-            trial = df.iloc[tr]
+            trial = df_subj.iloc[tr]
             traj_x = trial['trajectory_x']
             traj_y = trial['trajectory_y']
             ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
@@ -907,7 +908,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
     pos_ydim = ax_ydim.get_position()
-    ax_ydim.set_position([pos_ydim.x0-2*margin, pos_rawtr.y0,
+    ax_ydim.set_position([pos_ydim.x0-3*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # plot dashed lines
