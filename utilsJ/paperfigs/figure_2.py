@@ -15,6 +15,228 @@ from utilsJ.Models import simul
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 
+def plots_trajs_conditioned_old(df, ax, data_folder, condition='choice_x_coh', cmap='viridis',
+                            prior_limit=0.25, rt_lim=50,
+                            after_correct_only=True,
+                            trajectory="trajectory_y",
+                            velocity=("traj_d1", 1),
+                            acceleration=('traj_d2', 1)):
+    """
+    Plots mean trajectories, MT, velocity and peak velocity
+    conditioning on Coh/Zt/T.index,
+    """
+    interpolatespace = np.linspace(-700000, 1000000, 1700)
+    nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
+    df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
+    df.loc[nanidx, 'allpriors'] = np.nan
+    df['norm_allpriors'] = fp.norm_allpriors_per_subj(df)
+    df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
+    df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
+    # prior_lim = np.quantile(df.norm_allpriors, prior_limit)
+    if after_correct_only:
+        ac_cond = df.aftererror == False
+    else:
+        ac_cond = (df.aftererror*1) >= 0
+    if condition == 'choice_x_coh':
+        bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+        xlab = 'ev. resp.'
+        bintype = 'categorical'
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim)
+        mt = df.resp_len.values*1e3
+        n_iters = len(bins)
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
+    if condition == 'choice_x_prior':
+        bins_zt = [-1.01]
+        for i_p, perc in enumerate([0.5, 0.25, 0.25, 0.5]):
+            if i_p > 2:
+                bins_zt.append(df.norm_allpriors.abs().quantile(perc))
+            else:
+                bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+        bins_zt.append(1.01)
+        bins = np.array(bins_zt)
+        bins = np.array([-1, -0.4, -0.05, 0.05, 0.4, 1])
+        xlab = 'prior resp.'
+        bintype = 'edges'
+        rt_lim = 200
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 2) &\
+            (df.sound_len < rt_lim)
+        n_iters = len(bins)-1
+        colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
+    if condition == 'origidx':
+        bins = np.linspace(0, 1e3, num=6)
+        bintype = 'edges'
+        n_iters = len(bins) - 1
+        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
+            ac_cond & (df.special_trial == 0) &\
+            (df.sound_len < rt_lim)
+        colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
+
+    # position
+    subjects = df['subjid'].unique()
+    mat_all = np.empty((n_iters, 1700, len(subjects)))
+    mt_all = np.empty((n_iters, len(subjects)))
+    for i_subj, subj in enumerate(subjects):
+        traj_data = data_folder+subj+'/traj_data/'+subj+'_traj_pos_'+condition+'.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data):
+            traj_data = np.load(traj_data, allow_pickle=True)
+            mean_traj = traj_data['mean_traj']
+            xpoints = traj_data['xpoints']
+            mt_time = traj_data['mt_time']
+        else:
+            xpoints, _, _, mat, _, mt_time =\
+                trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                               condition, bins, collapse_sides=True, thr=30,
+                               ax=None, ax_traj=None, return_trash=True,
+                               error_kwargs=dict(marker='o'), cmap=cmap, bintype=bintype,
+                               trajectory=trajectory, plotmt=True, alpha_low=False)
+            mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+            data = {'xpoints': xpoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
+            np.savez(traj_data, **data)
+        mat_all[:, :, i_subj] = mean_traj
+        mt_all[:, i_subj] = mt_time
+    all_trajs = np.nanmean(mat_all, axis=2)
+    all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
+    mt_time = np.nanmedian(mt_all, axis=1)
+    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
+    for i_tr, traj in enumerate(all_trajs):
+        ax[1].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[1].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
+                           alpha=0.5)
+        if len(subjects) > 1:
+            c = colormap[i_tr]
+            xp = [xpoints[i_tr]]
+            ax[0].boxplot(mt_all[i_tr, :], positions=xp, 
+                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
+            ax[0].plot(xp + 0.1*np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
+                       linestyle='None')
+        else:
+            ax[0].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                           color=colormap[i_tr], marker='o')
+    if condition == 'choice_x_coh':
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
+                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[3], lw=2, label='0'),
+                          Line2D([0], [0], color=colormap[4], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[5], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[6], lw=2, label='1')]
+        ax[1].legend(handles=legendelements, title='Stimulus \n evidence',
+                     loc='upper left', fontsize=7)
+        ax[0].set_yticklabels('')
+        ax[0].set_yticks([])
+        ax[0].set_xticks([-1, 0, 1])
+        ax[0].set_xticklabels(['-1', '0', '1'], fontsize=9)
+        ax[0].set_xlabel('Stimulus')
+        ax[2].set_xticks([0])
+        ax[2].set_xticklabels(['Stimulus'], fontsize=9)
+        ax[2].xaxis.set_ticks_position('none')
+        # ax[0].set_ylim(220, 285)
+        ax[0].set_yticks([240, 275])
+        ax[0].set_yticklabels(['240', '275'])
+        # ax[2].set_ylim([0.5, 0.8])
+    if condition == 'choice_x_prior':
+        ax[0].set_yticklabels('')
+        ax[0].set_yticks([])
+        legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
+                                 label='congruent'),
+                          Line2D([0], [0], color=colormap[3], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2,
+                                 label='0'),
+                          Line2D([0], [0], color=colormap[1], lw=2,
+                                 label=''),
+                          Line2D([0], [0], color=colormap[0], lw=2,
+                                 label='incongruent')]
+        ax[1].legend(handles=legendelements, title='Prior', loc='upper left',
+                     fontsize=7)
+        xpoints = (bins[:-1] + bins[1:]) / 2
+        # ax[0].set_ylim(230, 310)
+        ax[0].set_yticks([250, 300])
+        ax[0].set_yticklabels(['250', '300'])
+        ax[0].set_xticks([xpoints[0], 0, xpoints[-1]])
+        ax[0].set_xticklabels(['Incongruent', '0', 'Congruent'])
+        ax[0].set_xlabel('Prior')
+        # ax[2].set_ylim([0.5, 0.8])
+        ax[2].set_xticks([0])
+        ax[2].set_xticklabels(['Prior'], fontsize=9)
+        ax[2].xaxis.set_ticks_position('none')
+    if condition == 'origidx':
+        legendelements = []
+        labs = ['100', '300', '500', '700', '900']
+        for i in range(len(colormap)):
+            legendelements.append(Line2D([0], [0], color=colormap[i], lw=2,
+                                  label=labs[i]))
+        ax[1].legend(handles=legendelements, title='Trial index')
+        ax[2].set_xlabel('Trial index')
+    ax[1].set_xlim([-20, 450])
+    ax[1].set_xticklabels('')
+    ax[1].axhline(0, c='gray')
+    ax[1].set_ylabel('Position (pixels)')
+    ax[0].set_ylabel('MT (ms)', fontsize=9)
+    # ax[1].set_ylim([-10, 85])
+    ax[1].set_yticks([0, 25, 50, 75])
+    ax[1].axhline(78, color='gray', linestyle=':')
+    ax[0].plot(xpoints, mt_time, color='k', ls=':')
+    # velocities
+    mat_all = np.empty((n_iters, 1700, len(subjects)))
+    mt_all = np.empty((n_iters, len(subjects)))
+    for i_subj, subj in enumerate(subjects):
+        traj_data = data_folder + subj + '/traj_data/' + subj + '_traj_vel_'+condition+'.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data):
+            traj_data = np.load(traj_data, allow_pickle=True)
+            mean_traj = traj_data['mean_traj']
+            xpoints = traj_data['xpoints']
+            mt_time = traj_data['mt_time']
+            ypoints = traj_data['ypoints']
+        else:
+            xpoints, ypoints, _, mat, _, mt_time =\
+                trajectory_thr(df.loc[(indx_trajs) & (df.subjid == subj)],
+                               condition, bins,
+                               collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                               return_trash=True, error_kwargs=dict(marker='o'),
+                               cmap=cmap, bintype=bintype,
+                               trajectory=velocity, plotmt=True, alpha_low=False)
+            mean_traj = np.array([np.nanmean(mat[m], axis=0) for m in mat])
+            data = {'xpoints': xpoints, 'ypoints': ypoints, 'mean_traj': mean_traj, 'mt_time': mt_time}
+            np.savez(traj_data, **data)
+        mat_all[:, :, i_subj] = mean_traj
+        mt_all[:, i_subj] = ypoints
+    all_trajs = np.nanmean(mat_all, axis=2)
+    all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
+    mt_time = np.nanmedian(mt_all, axis=1)
+    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
+    for i_tr, traj in enumerate(all_trajs):
+        ax[3].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[3].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
+                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
+                           alpha=0.5)
+        if len(subjects) > 1:
+            xp = [xpoints[i_tr]]
+            c = colormap[i_tr]
+            ax[2].boxplot(mt_all[i_tr, :], positions=xp,
+                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
+            ax[2].plot(xpoints[i_tr] + 0.1*np.random.randn(len(subjects)),
+                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
+                       linestyle='None')
+        else:
+            ax[2].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
+                           color=colormap[i_tr], marker='o')
+    ax[3].set_xlim([-20, 450])
+    ax[2].set_ylabel('Peak (pixels/ms)')
+    # ax[3].set_ylim([-0.05, 0.5])
+    ax[3].axhline(0, c='gray')
+    ax[3].set_ylabel('Velocity (pixels/ms)')
+    ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    ax[2].plot(xpoints, mt_time, color='k', ls=':')
 
 
 def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap='viridis',
@@ -66,10 +288,13 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
     mt_time = np.nanmedian(mt_all, axis=1)
     for i_tr, traj in enumerate(all_trajs):
-        ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[0].plot(interpolatespace/1000, 
+                   traj-np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)]),
+                   color=colormap[i_tr])
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
+        
     if condition == 'choice_x_coh':
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
@@ -496,8 +721,86 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     # plt.show()
 
 
-def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12), inset_sz=.06,
-                marginx=0.008, marginy=0.05):
+def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inset_sz=.06, marginx=0.008,
+                marginy=0.05):
+    f = plt.figure(figsize=fgsz)
+    # FIGURE LAYOUT
+    # mt vs zt
+    ax_label = f.add_subplot(3, 3, 1)
+    fp.add_text(ax_label, 'a', x=-0.1, y=1.2)
+    # mt vs stim
+    ax_label = f.add_subplot(3, 3, 2)
+    fp.add_text(ax_label, 'b', x=-0.1, y=1.2)
+    ax_label = f.add_subplot(3, 3, 3)
+    ax_label.axis('off')
+    # trajs prior
+    ax_label = f.add_subplot(3, 3, 4)
+    fp.add_text(ax_label, 'c', x=-0.1, y=1.2)
+    # trajs stim
+    ax_label = f.add_subplot(3, 3, 5)
+    fp.add_text(ax_label, 'd', x=-0.1, y=1.2)
+    ax_label = f.add_subplot(3, 3, 6)
+    ax_label.axis('off')
+    # vel prior
+    ax_label = f.add_subplot(3, 3, 7)
+    fp.add_text(ax_label, 'e', x=-0.1, y=1.2)
+    ax_label = f.add_subplot(3, 3, 8)
+    fp.add_text(ax_label, 'f', x=-0.1, y=1.2)
+    # adjust panels positions
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
+                        hspace=0.5, wspace=0.4)
+    ax = f.axes
+    pos_ax_0 = ax[0].get_position()
+    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
+                        pos_ax_0.height])
+    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
+                        pos_ax_0.width*1.6, pos_ax_0.height])
+    pos_ax_3 = ax[3].get_position()
+    ax[3].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
+                        pos_ax_3.height])
+    ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
+                        pos_ax_3.width*1.6, pos_ax_3.height])
+    pos_ax_5 = ax[6].get_position()
+    ax[6].set_position([pos_ax_5.x0, pos_ax_5.y0, pos_ax_5.width*1.6,
+                        pos_ax_5.height])
+    ax[7].set_position([pos_ax_5.x0 + pos_ax_5.width*2.2, pos_ax_5.y0,
+                        pos_ax_5.width*1.6, pos_ax_5.height])
+    ax_cohs = np.array([ax[1], ax[4], ax[7]])
+    ax_zt = np.array([ax[0], ax[3], ax[6]])
+    ax_inset = fp.add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_inset.yaxis.set_ticks_position('none')
+    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
+    ax_inset = fp.add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+                         marginx=marginx, marginy=marginy, right=True)
+    ax_inset.yaxis.set_ticks_position('none')
+    ax_zt = np.insert(ax_zt, 2, ax_inset)
+    ax_weights = ax[2]
+    pos = ax_weights.get_position()
+    ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
+                             pos.height*1/2])
+    for i_a, a in enumerate(ax):
+        if i_a != 8:
+            fp.rm_top_right_lines(a)
+
+    df_trajs = df.copy()
+    # TRAJECTORIES CONDITIONED ON PRIOR
+    plots_trajs_conditioned(df=df_trajs.loc[df_trajs.special_trial == 2],
+                            data_folder=data_folder,
+                            ax=ax_zt, condition='choice_x_prior',
+                            prior_limit=1, cmap='copper')
+    # TRAJECTORIES CONDITIONED ON COH
+    plots_trajs_conditioned(df=df_trajs, ax=ax_cohs,
+                            data_folder=data_folder,
+                            prior_limit=0.1,  # 10% quantile
+                            condition='choice_x_coh',
+                            cmap='coolwarm')
+    plt.show()
+    f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
+    f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
+
+def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
+                inset_sz=.06, marginx=0.008, marginy=0.05):
     margin = 0.05
     figsize = (8, 12)
     f = plt.figure(figsize=fgsz)
