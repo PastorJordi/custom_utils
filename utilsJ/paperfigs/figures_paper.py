@@ -1210,8 +1210,8 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
                          subjid=subjid, ax=ax[1], label='')
-    ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
-                    marginx=marginx, marginy=0.07, right=True)
+    ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
+                    marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
                                  'sound_len': sound_len[sound_len_model >= 0],
                                  'rt_model': sound_len_model[sound_len_model >= 0],
@@ -1457,7 +1457,7 @@ def supp_trajs_prior_cong(df_sim, ax=None):
 
 
 def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                 wanted_precision=8, inset_sz=.06,
+                 inset_sz=.06,
                  marginx=0.006, marginy=0.12, fgsz=(8, 14)):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
@@ -1540,8 +1540,7 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
                                                                     ax_coms[1]])
     mean_com_traj_human(df_data=df_data, ax=ax[8])
-    human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt,
-                jitter=jitter, wanted_precision=wanted_precision, plotxy=True)
+    human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt, plotxy=True)
     fig.savefig(SV_FOLDER+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig6.png', dpi=400, bbox_inches='tight')
 
@@ -1628,8 +1627,131 @@ def com_statistics_humans(peak_com, time_com, ax):
     ax2.set_xlabel('Deflection time (ms)')
 
 
-def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
-                wanted_precision=8, max_px=800, plotxy=False,
+def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs,
+                                 times, max_mt, interpolatespace, colormap):
+    # to plot trajectories with splitting time: (all subjects together)
+    ev_vals = np.array([0, 0.25, 0.5, 1])
+    labs = ['Early RT', 'Late RT']
+    for i in range(rtbins.size-1):
+        ax1 = ax[-3+i]
+        if i > 0:
+            rtbins = np.array((rtbins[-3], rtbins[-2], rtbins[-1]))
+        for i_ev, ev in enumerate(ev_vals):
+            index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
+                    (np.abs(np.round(coh, 2)) == ev)
+            all_trajs = np.empty((sum(index), int(max_mt+300)))
+            all_trajs[:] = np.nan
+            for tr in range(sum(index)):
+                vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
+                ind_time = [True if t != '' else False
+                            for t in times[index][tr]]
+                time = np.array(times[index][tr])[
+                    np.array(ind_time)].astype(float)*1e3
+                f = interpolate.interp1d(time, vals, bounds_error=False)
+                vals_in = f(interpolatespace)
+                vals_in = vals_in[~np.isnan(vals_in)]
+                vals_in -= vals_in[0]
+                vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
+                                          vals_in))
+                max_time = max(time)
+                if max_time > max_mt:
+                    continue
+                all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
+                all_trajs[tr, len(vals_in):-1] =\
+                    np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
+            if ev == 0:
+                ev_mat = np.repeat(0, sum(index))
+                traj_mat = all_trajs
+            else:
+                ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
+                traj_mat = np.concatenate((traj_mat, all_trajs))
+            ax1.plot(np.arange(len(np.nanmean(all_trajs, axis=0))),
+                     np.nanmean(all_trajs, axis=0),
+                     color=colormap[i_ev])
+        ax1.set_xlim(-5, 405)
+        ax1.set_ylim(-2, 400)
+        ax1.set_title(labs[i])
+        ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
+                                       max_MT=max_mt+300, pval=0.01)
+        # ax1.axvline(ind, color='r')
+        ax1.set_xlabel('Time (ms)')
+        if i == 0:
+            ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
+                      head_length=0.4)
+            ax1.text(ind-30, 10, 'Splitting Time', fontsize=8)
+            labels = ['0', '0.25', '0.5', '1']
+            legendelements = []
+            for i_l, lab in enumerate(labels):
+                legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+                                      label=lab))
+            ax1.legend(handles=legendelements, fontsize=7, loc='upper left')
+        else:
+            if np.isnan(ind):
+                ind = rtbins[i]
+            ax1.arrow(ind, 145, 0, -65, color='k', width=1, head_width=5,
+                      head_length=0.4)
+            ax1.text(ind-60, 160, 'Splitting Time', fontsize=8)
+
+
+def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
+                          interpolatespace, max_mt):
+    # splitting time computation
+    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
+    split_ind = []
+    ev_vals = [0, 0.25, 0.5, 1]
+    for subj in np.unique(subjects):
+        for i in range(rtbins.size-1):
+            # fig, ax1 = plt.subplots(1)
+            for i_ev, ev in enumerate(ev_vals):
+                index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
+                        (np.abs(np.round(coh, 2)) == ev) &\
+                        (subjects == subj)  # & (prior <= 0.3)
+                all_trajs = np.empty((sum(index), int(max_mt+300)))
+                all_trajs[:] = np.nan
+                for tr in range(sum(index)):
+                    vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
+                    ind_time = [True if t != '' else False
+                                for t in times[index][tr]]
+                    time = np.array(times[index][tr])[
+                        np.array(ind_time)].astype(float)*1e3
+                    f = interpolate.interp1d(time, vals, bounds_error=False)
+                    vals_in = f(interpolatespace)
+                    vals_in = vals_in[~np.isnan(vals_in)]
+                    vals_in -= vals_in[0]
+                    vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
+                                              vals_in))
+                    max_time = max(time)
+                    if max_time > max_mt:
+                        continue
+                    all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
+                    all_trajs[tr, len(vals_in):-1] =\
+                        np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
+                if ev == 0:
+                    ev_mat = np.repeat(0, sum(index))
+                    traj_mat = all_trajs
+                else:
+                    ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
+                    traj_mat = np.concatenate((traj_mat, all_trajs))
+                # ax1.plot(np.arange(len(np.nanmean(traj_mat, axis=0)))*16,
+                #          np.nanmean(traj_mat, axis=0),
+                #          color=colormap[i_ev])
+                # ax1.set_xlim(0, 650)
+                # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
+            ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
+                                           max_MT=max_mt+300, pval=0.01)
+            if ind < 410:
+                split_ind.append(ind)
+            else:
+                # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
+                #                          max_MT=500, pval=0.001)
+                # if ind > 410:
+                split_ind.append(np.nan)
+            # ax1.axvline(ind*16, color='r')
+    out_data = np.array(split_ind)
+    return out_data, rtbins
+
+
+def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
                 interpolatespace=np.arange(500)):
     # TRAJECTORIES
     index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
@@ -1698,122 +1820,19 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
     ax[2].set_xticks([])
     ax[2].set_xlabel('Stimulus')
     ax[2].set_ylabel('MT (ms)')
-    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
-    split_ind = []
-    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
-    ev_vals = [0, 0.25, 0.5, 1]
-    for subj in np.unique(subjects):
-        for i in range(rtbins.size-1):
-            # fig, ax1 = plt.subplots(1)
-            for i_ev, ev in enumerate(ev_vals):
-                index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
-                        (np.abs(np.round(coh, 2)) == ev) &\
-                        (subjects == subj)  # & (prior <= 0.3)
-                all_trajs = all_trajs = np.empty((sum(index), int(max_mt+300)))
-                all_trajs[:] = np.nan
-                for tr in range(sum(index)):
-                    vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
-                    ind_time = [True if t != '' else False
-                                for t in times[index][tr]]
-                    time = np.array(times[index][tr])[
-                        np.array(ind_time)].astype(float)*1e3
-                    f = interpolate.interp1d(time, vals, bounds_error=False)
-                    vals_in = f(interpolatespace)
-                    vals_in = vals_in[~np.isnan(vals_in)]
-                    vals_in -= vals_in[0]
-                    vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
-                                              vals_in))
-                    max_time = max(time)
-                    if max_time > max_mt:
-                        continue
-                    all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
-                    all_trajs[tr, len(vals_in):-1] =\
-                        np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
-                if ev == 0:
-                    ev_mat = np.repeat(0, sum(index))
-                    traj_mat = all_trajs
-                else:
-                    ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
-                    traj_mat = np.concatenate((traj_mat, all_trajs))
-                # ax1.plot(np.arange(len(np.nanmean(traj_mat, axis=0)))*16,
-                #          np.nanmean(traj_mat, axis=0),
-                #          color=colormap[i_ev])
-                # ax1.set_xlim(0, 650)
-                # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
-            ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                           max_MT=max_mt+300, pval=0.01)
-            if ind < 410:
-                split_ind.append(ind)
-            else:
-                # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                #                          max_MT=500, pval=0.001)
-                # if ind > 410:
-                split_ind.append(np.nan)
-            # ax1.axvline(ind*16, color='r')
-    out_data = np.array(split_ind)
+    out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
+                                             trajs=trajs, times=times, subjects=subjects,
+                                             ground_truth=ground_truth,
+                                             interpolatespace=interpolatespace,
+                                             max_mt=max_mt)
     rtbins = np.array((rtbins[0], rtbins[1], rtbins[2]))
-    # to plot trajectories with splitting time: (all subjects together)
-    labs = ['Early RT', 'Late RT']
-    for i in range(rtbins.size-1):
-        ax1 = ax[-3+i]
-        if i > 0:
-            rtbins = np.array((rtbins[-3], rtbins[-2], rtbins[-1]))
-        for i_ev, ev in enumerate(ev_vals):
-            index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
-                    (np.abs(np.round(coh, 2)) == ev)
-            all_trajs = all_trajs = np.empty((sum(index), int(max_mt+300)))
-            all_trajs[:] = np.nan
-            for tr in range(sum(index)):
-                vals = np.array(trajs[index][tr]) * (ground_truth[index][tr])
-                ind_time = [True if t != '' else False
-                            for t in times[index][tr]]
-                time = np.array(times[index][tr])[
-                    np.array(ind_time)].astype(float)*1e3
-                f = interpolate.interp1d(time, vals, bounds_error=False)
-                vals_in = f(interpolatespace)
-                vals_in = vals_in[~np.isnan(vals_in)]
-                vals_in -= vals_in[0]
-                vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
-                                          vals_in))
-                max_time = max(time)
-                if max_time > max_mt:
-                    continue
-                all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
-                all_trajs[tr, len(vals_in):-1] =\
-                    np.repeat(vals[-1], int(max_mt + 300 - len(vals_in)-1))
-            if ev == 0:
-                ev_mat = np.repeat(0, sum(index))
-                traj_mat = all_trajs
-            else:
-                ev_mat = np.concatenate((ev_mat, np.repeat(ev, sum(index))))
-                traj_mat = np.concatenate((traj_mat, all_trajs))
-            ax1.plot(np.arange(len(np.nanmean(all_trajs, axis=0))),
-                     np.nanmean(all_trajs, axis=0),
-                     color=colormap[i_ev])
-        ax1.set_xlim(-5, 405)
-        ax1.set_ylim(-2, 400)
-        ax1.set_title(labs[i])
-        ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                       max_MT=max_mt+300, pval=0.01)
-        # ax1.axvline(ind, color='r')
-        ax1.set_xlabel('Time (ms)')
-        if i == 0:
-            ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
-                      head_length=0.4)
-            ax1.text(ind-30, 10, 'Splitting Time', fontsize=8)
-            labels = ['0', '0.25', '0.5', '1']
-            legendelements = []
-            for i_l, lab in enumerate(labels):
-                legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
-                                      label=lab))
-            ax1.legend(handles=legendelements, fontsize=7, loc='upper left')
-        else:
-            if np.isnan(ind):
-                ind = rtbins[i]
-            ax1.arrow(ind, 145, 0, -65, color='k', width=1, head_width=5,
-                      head_length=0.4)
-            ax1.text(ind-60, 160, 'Splitting Time', fontsize=8)
-    # now for the prior
+    colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    splitting_time_example_human(rtbins=rtbins, ax=ax, sound_len=sound_len,
+                                 ground_truth=ground_truth, coh=coh, trajs=trajs,
+                                 times=times, max_mt=max_mt,
+                                 interpolatespace=interpolatespace,
+                                 colormap=colormap)
+    # now for the prior conditioned trajectories
     # cong_prior = prior * (decision*2 - 1)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     colormap = pl.cm.copper(np.linspace(0, 1, len(bins)-1))
@@ -1902,6 +1921,11 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, jitter=0.003,
         ax[0].set_ylabel('y-coord (px)')
     # ax[5].set_xlabel('Time (ms)')
     # ax[5].set_ylabel('x-coord (px)')
+    splitting_time_plot(sound_len=sound_len, out_data=out_data,
+                        ax=ax, subjects=subjects)
+
+
+def splitting_time_plot(sound_len, out_data, ax, subjects):
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
@@ -2085,7 +2109,7 @@ def fig_7(df, df_sim):
     zt = df.allpriors.values
     coh = df.coh2.values
     com = df.CoM_sugg.values
-    com_model = df_sim['com_detcted'].values
+    com_model = df_sim['com_detected'].values
     sound_len_model = df_sim.sound_len.values
     fig, ax = plt.subplots(nrows=3, ncols=3)
     ax = ax.flatten()
@@ -2468,7 +2492,7 @@ def fig_trajs_model_4(trajs_model, df, reaction_time):
     ev_vals = [0, 0.25, 0.5, 1]
     norm_zt_vals = [0, 0.1, 0.4, 0.7, 1]
     j = 0
-    trajs_model = np.array(trajs_model)
+    # trajs_model = np.array(trajs_model)
     for i_ev, ev in enumerate(ev_vals):
         for izt, ztbin in enumerate(norm_zt_vals):
             if ztbin == 1:

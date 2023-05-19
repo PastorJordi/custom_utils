@@ -60,8 +60,8 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = True
-f6 = False
+f5 = False
+f6 = True
 f7 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -224,12 +224,12 @@ if f5:
     # supp_trajs_prior_cong(df_sim, ax=None)
     # model_vs_data_traj(trajs_model=trajs, df_data=df)
     if f4:
-        fp.fig_trajs_model_4(trajs_model=trajs, df_data=df,
+        fp.fig_trajs_model_4(trajs_model=trajs, df=df,
                             reaction_time=reaction_time)
 if f6:
     print('Plotting Figure 6')
     # human traj plots
     fp.fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=600,
-                    wanted_precision=12, nm='300')
+                    nm='300')
 if f7:
     fp.fig_7(df, df_sim)
