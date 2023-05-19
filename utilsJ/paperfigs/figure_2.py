@@ -801,9 +801,8 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                 inset_sz=.06, marginx=0.008, marginy=0.05):
-    margin = 0.05
-    f, ax = plt.subplots(5, 3, figsize=fgsz)
-    letters = 'abcdeXfgXhijklm'
+    f, ax = plt.subplots(4, 3, figsize=fgsz)
+    letters = 'abcdeXfgXhij'
     ax = ax.flatten()
     for lett, a in zip(letters, ax):
         if lett != 'X':
@@ -841,6 +840,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     for i_a, a in enumerate(ax):
         if i_a != 8:
             fp.rm_top_right_lines(a)
+    margin = 0.05
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
     ax_scrnsht = ax[0]
@@ -855,6 +855,24 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_scrnsht.set_ylim([0, img.shape[0]])
     ax_scrnsht.set_xlabel('x dimension (pixels)')
     ax_scrnsht.set_ylabel('y dimension (pixels)')
+    ax_scrnsht.axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
+
+    # add colorbar for screenshot
+    n_stps = 100
+    pos = ax_scrnsht.get_position()
+    ax_clbr = plt.axes([pos.x0+margin/2, pos.y0+pos.height+margin/4,
+                        pos.width*0.7, pos.height/15])
+    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
+    x_tcks = np.linspace(0, n_stps, 6)
+    ax_clbr.set_xticks(x_tcks)
+    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
+    x_tcks_str[-1] += ' ms'
+    ax_clbr.set_xticklabels(x_tcks_str)
+    ax_clbr.tick_params(labelsize=6)
+    ax_clbr.set_yticks([])
+    ax_clbr.xaxis.set_ticks_position("top")
 
     # TRAJECTORIES
     ax_rawtr = ax[1]
@@ -868,13 +886,18 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
             ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
             time = trial['time_trajs']
             ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
-    ax_rawtr.set_xlim(-80, 20)
-    ax_rawtr.set_ylim(-100, 100)
+    x_lim = [-80, 20]
+    y_lim = [-100, 100]
+    ax_rawtr.set_xlim(x_lim)
+    ax_rawtr.set_ylim(y_lim)
     ax_rawtr.set_xticklabels([])
     ax_rawtr.set_yticklabels([])
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')
+    pos_rawtr = ax_rawtr.get_position()
+    ax_rawtr.set_position([pos_rawtr.x0-margin, pos_rawtr.y0,
+                           pos_rawtr.width/2, pos_rawtr.height])
     fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
     x_lim = [-100, 800]
     y_lim = [-100, 100]
@@ -882,44 +905,15 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_ydim.set_ylim(y_lim)
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
-    ax_ydim.
+    pos_ydim = ax_ydim.get_position()
+    ax_ydim.set_position([pos_ydim.x0-2*margin, pos_rawtr.y0,
+                          pos_ydim.width, pos_rawtr.height])
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
-    # adjust panels positions
-    # pos = ax_rawtr.get_position()
-    # factor = fgsz[1]/fgsz[0]
-    # width = pos.height*factor
-    # ax_rawtr.set_position([pos.x0, pos.y0-margin, width, pos.height])
-    # pos = ax_ydim.get_position()
-    # ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
-    # pos = ax_scrnsht.get_position()
-    # ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
-    #                          pos.height])
-    plt.show()
-    # add colorbar for screenshot
-    n_stps = 100
-    ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
-                        pos.width*0.7, pos.height/15])
-    ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
-    x_tcks = np.linspace(0, n_stps, 6)
-    ax_clbr.set_xticks(x_tcks)
-    # pass xticks to strings
-    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
-    x_tcks_str[-1] += ' ms'
-    ax_clbr.set_xticklabels(x_tcks_str)
-    ax_clbr.tick_params(labelsize=6)
-    # ax_clbr.set_title('$N_{max}$', fontsize=6)
-    ax_clbr.set_yticks([])
-    ax_clbr.xaxis.set_ticks_position("top")
-    # ax_clbr.yaxis.tick_right()
     # plot dashed lines
     for i_a in [1, 2]:
         ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(0, color='k', lw=.5)
-    ax[0].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
-    ax[0].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
-
 
     df_trajs = df.copy()
     # TRAJECTORIES CONDITIONED ON PRIOR
@@ -934,7 +928,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
-    ax_split = ax[12]
+    ax_split = ax[9]
     pos = ax_split.get_position()
     ax_split.set_position([pos.x0, pos.y0, pos.width,
                            pos.height*2/5])
@@ -948,9 +942,9 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
                                  xlab=True)
     # TRAJECTORY SPLITTING PRIOR
-    trajs_splitting_prior(df=df, ax=ax[14], data_folder=data_folder)
+    trajs_splitting_prior(df=df, ax=ax[11], data_folder=data_folder)
     # TRAJECTORY SPLITTING STIMULUS
-    trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[13],
+    trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[10],
                          connect_points=True)
     f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
