@@ -1019,10 +1019,88 @@ def mean_com_traj_simul(df_sim, ax):
     ax.text(200, -16, "Detection threshold", color='r')
 
 
-def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
-          decision_model, com, com_model, com_model_detected,
-          df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-          marginx=0.006, marginy=0.07, fgsz=(8, 18)):
+def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
+    subjid = df_plot_pcom.subjid
+    subjects = np.unique(subjid)
+    com_data = np.empty((len(subjects), len(BINS_RT)-1))
+    com_data[:] = np.nan
+    com_model_all = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_all[:] = np.nan
+    com_model_det = np.empty((len(subjects), len(BINS_RT)-1))
+    com_model_det[:] = np.nan
+    for i_s, subject in enumerate(subjects):
+        df_plot = df_plot_pcom.loc[subjid == subject]
+        xpos_plot, median_pcom_dat, _ =\
+            binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
+                         errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax,
+                         legend=False, return_data=True)
+        xpos_plot, median_pcom_mod_det, _ =\
+            binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
+                         xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
+                                                    'color': 'red'}, ax=ax,
+                         legend=False, return_data=True)
+        xpos_plot, median_pcom_mod_all, _ =\
+            binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT,
+                         xpos=xpos_RT,
+                         errorbar_kw={'label': 'Model all', 'color': 'green'},
+                         ax=ax2, legend=False, return_data=True)
+        com_data[i_s, :len(median_pcom_dat)] = median_pcom_dat
+        com_model_all[i_s, :len(median_pcom_mod_all)] = median_pcom_mod_all
+        com_model_det[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
+    xpos_plot = (BINS_RT[:-1] + BINS_RT[1:]) / 2
+    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+                yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
+    ax.errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
+                yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
+    ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
+                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='green')
+    ax.xaxis.tick_top()
+    ax.xaxis.tick_bottom()
+    legendelements = [Line2D([0], [0], color='k', lw=2,
+                             label='Data'),
+                      Line2D([0], [0], color='r', lw=2,
+                             label='Model Detected'),
+                      Line2D([0], [0], color='green', lw=2,
+                             label='Model All')]
+    ax.legend(handles=legendelements)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('P(CoM)')
+    ax2.set_ylabel('P(CoM)')
+    ax2.set_xlabel('RT (ms)')
+
+
+def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
+                      zt_model, ax):
+    subjects = np.unique(subjid)
+    coh_model = coh[sound_len_model >= 0]
+    decision_01_model = (decision_model+1)/2
+    mat_pright = np.zeros((7, 7, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        mat_per_subj, _ = com_heatmap(zt_model[subjid == subject],
+                                      coh_model[subjid == subject],
+                                      decision_01_model[subjid == subject],
+                                      return_mat=True, annotate=False)
+        mat_pright[:, :, i_s] = mat_per_subj
+    mat_pright_avg = np.nanmean(mat_pright, axis=2)
+    # P_right
+    ax_pright = ax
+    im = ax_pright.imshow(np.flipud(mat_pright_avg), vmin=0., vmax=1, cmap='PRGn_r')
+    plt.sca(ax_pright)
+    cbar = plt.colorbar(im, fraction=0.04)
+    cbar.set_label('p(Right)', rotation=270)
+    ax_pright.set_yticks([0, 3, 6])
+    # ax_pright.set_ylim([-0.5, 6.5])
+    ax_pright.set_yticklabels(['L', '', 'R'])
+    ax_pright.set_xticks([0, 3, 6])
+    # ax_pright.set_xlim([-0.5, 6.5])
+    ax_pright.set_xticklabels(['L', '', 'R'])
+    ax_pright.set_xlabel('Prior Evidence')
+    ax_pright.set_ylabel('Stimulus Evidence')
+    # ax[7].set_title('Pright Model')
+
+
+
+def create_figure_5_model(fgsz):
     matplotlib.rcParams['font.size'] = 10
     plt.rcParams['legend.title_fontsize'] = 9
     plt.rcParams['xtick.labelsize'] = 9
@@ -1051,109 +1129,11 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
         rm_top_right_lines(ax_1)
         ax_1.text(-0.1, 1.4, labs[n], transform=ax_1.transAxes, fontsize=16,
                   fontweight='bold', va='top', ha='right')
+    ax[0].set_ylabel('Stimulus Evidence')
+    return fig, ax, ax_inset, pos_ax_0
 
-    # select RT > 0 (no FB, as in data)
-    hit_model = hit_model[sound_len_model >= 0]
-    com_model_detected = com_model_detected[sound_len_model >= 0]
-    decision_model = decision_model[sound_len_model >= 0]
-    com_model = com_model[sound_len_model >= 0]
-    subjid = df_sim.subjid.values
-    _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
-                         sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid,
-                         ax=ax[1], label='')
-    ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
-                    marginx=marginx, marginy=0.07, right=True)
-    df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
-                                 'sound_len': sound_len[sound_len_model >= 0],
-                                 'rt_model': sound_len_model[sound_len_model >= 0],
-                                 'com_model': com_model,
-                                 'com_model_detected': com_model_detected,
-                                 'subjid': subjid})
-    subjects = np.unique(subjid)
-    com_data = np.empty((len(subjects), len(BINS_RT)-1))
-    com_data[:] = np.nan
-    com_model_all = np.empty((len(subjects), len(BINS_RT)-1))
-    com_model_all[:] = np.nan
-    com_model_det = np.empty((len(subjects), len(BINS_RT)-1))
-    com_model_det[:] = np.nan
-    for i_s, subject in enumerate(subjects):
-        df_plot = df_plot_pcom.loc[subjid == subject]
-        xpos_plot, median_pcom_dat, _ =\
-            binned_curve(df_plot, 'com', 'sound_len', bins=BINS_RT, xpos=xpos_RT,
-                         errorbar_kw={'label': 'Data', 'color': 'k'}, ax=ax[13],
-                         legend=False, return_data=True)
-        xpos_plot, median_pcom_mod_det, _ =\
-            binned_curve(df_plot, 'com_model_detected', 'rt_model', bins=BINS_RT,
-                         xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                                    'color': 'red'}, ax=ax[13],
-                         legend=False, return_data=True)
-        xpos_plot, median_pcom_mod_all, _ =\
-            binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT,
-                         xpos=xpos_RT,
-                         errorbar_kw={'label': 'Model all', 'color': 'green'},
-                         ax=ax2, legend=False, return_data=True)
-        com_data[i_s, :len(median_pcom_dat)] = median_pcom_dat
-        com_model_all[i_s, :len(median_pcom_mod_all)] = median_pcom_mod_all
-        com_model_det[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
-    xpos_plot = (BINS_RT[:-1] + BINS_RT[1:]) / 2
-    ax[13].errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
-                    yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
-    ax[13].errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
-                    yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
-    ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
-                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='green')
-    ax[13].xaxis.tick_top()
-    ax[13].xaxis.tick_bottom()
-    legendelements = [Line2D([0], [0], color='k', lw=2,
-                             label='Data'),
-                      Line2D([0], [0], color='r', lw=2,
-                             label='Model Detected'),
-                      Line2D([0], [0], color='green', lw=2,
-                             label='Model All')]
-    ax[13].legend(handles=legendelements)
-    ax[13].set_xlabel('RT (ms)')
-    ax[13].set_ylabel('P(CoM)')
-    ax2.set_ylabel('P(CoM)')
-    ax2.set_xlabel('RT (ms)')
-    zt_model = df_sim.norm_allpriors.values
-    coh_model = coh[sound_len_model >= 0]
-    decision_01_model = (decision_model+1)/2
-    mat_pright = np.zeros((7, 7, len(subjects)))
-    for i_s, subject in enumerate(subjects):
-        mat_per_subj, _ = com_heatmap(zt_model[subjid == subject],
-                                      coh_model[subjid == subject],
-                                      decision_01_model[subjid == subject],
-                                      return_mat=True, annotate=False)
-        mat_pright[:, :, i_s] = mat_per_subj
-    mat_pright_avg = np.nanmean(mat_pright, axis=2)
-    # P_right
-    ax_pright = ax[0]
-    im = ax_pright.imshow(np.flipud(mat_pright_avg), vmin=0., vmax=1, cmap='PRGn_r')
-    plt.sca(ax_pright)
-    cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(Right)', rotation=270)
-    ax_pright.set_yticks([0, 3, 6])
-    # ax_pright.set_ylim([-0.5, 6.5])
-    ax_pright.set_yticklabels(['L', '', 'R'])
-    ax_pright.set_xticks([0, 3, 6])
-    # ax_pright.set_xlim([-0.5, 6.5])
-    ax_pright.set_xticklabels(['L', '', 'R'])
-    ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_ylabel('Stimulus Evidence')
-    # ax[7].set_title('Pright Model')
-    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
-                             'CoM_sugg':
-                                 com_model_detected,
-                             'norm_allpriors':
-                                 zt_model/max(abs(zt_model)),
-                             'R_response': (decision_model+1)/2,
-                             'subjid': subjid})
-    df_model = df_model.loc[~df_model.norm_allpriors.isna()]
-    nbins = 7
-    # plot Pcoms matrices
-    ax_mat = [ax[10], ax_inset]
-    n_subjs = len(df_sim.subjid.unique())
+
+def plot_pcom_matrices_model(df_sim, df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
     for i_s, subj in enumerate(df_sim.subjid.unique()):
@@ -1179,24 +1159,22 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
 
-    for ax_i in [ax[10], ax_inset]:
+    for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
         ax_i.set_yticklabels(['']*nbins)
         ax_i.set_xticklabels(['']*nbins)
-    ax[10].set_ylabel('Stimulus Evidence')
-    ax[0].set_ylabel('Stimulus Evidence')
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
-    ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
-                         pos_ax_0.width/2,
-                         pos_ax_0.height])
-    ax_inset.set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
-                           pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+    ax_mat[0].set_ylabel('Stimulus Evidence')
+    ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
+                            pos_ax_0.width/2,
+                            pos_ax_0.height])
+    ax_mat[1].set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
+                            pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
     cbar.set_label('p(detected CoM)', rotation=270)
-    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
-                         pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
-    mt_distros(df=df_sim, ax=ax[12])
+
+
+def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy):
     ax_cohs = np.array([ax[5], ax[7], ax[3]])
     ax_zt = np.array([ax[4], ax[6], ax[2]])
 
@@ -1216,11 +1194,61 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
                             median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1))
+
+
+def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
+                decision_model, com, com_model, com_model_detected,
+                df_sim, means, errors, means_model, errors_model, inset_sz=.06,
+                marginx=0.006, marginy=0.07, fgsz=(8, 18)):
+    fig, ax, ax_inset, pos_ax_0 = create_figure_5_model(fgsz=fgsz)
+    # select RT > 0 (no FB, as in data)
+    hit_model = hit_model[sound_len_model >= 0]
+    com_model_detected = com_model_detected[sound_len_model >= 0]
+    decision_model = decision_model[sound_len_model >= 0]
+    com_model = com_model[sound_len_model >= 0]
+    subjid = df_sim.subjid.values
+    _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
+                         sound_len=sound_len_model[sound_len_model >= 0],
+                         subjid=subjid,
+                         ax=ax[1], label='')
+    ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
+                    marginx=marginx, marginy=0.07, right=True)
+    df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
+                                 'sound_len': sound_len[sound_len_model >= 0],
+                                 'rt_model': sound_len_model[sound_len_model >= 0],
+                                 'com_model': com_model,
+                                 'com_model_detected': com_model_detected,
+                                 'subjid': subjid})
+    zt_model = df_sim.norm_allpriors.values
+    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax2)
+    plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
+                      decision_model=decision_model, subjid=subjid, coh=coh,
+                      zt_model=zt_model, ax=ax[0])
+    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
+                             'CoM_sugg':
+                                 com_model_detected,
+                             'norm_allpriors':
+                                 zt_model/max(abs(zt_model)),
+                             'R_response': (decision_model+1)/2,
+                             'subjid': subjid})
+    df_model = df_model.loc[~df_model.norm_allpriors.isna()]
+    nbins = 7
+    # plot Pcoms matrices
+    ax_mat = [ax[10], ax_inset]
+    n_subjs = len(df_sim.subjid.unique())
+    plot_pcom_matrices_model(df_sim=df_sim, df_model=df_model, n_subjs=n_subjs,
+                             ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins)
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
+    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
+                         pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
+    mt_distros(df=df_sim, ax=ax[12])
+    plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, inset_sz=inset_sz,
+                                      fgsz=fgsz, marginx=marginx, marginy=marginy)
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
                                data_folder=DATA_FOLDER,
                                ax=ax[8], collapse_sides=True, threshold=500,
                                sim=True, rtbins=np.linspace(0, 150, 16),
-                               connect_points=True, draw_line=((0, 90), (90, 0)),
+                               connect_points=True,
                                trajectory="trajectory_y")
     mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')

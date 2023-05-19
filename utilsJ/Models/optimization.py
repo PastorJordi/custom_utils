@@ -1065,7 +1065,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim = []
         nan_mask = torch.sum(torch.isnan(x), axis=1).to(torch.bool)
         # define network MNLE
-        trainer = MNLE()
+        trainer = MNLE(prior=prior)
         time_start = time.time()
         print('Starting network training')
         # network training
