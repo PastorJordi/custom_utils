@@ -288,9 +288,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
     mt_time = np.nanmedian(mt_all, axis=1)
     for i_tr, traj in enumerate(all_trajs):
-        ax[0].plot(interpolatespace/1000, 
-                   traj-np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)]),
-                   color=colormap[i_tr])
+        traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
+        ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
@@ -373,6 +372,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
+        traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
         ax[2].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
@@ -798,6 +798,7 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
     plt.show()
     f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
+
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                 inset_sz=.06, marginx=0.008, marginy=0.05):
