@@ -23,6 +23,7 @@ from sbi.analysis import pairplot
 import pickle
 import scipy
 from pybads import BADS
+import os
 # from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -723,48 +724,56 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1):
     return log_liks_fb*weight_LLH_fb + log_liks_no_fb
 
 
-def simulations_for_mnle(theta_all, stim, zt, coh, trial_index, max_it=5):
+def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
     # run simulations
     x = torch.tensor(())
-    print('Starting simulation')
-    time_start = time.time()
-    for i_t, theta in enumerate(theta_all):
-        if (i_t+1) % 100000 == 0 and i_t != 0:
-            print('Simulation number: ' + str(i_t+1))
-            print('Time elapsed: ' + str((time.time()-time_start)/60) +
-                  ' mins')
-        p_w_zt = float(theta[0])
-        p_w_stim = float(theta[1])
-        p_e_bound = float(theta[2])
-        p_com_bound = float(theta[3])*p_e_bound
-        p_t_aff = int(np.round(theta[4]))
-        p_t_eff = int(np.round(theta[5]))
-        p_t_a = int(np.round(theta[6]))
-        p_w_a_intercept = float(theta[7])
-        p_w_a_slope = -float(theta[8])
-        p_a_bound = float(theta[9])
-        p_1st_readout = float(theta[10])
-        p_2nd_readout = float(theta[11])
-        p_leak = float(theta[12])
-        p_mt_noise = float(theta[13])
-        p_mt_intercept = float(theta[14])
-        p_mt_slope = float(theta[15])
-        try:
-            x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
-                                np.array([trial_index[i_t]]), None,
-                                None, None,
-                                p_w_zt, p_w_stim, p_e_bound, p_com_bound,
-                                p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
-                                p_w_a_slope, p_a_bound, p_1st_readout,
-                                p_2nd_readout, p_leak, p_mt_noise,
-                                p_mt_intercept, p_mt_slope,
-                                rms_comparison=False,
-                                num_times_tr=1, mnle=True)
-        except ValueError:
-            x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
-        x = torch.cat((x, x_temp))
-    x = x.to(torch.float32)
-    # np.save(SV_FOLDER + 'simul_mnle_{}.npy'.format(i_t+1), x.detach().numpy())
+    simul_data = SV_FOLDER+'/network/NN_simulations'+str(len(zt))+'.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(simul_data), exist_ok=True)
+    if os.path.exists(simul_data):
+        print('Loading Data')
+        x = np.load(simul_data, allow_pickle=True)
+        x = torch.tensor(x).to(torch.float32)
+    else:
+        print('Starting simulation')
+        time_start = time.time()
+        for i_t, theta in enumerate(theta_all):
+            if (i_t+1) % 100000 == 0 and i_t != 0:
+                print('Simulation number: ' + str(i_t+1))
+                print('Time elapsed: ' + str((time.time()-time_start)/60) +
+                      ' mins')
+            p_w_zt = float(theta[0])
+            p_w_stim = float(theta[1])
+            p_e_bound = float(theta[2])
+            p_com_bound = float(theta[3])*p_e_bound
+            p_t_aff = int(np.round(theta[4]))
+            p_t_eff = int(np.round(theta[5]))
+            p_t_a = int(np.round(theta[6]))
+            p_w_a_intercept = float(theta[7])
+            p_w_a_slope = -float(theta[8])
+            p_a_bound = float(theta[9])
+            p_1st_readout = float(theta[10])
+            p_2nd_readout = float(theta[11])
+            p_leak = float(theta[12])
+            p_mt_noise = float(theta[13])
+            p_mt_intercept = float(theta[14])
+            p_mt_slope = float(theta[15])
+            try:
+                x_temp = simulation(stim[i_t, :], zt[i_t], coh[i_t],
+                                    np.array([trial_index[i_t]]), None,
+                                    None, None,
+                                    p_w_zt, p_w_stim, p_e_bound, p_com_bound,
+                                    p_t_aff, p_t_eff, p_t_a, p_w_a_intercept,
+                                    p_w_a_slope, p_a_bound, p_1st_readout,
+                                    p_2nd_readout, p_leak, p_mt_noise,
+                                    p_mt_intercept, p_mt_slope,
+                                    rms_comparison=False,
+                                    num_times_tr=1, mnle=True)
+            except ValueError:
+                x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
+            x = torch.cat((x, x_temp))
+        x = x.to(torch.float32)
+        np.save(simul_data, x.detach().numpy())
     return x
 
 
