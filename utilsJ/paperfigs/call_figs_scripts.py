@@ -7,6 +7,7 @@ Created on Wed May 17 2023
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
 import sys
 
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
@@ -19,6 +20,16 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figures_paper as fp
+matplotlib.rcParams['font.size'] = 12
+plt.rcParams['legend.title_fontsize'] = 8
+plt.rcParams['legend.fontsize'] = 8
+plt.rcParams['xtick.labelsize']= 8
+plt.rcParams['ytick.labelsize']= 8
+# matplotlib.rcParams['font.family'] = 'Arial'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'Helvetica'
+matplotlib.rcParams['lines.markersize'] = 3
+
 # ---GLOBAL VARIABLES
 pc_name = 'idibaps'
 if pc_name == 'alex':
@@ -57,10 +68,10 @@ elif pc_name == 'alex_CRM':
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 com_threshold = 8
@@ -70,7 +81,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE85', 'LE42']
+    # subjects = ['LE37', 'LE46']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,

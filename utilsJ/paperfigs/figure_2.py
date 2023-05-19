@@ -235,7 +235,7 @@ def plots_trajs_conditioned_old(df, ax, data_folder, condition='choice_x_coh', c
     # ax[3].set_ylim([-0.05, 0.5])
     ax[3].axhline(0, c='gray')
     ax[3].set_ylabel('Velocity (pixels/ms)')
-    ax[3].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    ax[3].set_xlabel('Time from movement onset (ms)')
     ax[2].plot(xpoints, mt_time, color='k', ls=':')
 
 
@@ -293,7 +293,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        
+    ax[1].set_ylim([0.5, 0.8])
     if condition == 'choice_x_coh':
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
@@ -303,11 +303,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
                           Line2D([0], [0], color=colormap[5], lw=2, label=''),
                           Line2D([0], [0], color=colormap[6], lw=2, label='1')]
         ax[0].legend(handles=legendelements, title='Stimulus \n evidence',
-                     loc='upper left', fontsize=7)
-        ax[1].set_xticks([0])
-        ax[1].set_xticklabels(['Stimulus'], fontsize=9)
-        ax[1].xaxis.set_ticks_position('none')
-        ax[1].set_ylim([0.5, 0.8])
+                     loc='upper left')
+        ax[1].set_xlabel('Stimulus')
     if condition == 'choice_x_prior':
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
                                  label='congruent'),
@@ -315,17 +312,11 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
                                  label=''),
                           Line2D([0], [0], color=colormap[2], lw=2,
                                  label='0'),
-                          Line2D([0], [0], color=colormap[1], lw=2,
-                                 label=''),
+                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
                           Line2D([0], [0], color=colormap[0], lw=2,
                                  label='incongruent')]
-        ax[0].legend(handles=legendelements, title='Prior', loc='upper left',
-                     fontsize=7)
-        xpoints = (bins[:-1] + bins[1:]) / 2
-        ax[1].set_ylim([0.5, 0.8])
-        ax[1].set_xticks([0])
-        ax[1].set_xticklabels(['Prior'], fontsize=9)
-        ax[1].xaxis.set_ticks_position('none')
+        ax[0].legend(handles=legendelements, title='Prior', loc='upper left')
+        ax[1].set_xlabel('Prior')
     if condition == 'origidx':
         legendelements = []
         labs = ['100', '300', '500', '700', '900']
@@ -338,6 +329,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[0].set_xticklabels('')
     ax[0].axhline(0, c='gray')
     ax[0].set_ylabel('Position (pixels)')
+    ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_ylim([-10, 85])
     ax[0].set_yticks([0, 25, 50, 75])
     ax[0].axhline(78, color='gray', linestyle=':')
@@ -377,7 +369,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], color=colormap[i_tr],
                            alpha=0.5)
-        if len(subjects) > 1:
+        if False:  # len(subjects) > 1:
             xp = [xpoints[i_tr]]
             c = colormap[i_tr]
             ax[1].boxplot(mt_all[i_tr, :], positions=xp,
@@ -393,8 +385,9 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[2].set_ylim([-0.05, 0.5])
     ax[2].axhline(0, c='gray')
     ax[2].set_ylabel('Velocity (pixels/ms)')
-    ax[2].set_xlabel('Time from movement onset (ms)', fontsize=8)
-    ax[1].plot(xpoints, mt_time, color='k', ls=':')
+    ax[2].set_xlabel('Time from movement onset (ms)')
+    print(ax[1].get_xticks())
+    # ax[1].plot(xpoints, mt_time, color='k', ls=':')
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -580,7 +573,7 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
                          axis=1, nan_policy='omit'), **error_kws)
     ax.set_xlabel('RT (ms)')
-    ax.set_title('Impact of prior', fontsize=9)
+    # ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
     ax.plot([0, 155], [0, 155], color='k')
     ax.fill_between([0, 250], [0, 250], [0, 0],
@@ -717,7 +710,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     ax.set_xlim(-5, 155)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
-    ax.set_title('Impact of stimulus', fontsize=9)
+    # ax.set_title('Impact of stimulus')
     # plt.show()
 
 
@@ -801,7 +794,7 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
-                inset_sz=.06, marginx=0.008, marginy=0.05, subj='LE46'):
+                inset_sz=.1, marginx=-.1, marginy=0.1, subj='LE46'):
     f, ax = plt.subplots(4, 3, figsize=fgsz)
     letters = 'abcdeXfgXhij'
     ax = ax.flatten()
