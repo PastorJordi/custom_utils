@@ -967,7 +967,7 @@ def mean_com_traj_simul(df_sim, ax):
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
-        it_subs = np.where(df_sim.subjid.values == subject)[0][0]
+        it_subs = np.where(df_sim.subjid.values == subject)[0][0]-1
         i_com = 0
         i_nocom = 0
         i_und_com = 0
@@ -1099,7 +1099,6 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     # ax[7].set_title('Pright Model')
 
 
-
 def create_figure_5_model(fgsz):
     matplotlib.rcParams['font.size'] = 10
     plt.rcParams['legend.title_fontsize'] = 9
@@ -1210,16 +1209,14 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     # Tachometrics
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
-                         subjid=subjid,
-                         ax=ax[1], label='')
+                         subjid=subjid, ax=ax[1], label='')
     ax2 = add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz,
                     marginx=marginx, marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
                                  'sound_len': sound_len[sound_len_model >= 0],
                                  'rt_model': sound_len_model[sound_len_model >= 0],
-                                 'com_model': com_model,
-                                 'com_model_detected': com_model_detected,
-                                 'subjid': subjid})
+                                 'com_model': com_model, 'subjid': subjid,
+                                 'com_model_detected': com_model_detected})
     zt_model = df_sim.norm_allpriors.values
     # PCoM vs RT
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax2)
@@ -1228,12 +1225,9 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
                       decision_model=decision_model, subjid=subjid, coh=coh,
                       zt_model=zt_model, ax=ax[0])
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
-                             'CoM_sugg':
-                                 com_model_detected,
-                             'norm_allpriors':
-                                 zt_model/max(abs(zt_model)),
-                             'R_response': (decision_model+1)/2,
-                             'subjid': subjid})
+                             'CoM_sugg': com_model_detected,
+                             'norm_allpriors': zt_model/max(abs(zt_model)),
+                             'R_response': (decision_model+1)/2, 'subjid': subjid})
     df_model = df_model.loc[~df_model.norm_allpriors.isna()]
     nbins = 7
     # plot Pcoms matrices
@@ -1253,11 +1247,9 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
-                               data_folder=DATA_FOLDER,
-                               ax=ax[8], collapse_sides=True, threshold=500,
-                               sim=True, rtbins=np.linspace(0, 150, 16),
-                               connect_points=True,
-                               trajectory="trajectory_y")
+                               data_folder=DATA_FOLDER, ax=ax[8], collapse_sides=True,
+                               threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
+                               connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
     mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
@@ -2625,7 +2617,6 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.set_ylabel('Fraction of correcting Rev.')
     ax.set_xticks([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
     ax.legend()
-
 
 
 def plot_rt_sim(df_sim):

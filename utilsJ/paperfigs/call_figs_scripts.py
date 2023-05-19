@@ -20,7 +20,7 @@ from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figures_paper as fp
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'idibaps_alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
