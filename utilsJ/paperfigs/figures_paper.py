@@ -1207,6 +1207,7 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     decision_model = decision_model[sound_len_model >= 0]
     com_model = com_model[sound_len_model >= 0]
     subjid = df_sim.subjid.values
+    # Tachometrics
     _ = tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                          sound_len=sound_len_model[sound_len_model >= 0],
                          subjid=subjid,
@@ -1220,7 +1221,9 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
                                  'com_model_detected': com_model_detected,
                                  'subjid': subjid})
     zt_model = df_sim.norm_allpriors.values
+    # PCoM vs RT
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax2)
+    # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
                       zt_model=zt_model, ax=ax[0])
@@ -1236,20 +1239,26 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     # plot Pcoms matrices
     ax_mat = [ax[10], ax_inset]
     n_subjs = len(df_sim.subjid.unique())
+    # PCoM matrices
     plot_pcom_matrices_model(df_sim=df_sim, df_model=df_model, n_subjs=n_subjs,
                              ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins)
+    # MT matrix vs stim/prior
     fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
     ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
                          pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
+    # MT distributions
     mt_distros(df=df_sim, ax=ax[12])
+    # plot trajs and MT conditioned on stim/prior
     plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, inset_sz=inset_sz,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
+    # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
                                data_folder=DATA_FOLDER,
                                ax=ax[8], collapse_sides=True, threshold=500,
                                sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True,
                                trajectory="trajectory_y")
+    # plot mean com traj
     mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
