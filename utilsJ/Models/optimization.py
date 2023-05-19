@@ -564,11 +564,11 @@ def build_prior_sample_theta(num_simulations):
     prior =\
         MultipleIndependent([
             Uniform(torch.tensor([1e-3]),
-                    torch.tensor([1])),  # prior weight
+                    torch.tensor([1.])),  # prior weight
             Uniform(torch.tensor([1e-3]),
                     torch.tensor([0.8])),  # stim weight
             Uniform(torch.tensor([1e-2]),
-                    torch.tensor([4])),  # evidence integrator bound
+                    torch.tensor([4.])),  # evidence integrator bound
             Uniform(torch.tensor([1e-8]),
                     torch.tensor([1.])),  # CoM bound
             Uniform(torch.tensor([3.]),
@@ -581,7 +581,7 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([0.1])),  # intercept trial index for action drift
             Uniform(torch.tensor([1e-6]),
                     torch.tensor([5e-5])),  # slope trial index for action drift
-            Uniform(torch.tensor([1]),
+            Uniform(torch.tensor([1.]),
                     torch.tensor([4.])),  # bound for action integrator
             Uniform(torch.tensor([1.]),
                     torch.tensor([500.])),  # weight of evidence at first readout (for MT reduction)
@@ -1009,9 +1009,13 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim[df.soundrfail, :] = 0
         # Prepare data:
         coh = np.resize(coh, num_simulations)
+        np.random.shuffle(coh)
         zt = np.resize(zt, num_simulations)
+        np.random.shuffle(zt)
         trial_index = np.resize(trial_index, num_simulations)
+        np.random.shuffle(trial_index)
         stim = np.resize(stim, (num_simulations, 20))
+        np.random.shuffle(stim)
         if not bads:
             # motor time: in seconds (must be multiplied then by 1e3)
             mt = df.resp_len.values
