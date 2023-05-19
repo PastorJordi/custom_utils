@@ -802,75 +802,38 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                 inset_sz=.06, marginx=0.008, marginy=0.05):
     margin = 0.05
-    figsize = (8, 12)
-    f = plt.figure(figsize=fgsz)
-    # FIGURE LAYOUT
-    # mt vs zt
-    ax_label = f.add_subplot(5, 3, 1)
-    fp.add_text(ax_label, 'a', x=-0.1, y=1.2)
-    # mt vs stim
-    ax_label = f.add_subplot(5, 3, 2)
-    fp.add_text(ax_label, 'b', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 3)
-    ax_label.axis('off')
-    # trajs prior
-    ax_label = f.add_subplot(5, 3, 4)
-    fp.add_text(ax_label, 'c', x=-0.1, y=1.2)
-    # trajs stim
-    ax_label = f.add_subplot(5, 3, 5)
-    fp.add_text(ax_label, 'd', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 6)
-    ax_label.axis('off')
-    # vel prior
-    ax_label = f.add_subplot(5, 3, 7)
-    fp.add_text(ax_label, 'e', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 8)
-    fp.add_text(ax_label, 'f', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 9)
-    ax_label.axis('off')
-    ax_label = f.add_subplot(5, 3, 10)
-    fp.add_text(ax_label, 'g', x=-0.1, y=1.2)
-    # weights linear reg
-    ax_label = f.add_subplot(5, 3, 11)
-    fp.add_text(ax_label, 'h', x=-0.1, y=1.2)
-    # mt mat
-    ax_label = f.add_subplot(5, 3, 12)
-    fp.add_text(ax_label, 'i', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 13)
-    fp.add_text(ax_label, 'j', x=-0.1, y=3.0)
-    ax_label = f.add_subplot(5, 3, 14)
-    fp.add_text(ax_label, 'k', x=-0.1, y=1.2)
-    ax_label = f.add_subplot(5, 3, 15)
-    fp.add_text(ax_label, 'l', x=-0.1, y=1.2)
+    f, ax = plt.subplots(5, 3, figsize=fgsz)
+    letters = 'abcdeXfgXhijklm'
+    ax = ax.flatten()
+    for lett, a in zip(letters, ax):
+        if lett != 'X':
+            fp.add_text(ax=a, letter=lett, x=-0.1, y=1.2)
+    ax[5].axis('off')
+    ax[8].axis('off')
     # adjust panels positions
-    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.075, right=0.98,
+    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
+    factor = 1.2
+    for i_ax in [3, 4, 6, 7]:
+        pos = ax[i_ax].get_position()
+        if i_ax in [3, 6]:
+            ax[i_ax].set_position([pos.x0, pos.y0, pos.width*factor,
+                                    pos.height])
+        else:
+            ax[i_ax].set_position([pos.x0+pos.width/2, pos.y0, pos.width*factor,
+                                    pos.height])
+
     ax = f.axes
-    pos_ax_0 = ax[0].get_position()
-    ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*1.6,
-                        pos_ax_0.height])
-    ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*2.2, pos_ax_0.y0,
-                        pos_ax_0.width*1.6, pos_ax_0.height])
-    pos_ax_3 = ax[3].get_position()
-    ax[3].set_position([pos_ax_3.x0, pos_ax_3.y0, pos_ax_3.width*1.6,
-                        pos_ax_3.height])
-    ax[4].set_position([pos_ax_3.x0 + pos_ax_3.width*2.2, pos_ax_3.y0,
-                        pos_ax_3.width*1.6, pos_ax_3.height])
-    pos_ax_5 = ax[6].get_position()
-    ax[6].set_position([pos_ax_5.x0, pos_ax_5.y0, pos_ax_5.width*1.6,
-                        pos_ax_5.height])
-    ax[7].set_position([pos_ax_5.x0 + pos_ax_5.width*2.2, pos_ax_5.y0,
-                        pos_ax_5.width*1.6, pos_ax_5.height])
-    ax_cohs = np.array([ax[1], ax[4], ax[7]])
-    ax_zt = np.array([ax[0], ax[3], ax[6]])
-    ax_inset = fp.add_inset(ax=ax_cohs[2], inset_sz=inset_sz, fgsz=fgsz,
+    ax_zt = np.array([ax[3], ax[6]])
+    ax_cohs = np.array([ax[4], ax[7]])
+    ax_inset = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
-    ax_cohs = np.insert(ax_cohs, 2, ax_inset)
-    ax_inset = fp.add_inset(ax=ax_zt[2], inset_sz=inset_sz, fgsz=fgsz,
+    ax_cohs = np.insert(ax_cohs, 1, ax_inset)
+    ax_inset = fp.add_inset(ax=ax_zt[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
-    ax_zt = np.insert(ax_zt, 2, ax_inset)
+    ax_zt = np.insert(ax_zt, 1, ax_inset)
     ax_weights = ax[2]
     pos = ax_weights.get_position()
     ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
@@ -880,7 +843,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
             fp.rm_top_right_lines(a)
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
-    ax_scrnsht = ax[6]
+    ax_scrnsht = ax[0]
     img = rat[150:646, 120:-10, :]
     ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
     ax_scrnsht.set_xticks([])
@@ -893,9 +856,9 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_scrnsht.set_xlabel('x dimension (pixels)')
     ax_scrnsht.set_ylabel('y dimension (pixels)')
 
-    # RAW TRAJECTORIES
-    ax_rawtr = ax[7]
-    ax_ydim = ax[8]
+    # TRAJECTORIES
+    ax_rawtr = ax[1]
+    ax_ydim = ax[2]
     ran_max = 100
     for tr in range(ran_max):
         if tr > (ran_max/2):
@@ -913,22 +876,25 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')
     fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
-    ax_ydim.set_xlim(-100, 800)
-    ax_ydim.set_ylim(-100, 100)
+    x_lim = [-100, 800]
+    y_lim = [-100, 100]
+    ax_ydim.set_xlim(x_lim)
+    ax_ydim.set_ylim(y_lim)
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
+    ax_ydim.
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # adjust panels positions
-    pos = ax_rawtr.get_position()
-    factor = figsize[1]/figsize[0]
-    width = pos.height*factor/2
-    ax_rawtr.set_position([pos.x0+width*0.5, pos.y0-margin, width,
-                           pos.height])
-    pos = ax_ydim.get_position()
-    ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
-    pos = ax_scrnsht.get_position()
-    ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
-                             pos.height])
+    # pos = ax_rawtr.get_position()
+    # factor = fgsz[1]/fgsz[0]
+    # width = pos.height*factor
+    # ax_rawtr.set_position([pos.x0, pos.y0-margin, width, pos.height])
+    # pos = ax_ydim.get_position()
+    # ax_ydim.set_position([pos.x0, pos.y0-margin, pos.width, pos.height])
+    # pos = ax_scrnsht.get_position()
+    # ax_scrnsht.set_position([pos.x0+width*0.5, pos.y0-margin, pos.width,
+    #                          pos.height])
+    plt.show()
     # add colorbar for screenshot
     n_stps = 100
     ax_clbr = plt.axes([pos.x0+width*0.5, pos.y0+pos.height-margin*0.9,
@@ -946,12 +912,12 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_clbr.xaxis.set_ticks_position("top")
     # ax_clbr.yaxis.tick_right()
     # plot dashed lines
-    for i_a in [7, 8]:
+    for i_a in [1, 2]:
         ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(0, color='k', lw=.5)
-    ax[6].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
-    ax[6].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
+    ax[0].axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
+    ax[0].axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
     ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
 
 

@@ -65,29 +65,21 @@ f6 = False
 f7 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
-    all_rats = True
-    if all_rats:
-        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-                    'LE44']
-        # subjects = ['LE43']
-        # with silent: 42, 43, 44, 45, 46, 47
-    else:
-        subjects = ['LE43']
-        # good ones for fitting: 42, 43, 38
+    # with silent: 42, 43, 44, 45, 46, 47
+    # good ones for fitting: 42, 43, 38
+    subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                'LE44']
+    subjects = ['LE43', 'LE37']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
                                         sv_folder=SV_FOLDER, after_correct=True,
                                         silent=True, all_trials=True,
                                         srfail=True)
-        if all_rats:
-            df_all = pd.concat((df_all, df), ignore_index=True)
-        else:
-            subjects = [None]
-    if all_rats:
-        df = df_all
-        df_all = []
+        df_all = pd.concat((df_all, df), ignore_index=True)
+    df = df_all
+    del df_all
     # XXX: can we remove the code below or move it to the fig5 part?
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     df['allpriors'] = zt
