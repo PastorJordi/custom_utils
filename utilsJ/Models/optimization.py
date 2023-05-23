@@ -958,12 +958,11 @@ def nonbox_constraints_bads(x):
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
     # effect on MT for Reactive responses < 30 ms
-    # cond4 = x_1[:, 0] < 1e-2  # lb for prior
+    cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5  # lb for prior
     # cond5 = x_1[:, 1] < 1e-2  # lb for stim
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
     # cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
-    cond1 = False
-    return np.bool_(cond1)
+    return np.bool_(cond4)
 
 
 def gumbel_plotter():
@@ -1111,8 +1110,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub)
-        # non_box_cons=nonbox_constraints_bads
+        bads = BADS(fun_target, x0, lb, ub, plb, pub,
+                    non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)

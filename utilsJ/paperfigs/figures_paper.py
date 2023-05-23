@@ -967,7 +967,7 @@ def mean_com_traj_simul(df_sim, ax):
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
-        it_subs = np.where(df_sim.subjid.values == subject)[0][0]-1
+        it_subs = np.where(df_sim.subjid.values == subject)[0][0]
         i_com = 0
         i_nocom = 0
         i_und_com = 0
