@@ -971,11 +971,11 @@ def mean_com_traj_simul(df_sim, ax):
         i_com = 0
         i_nocom = 0
         i_und_com = 0
-        mat_nocom_erase = np.empty((sum(~(index_com & raw_com)), max_ind))
+        mat_nocom_erase = np.empty((sum(~(raw_com))+200, max_ind))
         mat_nocom_erase[:] = np.nan
-        mat_com_erase = np.empty((sum(index_com), max_ind))
+        mat_com_erase = np.empty((sum(index_com)+200, max_ind))
         mat_com_erase[:] = np.nan
-        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com)), max_ind))
+        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+200, max_ind))
         mat_com_und_erase[:] = np.nan
         for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
             if index_com[i_t+it_subs]:
@@ -984,7 +984,7 @@ def mean_com_traj_simul(df_sim, ax):
             if not index_com[i_t+it_subs] and not raw_com[i_t]:
                 mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t+it_subs]
                 i_nocom += 1
-            if raw_com[i_t+it_subs]:
+            if raw_com[i_t+it_subs] and not index_com[i_t+it_subs]:
                 mat_com_und_erase[i_und_com, :len(traj)] = traj*dec[i_t+it_subs]
                 i_und_com += 1
         mean_com_traj = np.nanmean(mat_com_erase, axis=0)

@@ -682,7 +682,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -803,7 +803,7 @@ def theta_for_lh_plot():
 def get_x0():
     p_t_aff = 5
     p_t_eff = 4
-    p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_a = 13  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.12
     p_e_bound = 2.
@@ -835,7 +835,7 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 4
+    lb_t_a = 10
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.3
@@ -867,9 +867,9 @@ def get_ub():
     """
     ub_aff = 15
     ub_eff = 15
-    ub_t_a = 25
+    ub_t_a = 18
     ub_w_zt = 1
-    ub_w_st = 0.6
+    ub_w_st = 0.3
     ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.12
@@ -877,9 +877,9 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 2
-    ub_mt_n = 50
-    ub_mt_int = 400
+    ub_leak = 1
+    ub_mt_n = 40
+    ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
             ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
@@ -899,9 +899,9 @@ def get_pub():
     """
     pub_aff = 9
     pub_eff = 9
-    pub_t_a = 18
+    pub_t_a = 16
     pub_w_zt = 0.7
-    pub_w_st = 0.2
+    pub_w_st = 0.14
     pub_e_bound = 2.6
     pub_com_bound = 0.2
     pub_w_intercept = 0.08
@@ -909,9 +909,9 @@ def get_pub():
     pub_a_bound = 3
     pub_1st_r = 400
     pub_2nd_r = 400
-    pub_leak = 0.8
-    pub_mt_n = 40
-    pub_mt_int = 350
+    pub_leak = 0.7
+    pub_mt_n = 30
+    pub_mt_int = 320
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
             pub_eff, pub_t_a, pub_w_intercept, pub_w_slope, pub_a_bound,
@@ -941,8 +941,8 @@ def get_plb():
     plb_a_bound = 2.2
     plb_1st_r = 40
     plb_2nd_r = 40
-    plb_leak = 0.4
-    plb_mt_n = 20
+    plb_leak = 0.1
+    plb_mt_n = 10
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
@@ -953,7 +953,7 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 50  # ~ max. action RT peak < -50 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] > 60  # ~ max. action RT peak > 75 ms
     # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
     # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
     # cond3 = x_1[:, 2] * x_1[:, 10] < 30
@@ -962,6 +962,7 @@ def nonbox_constraints_bads(x):
     # cond5 = x_1[:, 1] < 1e-2  # lb for stim
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
     # cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
+    cond1 = False
     return np.bool_(cond1)
 
 
@@ -1110,8 +1111,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub,
-                    non_box_cons=nonbox_constraints_bads)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub)
+        # non_box_cons=nonbox_constraints_bads
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
@@ -1424,11 +1425,11 @@ if __name__ == '__main__':
         num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+        subjects = ['LE85', 'LE42', 'LE38', 'LE39', 'LE43', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = True
+        training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
