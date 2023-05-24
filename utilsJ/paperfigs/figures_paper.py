@@ -2662,7 +2662,7 @@ def plot_fb_per_subj_from_df(df):
     # plots the RT distros conditioning on coh
     fig, ax = plt.subplots(4, 4)
     ax = ax.flatten()
-    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
@@ -2670,14 +2670,14 @@ def plot_fb_per_subj_from_df(df):
         for ifb, fb in enumerate(df_1.fb):
             for j in range(len(fb)):
                 coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
-            fix_breaks =\
-                np.vstack(np.concatenate([df_1.sound_len/1000,
-                                          np.concatenate(df_1.fb.values)-0.3]))
-            fix_breaks = fix_breaks[index]
-            sns.kdeplot(fix_breaks, color=colormap[iev], ax=ax[i_s])
-            ax[i_s].set_title(subj)
+            fix_breaks_2 = fix_breaks[index]
+            sns.kdeplot(fix_breaks_2, color=colormap[iev], ax=ax[i_s])
+        ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
 
 
 def sess_t_index_stats(df, subjects):

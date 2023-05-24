@@ -82,7 +82,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE44', 'LE85', 'LE86', 'LE37']
-    subjects = ['LE85']
+    subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -200,6 +200,7 @@ if f5:
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
     # simulation plots
     fp.plot_rt_sim(df_sim)
+    fp.plot_fb_per_subj_from_df(df)
     means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
     means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
     if not with_fb:

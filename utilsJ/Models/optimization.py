@@ -801,8 +801,8 @@ def theta_for_lh_plot():
 
 
 def get_x0():
-    p_t_aff = 5
-    p_t_eff = 4
+    p_t_aff = 6
+    p_t_eff = 6
     p_t_a = 16  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.12
@@ -835,7 +835,7 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 10
+    lb_t_a = 6
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.3
@@ -869,7 +869,7 @@ def get_ub():
     ub_eff = 15
     ub_t_a = 18
     ub_w_zt = 1
-    ub_w_st = 0.3
+    ub_w_st = 0.18
     ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.12
@@ -877,7 +877,7 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.8
+    ub_leak = 0.7
     ub_mt_n = 40
     ub_mt_int = 370
     ub_mt_slope = 0.6
@@ -953,10 +953,10 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 65
-    # ~ min. action RT peak can't be < 25 ms
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 30
+    # ~ min. action RT peak can't be < -150 ms
     cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5
-    # lb for prior. i.e. prior*p_zt can't be > 50% of the bound
+    # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
     return np.bool_(cond4 + cond1 + cond5)
@@ -1421,7 +1421,7 @@ if __name__ == '__main__':
         num_simulations = int(2e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        subjects = ['LE85', 'LE42', 'LE38', 'LE39', 'LE43', 'LE84', 'LE45',
+        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
