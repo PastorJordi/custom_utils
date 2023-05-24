@@ -682,7 +682,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e0):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -803,12 +803,12 @@ def theta_for_lh_plot():
 def get_x0():
     p_t_aff = 5
     p_t_eff = 4
-    p_t_a = 13  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_t_a = 16  # 90 ms (18) PSIAM fit includes p_t_eff
     p_w_zt = 0.2
     p_w_stim = 0.12
     p_e_bound = 2.
     p_com_bound = 0.1
-    p_w_a_intercept = 0.056
+    p_w_a_intercept = 0.05
     p_w_a_slope = 2e-5
     p_a_bound = 2.6
     p_1st_readout = 40
@@ -877,7 +877,7 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 1
+    ub_leak = 0.8
     ub_mt_n = 40
     ub_mt_int = 370
     ub_mt_slope = 0.6
@@ -909,7 +909,7 @@ def get_pub():
     pub_a_bound = 3
     pub_1st_r = 400
     pub_2nd_r = 400
-    pub_leak = 0.7
+    pub_leak = 0.65
     pub_mt_n = 30
     pub_mt_int = 320
     pub_mt_slope = 0.12
@@ -953,16 +953,13 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] > 60  # ~ max. action RT peak > 75 ms
-    # cond2 = 10 * x_1[:, 1] * x_1[:, 10] < 30
-    # effect on MT for coh=1 and zt=0 after 50 ms integration < 30ms
-    # cond3 = x_1[:, 2] * x_1[:, 10] < 30
-    # effect on MT for Reactive responses < 30 ms
-    cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5  # lb for prior
-    # cond5 = x_1[:, 1] < 1e-2  # lb for stim
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 65
+    # ~ min. action RT peak can't be < 25 ms
+    cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5
+    # lb for prior. i.e. prior*p_zt can't be > 50% of the bound
+    cond5 = x_1[:, 1] < 1e-2  # lb for stim
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
-    # cond7 = x_1[:, 11] < 30  # lb for 2nd readout weight
-    return np.bool_(cond4)
+    return np.bool_(cond4 + cond1 + cond5)
 
 
 def gumbel_plotter():
@@ -990,16 +987,16 @@ def prepare_fb_data(df):
             coh_vec = np.append(coh_vec, [df.coh2.values[ifb]])
             dwl_vec = np.append(dwl_vec, [df.dW_lat.values[ifb]])
             dwt_vec = np.append(dwt_vec, [df.dW_trans.values[ifb]])
-            mt_vec = np.append(mt_vec, np.nan)
-            ch_vec = np.append(ch_vec, np.nan)
+            mt_vec = np.append(mt_vec, [np.nan])
+            ch_vec = np.append(ch_vec, [np.nan])
             tr_in_vec = np.append(tr_in_vec, [df.origidx.values[ifb]])
     rt_vec =\
         np.vstack(np.concatenate([df.sound_len,
                                   1e3*(np.concatenate(
-                                      df.fb.values)-0.3)])).reshape(-1)
+                                      df.fb.values)-0.3)])).reshape(-1)+300
     zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
     x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
-                              torch.tensor(rt_vec+300),
+                              torch.tensor(rt_vec),
                               torch.tensor(ch_vec)))
     data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
                                torch.tensor(tr_in_vec.astype(float)),

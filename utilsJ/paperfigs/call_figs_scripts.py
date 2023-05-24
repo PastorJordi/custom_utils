@@ -82,6 +82,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE44', 'LE85', 'LE86', 'LE37']
+    subjects = ['LE85']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -172,8 +173,7 @@ if f5:
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=True,
-                                          load_params=False)
+                                          subject_list=subjects, subjid=subjid, simulate=True)
     # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
     # basic_statistics(com, com_model_detected)  # com
     # basic_statistics(hit, hit_model)  # hit

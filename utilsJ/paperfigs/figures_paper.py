@@ -1345,14 +1345,16 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                                      > traj_all.shape[0] - 50)[0][0]
                 mean_traj = func_final(traj_all[:, :index_vel], axis=0)
                 std_traj = np.nanstd(traj_all[:, :index_vel],
-                                     axis=0) / np.sqrt(sum(index))
+                                     axis=0) / np.sqrt(len(subjects.unique()))
+                std_traj = 0
             except Exception:
                 mean_traj = func_final(traj_all, axis=0)
-                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
+                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(len(subjects.unique()))
+                std_traj = 0
             val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
             vals_thr_traj.append(val_traj)
             mean_vel = func_final(vel_all, axis=0)
-            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
+            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
             val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
             vals_thr_vel.append(val_vel)
             mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
@@ -1371,6 +1373,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
         mean_vel = np.nanmean(mat_vel_subs[i_ev, :, :], axis=1)
         std_vel = np.std(mat_vel_subs[i_ev, :, :], axis=1) /\
             np.sqrt(len(subjects.unique()))
+        std_vel = 0
+        std_traj = 0
         if prior:
             xval = xvals_zt[i_ev]
         else:
@@ -1393,6 +1397,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                            color=colormap[i_ev])
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 460)
+    ax[0].set_yticks([0, 25, 50, 75])
     ax[0].set_ylim(-10, 85)
     ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 460)
