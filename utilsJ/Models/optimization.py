@@ -27,9 +27,9 @@ import os
 # from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
 from utilsJ.Behavior.plotting import binned_curve
@@ -38,16 +38,17 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
+CTE_FB = 1/600
 
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
@@ -679,10 +680,11 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     t = rt_fb*1e-3
     prob = prob_rt_fb_action(t=t, v_a=v_a, t_a=t_a, bound_a=bound_a)
     prob[np.isnan(prob)] = 0
-    return -np.nansum(np.log(prob*(1-eps) + eps*CTE))
+    # prob[prob > 1] = 1
+    return -np.nansum(np.log(prob*(1-eps) + eps*CTE_FB))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e0):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e2):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -720,8 +722,11 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e0):
     # print(log_liks_fb)
     # print('-LLH ( RT > 0 )')
     # print(log_liks_no_fb)
+    # print('Ratio LLH: FB/NOFB')
+    # print(log_liks_fb/log_liks_no_fb)
+
     # returns -LLH (data (RT > 0) | theta) + -LLH (data (RT < 0) | theta)
-    return log_liks_fb*weight_LLH_fb + log_liks_no_fb
+    return log_liks_fb*weight_LLH_fb + log_liks_no_fb  # *(1-weight_LLH_fb)
 
 
 def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
@@ -865,8 +870,8 @@ def get_ub():
         List with hard upper bounds.
 
     """
-    ub_aff = 15
-    ub_eff = 15
+    ub_aff = 12
+    ub_eff = 12
     ub_t_a = 18
     ub_w_zt = 1
     ub_w_st = 0.18
@@ -958,7 +963,7 @@ def nonbox_constraints_bads(x):
     cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5
     # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
-    # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 7  # aff + eff < 35 ms
+    # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
     return np.bool_(cond4 + cond1 + cond5)
 
 
@@ -1107,8 +1112,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub,
-                    non_box_cons=nonbox_constraints_bads)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub)
+        # , non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
@@ -1455,8 +1460,8 @@ if __name__ == '__main__':
                 print('p_mt_noise: '+str(parameters[13]))
                 print('p_MT_intercept: '+str(parameters[14]))
                 print('p_MT_slope: '+str(parameters[15]))
-                np.save(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy',
-                        parameters)
+                np.save(SV_FOLDER + 'parameters_MNLE_BADS_100LLHFB_' +
+                        subject + '.npy', parameters)
             except Exception:
                 continue
     if rms_comparison and plotting:
