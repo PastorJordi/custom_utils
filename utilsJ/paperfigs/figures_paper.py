@@ -47,7 +47,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -845,11 +845,11 @@ def fig_3_CoMs(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=-3e-2, vmax=vmax, cmap='magma')
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
     plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=-3e-2, vmax=vmax, cmap='magma')
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
@@ -2683,7 +2683,8 @@ def plot_fb_per_subj_from_df(df):
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
             fix_breaks_2 = fix_breaks[index]
-            sns.kdeplot(fix_breaks_2, color=colormap[iev], ax=ax[i_s])
+            sns.kdeplot(fix_breaks_2.reshape(-1),
+                        color=colormap[iev], ax=ax[i_s])
         ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
 
 
