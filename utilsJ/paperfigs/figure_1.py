@@ -38,7 +38,6 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
     ax.set_ylabel('RT density')
     ax.set_xlabel('Reaction time (ms)')
 
-
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                         rt_lim=50, after_correct_only=True):
     subjects = df['subjid'].unique()
@@ -50,6 +49,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                           after_correct_only=after_correct_only,
                             rt_lim=rt_lim)
     df = df.loc[indx_trajs]
+    df.resp_len *= 1e3
     if condition == 'choice_x_coh':
         # compute median MT for each subject and each stim strength
         df['choice_x_coh'] = (df.R_response*2-1) * df.coh2
@@ -64,20 +64,19 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
     for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
-        if len(subjects) > 1:            
+        if False:            
             ax.boxplot(mt_time[:, i_tr], positions=[bin], 
                        boxprops=dict(markerfacecolor=c, markeredgecolor=c))
             ax.plot(bin + 0.1*np.random.randn(len(subjects)),
                     mt_time[:, i_tr], color=colormap[i_tr], marker='o',
                     linestyle='None')
         else:
-            ax.errorbar(bin, mt_time[:, i_tr], yerr=mt_time_err[i_tr],
+            mean_mt = np.mean(mt_time[:, i_tr])
+            ax.errorbar(bin, mean_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o')
 
         ax.set_ylabel('MT (ms)', fontsize=9)
-    # ax.plot(xp, mt_time, color='k', ls=':')
-
-
+    ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls=':')
 
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
@@ -425,13 +424,16 @@ def mt_matrix_ev_vs_zt(df, ax, silent_comparison=False, rt_bin=None,
     else:
         im_s = ax.imshow(np.flip(mat_s).T, cmap='RdGy')
         plt.sca(ax)
-        cbar_s = plt.colorbar(im_s, fraction=0.04)
-        cbar_s.set_label(r'$MT \;(ms)$')
-        ax.set_yticks([0, 3, 6], ['1', '0', '-1'])
-        ax.set_xticks([0, 3, 6], ['-1', '0', '1'])
+        ax.set_yticks([0, 3, 6])
+        ax.set_xticks([0, 3, 6])
+        ax.set_yticklabels(['1', '0', '-1'])
+        ax.set_xticklabels(['-1', '0', '1'])
+        ax.set_ylim([-0.5, 6.5])
+        ax.set_xlim([-0.5, 6.5])
         ax.set_xlabel('Prior Evidence')
         ax.set_ylabel('Stimulus Evidence')
-
+        cbar_s = plt.colorbar(im_s, fraction=0.04)
+        cbar_s.set_label(r'$MT \;(ms)$')
 
 
 def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
@@ -451,8 +453,10 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     ax = ax.flatten()
     labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g', '', '', '']
     for n, ax_1 in enumerate(ax):
-        fp.rm_top_right_lines(ax_1)
         fp.add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
+        if n not in [4, 10]:
+            fp.rm_top_right_lines(ax_1)
+
     for i in [0, 1, 3]:
         ax[i].axis('off')
     # TASK PANEL
@@ -525,22 +529,22 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     del df_mt
     # MT VS PRIOR
     df_mt = df_data.copy()
-    plot_mt_vs_evidence(df=df_data.loc[df_data.special_trial == 2], ax=ax[6],
+    plot_mt_vs_evidence(df=df_mt.loc[df_mt.special_trial == 2], ax=ax[6],
                         condition='choice_x_prior', prior_limit=1,
                         rt_lim=200)
     del df_mt
     # REGRESSION WEIGHTS
     df_wghts = df_data.copy()
-    mt_weights(df=df_wghts, ax=ax[8], plot=True, means_errs=False)
+    mt_weights(df=df_wghts, ax=ax[9], plot=True, means_errs=False)
     del df_wghts
     # MT MATRIX
     df_mtx = df_data.copy()
-    mt_matrix_ev_vs_zt(df=df_mtx, ax=ax[9], silent_comparison=False,
+    mt_matrix_ev_vs_zt(df=df_mtx, ax=ax[10], silent_comparison=False,
                           rt_bin=60, collapse_sides=True)
     del df_mtx
     # SLOWING
     df_slow = df_data.copy()
-    plot_mt_vs_stim(df=df_slow, ax=ax[10], prior_min=0.8, rt_max=50)
+    plot_mt_vs_stim(df=df_slow, ax=ax[11], prior_min=0.8, rt_max=50)
     del df_slow
     f.savefig(sv_folder+'fig1.svg', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'fig1.png', dpi=400, bbox_inches='tight')

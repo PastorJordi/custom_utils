@@ -31,7 +31,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -67,12 +67,12 @@ elif pc_name == 'alex_CRM':
 
 
 plt.close('all')
-f1 = False
-f2 = True
+f1 = True
+f2 = False
 f3 = False
 f4 = False
 f5 = False
-f6 = True
+f6 = False
 f7 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
