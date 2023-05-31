@@ -20,7 +20,7 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figures_paper as fp
-matplotlib.rcParams['font.size'] = 12
+matplotlib.rcParams['font.size'] = 10
 plt.rcParams['legend.title_fontsize'] = 8
 plt.rcParams['legend.fontsize'] = 8
 plt.rcParams['xtick.labelsize']= 8
@@ -68,7 +68,7 @@ elif pc_name == 'alex_CRM':
 
 plt.close('all')
 f1 = True
-f2 = False
+f2 = True
 f3 = False
 f4 = False
 f5 = False
@@ -81,8 +81,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE44', 'LE85', 'LE86', 'LE37']
-    subjects = ['LE42']
+    # subjects = ['LE46', 'LE37']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,

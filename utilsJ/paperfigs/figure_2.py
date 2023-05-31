@@ -903,6 +903,17 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     pos_coh_2 = ax_cohs[2].get_position()
     ax_cohs[2].set_position([pos_ydim.x0, pos_coh_2.y0,
                           pos_coh_2.width, pos_coh_2.height])
+    # tune splitting time panels
+    ax_split = ax[9]
+    pos = ax_split.get_position()
+    ax_split.set_position([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                           pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0, pos.width,
+                         pos.height*2/5])
+    axes_split = [ax_split, ax_inset]
+    fp.rm_top_right_lines(axes_split[1])
+    fp.rm_top_right_lines(axes_split[0])
+
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
     img = rat[150:646, 120:-10, :]
@@ -943,17 +954,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
-    ax_split = ax[9]
-    pos = ax_split.get_position()
-    ax_split.set_position([pos.x0, pos.y0+pos.height*3/5, pos.width,
-                           pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0, pos.width,
-                         pos.height*2/5])
-    axes_split = [ax_split, ax_inset]
     plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(0, 15, 2),
                                  xlab=False)
-    fp.rm_top_right_lines(axes_split[1])
-    fp.rm_top_right_lines(axes_split[0])
     plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(150, 300, 2),
                                  xlab=True)
     # TRAJECTORY SPLITTING PRIOR

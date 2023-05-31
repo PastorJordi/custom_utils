@@ -444,9 +444,9 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     ax = ax.flatten()
     # TUNE PANELS
     # all panels
-    labs = ['', '',  'c', '', '', 'd', 'e', 'f', 'g', '', '', '']
+    letters = ['', '',  'c', '', '', 'd', 'e', 'f', '', 'g', 'h', 'i']
     for n, ax_1 in enumerate(ax):
-        fp.add_text(ax=ax_1, letter=labs[n], x=-0.15, y=1.2)
+        fp.add_text(ax=ax_1, letter=letters[n], x=-0.15, y=1.2)
         if n not in [4, 10]:
             fp.rm_top_right_lines(ax_1)
 
@@ -517,16 +517,16 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     # make axis 9 smaller and move it to the right
     factor = 0.5
     pos = ax[9].get_position()
-    ax[9].set_position([pos.x0+shift, pos.y0, pos.width*factor, pos.height])
+    ax[9].set_position([pos.x0+shift, pos.y0-margin/2, pos.width*factor, pos.height])
     # mt matrix panel
     # make axis 10 smaller and move it to the right
     factor = 0.8
     pos = ax[10].get_position()
-    ax[10].set_position([pos.x0+shift/3, pos.y0, pos.width*factor, pos.height])
+    ax[10].set_position([pos.x0+shift/3, pos.y0-margin/2, pos.width*factor, pos.height])
     # mt versus silent panel
     # make axis 11 smaller
     pos = ax[11].get_position()
-    ax[11].set_position([pos.x0+shift, pos.y0, pos.width*factor, pos.height])
+    ax[11].set_position([pos.x0+shift, pos.y0-margin/2, pos.width*factor, pos.height])
 
     # TASK PANEL
     task = plt.imread(task_img)
