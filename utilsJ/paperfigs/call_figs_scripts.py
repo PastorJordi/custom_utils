@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 import sys
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
@@ -81,7 +81,8 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE37', 'LE46']
+    # subjects = ['LE42', 'LE44', 'LE85', 'LE86', 'LE37']
+    subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -172,7 +173,7 @@ if f5:
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=False)
+                                          subject_list=subjects, subjid=subjid, simulate=True)
     # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
     # basic_statistics(com, com_model_detected)  # com
     # basic_statistics(hit, hit_model)  # hit
@@ -199,6 +200,7 @@ if f5:
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
     # simulation plots
     fp.plot_rt_sim(df_sim)
+    fp.plot_fb_per_subj_from_df(df)
     means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
     means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
     if not with_fb:

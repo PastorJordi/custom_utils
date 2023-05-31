@@ -47,7 +47,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -845,11 +845,11 @@ def fig_3_CoMs(df, peak_com, time_com, inset_sz=.07, marginx=-0.2,
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=-3e-2, vmax=vmax, cmap='magma')
+    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
     plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=-3e-2, vmax=vmax, cmap='magma')
+    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
@@ -967,15 +967,15 @@ def mean_com_traj_simul(df_sim, ax):
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
-        it_subs = np.where(df_sim.subjid.values == subject)[0][0]-1
+        it_subs = np.where(df_sim.subjid.values == subject)[0][0]
         i_com = 0
         i_nocom = 0
         i_und_com = 0
-        mat_nocom_erase = np.empty((sum(~(index_com & raw_com)), max_ind))
+        mat_nocom_erase = np.empty((sum(~(raw_com))+200, max_ind))
         mat_nocom_erase[:] = np.nan
-        mat_com_erase = np.empty((sum(index_com), max_ind))
+        mat_com_erase = np.empty((sum(index_com)+200, max_ind))
         mat_com_erase[:] = np.nan
-        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com)), max_ind))
+        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+200, max_ind))
         mat_com_und_erase[:] = np.nan
         for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
             if index_com[i_t+it_subs]:
@@ -984,7 +984,7 @@ def mean_com_traj_simul(df_sim, ax):
             if not index_com[i_t+it_subs] and not raw_com[i_t]:
                 mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t+it_subs]
                 i_nocom += 1
-            if raw_com[i_t+it_subs]:
+            if raw_com[i_t+it_subs] and not index_com[i_t+it_subs]:
                 mat_com_und_erase[i_und_com, :len(traj)] = traj*dec[i_t+it_subs]
                 i_und_com += 1
         mean_com_traj = np.nanmean(mat_com_erase, axis=0)
@@ -1345,14 +1345,16 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                                      > traj_all.shape[0] - 50)[0][0]
                 mean_traj = func_final(traj_all[:, :index_vel], axis=0)
                 std_traj = np.nanstd(traj_all[:, :index_vel],
-                                     axis=0) / np.sqrt(sum(index))
+                                     axis=0) / np.sqrt(len(subjects.unique()))
+                std_traj = 0
             except Exception:
                 mean_traj = func_final(traj_all, axis=0)
-                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(sum(index))
+                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(len(subjects.unique()))
+                std_traj = 0
             val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
             vals_thr_traj.append(val_traj)
             mean_vel = func_final(vel_all, axis=0)
-            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(sum(index))
+            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
             val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
             vals_thr_vel.append(val_vel)
             mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
@@ -1371,6 +1373,8 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
         mean_vel = np.nanmean(mat_vel_subs[i_ev, :, :], axis=1)
         std_vel = np.std(mat_vel_subs[i_ev, :, :], axis=1) /\
             np.sqrt(len(subjects.unique()))
+        std_vel = 0
+        std_traj = 0
         if prior:
             xval = xvals_zt[i_ev]
         else:
@@ -1393,6 +1397,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                            color=colormap[i_ev])
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 460)
+    ax[0].set_yticks([0, 25, 50, 75])
     ax[0].set_ylim(-10, 85)
     ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 460)
@@ -2657,7 +2662,7 @@ def plot_fb_per_subj_from_df(df):
     # plots the RT distros conditioning on coh
     fig, ax = plt.subplots(4, 4)
     ax = ax.flatten()
-    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
@@ -2665,14 +2670,15 @@ def plot_fb_per_subj_from_df(df):
         for ifb, fb in enumerate(df_1.fb):
             for j in range(len(fb)):
                 coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
-            fix_breaks =\
-                np.vstack(np.concatenate([df_1.sound_len/1000,
-                                          np.concatenate(df_1.fb.values)-0.3]))
-            fix_breaks = fix_breaks[index]
-            sns.kdeplot(fix_breaks, color=colormap[iev], ax=ax[i_s])
-            ax[i_s].set_title(subj)
+            fix_breaks_2 = fix_breaks[index]
+            sns.kdeplot(fix_breaks_2.reshape(-1),
+                        color=colormap[iev], ax=ax[i_s])
+        ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
 
 
 def sess_t_index_stats(df, subjects):
