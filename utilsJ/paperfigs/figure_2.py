@@ -794,8 +794,9 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
-                inset_sz=.1, marginx=-.1, marginy=0.1, subj='LE46'):
+                inset_sz=.1, marginx=-.15, marginy=0.1, subj='LE46'):
     f, ax = plt.subplots(4, 3, figsize=fgsz)
+    # add letters to panels
     letters = 'abcdeXfgXhij'
     ax = ax.flatten()
     for lett, a in zip(letters, ax):
@@ -815,18 +816,27 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
         else:
             ax[i_ax].set_position([pos.x0+pos.width/2, pos.y0, pos.width*factor,
                                     pos.height])
-
+    # add insets
     ax = f.axes
     ax_zt = np.array([ax[3], ax[6]])
     ax_cohs = np.array([ax[4], ax[7]])
     ax_inset = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy, right=True)
+                            marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
+    # ax_cohs contains in this order the axes for:
+    # index 0: mean position of rats conditioned on stim. evidence,
+    # index 1: the inset for the velocity panel 
+    # index 2: mean velocity  of rats conditioned on stim. evidence
     ax_cohs = np.insert(ax_cohs, 1, ax_inset)
     ax_inset = fp.add_inset(ax=ax_zt[1], inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=marginy, right=True)
+                            marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
     ax_zt = np.insert(ax_zt, 1, ax_inset)
+     # ax_zt contains in this order the axes for:
+    # index 0: mean position of rats conditioned on prior evidence,
+    # index 1: the inset for the velocity panel 
+    # index 2: mean velocity  of rats conditioned on priors evidence
+
     ax_weights = ax[2]
     pos = ax_weights.get_position()
     ax_weights.set_position([pos.x0, pos.y0+pos.height/4, pos.width,
@@ -835,24 +845,16 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
         if i_a != 8:
             fp.rm_top_right_lines(a)
     margin = 0.05
-    # TRACKING SCREENSHOT
-    rat = plt.imread(rat_nocom_img)
+    # tune screenshot panel
     ax_scrnsht = ax[0]
-    img = rat[150:646, 120:-10, :]
-    ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
     ax_scrnsht.set_xticks([])
     right_port_y = 50
     center_port_y = 250
     left_port_y = 460
     ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
     ax_scrnsht.set_yticklabels([-85, 0, 85])
-    ax_scrnsht.set_ylim([0, img.shape[0]])
     ax_scrnsht.set_xlabel('x dimension (pixels)')
     ax_scrnsht.set_ylabel('y dimension (pixels)')
-    ax_scrnsht.axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
-    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
-
     # add colorbar for screenshot
     n_stps = 100
     pos = ax_scrnsht.get_position()
@@ -867,20 +869,9 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_clbr.tick_params(labelsize=6)
     ax_clbr.set_yticks([])
     ax_clbr.xaxis.set_ticks_position("top")
-
-    # TRAJECTORIES
-    df_subj = df[df.subjid == subj]
+    # tune trajectories panels
     ax_rawtr = ax[1]
     ax_ydim = ax[2]
-    ran_max = 100
-    for tr in range(ran_max):
-        if tr > (ran_max/2):
-            trial = df_subj.iloc[tr]
-            traj_x = trial['trajectory_x']
-            traj_y = trial['trajectory_y']
-            ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
-            time = trial['time_trajs']
-            ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
     x_lim = [-80, 20]
     y_lim = [-100, 100]
     ax_rawtr.set_xlim(x_lim)
@@ -904,6 +895,35 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_ydim.set_position([pos_ydim.x0-3*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    # tune mean trajectories panels
+    pos_ydim = ax_ydim.get_position()
+    pos_coh_0 = ax_cohs[0].get_position()
+    ax_cohs[0].set_position([pos_ydim.x0, pos_coh_0.y0,
+                          pos_coh_0.width, pos_coh_0.height])
+    pos_coh_2 = ax_cohs[2].get_position()
+    ax_cohs[2].set_position([pos_ydim.x0, pos_coh_2.y0,
+                          pos_coh_2.width, pos_coh_2.height])
+    # TRACKING SCREENSHOT
+    rat = plt.imread(rat_nocom_img)
+    img = rat[150:646, 120:-10, :]
+    ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
+    ax_scrnsht.axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
+    ax_scrnsht.axhline(center_port_y, color='k', lw=.5)
+    ax_scrnsht.set_ylim([0, img.shape[0]])
+
+
+    # TRAJECTORIES
+    df_subj = df[df.subjid == subj]
+    ran_max = 100
+    for tr in range(ran_max):
+        if tr > (ran_max/2):
+            trial = df_subj.iloc[tr]
+            traj_x = trial['trajectory_x']
+            traj_y = trial['trajectory_y']
+            ax_rawtr.plot(traj_x, traj_y, color='grey', lw=.5, alpha=0.6)
+            time = trial['time_trajs']
+            ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
     # plot dashed lines
     for i_a in [1, 2]:
         ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
@@ -925,16 +945,16 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     # SPLITTING TIME EXAMPLE
     ax_split = ax[9]
     pos = ax_split.get_position()
-    ax_split.set_position([pos.x0, pos.y0, pos.width,
+    ax_split.set_position([pos.x0, pos.y0+pos.height*3/5, pos.width,
                            pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+    ax_inset = plt.axes([pos.x0, pos.y0, pos.width,
                          pos.height*2/5])
     axes_split = [ax_split, ax_inset]
-    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(0, 15, 2),
+    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(0, 15, 2),
                                  xlab=False)
     fp.rm_top_right_lines(axes_split[1])
     fp.rm_top_right_lines(axes_split[0])
-    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(150, 300, 2),
+    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(150, 300, 2),
                                  xlab=True)
     # TRAJECTORY SPLITTING PRIOR
     trajs_splitting_prior(df=df, ax=ax[11], data_folder=data_folder)
