@@ -515,6 +515,8 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
     elif condition == 'choice_x_prior':
         # FIXME: bins should be define taking into account the filtered trials (indx_trajs)
         # also, equipopulated bins should be done in the congruent-incongruent plane
+        import warnings
+        warnings.warn("The zt binning is not well done!")
         bins_zt = [-1.01]
         percentiles = [0.5, 0.25, 0.25, 0.5]
         for i_p, perc in enumerate(percentiles):
