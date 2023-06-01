@@ -57,10 +57,12 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # unstack to have a matrix with rows for subjects and columns for bins
         mt_time = mt_time.unstack(fill_value=np.nan).values.T
         plot_bins = sorted(df.coh2.unique())
+        ax.set_xlabel('Stimulus congruent evidence')
     elif condition == 'choice_x_prior':
         df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
+        ax.set_xlabel('Prior congruent evidence')
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
     for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
@@ -71,12 +73,12 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                     mt_time[:, i_tr], color=colormap[i_tr], marker='o',
                     linestyle='None')
         else:
-            mean_mt = np.mean(mt_time[:, i_tr])
-            ax.errorbar(bin, mean_mt, yerr=mt_time_err[i_tr],
+            median_mt = np.median(mt_time[:, i_tr])
+            ax.errorbar(bin, median_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o')
 
-        ax.set_ylabel('MT (ms)', fontsize=9)
-    ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls=':')
+        ax.set_ylabel('Movement Time (ms)')
+    ax.plot(plot_bins, np.median(mt_time, axis=0), color='k', ls='-', lw=0.5)
 
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
@@ -517,16 +519,16 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     # make axis 9 smaller and move it to the right
     factor = 0.5
     pos = ax[9].get_position()
-    ax[9].set_position([pos.x0+shift, pos.y0-margin/2, pos.width*factor, pos.height])
+    ax[9].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
     # mt matrix panel
     # make axis 10 smaller and move it to the right
     factor = 0.8
     pos = ax[10].get_position()
-    ax[10].set_position([pos.x0+shift/3, pos.y0-margin/2, pos.width*factor, pos.height])
+    ax[10].set_position([pos.x0+shift/3, pos.y0-margin, pos.width*factor, pos.height])
     # mt versus silent panel
     # make axis 11 smaller
     pos = ax[11].get_position()
-    ax[11].set_position([pos.x0+shift, pos.y0-margin/2, pos.width*factor, pos.height])
+    ax[11].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
 
     # TASK PANEL
     task = plt.imread(task_img)
