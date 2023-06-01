@@ -288,12 +288,16 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
     mt_time = np.nanmedian(mt_all, axis=1)
     for i_tr, traj in enumerate(all_trajs):
+        col_face = colormap[i_tr].copy()
+        col_face[-1] = 0.2
+        col_edge = [0, 0, 0, 0]
         traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
         ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
-                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
-                           alpha=0.5)
+                           traj+all_trajs_err[i_tr], facecolor=col_face,
+                           edgecolor=col_edge)
     ax[1].set_ylim([0.5, 0.8])
+    # plt.show()
     if condition == 'choice_x_coh':
         legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
@@ -302,9 +306,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
                           Line2D([0], [0], color=colormap[4], lw=2, label=''),
                           Line2D([0], [0], color=colormap[5], lw=2, label=''),
                           Line2D([0], [0], color=colormap[6], lw=2, label='1')]
-        ax[0].legend(handles=legendelements, title='Stimulus \n evidence',
-                     loc='upper left')
-        ax[1].set_xlabel('Stimulus')
+        title = 'Stimulus'
     if condition == 'choice_x_prior':
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
                                  label='congruent'),
@@ -315,8 +317,10 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
                           Line2D([0], [0], color=colormap[0], lw=2,
                                  label='incongruent')]
-        ax[0].legend(handles=legendelements, title='Prior', loc='upper left')
-        ax[1].set_xlabel('Prior')
+        title = 'Prior'
+    ax[0].legend(handles=legendelements, title=title, loc='upper left',
+                labelspacing=.3)
+    ax[1].set_xlabel(title)
     if condition == 'origidx':
         legendelements = []
         labs = ['100', '300', '500', '700', '900']
@@ -364,11 +368,14 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     mt_time = np.nanmedian(mt_all, axis=1)
     mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
+        col_face = colormap[i_tr].copy()
+        col_face[-1] = 0.2
+        col_edge = [0, 0, 0, 0]
         traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
         ax[2].plot(interpolatespace/1000, traj, color=colormap[i_tr])
         ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
-                           traj+all_trajs_err[i_tr], color=colormap[i_tr],
-                           alpha=0.5)
+                           traj+all_trajs_err[i_tr],
+                           facecolor=col_face, edgecolor=col_edge)
         if False:  # len(subjects) > 1:
             xp = [xpoints[i_tr]]
             c = colormap[i_tr]
@@ -381,13 +388,14 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
             ax[1].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
                            color=colormap[i_tr], marker='o')
     ax[2].set_xlim([-20, 450])
-    ax[1].set_ylabel('Peak (pixels/ms)')
+    ax[1].set_ylabel('Peak')
     ax[2].set_ylim([-0.05, 0.5])
     ax[2].axhline(0, c='gray')
-    ax[2].set_ylabel('Velocity (pixels/ms)')
+    ax[2].set_ylabel('Velocity')
     ax[2].set_xlabel('Time from movement onset (ms)')
-    print(ax[1].get_xticks())
-    # ax[1].plot(xpoints, mt_time, color='k', ls=':')
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].plot(xpoints, mt_time, color='k', ls='-', lw=0.5)
 
 
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
@@ -794,7 +802,7 @@ def fig_2_trajs_old(df, data_folder, sv_folder, rat_nocom_img, fgsz=(8, 8), inse
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
-                inset_sz=.1, marginx=-.15, marginy=0.1, subj='LE46'):
+                inset_sz=.1, marginx=-.05, marginy=0.1, subj='LE46'):
     f, ax = plt.subplots(4, 3, figsize=fgsz)
     # add letters to panels
     letters = 'abcdeXfgXhij'
@@ -897,12 +905,14 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # tune mean trajectories panels
     pos_ydim = ax_ydim.get_position()
-    pos_coh_0 = ax_cohs[0].get_position()
-    ax_cohs[0].set_position([pos_ydim.x0, pos_coh_0.y0,
-                          pos_coh_0.width, pos_coh_0.height])
-    pos_coh_2 = ax_cohs[2].get_position()
-    ax_cohs[2].set_position([pos_ydim.x0, pos_coh_2.y0,
-                          pos_coh_2.width, pos_coh_2.height])
+    for i_a in [0, 2]:
+        pos_coh = ax_cohs[i_a].get_position()
+        ax_cohs[i_a].set_position([pos_ydim.x0, pos_coh.y0,
+                                   pos_coh.width, pos_coh.height])
+    pos_inset = ax_cohs[1].get_position()
+    ax_cohs[1].set_position([pos_inset.x0+(pos_ydim.x0-pos_coh.x0),
+                             pos_inset.y0, pos_inset.width, pos_inset.height])
+
     # tune splitting time panels
     ax_split = ax[9]
     pos = ax_split.get_position()
