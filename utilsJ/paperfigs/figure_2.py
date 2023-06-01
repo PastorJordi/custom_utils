@@ -198,7 +198,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
 
 
 def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                                 subject='LE37', xlab=False):
+                                 subject='LE37', xlabel='', ylabel='', show_legend=False):
     """
     Plot trajectories depending on COH and the corresponding Splitting Time as arrow.
 
@@ -260,22 +260,11 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
     ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
-    if xlab:
-        ax.set_xlabel('Time from stimulus onset (ms)')
-    if rtbins[-1] > 25 and xlab:
-        ax.set_title('\n RT > 150 ms', fontsize=8)
-        ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
-                 head_length=0.4)
-        ax.text(ind-17, 3.4, 'Splitting Time', fontsize=8)
-        ax.set_ylabel("{} Snout position (px)".format("           "))
-        plot_boxcar_rt(rt=rtbins[0], ax=ax)
-    else:
-        ax.set_title('RT < 15 ms', fontsize=8)
-        ax.text(ind-60, 3.3, 'Splitting Time', fontsize=8)
-        ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
-                 head_length=0.4)
-        ax.set_xticklabels([''])
-        plot_boxcar_rt(rt=rtbins[-1], ax=ax)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_ylim([-0.5, 3])
+    plt.show()
+    if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
         for i_l, lab in enumerate(labels):
@@ -283,6 +272,27 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7, loc='upper right')
 
+    # if xlab:
+        
+    # if rtbins[-1] > 25:
+    #     # ax.set_title('\n RT > 150 ms', fontsize=8)
+    #     ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
+    #              head_length=0.4)
+    #     ax.text(ind-17, 3.4, 'Splitting Time', fontsize=8)
+    #     plot_boxcar_rt(rt=rtbins[0], ax=ax)
+    # else:
+    #     ax.set_title('RT < 15 ms', fontsize=8)
+    #     ax.text(ind-60, 3.3, 'Splitting Time', fontsize=8)
+    #     ax.arrow(ind, 2.85, 0, -1.4, color='k', width=1, head_width=5,
+    #              head_length=0.4)
+    #     ax.set_xticklabels([''])
+    #     plot_boxcar_rt(rt=rtbins[-1], ax=ax)
+    #     labels = ['0', '0.25', '0.5', '1']
+    #     legendelements = []
+    #     for i_l, lab in enumerate(labels):
+    #         legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+    #                               label=lab))
+    #     
 
 def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
                           trajectory='trajectory_y', threshold=300):
@@ -611,16 +621,20 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                              pos_inset.y0, pos_inset.width, pos_inset.height])
 
     # tune splitting time panels
+    factor = 0.3
     ax_split = ax[9]
     pos = ax_split.get_position()
-    ax_split.set_position([pos.x0, pos.y0+pos.height*3/5, pos.width,
-                           pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0, pos.width,
-                         pos.height*2/5])
-    axes_split = [ax_split, ax_inset]
-    fp.rm_top_right_lines(axes_split[1])
-    fp.rm_top_right_lines(axes_split[0])
-
+    ax_top = plt.axes([pos.x0, pos.y0+pos.height*0.8, pos.width,
+                         pos.height*factor])
+    ax_split.set_position([pos.x0, pos.y0+pos.height*0.5, pos.width,
+                           pos.height*factor])
+    ax_bottom = plt.axes([pos.x0, pos.y0, pos.width,
+                         pos.height*factor])
+    axes_split = [ax_bottom, ax_split, ax_top]
+    
+    for a in axes_split:
+        fp.rm_top_right_lines(a)
+    # plt.show()
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
     img = rat[150:646, 120:-10, :]
@@ -661,10 +675,10 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
-    plot_trajs_splitting_example(df, ax=axes_split[0], rtbins=np.linspace(0, 15, 2),
-                                 xlab=False)
-    plot_trajs_splitting_example(df, ax=axes_split[1], rtbins=np.linspace(150, 300, 2),
-                                 xlab=True)
+    plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
+                                 xlabel='Time from stimulus onset (ms)', show_legend=True)
+    plot_trajs_splitting_example(df, ax=ax_split, rtbins=np.linspace(45, 65, 2), ylabel='Position')
+    plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
     # TRAJECTORY SPLITTING PRIOR
     trajs_splitting_prior(df=df, ax=ax[11], data_folder=data_folder)
     # TRAJECTORY SPLITTING STIMULUS
