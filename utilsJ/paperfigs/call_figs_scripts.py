@@ -49,6 +49,8 @@ elif pc_name == 'idibaps':
         'ChangesOfMind/figures/Figure_3/001965.png'
     TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
         'figures/Figure_1/panel_a.png'
+    ST_CARTOON_IMG ='/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
+        'figures/Figure_2/st_cartoon.png'
 elif pc_name == 'idibaps_alex':
     SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
@@ -81,7 +83,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE46', 'LE37']
+    # subjects = ['LE46', 'LE37']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -135,7 +137,7 @@ if f1:
 if f2:
     print('Plotting Figure 2')
     fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
-                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG)
+                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG, st_cartoon_img=ST_CARTOON_IMG)
 
 # fig 3
 if f3:

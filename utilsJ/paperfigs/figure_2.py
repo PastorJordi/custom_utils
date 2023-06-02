@@ -108,7 +108,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[0].set_xlim([-20, 450])
     ax[0].set_xticklabels('')
     ax[0].axhline(0, c='gray')
-    ax[0].set_ylabel('Position (pixels)')
+    ax[0].set_ylabel('Position')
     ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_ylim([-10, 85])
     ax[0].set_yticks([0, 25, 50, 75])
@@ -507,28 +507,28 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     # plt.show()
 
 
-def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
-                inset_sz=.1, marginx=-.05, marginy=0.1, subj='LE46'):
+def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=(8, 12),
+                inset_sz=.1, marginx=-.04, marginy=0.1, subj='LE46'):
     f, ax = plt.subplots(4, 3, figsize=fgsz)
     # add letters to panels
-    letters = 'abcdeXfgXhij'
+    letters = 'abcdehfgXij'
     ax = ax.flatten()
     for lett, a in zip(letters, ax):
         if lett != 'X':
             fp.add_text(ax=a, letter=lett, x=-0.1, y=1.2)
-    ax[5].axis('off')
     ax[8].axis('off')
+    ax[11].axis('off')
     # adjust panels positions
     plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
-    factor = 1.2
+    factor = 1.
     for i_ax in [3, 4, 6, 7]:
         pos = ax[i_ax].get_position()
         if i_ax in [3, 6]:
             ax[i_ax].set_position([pos.x0, pos.y0, pos.width*factor,
                                     pos.height])
         else:
-            ax[i_ax].set_position([pos.x0+pos.width/2, pos.y0, pos.width*factor,
+            ax[i_ax].set_position([pos.x0+pos.width/8, pos.y0, pos.width*factor,
                                     pos.height])
     # add insets
     ax = f.axes
@@ -595,8 +595,9 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_rawtr.set_xticks([])
     ax_rawtr.set_yticks([])
     ax_rawtr.set_xlabel('x dimension (pixels)')
+    pos_coh = ax_cohs[2].get_position()
     pos_rawtr = ax_rawtr.get_position()
-    ax_rawtr.set_position([pos_rawtr.x0-margin, pos_rawtr.y0,
+    ax_rawtr.set_position([pos_coh.x0, pos_rawtr.y0,
                            pos_rawtr.width/2, pos_rawtr.height])
     fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
     x_lim = [-100, 800]
@@ -606,32 +607,28 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
     pos_ydim = ax_ydim.get_position()
-    ax_ydim.set_position([pos_ydim.x0-3*margin, pos_rawtr.y0,
+    ax_ydim.set_position([pos_ydim.x0-2*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
-    # tune mean trajectories panels
-    pos_ydim = ax_ydim.get_position()
-    for i_a in [0, 2]:
-        pos_coh = ax_cohs[i_a].get_position()
-        ax_cohs[i_a].set_position([pos_ydim.x0, pos_coh.y0,
-                                   pos_coh.width, pos_coh.height])
-    pos_inset = ax_cohs[1].get_position()
-    ax_cohs[1].set_position([pos_inset.x0+(pos_ydim.x0-pos_coh.x0),
-                             pos_inset.y0, pos_inset.width, pos_inset.height])
-
     # tune splitting time panels
-    factor = 0.3
-    ax_top = ax[9]
-    pos = ax_top.get_position()
-    ax_middle = plt.axes([pos.x0, pos.y0+pos.height*0.5, pos.width,
-                         pos.height*factor])
-    ax_top.set_position([pos.x0, pos.y0+pos.height*0.8, pos.width,
-                           pos.height*factor])
-    ax_bottom = plt.axes([pos.x0, pos.y0, pos.width,
-                         pos.height*factor])
-    
-    for a in [ax_bottom, ax_top, ax_middle]:
+    factor_y = 0.4
+    factor_x = 0.8
+    plt.axes
+    ax_cartoon = ax[5]
+    ax_cartoon.axis('off')
+    pos = ax_cartoon.get_position()
+    ax_cartoon.set_position([pos.x0+pos.width/4, pos.y0+pos.height*factor_y*1.1,
+                             pos.width, pos.height*0.6])
+    ax_top = plt.axes([.1, .1, .1, .1])
+    ax_middle = plt.axes([.2, .2, .1, .1])
+    ax_bottom = plt.axes([.3, .3, .1, .1])
+    for i_a, a in enumerate([ax_top, ax_middle, ax_bottom]):
+        a.set_position([pos.x0+pos.width/4, pos.y0-(i_a)*pos.height*factor_y*1.5, pos.width*factor_x,
+                        pos.height*factor_y])
         fp.rm_top_right_lines(a)
+    # move ax[10] (spllting time coherence) to the right
+    pos = ax[10].get_position()
+    ax[10].set_position([pos_coh.x0, pos.y0, pos.width, pos.height])
     # plt.show()
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
@@ -673,12 +670,14 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
+    img = plt.imread(st_cartoon_img)
+    ax_cartoon.imshow(img)
     plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
     plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
     plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2), ylabel='Position')
     # TRAJECTORY SPLITTING PRIOR
-    trajs_splitting_prior(df=df, ax=ax[11], data_folder=data_folder)
+    trajs_splitting_prior(df=df, ax=ax[9], data_folder=data_folder)
     # TRAJECTORY SPLITTING STIMULUS
     trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[10],
                          connect_points=True)
