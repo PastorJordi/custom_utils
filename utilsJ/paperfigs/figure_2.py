@@ -263,7 +263,6 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_ylim([-0.5, 3])
-    plt.show()
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
@@ -622,17 +621,16 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
 
     # tune splitting time panels
     factor = 0.3
-    ax_split = ax[9]
-    pos = ax_split.get_position()
-    ax_top = plt.axes([pos.x0, pos.y0+pos.height*0.8, pos.width,
+    ax_top = ax[9]
+    pos = ax_top.get_position()
+    ax_middle = plt.axes([pos.x0, pos.y0+pos.height*0.5, pos.width,
                          pos.height*factor])
-    ax_split.set_position([pos.x0, pos.y0+pos.height*0.5, pos.width,
+    ax_top.set_position([pos.x0, pos.y0+pos.height*0.8, pos.width,
                            pos.height*factor])
     ax_bottom = plt.axes([pos.x0, pos.y0, pos.width,
                          pos.height*factor])
-    axes_split = [ax_bottom, ax_split, ax_top]
     
-    for a in axes_split:
+    for a in [ax_bottom, ax_top, ax_middle]:
         fp.rm_top_right_lines(a)
     # plt.show()
     # TRACKING SCREENSHOT
@@ -675,10 +673,10 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, fgsz=(8, 12),
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
+    plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
     plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
-    plot_trajs_splitting_example(df, ax=ax_split, rtbins=np.linspace(45, 65, 2), ylabel='Position')
-    plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
+    plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2), ylabel='Position')
     # TRAJECTORY SPLITTING PRIOR
     trajs_splitting_prior(df=df, ax=ax[11], data_folder=data_folder)
     # TRAJECTORY SPLITTING STIMULUS
