@@ -186,7 +186,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         try:
             _, p2 = pearsonr(pop_a, pop_evidence)  # p2 = pvalue from pearson corr
             plist.append(p2)
-        except Exception:
+        except Exception:  # TODO: really??
             continue
             # return np.nan
         if p2 > pval:
@@ -320,33 +320,22 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     None.
 
     """
-    def plot_boxcar_rt(rt, ax, low_val=0, high_val=2):
-        # plot box representing stimulus duration
-        x_vals = np.linspace(-1, rt+5, num=100)
-        y_vals = [low_val]
-        for x in x_vals[:-1]:
-            if x <= rt:
-                y_vals.append(high_val)
-            else:
-                y_vals.append(low_val)
-        ax.step(x_vals, y_vals, color='k')
-        ax.fill_between(x_vals, y_vals, np.repeat(0, len(y_vals)),
-                        color='grey', alpha=0.6)
-
-    subject = subject
+    assert startfrom == 700, 'startfrom must be 700, which is the movement onset'
+    indx = (df.special_trial == 0) & (df.subjid == subject)
+    assert np.sum(indx) > 0, 'No trials for subject ' + subject + ' with special_trial == 0'
     lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
     evs = [0, 0.25, 0.5, 1]
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    medians = []
     for iev, ev in enumerate(evs):
-        indx = (df.special_trial == 0) & (df.subjid == subject)
-        if np.sum(indx) > 0:
-            matatmp =\
-                get_splitting_mat_data(df=df[indx], side=0, rtbin=rtbin,
-                                       rtbins=rtbins, coh1=ev, align='sound')
-            median_a = np.nanmedian(matatmp, axis=0) -\
-                 np.nanmedian(matatmp[:,startfrom-fix_per_offset_subtr:startfrom])
-            ax.plot(np.arange(matatmp.shape[1]) - startfrom,
-                    median_a, color=colormap[iev], label=lbl)
+        matatmp =\
+            get_splitting_mat_data(df=df[indx], side=0, rtbin=rtbin,
+                                    rtbins=rtbins, coh1=ev, align='sound')
+        median_plt = np.nanmedian(matatmp, axis=0) -\
+                np.nanmedian(matatmp[:,startfrom-fix_per_offset_subtr:startfrom])
+        ax.plot(np.arange(matatmp.shape[1]) - startfrom,
+                median_plt, color=colormap[iev], label=lbl)
+        medians.append(median_plt)
         
         if iev == 0:
             mat = matatmp
@@ -354,19 +343,30 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         else:
             mat = np.concatenate((mat, matatmp))
             evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-    ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
+    ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=startfrom)
+    ind_y = np.max([m[ind+startfrom] for m in medians])
     ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_ylim([-0.5, 3])
+    ax.set_ylim([-0.5, 4])
     # plot horizontal line
     ax.axhline(0, color='k', lw=0.5, ls='--')
     # plot stimulus duration as line at y=3
-    ax.plot(np.mean(rtbins)*np.array([1, 1]), [3, 3], color='k', lw=6)
-    ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
-             head_length=0.4)
+    mean_stim_dur = np.mean(df.loc[(df.special_trial == 0)&(df.subjid == subject)&
+                            (df.sound_len < rtbins[rtbin + 1])&
+                            (df.sound_len >= rtbins[rtbin])].sound_len)
+    # ax.plot([0, mean_stim_dur], [3.5, 3.5], color=(.7, .7, .7), lw=2)
+    col_face = [0.7, 0.7, 0.7, 0.4]
+    col_edge = [0.7, 0.7, 0.7, 0]
+    ax.fill_between([0, mean_stim_dur], [3.5, 3.5], [4, 4],
+                     facecolor=col_face, edgecolor=col_edge)
 
+    # plot arrow
+    al = 0.5
+    hl = 0.4
+    ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=5,
+             head_length=hl)
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
@@ -711,11 +711,11 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
     pos_ydim = ax_ydim.get_position()
-    ax_ydim.set_position([pos_ydim.x0-2*margin, pos_rawtr.y0,
+    ax_ydim.set_position([pos_ydim.x0-1.5*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
     fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # tune splitting time panels
-    factor_y = 0.4
+    factor_y = 0.5
     factor_x = 0.8
     plt.axes
     ax_cartoon = ax[5]
@@ -779,7 +779,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
     plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
-    plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2), ylabel='Position')
+    plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2),
+                                  ylabel='Position')
     # TRAJECTORY SPLITTING PRIOR
     trajs_splitting_prior(df=df, ax=ax[9], data_folder=data_folder)
     # TRAJECTORY SPLITTING STIMULUS
