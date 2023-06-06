@@ -238,7 +238,7 @@ def get_splitting_mat_data(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
 
 
 def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
-    ax=None, plot_kwargs={}, align='movement', coh=1):  # debugging purposes
+                            align='movement', coh=1):  # debugging purposes
     """
     Create matrix that will be used to compute splitting time.
     Version of function:
@@ -288,8 +288,8 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
     # discard all nan rows # this is not working because a is a copy!
     mata = mata[~np.isnan(mata).all(axis=1)]
 
-    if ax is not None:
-        ax.plot(np.nanmean(mata, axis=0), **plot_kwargs)
+    # if ax is not None:
+    #     ax.plot(np.nanmean(mata, axis=0), **plot_kwargs)
     return mata
 
 
