@@ -11,7 +11,6 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
-from utilsJ.Models import simul
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 
@@ -196,9 +195,108 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
             return i + 1
     return np.nan
 
+def get_splitting_mat_data(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
+                           align='movement', trajectory="trajectory_y",
+                           coh1=1):
+    """
+    Create matrix that will be used to compute splitting time.
+    Version of function:
+    utilsJ.Models.simul.when_did_split_dat
+
+    df= dataframe
+    side= {0,1} left or right,
+    rtbins
+    startfrom= index to start checking diffs. movement==700;
+    plot_kwargs: plot kwargs for ax.plot
+    align: whether to align 0 to movement(action) or sound
+    """
+    kw = {"trajectory": trajectory}
+
+    # TODO: addapt to align= sound
+    # get matrices
+    if side == 0:
+        coh1 = -coh1
+    else:
+        coh1 = coh1
+    dat = df.loc[
+        (df.sound_len < rtbins[rtbin + 1])
+        & (df.sound_len >= rtbins[rtbin])
+        # & (df.resp_len)
+    ]  # &(df.R_response==side)
+    if align == 'movement':
+        kw["align"] = "action"
+    elif align == 'sound':
+        kw["align"] = "sound"
+    idx = (dat.coh2 == coh1) & (dat.rewside == 0)
+    mata_0 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+    idx = (dat.coh2 == -coh1) & (dat.rewside == 1)
+    mata_1 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+    mata = np.vstack([mata_0*-1, mata_1])
+    mata = mata[~np.isnan(mata).all(axis=1)]
+
+    return mata
+
+
+def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
+    ax=None, plot_kwargs={}, align='movement', coh=1):  # debugging purposes
+    """
+    Create matrix that will be used to compute splitting time.
+    Version of function:
+    utilsJ.Models.simul.when_did_split_simul
+
+    """
+    def shortpad2(row, upto=1400, align='movement', pad_value=np.nan,
+                  pad_pre=0):
+        """pads nans to trajectories so it can be stacked in a matrix
+        align can be either 'movement' (0 is movement onset), or 'sound'
+        """
+        if align == 'movement':
+            missing = upto - row.traj.size
+            return np.pad(row.traj, ((0, missing)), "constant",
+                        constant_values=pad_value)
+        elif align == 'sound':
+            missing_pre = int(row.sound_len)
+            missing_after = upto - missing_pre - row.traj.size
+            return np.pad(row.traj, ((missing_pre, missing_after)), "constant",
+                        constant_values=(pad_pre, pad_value))
+    
+    
+    # get matrices
+    if side == 0:
+        coh1 = -coh
+    else:
+        coh1 = coh
+    shortpad_kws = {}
+    if align == 'sound':
+        shortpad_kws = dict(upto=1400, align='sound')
+    dat = df.loc[
+        (df.sound_len < rtbins[rtbin + 1])
+        & (df.sound_len >= rtbins[rtbin])
+        # & (df.resp_len) # ?
+    ]  # &(df.R_response==side) this goes out
+    idx = (dat.coh2 == coh1) & (dat.rewside == 0)
+    mata_0 = np.vstack(dat.loc[idx].apply(lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+    idx = (dat.coh2 == -coh1) & (dat.rewside == 1)
+    mata_1 = np.vstack(dat.loc[idx].apply(lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+    for mat in [mata_0, mata_1]:
+        for i_t, t in enumerate(mat):
+            ind_last_val = np.where(t == t[~np.isnan(t)][-1])[0][0]
+            mat[i_t, ind_last_val:-1] = np.repeat(t[ind_last_val],
+                                                  len(t)-ind_last_val-1)
+    mata = np.vstack([mata_0*-1, mata_1])
+
+    # discard all nan rows # this is not working because a is a copy!
+    mata = mata[~np.isnan(mata).all(axis=1)]
+
+    if ax is not None:
+        ax.plot(np.nanmean(mata, axis=0), **plot_kwargs)
+    return mata
+
+
 
 def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
-                                 subject='LE37', xlabel='', ylabel='', show_legend=False):
+                                 subject='LE37', xlabel='', ylabel='', show_legend=False,
+                                 startfrom=700, fix_per_offset_subtr=150):
     """
     Plot trajectories depending on COH and the corresponding Splitting Time as arrow.
 
@@ -237,32 +335,38 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
 
     subject = subject
     lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
-    colors = pl.cm.gist_yarg(np.linspace(0.4, 1, 3))
-    evs = [0.25, 0.5, 1]
-    mat = np.empty((1701,))
-    evl = np.empty(())
-    appb = True
+    evs = [0, 0.25, 0.5, 1]
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     for iev, ev in enumerate(evs):
         indx = (df.special_trial == 0) & (df.subjid == subject)
         if np.sum(indx) > 0:
-            _, matatmp, matb =\
-                simul.when_did_split_dat(df=df[indx], side=0, collapse_sides=True,
-                                         ax=ax, rtbin=rtbin, rtbins=rtbins,
-                                         color=colors[iev], label=lbl, coh1=ev,
-                                         align='sound')
-        if appb:
-            mat = matb
-            evl = np.repeat(0, matb.shape[0])
-            appb = False
-        mat = np.concatenate((mat, matatmp))
-        evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+            matatmp =\
+                get_splitting_mat_data(df=df[indx], side=0, rtbin=rtbin,
+                                       rtbins=rtbins, coh1=ev, align='sound')
+            median_a = np.nanmedian(matatmp, axis=0) -\
+                 np.nanmedian(matatmp[:,startfrom-fix_per_offset_subtr:startfrom])
+            ax.plot(np.arange(matatmp.shape[1]) - startfrom,
+                    median_a, color=colormap[iev], label=lbl)
+        
+        if iev == 0:
+            mat = matatmp
+            evl = np.repeat(0, matatmp.shape[0])
+        else:
+            mat = np.concatenate((mat, matatmp))
+            evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
     ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700)
     ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_ylim([-0.5, 3])
+    # plot horizontal line
+    ax.axhline(0, color='k', lw=0.5, ls='--')
+    # plot stimulus duration as line at y=3
+    ax.plot(np.mean(rtbins)*np.array([1, 1]), [3, 3], color='k', lw=6)
+    ax.arrow(ind, 3, 0, -2, color='k', width=1, head_width=5,
+             head_length=0.4)
+
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
@@ -270,7 +374,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=7, loc='upper right')
-
+    
     # if xlab:
         
     # if rtbins[-1] > 25:
@@ -382,10 +486,10 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
 
     # split time/subject by coherence
     if sim:
-        splitfun = simul.when_did_split_simul
+        splitfun = get_splitting_mat_simul
         df['traj'] = df.trajectory_y.values
     if not sim:
-        splitfun = simul.when_did_split_dat
+        splitfun = get_splitting_mat_data
     out_data = []
     for subject in df.subjid.unique():
         out_data_sbj = []
