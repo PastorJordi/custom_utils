@@ -502,30 +502,28 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
         else:
             for i in range(rtbins.size-1):
                 if collapse_sides:
-                    evs = [0.25, 0.5, 1]
-                    mat = np.empty((1701,))
-                    evl = np.empty(())
-                    appb = True
-                    for ev in evs:
+                    evs = [0, 0.25, 0.5, 1]
+                    for iev, ev in enumerate(evs):
                         if not sim:  # TODO: do this if within splitfun
-                            _, matatmp, matb =\
+                            matatmp =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
                                                    & (df.subjid == subject)],
                                          side=0, collapse_sides=True,
                                          rtbin=i, rtbins=rtbins, coh1=ev,
                                          trajectory=trajectory, align="sound")
                         if sim:
-                            _, matatmp, matb =\
+                            matatmp =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
                                                    & (df.subjid == subject)],
                                          side=0, rtbin=i, rtbins=rtbins, coh=ev,
                                          align="sound")
-                        if appb:
-                            mat = matb
-                            evl = np.repeat(0, matb.shape[0])
-                            appb = False
-                        mat = np.concatenate((mat, matatmp))
-                        evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+                        
+                        if iev == 0:
+                            mat = matatmp
+                            evl = np.repeat(0, matatmp.shape[0])
+                        else:
+                            mat = np.concatenate((mat, matatmp))
+                            evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                     if not sim:
                         current_split_index =\
                             get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
