@@ -320,7 +320,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     None.
 
     """
-    assert startfrom == 700, 'startfrom must be 700, which is the movement onset'
+    assert startfrom == 700, 'startfrom must be 700, which is the stimulus onset'
     indx = (df.special_trial == 0) & (df.subjid == subject)
     assert np.sum(indx) > 0, 'No trials for subject ' + subject + ' with special_trial == 0'
     lbl = 'RTs: ['+str(rtbins[rtbin])+'-'+str(rtbins[rtbin+1])+']'
@@ -721,8 +721,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     ax_cartoon = ax[5]
     ax_cartoon.axis('off')
     pos = ax_cartoon.get_position()
-    ax_cartoon.set_position([pos.x0+pos.width/4, pos.y0+pos.height*factor_y*1.1,
-                             pos.width, pos.height*0.6])
+    ax_cartoon.set_position([pos.x0+pos.width/8, pos.y0+pos.height*factor_y*0.9,
+                             pos.width*0.9, pos.height*0.9])
     ax_top = plt.axes([.1, .1, .1, .1])
     ax_middle = plt.axes([.2, .2, .1, .1])
     ax_bottom = plt.axes([.3, .3, .1, .1])

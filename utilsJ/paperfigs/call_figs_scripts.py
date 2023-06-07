@@ -50,7 +50,7 @@ elif pc_name == 'idibaps':
     TASK_IMG = '/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
         'figures/Figure_1/panel_a.png'
     ST_CARTOON_IMG ='/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
-        'figures/Figure_2/st_cartoon.png'
+        'figures/Figure_2/st_cartoon_violins.png'
 elif pc_name == 'idibaps_alex':
     SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
     DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
