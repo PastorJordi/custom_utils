@@ -19,6 +19,7 @@ sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
+from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figures_paper as fp
 matplotlib.rcParams['font.size'] = 10
 plt.rcParams['legend.title_fontsize'] = 8
@@ -70,8 +71,8 @@ elif pc_name == 'alex_CRM':
 
 plt.close('all')
 f1 = False
-f2 = True
-f3 = False
+f2 = False
+f3 = True
 f4 = False
 f5 = False
 f6 = False
@@ -114,11 +115,11 @@ if f1 or f2 or f3 or f5:
                                         traj_stamps=traj_stamps,
                                         fix_onset=fix_onset, com=com,
                                         sound_len=sound_len)
-    if f3 or f5:
+    if f5:
         subjid = df.subjid.values
         print('Computing CoMs')
         _, time_com, peak_com, com =\
-            edd2.com_detection(trajectories=traj_y, decision=decision,
+            fig_3.com_detection(trajectories=traj_y, decision=decision,
                                 time_trajs=time_trajs,
                                 com_threshold=com_threshold)
         print('Ended Computing CoMs')
@@ -137,13 +138,14 @@ if f1:
 if f2:
     print('Plotting Figure 2')
     fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
-                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG, st_cartoon_img=ST_CARTOON_IMG)
+                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
+                        st_cartoon_img=ST_CARTOON_IMG)
 
 # fig 3
 if f3:
     print('Plotting Figure 3')
-    fp.fig_3_CoMs(df=df, peak_com=peak_com, time_com=time_com)
-    fp.supp_com_marginal(df)
+    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, rat_com_img=RAT_COM_IMG)
+    fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
 if f5:

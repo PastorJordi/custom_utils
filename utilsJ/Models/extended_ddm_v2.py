@@ -29,6 +29,8 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 # import utilsJ
 from utilsJ.Behavior.plotting import binned_curve, tachometric, psych_curve,\
     com_heatmap_paper_marginal_pcom_side
+from utilsJ.paperfigs import figure_3 as fig_3
+
 # from simul import splitplot
 # import os
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
@@ -816,8 +818,8 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
     print('Ended loading data, start computing matrix')
     time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
                                 sound_len=sound_len)
-    com_trajs, _, _, comlist = com_detection(traj_y, decision, time_trajs,
-                                             com_threshold=8)
+    com_trajs, _, _, comlist = fig_3.com_detection(traj_y, decision, time_trajs,
+                                                   com_threshold=8)
     comlist = np.array(comlist)
     # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
     com = comlist
@@ -2546,39 +2548,6 @@ def cdfs(coh, sound_len, title=''):
     plt.title(str(title))
 
 
-def com_detection(trajectories, decision, time_trajs, com_threshold=5):
-    com_trajs = []
-    time_com = []
-    peak_com = []
-    comlist = []
-    for i_t, traj in enumerate(trajectories):
-        if len(traj) > 1 and max(np.abs(traj)) > 100:
-            comlist.append(False)
-        else:
-            if len(traj) > 1 and len(time_trajs[i_t]) > 1 and\
-              sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
-                traj -= np.nanmean(traj[
-                    (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
-                signed_traj = traj*decision[i_t]
-                if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
-                    peak = min(signed_traj[time_trajs[i_t] >= 0])
-                    if peak < 0:
-                        peak_com.append(peak)
-                    if peak < -com_threshold:
-                        com_trajs.append(traj)
-                        time_com.append(
-                            time_trajs[i_t]
-                            [np.where(signed_traj == peak)[0]][0])
-                        comlist.append(True)
-                    else:
-                        comlist.append(False)
-                else:
-                    comlist.append(False)
-            else:
-                comlist.append(False)
-    return com_trajs, time_com, peak_com, comlist
-
-
 def mean_com_traj_peak(trajectories, com, sound_len, decision, motor_time, zt,
                        time_trajs, val_at_updt=None, data=True, peak_cond=False):
     if data:
@@ -2813,7 +2782,7 @@ if __name__ == '__main__':
             print('Number of trials: ' + str(stim.shape[1]))
             time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
                                         sound_len=sound_len)
-            com_trajs, _, _, comlist = com_detection(
+            com_trajs, _, _, comlist = fig_3.com_detection(
                 traj_y, decision, time_trajs, com_threshold=8)
             comlist = np.array(comlist)
             # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
