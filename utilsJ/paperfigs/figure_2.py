@@ -84,17 +84,17 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Stimulus'
     if condition == 'choice_x_prior':
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
-                                 label='congruent'),
+                                 label='congr.'),
                           Line2D([0], [0], color=colormap[3], lw=2,
                                  label=''),
                           Line2D([0], [0], color=colormap[2], lw=2,
                                  label='0'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
                           Line2D([0], [0], color=colormap[0], lw=2,
-                                 label='incongruent')]
+                                 label='incongr.')]
         title = 'Prior'
-    ax[0].legend(handles=legendelements, title=title, loc='upper left',
-                labelspacing=.3)
+    ax[0].legend(handles=legendelements, loc='upper left', title=title,
+                labelspacing=.2)
     ax[1].set_xlabel(title)
     if condition == 'origidx':
         legendelements = []
@@ -373,7 +373,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         for i_l, lab in enumerate(labels):
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
-        ax.legend(handles=legendelements, fontsize=7, loc='upper right')
+        ax.legend(handles=legendelements, fontsize=7, loc='bottom right')
     
     # if xlab:
         
@@ -472,9 +472,9 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
     ax.set_xlabel('RT (ms)')
     # ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
-    ax.plot([0, 155], [0, 155], color='k')
-    ax.fill_between([0, 250], [0, 250], [0, 0],
-                    color='grey', alpha=0.6)
+    # ax.plot([0, 155], [0, 155], color='k')
+    ax.fill_between([0, 155], [0, 155], [0, 0],
+                    color='grey', alpha=0.2)
     ax.set_xlim(-5, 155)
     # plt.show()
 
