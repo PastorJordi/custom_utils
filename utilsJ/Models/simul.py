@@ -164,10 +164,12 @@ def when_did_split_dat(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
     ind = get_when_t(mata, matb, startfrom=startfrom)
 
     if ax is not None:
+        median_a = np.nanmedian(mata, axis=0) - np.nanmedian(mata[:,startfrom-300:startfrom])
         ax.plot(np.arange(mata.shape[1]) - startfrom,
-                np.nanmedian(mata, axis=0), color=color, label=label)
+                median_a, color=color, label=label)
+        median_b = np.nanmedian(matb, axis=0) - np.nanmedian(matb[:,startfrom-300:startfrom])
         ax.plot(np.arange(matb.shape[1]) - startfrom,
-                np.nanmedian(matb, axis=0), color=(0.8, 0.8, 0.8, 1.0),
+                median_b, color=(0.8, 0.8, 0.8, 1.0),
                 label=label)
     return ind, mata, matb
 

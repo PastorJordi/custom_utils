@@ -275,7 +275,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
     plt.gca().set_facecolor('white')
     if SAVEPLOTS:
         plt.gcf().savefig(f'{sv_folder}2e_Pcom_and_RT_distr.svg')
-    plt.show()
+    # plt.show()
 
 def f(df, average=False, sv_folder=None):
     """com matrix and marginal axes
