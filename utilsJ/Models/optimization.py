@@ -27,24 +27,24 @@ import os
 # from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
-    data_augmentation, get_data_and_matrix, com_detection, get_trajs_time
+    data_augmentation, get_data_and_matrix
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -684,7 +684,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE_FB))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e2):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -840,7 +840,7 @@ def get_lb():
     """
     lb_aff = 3
     lb_eff = 3
-    lb_t_a = 6
+    lb_t_a = 4
     lb_w_zt = 0
     lb_w_st = 0
     lb_e_bound = 0.3
@@ -849,7 +849,7 @@ def get_lb():
     lb_w_slope = 1e-6
     lb_a_bound = 0.1
     lb_1st_r = 25
-    lb_2nd_r = 1
+    lb_2nd_r = 25
     lb_leak = 0
     lb_mt_n = 1
     lb_mt_int = 120
@@ -882,8 +882,8 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.7
-    ub_mt_n = 40
+    ub_leak = 0.65
+    ub_mt_n = 30
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -914,8 +914,8 @@ def get_pub():
     pub_a_bound = 3
     pub_1st_r = 400
     pub_2nd_r = 400
-    pub_leak = 0.65
-    pub_mt_n = 30
+    pub_leak = 0.5
+    pub_mt_n = 25
     pub_mt_int = 320
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -960,11 +960,11 @@ def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
     cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 30
     # ~ min. action RT peak can't be < -150 ms
-    cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.5
+    cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.7
     # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
-    return np.bool_(cond4 + cond1 + cond5)
+    return np.bool_(cond4 + cond5)
 
 
 def gumbel_plotter():
@@ -1460,7 +1460,7 @@ if __name__ == '__main__':
                 print('p_mt_noise: '+str(parameters[13]))
                 print('p_MT_intercept: '+str(parameters[14]))
                 print('p_MT_slope: '+str(parameters[15]))
-                np.save(SV_FOLDER + 'parameters_MNLE_BADS_100LLHFB_' +
+                np.save(SV_FOLDER + 'parameters_MNLE_BADS' +
                         subject + '.npy', parameters)
             except Exception:
                 continue
