@@ -460,11 +460,11 @@ def mean_com_traj_simul(df_sim, ax):
         i_com = 0
         i_nocom = 0
         i_und_com = 0
-        mat_nocom_erase = np.empty((sum(~(raw_com))+200, max_ind))
+        mat_nocom_erase = np.empty((sum(~(raw_com))+50, max_ind))
         mat_nocom_erase[:] = np.nan
-        mat_com_erase = np.empty((sum(index_com)+200, max_ind))
+        mat_com_erase = np.empty((sum(index_com)+50, max_ind))
         mat_com_erase[:] = np.nan
-        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+200, max_ind))
+        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+50, max_ind))
         mat_com_und_erase[:] = np.nan
         for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
             if index_com[i_t+it_subs]:
@@ -740,6 +740,8 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
                                threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
+    fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
     mean_com_traj_simul(df_sim, ax=ax[9])
     fig.savefig(SV_FOLDER+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(SV_FOLDER+'fig5.png', dpi=400, bbox_inches='tight')
@@ -856,7 +858,11 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
             if ev == 1.01:
                 break
         val_traj = np.nanmean(val_traj_subs[i_ev, :])
+        std_mt = np.nanstd(val_traj_subs[i_ev, :]) /\
+            np.sqrt(len(subjects.unique()))
         val_vel = np.nanmean(val_vel_subs[i_ev, :])
+        std_vel_points = np.nanstd(val_vel_subs[i_ev, :]) /\
+            np.sqrt(len(subjects.unique()))
         mean_traj = np.nanmean(mat_trajs_subs[i_ev, :, :], axis=1)
         std_traj = np.std(mat_trajs_subs[i_ev, :, :], axis=1) /\
             np.sqrt(len(subjects.unique()))
@@ -869,8 +875,9 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
             xval = xvals_zt[i_ev]
         else:
             xval = ev
-        ax[2].scatter(xval, val_traj, color=colormap[i_ev], marker='o', s=25)
-        ax[3].scatter(xval, val_vel, color=colormap[i_ev], marker='o', s=25)
+        ax[2].errorbar(xval, val_traj, std_mt, color=colormap[i_ev], marker='o')
+        ax[3].errorbar(xval, val_vel, std_vel_points, color=colormap[i_ev],
+                       marker='o')
         if not prior:
             label = labels_coh[i_ev]
         if prior:
@@ -1478,8 +1485,8 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
         p_w_a_intercept = 0.056
         p_w_a_slope = -2e-5  # fixed
         p_a_bound = 2.6  # fixed
-        p_1st_readout = 40
-        p_2nd_readout = 80
+        p_1st_readout = 50
+        p_2nd_readout = 90
         p_leak = 0.5
         p_mt_noise = 35
         p_MT_intercept = 320
