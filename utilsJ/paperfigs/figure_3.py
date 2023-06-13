@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.pylab as pl
+import os
 import sys
 sys.path.append("/home/jordi/Repos/custom_utils")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -81,11 +82,11 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
         m_corr_norm.append(np.nanmean(m_corr_normal))
         std_corr.append(np.nanstd(m_corr_ev))
         std_corr_norm.append(np.nanstd(m_corr_normal))
-    ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o', label='Rev.')
+    ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o', label='Reversal')
     ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
-                marker='o', label='No-Rev.')
+                marker='o', label='No-Reversal')
     ax.set_xlabel('Stimulus evidence')
-    ax.set_ylabel('Fraction of correcting Rev.')
+    ax.set_ylabel('Fraction of correcting Reversal')
     ax.set_xticks([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
     ax.legend()
 
@@ -287,7 +288,7 @@ def com_statistics(peak_com, time_com, ax):
     ax2.hist(time_com, bins=80, range=(0, 500), color=COLOR_COM)
     ax2.set_xlabel('Deflection time (ms)', fontsize=8)
 
-def mean_com_traj(df, ax, condition='choice_x_prior', prior_limit=1,
+def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
                   after_correct_only=True, rt_lim=300,
                   trajectory='trajectory_y',
                   interpolatespace=np.linspace(-700000, 1000000, 1700)):
@@ -306,38 +307,46 @@ def mean_com_traj(df, ax, condition='choice_x_prior', prior_limit=1,
     all_trajs[:] = np.nan
     all_trajs_nocom = np.empty((len(df.subjid.unique()), 1700))
     all_trajs_nocom[:] = np.nan
+    if after_correct_only:
+        ac_cond = df.aftererror == False
+    else:
+        ac_cond = (df.aftererror*1) >= 0
+
+    common_cond = (df.norm_allpriors.abs() <= prior_limit) &\
+        ac_cond & (df.special_trial == 0) & (df.sound_len < rt_lim)
     for i_s, subj in enumerate(df.subjid.unique()):
         if subj == 'LE86':
             continue
-        if after_correct_only:
-            ac_cond = df.aftererror == False
+        com_data = data_folder + subj + '/traj_data/' + subj + '_traj_coms.npz'
+        os.makedirs(os.path.dirname(com_data), exist_ok=True)
+        if os.path.exists(com_data):
+            com_data = np.load(com_data, allow_pickle=True)
+            mat_com = com_data['mat_com']
+            mat_nocom = com_data['mat_nocom']
         else:
-            ac_cond = (df.aftererror*1) >= 0
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim) & (df.CoM_sugg == True) & (df.subjid == subj)
-        _, _, _, mat, _, _ =\
-            trajectory_thr(df.loc[indx_trajs], condition, bins,
-                           collapse_sides=True, thr=30, ax=None, ax_traj=ax,
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap=None, bintype=bintype,
-                           trajectory=trajectory, plotmt=False,
-                           color_tr=COLOR_COM, alpha_low=True)
-        median_traj = np.nanmedian(mat[0], axis=0)
+            indx_trajs = common_cond & (df.CoM_sugg == True) & (df.subjid == subj)
+            _, _, _, mat_com, _, _ =\
+                trajectory_thr(df.loc[indx_trajs], condition, bins,
+                            collapse_sides=True, thr=30, ax=None, ax_traj=ax,
+                            return_trash=True, error_kwargs=dict(marker='o'),
+                            cmap=None, bintype=bintype,
+                            trajectory=trajectory, plotmt=False,
+                            color_tr=COLOR_COM, alpha_low=True)
+            indx_trajs = common_cond & (df.CoM_sugg == False) & (df.subjid == subj)
+            _, _, _, mat_nocom, _, _ =\
+                trajectory_thr(df.loc[indx_trajs], condition, bins,
+                            collapse_sides=True, thr=30, ax=None, ax_traj=ax,
+                            return_trash=True, error_kwargs=dict(marker='o'),
+                            cmap=None, bintype=bintype,
+                            trajectory=trajectory, plotmt=False, plot_traj=False,
+                            alpha_low=True)
+            data = {'mat_com': mat_com, 'mat_nocom': mat_nocom}
+            np.savez(com_data, **data)
+        median_traj = np.nanmedian(mat_com[0], axis=0)
         all_trajs[i_s, :] = median_traj
         all_trajs[i_s, :] += -np.nanmean(median_traj[(interpolatespace > -100000) &
                                                      (interpolatespace < 0)])
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-                (df.sound_len < rt_lim) & (df.CoM_sugg == False) & (df.subjid == subj)
-        _, _, _, mat, _, _ =\
-            trajectory_thr(df.loc[indx_trajs], condition, bins,
-                           collapse_sides=True, thr=30, ax=None, ax_traj=ax,
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap=None, bintype=bintype,
-                           trajectory=trajectory, plotmt=False, plot_traj=False,
-                           alpha_low=True)
-        all_trajs_nocom[i_s, :] = np.nanmedian(mat[0], axis=0)
+        all_trajs_nocom[i_s, :] = np.nanmedian(mat_nocom[0], axis=0)
     mean_traj = np.nanmedian(all_trajs, axis=0)
     mean_traj += -np.nanmean(mean_traj[(interpolatespace > -100000) &
                                        (interpolatespace < 0)])
@@ -346,15 +355,15 @@ def mean_com_traj(df, ax, condition='choice_x_prior', prior_limit=1,
                                                    (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2,
-            label='No-Rev.')
+            label='No-Reversal')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='Detected Rev.'),
+                             label='Detected Reversal'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-Rev.')]
+                             label='No-Reversal')]
     ax.legend(handles=legendelements)
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(20, -20, "Detection threshold", color='r')
@@ -440,7 +449,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
     ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.2, comlist_rats, 'o',
                   color='grey', alpha=0.4)
     ax_inset.set_xticks([])
-    ax_inset.set_ylabel('P(CoM)')
+    ax_inset.set_ylabel('P(reversal)')
     # ax_inset.set_ylabel('# Rats')
 
 
@@ -470,9 +479,9 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         mt_com_mat[:, i_s] = counts_com/sum(counts_com)
         mt_nocom_mat[:, i_s] = counts_nocom/sum(counts_nocom)
     ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color=COLOR_COM,
-            label='Detected Rev.', linewidth=1.6)
+            label='Detected Reversal', linewidth=1.6)
     ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color=COLOR_NO_COM,
-            label='No-Rev.', linewidth=1.6)
+            label='No-Reversal', linewidth=1.6)
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
@@ -482,16 +491,7 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
     ax.set_ylabel('Density')
 
 
-def fig_3_CoMs(df, rat_com_img, sv_folder, figsize=(8, 10), com_th=8):
-    traj_y = df.trajectory_y.values
-    decision = np.array(df.R_response) * 2 - 1
-    time_trajs = df.time_trajs
-    _, time_com, peak_com, com = com_detection(trajectories=traj_y,
-                                               decision=decision,
-                                               time_trajs=time_trajs,
-                                               com_threshold=com_th)
-    com = np.array(com)  # new CoM list
-    df['CoM_sugg'] = com
+def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=8):
     fig, ax = plt.subplots(4, 3, figsize=figsize)
     ax = ax.flatten()
     ax[10].axis('off')
@@ -521,14 +521,29 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, figsize=(8, 10), com_th=8):
         else:
             axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    ax_mat = [ax[6], ax[7]]
-    fp.rm_top_right_lines(ax=ax[5])
-    plot_proportion_corr_com_vs_stim(df, ax[5])
-    fig2.e(df, sv_folder=sv_folder, ax=ax[8])
-    ax[8].set_ylim(0, 0.075)
-    plot_coms_single_session(df=df, ax=ax[1])
+    traj_y = df.trajectory_y.values
+    decision = np.array(df.R_response) * 2 - 1
+    time_trajs = df.time_trajs
+    _, time_com, peak_com, com = com_detection(trajectories=traj_y,
+                                               decision=decision,
+                                               time_trajs=time_trajs,
+                                               com_threshold=com_th)
+    com = np.array(com)  # new CoM list
+    df['CoM_sugg'] = com
+    # TRACKING IMAGE PANEL
     ax_trck = ax[0]
     tracking_image(ax_trck, rat_com_img=rat_com_img)
+    # TRAJECTORIES PANEL
+    plot_coms_single_session(df=df, ax=ax[1])
+    # REVERSAL PERCENTAGES PANEL
+    fp.rm_top_right_lines(ax=ax[2])
+    fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
+    # MEAN REVERSAL TRAJECTORY PANEL
+    mean_com_traj(df=df, ax=ax[3], data_folder=data_folder, condition='choice_x_prior',
+                  prior_limit=1, after_correct_only=True, rt_lim=400,
+                  trajectory='trajectory_y',
+                  interpolatespace=np.linspace(-700000, 1000000, 1700))
+    # REVERSAL STATISTICS PANELS
     ax_com_stat = ax[4]
     pos = ax_com_stat.get_position()
     ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
@@ -538,11 +553,11 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, figsize=(8, 10), com_th=8):
     ax_coms = [ax_com_stat, ax_inset]
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
-    fp.rm_top_right_lines(ax=ax[2])
-    mean_com_traj(df=df, ax=ax[3], condition='choice_x_prior',
-                  prior_limit=1, after_correct_only=True, rt_lim=400,
-                  trajectory='trajectory_y',
-                  interpolatespace=np.linspace(-700000, 1000000, 1700))
+    ax_mat = [ax[6], ax[7]]
+    fp.rm_top_right_lines(ax=ax[5])
+    plot_proportion_corr_com_vs_stim(df, ax[5])
+    fig2.e(df, sv_folder=sv_folder, ax=ax[8])
+    ax[8].set_ylim(0, 0.075)
     # plot Pcoms matrices
     n_subjs = len(df.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
@@ -578,7 +593,6 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, figsize=(8, 10), com_th=8):
         ax_i.set_xticks([0, 3, 6], ['L', '0', 'R'])
     for ax_i in [ax_mat[0]]:
         ax_i.set_ylabel('Stimulus Evidence')
-    fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
     fp.rm_top_right_lines(ax=ax[9])
     mt_distros(df=df, ax=ax[9])
     fig.savefig(sv_folder+'fig3.svg', dpi=400, bbox_inches='tight')

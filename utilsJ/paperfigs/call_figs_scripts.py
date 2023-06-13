@@ -144,7 +144,8 @@ if f2:
 # fig 3
 if f3:
     print('Plotting Figure 3')
-    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, rat_com_img=RAT_COM_IMG)
+    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                     rat_com_img=RAT_COM_IMG)
     fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
