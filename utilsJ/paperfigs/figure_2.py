@@ -399,6 +399,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
 
 def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
                           trajectory='trajectory_y', threshold=300):
+    # TODO: do analysis with equipopulated bins
     # split time/subject by prior
     ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "sound"}

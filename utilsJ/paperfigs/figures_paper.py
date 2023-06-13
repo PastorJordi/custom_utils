@@ -238,49 +238,36 @@ def binning_mt_prior(df, bins):
 
 
 def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
-                 fpsmin=29):
+                 fpsmin=29, num_bins_prior=5):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
-    # filter by frame rate
-    fr_cond = df.framerate >= fpsmin
     # common condition 
-    # TODO: put together all common conditions
+    # put together all common conditions: prior, reaction time and framerate
+    common_cond = ac_cond & (df.norm_allpriors.abs() <= prior_limit) &\
+        (df.sound_len < rt_lim) & (df.framerate >= fpsmin)
     # define bins, bin type, trajectory index and colormap depending on condition
     if condition == 'choice_x_coh':
         bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
         bintype = 'categorical'
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) & (df.sound_len < rt_lim) &\
-            fr_cond
+        indx_trajs = common_cond & (df.special_trial == 0) 
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
     elif condition == 'choice_x_prior':
-        # FIXME: bins should be define taking into account the filtered trials (indx_trajs)
-        # also, equipopulated bins should be done in the congruent-incongruent plane
-        import warnings
-        warnings.warn("The zt binning is not well done!")
+        indx_trajs = common_cond & (df.special_trial == 2)
         bins_zt = [-1.01]
-        percentiles = [0.5, 0.25, 0.25, 0.5]
-        for i_p, perc in enumerate(percentiles):
-            if i_p >= len(percentiles)/2:
-                bins_zt.append(df.norm_allpriors.abs().quantile(perc))
-            else:
-                bins_zt.append(-df.norm_allpriors.abs().quantile(perc))
+        percentiles = [1/num_bins_prior*i for i in range(1, num_bins_prior)]
+        for perc in percentiles:
+            bins_zt.append(df.loc[indx_trajs, 'choice_x_prior'].quantile(perc))
         bins_zt.append(1.01)
         bins = np.array(bins_zt)
         bintype = 'edges'
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 2) & (df.sound_len < rt_lim) &\
-            fr_cond
         n_iters = len(bins)-1
         colormap = pl.cm.copper(np.linspace(0., 1, n_iters))
     elif condition == 'origidx':
         bins = np.linspace(0, 1e3, num=6)
         bintype = 'edges'
         n_iters = len(bins) - 1
-        indx_trajs = (df.norm_allpriors.abs() <= prior_limit) &\
-            ac_cond & (df.special_trial == 0) &\
-            (df.sound_len < rt_lim) & fr_cond
+        indx_trajs = common_cond & (df.special_trial == 0)
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
 
@@ -771,6 +758,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     bins_zt = [1.01]
+    # TODO: fix issue with equipopulated bins
     for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
         if i_p < 3:
             bins_zt.append(df_sim.norm_allpriors.abs().quantile(perc))
@@ -1666,6 +1654,7 @@ def plot_mt_matrix_different_rtbins(df, small_rt=40, big_rt=120):
 
 def binning_mt(df):
     bins_zt = [-1.01]
+    # TODO: fix issue with equipopulated bins
     for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
         if i_p > 2:
             bins_zt.append(df.norm_allpriors.abs().quantile(perc))

@@ -44,6 +44,8 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
+    if condition == 'choice_x_prior':
+        df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     bins, _, indx_trajs, _, colormap =\
           fp.get_bin_info(df=df, condition=condition, prior_limit=prior_limit,
                           after_correct_only=after_correct_only,
@@ -59,7 +61,6 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         plot_bins = sorted(df.coh2.unique())
         ax.set_xlabel('Stimulus congruent evidence')
     elif condition == 'choice_x_prior':
-        df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
         ax.set_xlabel('Prior congruent evidence')
