@@ -17,37 +17,59 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
-def com_detection(trajectories, decision, time_trajs, com_threshold=5):
-    com_trajs = []
-    time_com = []
-    peak_com = []
-    comlist = []
-    for i_t, traj in enumerate(trajectories):
-        if len(traj) > 1 and max(np.abs(traj)) > 100:
-            comlist.append(False)
-        else:
-            if len(traj) > 1 and len(time_trajs[i_t]) > 1 and\
-              sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
-                traj -= np.nanmean(traj[
-                    (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
-                signed_traj = traj*decision[i_t]
-                if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
-                    peak = min(signed_traj[time_trajs[i_t] >= 0])
-                    if peak < 0:
-                        peak_com.append(peak)
-                    if peak < -com_threshold:
-                        com_trajs.append(traj)
-                        time_com.append(
-                            time_trajs[i_t]
-                            [np.where(signed_traj == peak)[0]][0])
-                        comlist.append(True)
+def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com_threshold=5):
+    com_trajs_all = []
+    time_com_all = []
+    peak_com_all = []
+    comlist_all = []
+    for subj in subjects:
+        print(subj)
+        com_data = data_folder + subj + '/traj_data/' + subj + '_detected_coms.npz'
+        os.makedirs(os.path.dirname(com_data), exist_ok=True)
+        if os.path.exists(com_data):
+            com_data = np.load(com_data, allow_pickle=True)
+            com_trajs = com_data['com_trajs'].tolist()
+            time_com = com_data['time_com'].tolist()
+            peak_com = com_data['peak_com'].tolist()
+            comlist = com_data['comlist'].tolist()
+        else:   
+            com_trajs = []
+            time_com = []
+            peak_com = []
+            comlist = []
+            for i_t, traj in enumerate(trajectories):
+                if len(traj) > 1 and max(np.abs(traj)) > 100:
+                    comlist.append(False)
+                else:
+                    if len(traj) > 1 and len(time_trajs[i_t]) > 1 and\
+                    sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
+                        traj -= np.nanmean(traj[
+                            (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
+                        signed_traj = traj*decision[i_t]
+                        if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
+                            peak = min(signed_traj[time_trajs[i_t] >= 0])
+                            if peak < 0:
+                                peak_com.append(peak)
+                            if peak < -com_threshold:
+                                com_trajs.append(traj)
+                                time_com.append(
+                                    time_trajs[i_t]
+                                    [np.where(signed_traj == peak)[0]][0])
+                                comlist.append(True)
+                            else:
+                                comlist.append(False)
+                        else:
+                            comlist.append(False)
                     else:
                         comlist.append(False)
-                else:
-                    comlist.append(False)
-            else:
-                comlist.append(False)
-    return com_trajs, time_com, peak_com, comlist
+                data = {'com_trajs': com_trajs, 'time_com': time_com, 'comlist': comlist,
+                        'peak_com': peak_com}
+                np.savez(com_data, **data)
+        com_trajs_all += com_trajs
+        time_com_all += time_com
+        peak_com_all += peak_com
+        comlist_all += comlist
+    return com_trajs_all, time_com_all, peak_com_all, comlist_all
 
 def plot_proportion_corr_com_vs_stim(df, ax=None):
     if ax is None:
@@ -321,8 +343,8 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
         os.makedirs(os.path.dirname(com_data), exist_ok=True)
         if os.path.exists(com_data):
             com_data = np.load(com_data, allow_pickle=True)
-            mat_com = com_data['mat_com']
-            mat_nocom = com_data['mat_nocom']
+            mat_com = com_data['mat_com'].item()
+            mat_nocom = com_data['mat_nocom'].item()
         else:
             indx_trajs = common_cond & (df.CoM_sugg == True) & (df.subjid == subj)
             _, _, _, mat_com, _, _ =\
@@ -524,11 +546,14 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     traj_y = df.trajectory_y.values
     decision = np.array(df.R_response) * 2 - 1
     time_trajs = df.time_trajs
-    _, time_com, peak_com, com = com_detection(trajectories=traj_y,
+    subjects = df.subjid.unique()
+    _, time_com, peak_com, com = com_detection(subjects=subjects,
+                                               trajectories=traj_y,
                                                decision=decision,
                                                time_trajs=time_trajs,
+                                               data_folder=data_folder,
                                                com_threshold=com_th)
-    com = np.array(com)  # new CoM list
+    com = np.array(com)
     df['CoM_sugg'] = com
     # TRACKING IMAGE PANEL
     ax_trck = ax[0]
@@ -553,12 +578,10 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     ax_coms = [ax_com_stat, ax_inset]
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
-    ax_mat = [ax[6], ax[7]]
+    # PROPORTION CORRECT COM VS STIM PANEL
     fp.rm_top_right_lines(ax=ax[5])
     plot_proportion_corr_com_vs_stim(df, ax[5])
-    fig2.e(df, sv_folder=sv_folder, ax=ax[8])
-    ax[8].set_ylim(0, 0.075)
-    # plot Pcoms matrices
+    # PCOM MATRICES
     n_subjs = len(df.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
@@ -577,22 +600,35 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat = [ax[6], ax[7]]
     ax_mat[0].set_title(pcomlabel_0)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
-    plt.sca(ax_mat[0])
-    plt.colorbar(im, fraction=0.04)
     ax_mat[1].set_title(pcomlabel_1)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
-    plt.sca(ax_mat[1])
-    cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(detected CoM)', rotation=270)
+    margin = 0.01
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticks([0, 3, 6], ['R', '0', 'L'])
-        ax_i.set_xticks([0, 3, 6], ['L', '0', 'R'])
-    for ax_i in [ax_mat[0]]:
-        ax_i.set_ylabel('Stimulus Evidence')
+        ax_i.set_yticks([0, 3, 6])
+        ax_i.set_yticklabels(['R', '0', 'L'])
+        ax_i.set_xticks([0, 3, 6])
+        ax_i.set_xticklabels(['R', '0', 'L'])
+        ax_i.set_ylim([-.5, 6.5])
+    pos = ax_mat[0].get_position()
+    ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
+                                pos.height])
+    pos = ax_mat[1].get_position()
+    ax_mat[1].set_position([pos.x0-5*margin, pos.y0, pos.width,
+                                pos.height])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.2, pos.y0,
+                                   pos.width/10, pos.height/2])
+    fig.colorbar(im, cax=pright_cbar_ax)
+    ax_mat[0].set_ylabel('Stimulus Evidence')
+    # COM PROB VERSUS REACTION TIME PANEL
+    fig2.e(df, sv_folder=sv_folder, ax=ax[8])
+    ax[8].set_ylim(0, 0.075)
+    ax[8].set_ylabel('p(detected Reversal)')
+    # MT DISTRIBUTIONS PANEL
     fp.rm_top_right_lines(ax=ax[9])
     mt_distros(df=df, ax=ax[9])
     fig.savefig(sv_folder+'fig3.svg', dpi=400, bbox_inches='tight')
