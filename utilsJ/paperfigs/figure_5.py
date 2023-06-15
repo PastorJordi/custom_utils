@@ -294,14 +294,15 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
             bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
     bins_zt.append(-1.01)
     bins_zt = bins_zt[::-1]
-    xvals_zt = [-1, -0.5, 0, 0.5, 1]
+    # xvals_zt = [-1, -0.5, 0, 0.5, 1]
+    xvals_zt = np.linspace(-1, 1, 7)
     signed_response = df_sim.R_response.values
     # df_sim['normallpriors'] = df_sim['allpriors'] /\
     #     np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
     if ax is None:
         fig, ax = plt.subplots(nrows=2, ncols=2)
         ax = ax.flatten()
-    labels_zt = ['inc.', ' ', '0', ' ', 'cong.']
+    labels_zt = ['inc.', ' ', ' ', '0', ' ', ' ', 'cong.']
     labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     if prior:
         bins_ref = bins_zt

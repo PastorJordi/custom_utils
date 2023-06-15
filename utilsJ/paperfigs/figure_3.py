@@ -542,12 +542,12 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     decision = np.array(df.R_response) * 2 - 1
     time_trajs = df.time_trajs
     subjects = df.subjid.unique()
-   time_com, peak_com, com = com_detection(subjects=subjects,
-                                           trajectories=traj_y,
-                                           decision=decision,
-                                           time_trajs=time_trajs,
-                                           data_folder=data_folder,
-                                           com_threshold=com_th)
+    time_com, peak_com, com = com_detection(subjects=subjects,
+                                            trajectories=traj_y,
+                                            decision=decision,
+                                            time_trajs=time_trajs,
+                                            data_folder=data_folder,
+                                            com_threshold=com_th)
     com = np.array(com)
     df['CoM_sugg'] = com
     # TRACKING IMAGE PANEL

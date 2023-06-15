@@ -227,19 +227,20 @@ if f5:
     resp_len = []
     time_trajs = []
     # actual plot
-    fig_5.fig_5_model(sv_folde=SV_FOLDER, data_folder=DATA_FOLDER,
+    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
                       coh=coh, sound_len=sound_len, zt=zt,
                       hit_model=hit_model, sound_len_model=reaction_time.astype(int),
                       decision_model=resp_fin, com=com, com_model=com_model,
                       com_model_detected=com_model_detected,
                       means=means, errors=errors, means_model=means_model,
-        errors_model=errors_model, df_sim=df_sim)
+                      errors_model=errors_model, df_sim=df_sim)
     fig, ax = plt.subplots(ncols=2, nrows=1)
     ax = ax.flatten()
     ax[0].set_title('Data')
-    fig_1.mt_matrix_ev_vs_zt(df, ax[0], silent_comparison=False, collapse_sides=True)
+    fig_1.mt_matrix_ev_vs_zt(df, ax[0], f=fig,
+                             silent_comparison=False, collapse_sides=True)
     ax[1].set_title('Model')
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], silent_comparison=False,
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], f=fig, silent_comparison=False,
                         collapse_sides=True)
     # fig.suptitle('DATA (top) vs MODEL (bottom)')
     fp.mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
