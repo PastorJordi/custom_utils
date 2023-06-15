@@ -119,7 +119,7 @@ if f1 or f2 or f3 or f5:
     if f5:
         subjid = df.subjid.values
         print('Computing CoMs')
-        _, time_com, peak_com, com =\
+        time_com, peak_com, com =\
             fig_3.com_detection(subjects=subjects, data_folder=DATA_FOLDER,
                                 trajectories=traj_y, decision=decision,
                                 time_trajs=time_trajs,
