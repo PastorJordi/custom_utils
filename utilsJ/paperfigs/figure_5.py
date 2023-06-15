@@ -186,7 +186,7 @@ def plot_pcom_matrices_model(df_sim, df_model, n_subjs, ax_mat, pos_ax_0, nbins=
 
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
-                                      new_data, data_folder):
+                                      new_data, save_new_data, data_folder):
     ax_cohs = np.array([ax[5], ax[7], ax[3]])
     ax_zt = np.array([ax[4], ax[6], ax[2]])
 
@@ -200,17 +200,20 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
     if sum(df_sim.special_trial == 2) > 0:
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             new_data=new_data, data_folder=data_folder,
+                            save_new_data=save_new_data,
                             median=True, prior=True, rt_lim=300)
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
+                            save_new_data=save_new_data,
                             data_folder=data_folder, median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                        save_new_data=save_new_data,
                         new_data=new_data, data_folder=data_folder,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
 
 
-def mean_com_traj_simul(df_sim, ax):
+def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     raw_com = df_sim.CoM_sugg.values
     index_com = df_sim.com_detected.values
     trajs_all = df_sim.trajectory_y.values
@@ -224,34 +227,48 @@ def mean_com_traj_simul(df_sim, ax):
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
-        it_subs = np.where(df_sim.subjid.values == subject)[0][0]
-        i_com = 0
-        i_nocom = 0
-        i_und_com = 0
-        mat_nocom_erase = np.empty((sum(~(raw_com))+50, max_ind))
-        mat_nocom_erase[:] = np.nan
-        mat_com_erase = np.empty((sum(index_com)+50, max_ind))
-        mat_com_erase[:] = np.nan
-        mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+50, max_ind))
-        mat_com_und_erase[:] = np.nan
-        for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
-            if index_com[i_t+it_subs]:
-                mat_com_erase[i_com, :len(traj)] = traj*dec[i_t+it_subs]
-                i_com += 1
-            if not index_com[i_t+it_subs] and not raw_com[i_t]:
-                mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t+it_subs]
-                i_nocom += 1
-            if raw_com[i_t+it_subs] and not index_com[i_t+it_subs]:
-                mat_com_und_erase[i_und_com, :len(traj)] = traj*dec[i_t+it_subs]
-                i_und_com += 1
-        mean_com_traj = np.nanmean(mat_com_erase, axis=0)
+        traj_data = data_folder+subject+'/sim_data/'+subject +\
+            '_mean_com_trajs'+'.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data) and not new_data:
+            traj_data = np.load(traj_data, allow_pickle=True)
+            mean_com_und_traj = traj_data['mean_com_und_traj']
+            mean_nocom_tr = traj_data['mean_nocom_tr']
+            mean_com_traj = traj_data['mean_com_traj']
+        else:
+            it_subs = np.where(df_sim.subjid.values == subject)[0][0]
+            i_com = 0
+            i_nocom = 0
+            i_und_com = 0
+            mat_nocom_erase = np.empty((sum(~(raw_com))+50, max_ind))
+            mat_nocom_erase[:] = np.nan
+            mat_com_erase = np.empty((sum(index_com)+50, max_ind))
+            mat_com_erase[:] = np.nan
+            mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+50, max_ind))
+            mat_com_und_erase[:] = np.nan
+            for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
+                if index_com[i_t+it_subs]:
+                    mat_com_erase[i_com, :len(traj)] = traj*dec[i_t+it_subs]
+                    i_com += 1
+                if not index_com[i_t+it_subs] and not raw_com[i_t]:
+                    mat_nocom_erase[i_nocom, :len(traj)] = traj*dec[i_t+it_subs]
+                    i_nocom += 1
+                if raw_com[i_t+it_subs] and not index_com[i_t+it_subs]:
+                    mat_com_und_erase[i_und_com, :len(traj)] = traj*dec[i_t+it_subs]
+                    i_und_com += 1
+            mean_com_traj = np.nanmean(mat_com_erase, axis=0)
+            mean_nocom_tr = np.nanmean(mat_nocom_erase, axis=0)
+            mean_com_und_traj = np.nanmean(mat_com_und_erase, axis=0)
+        if save_new_data:
+            data = {'mean_com_traj': mean_com_traj, 'mean_nocom_tr': mean_nocom_tr,
+                    'mean_com_und_traj': mean_com_und_traj}
+            np.savez(traj_data, **data)
         matrix_com_tr[i_s, :len(mean_com_traj)] = mean_com_traj
+        matrix_nocom_tr[i_s, :len(mean_nocom_tr)] = mean_nocom_tr
+        matrix_com_und_tr[i_s, :len(mean_com_und_traj)] = mean_com_und_traj
         ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color=fig_3.COLOR_COM,
                 linewidth=1.4, alpha=0.25)
-        mean_nocom_tr = np.nanmean(mat_nocom_erase, axis=0)
-        matrix_nocom_tr[i_s, :len(mean_nocom_tr)] = mean_nocom_tr
-        mean_com_und_traj = np.nanmean(mat_com_und_erase, axis=0)
-        matrix_com_und_tr[i_s, :len(mean_com_und_traj)] = mean_com_und_traj
     mean_com_traj = np.nanmean(matrix_com_tr, axis=0)
     mean_nocom_traj = np.nanmean(matrix_nocom_tr, axis=0)
     mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
@@ -276,8 +293,8 @@ def mean_com_traj_simul(df_sim, ax):
     ax.text(200, -16, "Detection threshold", color='r')
 
 
-def traj_cond_coh_simul(df_sim, data_folder, new_data, ax=None, median=True, prior=True,
-                        prior_lim=1, rt_lim=200):
+def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
+                        ax=None, median=True, prior=True, prior_lim=1, rt_lim=200):
     # TODO: save each matrix? or save the mean and std
     df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
@@ -395,9 +412,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, ax=None, median=True, pri
                 mat_vel_subs[i_ev, :len(mean_vel), i_s] = mean_vel
             val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
             val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
-            data = {'val_traj_subs': val_traj_subs, 'val_vel_subs': val_vel_subs,
-                    'mat_trajs_subs': mat_trajs_subs, 'mat_vel_subs': mat_vel_subs}
-            np.savez(traj_data, **data)
+            if save_new_data:
+                data = {'val_traj_subs': val_traj_subs, 'val_vel_subs': val_vel_subs,
+                        'mat_trajs_subs': mat_trajs_subs, 'mat_vel_subs': mat_vel_subs}
+                np.savez(traj_data, **data)
     for i_ev, ev in enumerate(bins_ref):
         if prior:
             if ev == 1.01:
@@ -469,7 +487,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, ax=None, median=True, pri
     ax[3].set_ylabel('Peak (pixels/ms)', fontsize=8)
 
 
-def fig_5_model(sv_folder, data_folder, new_data,
+def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                 coh, sound_len, hit_model, sound_len_model, zt,
                 decision_model, com, com_model, com_model_detected,
                 df_sim, means, errors, means_model, errors_model, inset_sz=.06,
@@ -520,6 +538,7 @@ def fig_5_model(sv_folder, data_folder, new_data,
     fig_3.mt_distros(df=df_sim, ax=ax[12])
     # plot trajs and MT conditioned on stim/prior
     plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=new_data,
+                                      save_new_data=save_new_data,
                                       inset_sz=inset_sz, data_folder=data_folder,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
@@ -530,6 +549,7 @@ def fig_5_model(sv_folder, data_folder, new_data,
     # plot mean com traj
     fig.savefig(sv_folder+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig5.png', dpi=400, bbox_inches='tight')
-    mean_com_traj_simul(df_sim, ax=ax[9])
+    mean_com_traj_simul(df_sim, ax=ax[9], data_folder=data_folder, new_data=new_data,
+                        save_new_data=save_new_data)
     fig.savefig(sv_folder+'fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig5.png', dpi=400, bbox_inches='tight')

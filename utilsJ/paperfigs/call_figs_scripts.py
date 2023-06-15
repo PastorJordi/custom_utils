@@ -85,7 +85,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE42']
+    subjects = ['LE42', 'LE85', 'LE86']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -154,6 +154,7 @@ if f3:
 if f5:
     simulate = False
     with_fb = False
+    save_new_data = True
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     n_sil = 0
@@ -229,7 +230,7 @@ if f5:
     time_trajs = []
     # actual plot
     fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate,
+                      new_data=simulate, save_new_data=save_new_data,
                       coh=coh, sound_len=sound_len, zt=zt,
                       hit_model=hit_model, sound_len_model=reaction_time.astype(int),
                       decision_model=resp_fin, com=com, com_model=com_model,
