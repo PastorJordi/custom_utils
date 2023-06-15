@@ -20,6 +20,7 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
+from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figures_paper as fp
 matplotlib.rcParams['font.size'] = 10
 plt.rcParams['legend.title_fontsize'] = 8
@@ -84,6 +85,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
+    subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -111,9 +113,9 @@ if f1 or f2 or f3 or f5:
     trial_index = np.array(df.origidx)
     resp_len = np.array(df.resp_len)
     time_trajs = edd2.get_trajs_time(resp_len=resp_len,
-                                        traj_stamps=traj_stamps,
-                                        fix_onset=fix_onset, com=com,
-                                        sound_len=sound_len)
+                                     traj_stamps=traj_stamps,
+                                     fix_onset=fix_onset, com=com,
+                                     sound_len=sound_len)
     if f5:
         subjid = df.subjid.values
         print('Computing CoMs')
@@ -225,12 +227,13 @@ if f5:
     resp_len = []
     time_trajs = []
     # actual plot
-    fp.fig_5_model(coh=coh, sound_len=sound_len, zt=zt,
-                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                   decision_model=resp_fin, com=com, com_model=com_model,
-                   com_model_detected=com_model_detected,
-                   means=means, errors=errors, means_model=means_model,
-                   errors_model=errors_model, df_sim=df_sim)
+    fig_5.fig_5_model(sv_folde=SV_FOLDER, data_folder=DATA_FOLDER,
+                      coh=coh, sound_len=sound_len, zt=zt,
+                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                      decision_model=resp_fin, com=com, com_model=com_model,
+                      com_model_detected=com_model_detected,
+                      means=means, errors=errors, means_model=means_model,
+        errors_model=errors_model, df_sim=df_sim)
     fig, ax = plt.subplots(ncols=2, nrows=1)
     ax = ax.flatten()
     ax[0].set_title('Data')
