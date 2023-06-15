@@ -18,9 +18,9 @@ from statsmodels.stats.proportion import proportion_confint
 # from scipy import interpolate
 # import shutil
 
-sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -681,7 +681,7 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt,
                             median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
-                        prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1))
+                        prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
 
 
 def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
@@ -726,7 +726,7 @@ def fig_5_model(coh, sound_len, hit_model, sound_len_model, zt,
     plot_pcom_matrices_model(df_sim=df_sim, df_model=df_model, n_subjs=n_subjs,
                              ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins)
     # MT matrix vs stim/prior
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], silent_comparison=False, collapse_sides=True)
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], f=fig, silent_comparison=False, collapse_sides=True)
     ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
                          pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
     # MT distributions
@@ -768,14 +768,14 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
             bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
     bins_zt.append(-1.01)
     bins_zt = bins_zt[::-1]
-    xvals_zt = [-1, -0.666, -0.333, 0, 0.333, 0.666, 1]
+    xvals_zt = [-1, -0.5, 0, 0.5, 1]
     signed_response = df_sim.R_response.values
-    df_sim['normallpriors'] = df_sim['allpriors'] /\
-        np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
+    # df_sim['normallpriors'] = df_sim['allpriors'] /\
+    #     np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
     if ax is None:
         fig, ax = plt.subplots(nrows=2, ncols=2)
         ax = ax.flatten()
-    labels_zt = ['inc.', ' ', ' ', '0', ' ', ' ', 'cong.']
+    labels_zt = ['inc.', ' ', '0', ' ', 'cong.']
     labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     if prior:
         bins_ref = bins_zt
@@ -807,10 +807,10 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
                     (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
                     (subjects == subject)
             if prior:
-                if ev == 1.01:
+                if i_ev == len(bins_ref)-1:
                     break
-                index = (df_sim.normallpriors.values >= bins_zt[i_ev]) *\
-                    (df_sim.normallpriors.values < bins_zt[i_ev + 1]) *\
+                index = (df_sim.normallpriors.values >= bins_ref[i_ev]) *\
+                    (df_sim.normallpriors.values < bins_ref[i_ev + 1]) *\
                     (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
                     (subjects == subject)
                 if sum(index) == 0:
@@ -1976,6 +1976,42 @@ def fig_trajs_model_4(trajs_model, df, reaction_time):
                                             time_traj[-1]))
                     j += 1
                     pl = False
+
+
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
+    fig, ax = plt.subplots(4, 4)
+    if diff_col:
+        colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    else:
+        colors = ['k' for _ in range(len(subjects))]
+    ax = ax.flatten()
+    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
+              't aff', 't eff', 'tAction', 'intercept AI',
+              'slope AI', 'AI bound', 'DV weight 1st readout',
+              'DV weight 2nd readout', 'leak', 'MT noise std',
+              'MT offset', 'MT slope T.I.']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_mat[:, i_s] = conf
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h')
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s]*5,
+                           0.05*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+        else:
+            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h')
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s],
+                           0.1*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' ms'))
+            ax[i].set_xlabel(labels[i])
 
 
 def mt_vs_ti_data_comparison(df, df_sim):
