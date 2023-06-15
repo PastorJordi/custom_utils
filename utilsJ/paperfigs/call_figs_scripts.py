@@ -118,7 +118,8 @@ if f1 or f2 or f3 or f5:
         subjid = df.subjid.values
         print('Computing CoMs')
         _, time_com, peak_com, com =\
-            fig_3.com_detection(trajectories=traj_y, decision=decision,
+            fig_3.com_detection(subjects=subjects, data_folder=DATA_FOLDER,
+                                trajectories=traj_y, decision=decision,
                                 time_trajs=time_trajs,
                                 com_threshold=com_threshold)
         print('Ended Computing CoMs')
