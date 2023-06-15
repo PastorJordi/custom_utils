@@ -185,7 +185,8 @@ def plot_pcom_matrices_model(df_sim, df_model, n_subjs, ax_mat, pos_ax_0, nbins=
     cbar.set_label('p(detected CoM)', rotation=270)
 
 
-def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy):
+def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
+                                      new_data, data_folder):
     ax_cohs = np.array([ax[5], ax[7], ax[3]])
     ax_zt = np.array([ax[4], ax[6], ax[2]])
 
@@ -198,12 +199,14 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
     ax_zt = np.insert(ax_zt, 3, ax_inset)
     if sum(df_sim.special_trial == 2) > 0:
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
+                            new_data=new_data, data_folder=data_folder,
                             median=True, prior=True, rt_lim=300)
     else:
         print('No silent trials')
-        traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt,
-                            median=True, prior=True)
+        traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
+                            data_folder=data_folder, median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                        new_data=new_data, data_folder=data_folder,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
 
 
@@ -273,7 +276,7 @@ def mean_com_traj_simul(df_sim, ax):
     ax.text(200, -16, "Detection threshold", color='r')
 
 
-def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
+def traj_cond_coh_simul(df_sim, data_folder, new_data, ax=None, median=True, prior=True,
                         prior_lim=1, rt_lim=200):
     # TODO: save each matrix? or save the mean and std
     df_sim = df_sim[df_sim.sound_len >= 0]
@@ -319,67 +322,82 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     if prior:
         val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
+        label_save = 'prior'
     else:
         val_traj_subs = np.empty((len(bins_ref), len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref), len(subjects.unique())))
+        label_save = 'stim'
     for i_s, subject in enumerate(subjects.unique()):
-        vals_thr_traj = []
-        vals_thr_vel = []
-        lens = []
-        for i_ev, ev in enumerate(bins_ref):
-            if not prior:
-                index = (df_sim.choice_x_coh.values == ev) *\
-                    (df_sim.normallpriors.abs() <= prior_lim) *\
-                    (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
-                    (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
-                    (subjects == subject)
-            if prior:
-                if i_ev == len(bins_ref)-1:
-                    break
-                index = (df_sim.normallpriors.values >= bins_ref[i_ev]) *\
-                    (df_sim.normallpriors.values < bins_ref[i_ev + 1]) *\
-                    (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
-                    (subjects == subject)
-                if sum(index) == 0:
-                    continue
-            lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
-            traj_all = np.empty((sum(index), max_mt))
-            traj_all[:] = np.nan
-            vel_all = np.empty((sum(index), max_mt))
-            vel_all[:] = np.nan
-            for tr in range(sum(index)):
-                vals_traj = df_sim.traj[index].values[tr] *\
-                    (signed_response[index][tr]*2 - 1)
-                if sum(vals_traj) == 0:
-                    continue
-                vals_traj = np.concatenate((vals_traj,
-                                            np.repeat(75, max_mt-len(vals_traj))))
-                vals_vel = df_sim.traj_d1[index].values[tr] *\
-                    (signed_response[index][tr]*2 - 1)
-                vals_vel = np.diff(vals_traj)
-                traj_all[tr, :len(vals_traj)] = vals_traj
-                vel_all[tr, :len(vals_vel)] = vals_vel
-            try:
-                index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
-                                     > traj_all.shape[0] - 50)[0][0]
-                mean_traj = func_final(traj_all[:, :index_vel], axis=0)
-                std_traj = np.nanstd(traj_all[:, :index_vel],
-                                     axis=0) / np.sqrt(len(subjects.unique()))
-                std_traj = 0
-            except Exception:
-                mean_traj = func_final(traj_all, axis=0)
-                std_traj = np.nanstd(traj_all, axis=0) / np.sqrt(len(subjects.unique()))
-                std_traj = 0
-            val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
-            vals_thr_traj.append(val_traj)
-            mean_vel = func_final(vel_all, axis=0)
-            std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
-            val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
-            vals_thr_vel.append(val_vel)
-            mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
-            mat_vel_subs[i_ev, :len(mean_vel), i_s] = mean_vel
-        val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
-        val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
+        traj_data = data_folder+subject+'/sim_data/'+subject +\
+            '_traj_sim_pos_'+label_save+'.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
+        if os.path.exists(traj_data) and not new_data:
+            traj_data = np.load(traj_data, allow_pickle=True)
+            val_traj_subs = traj_data['val_traj_subs']
+            val_vel_subs = traj_data['val_vel_subs']
+            mat_trajs_subs = traj_data['mat_trajs_subs']
+            mat_vel_subs = traj_data['mat_vel_subs']
+        else:
+            vals_thr_traj = []
+            vals_thr_vel = []
+            lens = []
+            for i_ev, ev in enumerate(bins_ref):
+                if not prior:
+                    index = (df_sim.choice_x_coh.values == ev) *\
+                        (df_sim.normallpriors.abs() <= prior_lim) *\
+                        (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
+                        (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                        (subjects == subject)
+                if prior:
+                    if i_ev == len(bins_ref)-1:
+                        break
+                    index = (df_sim.normallpriors.values >= bins_ref[i_ev]) *\
+                        (df_sim.normallpriors.values < bins_ref[i_ev + 1]) *\
+                        (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                        (subjects == subject)
+                    if sum(index) == 0:
+                        continue
+                lens.append(max([len(t) for t in df_sim.trajectory_y[index].values]))
+                traj_all = np.empty((sum(index), max_mt))
+                traj_all[:] = np.nan
+                vel_all = np.empty((sum(index), max_mt))
+                vel_all[:] = np.nan
+                for tr in range(sum(index)):
+                    vals_traj = df_sim.traj[index].values[tr] *\
+                        (signed_response[index][tr]*2 - 1)
+                    if sum(vals_traj) == 0:
+                        continue
+                    vals_traj = np.concatenate((vals_traj,
+                                                np.repeat(75, max_mt-len(vals_traj))))
+                    vals_vel = df_sim.traj_d1[index].values[tr] *\
+                        (signed_response[index][tr]*2 - 1)
+                    vals_vel = np.diff(vals_traj)
+                    traj_all[tr, :len(vals_traj)] = vals_traj
+                    vel_all[tr, :len(vals_vel)] = vals_vel
+                try:
+                    index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
+                                         > traj_all.shape[0] - 50)[0][0]
+                    mean_traj = func_final(traj_all[:, :index_vel], axis=0)
+                    std_traj = np.nanstd(traj_all[:, :index_vel],
+                                         axis=0) / np.sqrt(len(subjects.unique()))
+                except Exception:
+                    mean_traj = func_final(traj_all, axis=0)
+                    std_traj = np.nanstd(traj_all, axis=0) /\
+                        np.sqrt(len(subjects.unique()))
+                val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
+                vals_thr_traj.append(val_traj)
+                mean_vel = func_final(vel_all, axis=0)
+                std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
+                val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
+                vals_thr_vel.append(val_vel)
+                mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
+                mat_vel_subs[i_ev, :len(mean_vel), i_s] = mean_vel
+            val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
+            val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
+            data = {'val_traj_subs': val_traj_subs, 'val_vel_subs': val_vel_subs,
+                    'mat_trajs_subs': mat_trajs_subs, 'mat_vel_subs': mat_vel_subs}
+            np.savez(traj_data, **data)
     for i_ev, ev in enumerate(bins_ref):
         if prior:
             if ev == 1.01:
@@ -396,8 +414,6 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
         mean_vel = np.nanmean(mat_vel_subs[i_ev, :, :], axis=1)
         std_vel = np.std(mat_vel_subs[i_ev, :, :], axis=1) /\
             np.sqrt(len(subjects.unique()))
-        std_vel = 0
-        std_traj = 0
         if prior:
             xval = xvals_zt[i_ev]
         else:
@@ -453,7 +469,7 @@ def traj_cond_coh_simul(df_sim, ax=None, median=True, prior=True,
     ax[3].set_ylabel('Peak (pixels/ms)', fontsize=8)
 
 
-def fig_5_model(sv_folder, data_folder,
+def fig_5_model(sv_folder, data_folder, new_data,
                 coh, sound_len, hit_model, sound_len_model, zt,
                 decision_model, com, com_model, com_model_detected,
                 df_sim, means, errors, means_model, errors_model, inset_sz=.06,
@@ -503,7 +519,8 @@ def fig_5_model(sv_folder, data_folder,
     # MT distributions
     fig_3.mt_distros(df=df_sim, ax=ax[12])
     # plot trajs and MT conditioned on stim/prior
-    plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, inset_sz=inset_sz,
+    plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=new_data,
+                                      inset_sz=inset_sz, data_folder=data_folder,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],

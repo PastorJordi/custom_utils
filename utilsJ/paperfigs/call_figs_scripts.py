@@ -152,6 +152,7 @@ if f3:
 
 # fig 5 (model)
 if f5:
+    simulate = False
     with_fb = False
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
@@ -179,7 +180,7 @@ if f5:
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=False)
+                                          subject_list=subjects, subjid=subjid, simulate=simulate)
     # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
     # basic_statistics(com, com_model_detected)  # com
     # basic_statistics(hit, hit_model)  # hit
@@ -228,6 +229,7 @@ if f5:
     time_trajs = []
     # actual plot
     fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                      new_data=simulate,
                       coh=coh, sound_len=sound_len, zt=zt,
                       hit_model=hit_model, sound_len_model=reaction_time.astype(int),
                       decision_model=resp_fin, com=com, com_model=com_model,
