@@ -17,7 +17,8 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
-def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com_threshold=5):
+def com_detection(subjects, trajectories, decision, time_trajs_all,
+                  subjid, data_folder, com_threshold=5):
     time_com_all = []
     peak_com_all = []
     comlist_all = []
@@ -34,7 +35,9 @@ def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com
             time_com = []
             peak_com = []
             comlist = []
-            for i_t, traj in enumerate(trajectories):
+            index = subjid == subj
+            time_trajs = time_trajs_all[index]
+            for i_t, traj in enumerate(trajectories[index]):
                 if len(traj) > 1 and max(np.abs(traj)) > 100:
                     comlist.append(False)
                 else:
@@ -42,7 +45,7 @@ def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com
                     sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
                         traj -= np.nanmean(traj[
                             (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
-                        signed_traj = traj*decision[i_t]
+                        signed_traj = traj*decision[index][i_t]
                         if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
                             peak = min(signed_traj[time_trajs[i_t] >= 0])
                             if peak < 0:
@@ -545,7 +548,8 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     time_com, peak_com, com = com_detection(subjects=subjects,
                                             trajectories=traj_y,
                                             decision=decision,
-                                            time_trajs=time_trajs,
+                                            subjid=df.subjid.values,
+                                            time_trajs_all=time_trajs,
                                             data_folder=data_folder,
                                             com_threshold=com_th)
     com = np.array(com)

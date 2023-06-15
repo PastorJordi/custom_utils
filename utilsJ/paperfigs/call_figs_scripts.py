@@ -122,7 +122,8 @@ if f1 or f2 or f3 or f5:
         time_com, peak_com, com =\
             fig_3.com_detection(subjects=subjects, data_folder=DATA_FOLDER,
                                 trajectories=traj_y, decision=decision,
-                                time_trajs=time_trajs,
+                                subjid=subjid,
+                                time_trajs_all=time_trajs,
                                 com_threshold=com_threshold)
         print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
@@ -154,7 +155,7 @@ if f3:
 if f5:
     simulate = False
     with_fb = False
-    save_new_data = True
+    save_new_data = False
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     n_sil = 0

@@ -336,6 +336,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                                len(subjects.unique())))
     mat_vel_subs = np.empty((len(bins_ref), max_mt,
                              len(subjects.unique())))
+    mat_trajs_indsub = np.empty((len(bins_ref), max_mt))
+    mat_vel_indsub = np.empty((len(bins_ref), max_mt))
     if prior:
         val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
@@ -353,8 +355,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
             traj_data = np.load(traj_data, allow_pickle=True)
             val_traj_subs = traj_data['val_traj_subs']
             val_vel_subs = traj_data['val_vel_subs']
-            mat_trajs_subs = traj_data['mat_trajs_subs']
-            mat_vel_subs = traj_data['mat_vel_subs']
+            mat_trajs_indsub = traj_data['mat_trajs_indsub']
+            mat_vel_indsub = traj_data['mat_vel_indsub']
         else:
             vals_thr_traj = []
             vals_thr_vel = []
@@ -408,14 +410,17 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                 std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
                 val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
                 vals_thr_vel.append(val_vel)
-                mat_trajs_subs[i_ev, :len(mean_traj), i_s] = mean_traj
-                mat_vel_subs[i_ev, :len(mean_vel), i_s] = mean_vel
+                mat_trajs_indsub[i_ev, :len(mean_traj)] = mean_traj
+                mat_vel_indsub[i_ev, :len(mean_vel)] = mean_vel
             val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
             val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
             if save_new_data:
-                data = {'val_traj_subs': val_traj_subs, 'val_vel_subs': val_vel_subs,
-                        'mat_trajs_subs': mat_trajs_subs, 'mat_vel_subs': mat_vel_subs}
+                data = {'mat_trajs_indsub': mat_trajs_indsub,
+                        'mat_vel_indsub': mat_vel_indsub,
+                        'vals_thr_traj': vals_thr_traj, 'vals_thr_vel': vals_thr_vel}
                 np.savez(traj_data, **data)
+            mat_vel_subs[:, :, i_s] = mat_trajs_indsub
+            mat_vel_subs[:, :, i_s] = mat_vel_indsub
     for i_ev, ev in enumerate(bins_ref):
         if prior:
             if ev == 1.01:
