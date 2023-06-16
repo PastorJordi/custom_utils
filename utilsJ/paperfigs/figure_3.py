@@ -8,7 +8,7 @@ sys.path.append("/home/jordi/Repos/custom_utils")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 import utilsJ.paperfigs.fig2 as fig2
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import tachometric, com_heatmap, trajectory_thr
@@ -17,12 +17,11 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
-def com_detection(df, data_folder, com_threshold=5, rerun=False):
+def com_detection(df, data_folder, com_threshold=5, rerun=True):
     trajectories = df.trajectory_y.values
     decision = np.array(df.R_response.values) * 2 - 1
     time_trajs = df.time_trajs.values
     subjects = df.subjid.unique()
-    com_trajs_all = []
     time_com_all = []
     peak_com_all = []
     comlist_all = []
@@ -66,8 +65,7 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False):
                             comlist.append(False)
                     else:
                         comlist.append(False)
-                data = {'time_com': time_com, 'comlist': comlist,
-                        'peak_com': peak_com}
+                data = {'time_com': time_com, 'comlist': comlist, 'peak_com': peak_com}
                 np.savez(com_data, **data)
         time_com_all += time_com
         peak_com_all += peak_com
@@ -112,7 +110,8 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
                 marker='o', label='No-Reversal')
     ax.set_xlabel('Stimulus evidence')
     ax.set_ylabel('Fraction of correcting Reversal')
-    ax.set_xticks([0, 0.25, 0.5, 1], ['0', '0.25', '0.5', '1'])
+    ax.set_xticks([0, 0.25, 0.5, 1])
+    ax.set_xticklabels(['0', '0.25', '0.5', '1'])
     ax.legend()
 
 

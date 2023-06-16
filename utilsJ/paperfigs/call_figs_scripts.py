@@ -14,7 +14,7 @@ import sys
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-# sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
@@ -22,7 +22,7 @@ from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figures_paper as fp
-matplotlib.rcParams['font.size'] = 10
+matplotlib.rcParams['font.size'] = 10   
 plt.rcParams['legend.title_fontsize'] = 8
 plt.rcParams['legend.fontsize'] = 8
 plt.rcParams['xtick.labelsize']= 8
@@ -33,7 +33,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'idibaps'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -73,9 +73,9 @@ elif pc_name == 'alex_CRM':
 plt.close('all')
 f1 = False
 f2 = False
-f3 = False
+f3 = True
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 com_threshold = 8
@@ -85,7 +85,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE42', 'LE85', 'LE86']
+    # subjects = ['LE42', 'LE85', 'LE86']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
