@@ -17,7 +17,7 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
-def com_detection(df, data_folder, com_threshold=5, rerun=True):
+def com_detection(df, data_folder, com_threshold=5, rerun=False):
     trajectories = df.trajectory_y.values
     decision = np.array(df.R_response.values) * 2 - 1
     time_trajs = df.time_trajs.values

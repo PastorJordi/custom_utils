@@ -474,9 +474,8 @@ def supp_trajs_prior_cong(df_sim, ax=None):
     ax.set_xlabel('Time from movement onset (ms)', fontsize=10)
 
 
-def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
-                 inset_sz=.06,
-                 marginx=0.006, marginy=0.12, fgsz=(8, 14)):
+def fig_6_humans(user_id, sv_folder, nm='300', max_mt=600, inset_sz=.06,
+                 marginx=0.006, marginy=0.04, fgsz=(8, 14)):
     if user_id == 'Alex':
         folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
@@ -512,12 +511,13 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
                       fontweight='bold', va='top', ha='right')
     for i in [0, 1]:
         ax[i].axis('off')
-    # task panel
-    pos_ax_0 = ax[0].get_position()
-    # setting ax0 a bit bigger
-    ax[0].set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
-                        pos_ax_0.width+pos_ax_0.width*2/3, pos_ax_0.height+0.025])
+    # TASK PANEL
     ax_task = ax[0]
+    pos_ax_0 = ax_task.get_position()
+    # setting ax0 a bit bigger
+    ax_task.set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
+                          pos_ax_0.width+pos_ax_0.width*2/3, pos_ax_0.height+0.025])
+    
     pos = ax_task.get_position()
     ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
     task = plt.imread(HUMAN_TASK_IMG)
@@ -538,11 +538,11 @@ def fig_humans_6(user_id, sv_folder, nm='300', max_mt=600, jitter=0.003,
     ax_zt = ax[7]
     # trajs. conditioned on coh
     ax_inset = add_inset(ax=ax_cohs, inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
+                         marginx=marginx, marginy=marginy, right=True)
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     # trajs. conditioned on zt
     ax_inset = add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=fgsz,
-                         marginx=marginx, marginy=0.04, right=True)
+                         marginx=marginx, marginy=marginy, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
     axes_trajs = [ax[2], ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12],
                   ax[13], ax[14]]
