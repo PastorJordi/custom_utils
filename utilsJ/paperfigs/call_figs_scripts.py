@@ -256,7 +256,7 @@ if f5:
 if f6:
     print('Plotting Figure 6')
     # human traj plots
-    fp.fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER, max_mt=600,
-                    nm='300')
+    fp.fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER,
+                    human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
 if f7:
     fp.fig_7(df, df_sim)
