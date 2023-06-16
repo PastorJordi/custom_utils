@@ -545,9 +545,9 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
         else:
             axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    _, time_com, peak_com, com = com_detection(df=df,
-                                               data_folder=data_folder,
-                                               com_threshold=com_th)
+    time_com, peak_com, com = com_detection(df=df,
+                                            data_folder=data_folder,
+                                            com_threshold=com_th)
 
     com = np.array(com)
     df['CoM_sugg'] = com
