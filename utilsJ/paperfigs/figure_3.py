@@ -65,8 +65,8 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False):
                             comlist.append(False)
                     else:
                         comlist.append(False)
-                data = {'time_com': time_com, 'comlist': comlist, 'peak_com': peak_com}
-                np.savez(com_data, **data)
+            data = {'time_com': time_com, 'comlist': comlist, 'peak_com': peak_com}
+            np.savez(com_data, **data)
         time_com_all += time_com
         peak_com_all += peak_com
         comlist_all += comlist
