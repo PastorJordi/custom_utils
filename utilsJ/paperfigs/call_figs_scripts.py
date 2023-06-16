@@ -20,6 +20,7 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
+from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figures_paper as fp
 matplotlib.rcParams['font.size'] = 10
 plt.rcParams['legend.title_fontsize'] = 8
@@ -32,7 +33,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
@@ -72,9 +73,9 @@ elif pc_name == 'alex_CRM':
 plt.close('all')
 f1 = False
 f2 = False
-f3 = True
+f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
 f7 = False
 com_threshold = 8
@@ -84,7 +85,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE37']
+    subjects = ['LE42', 'LE85', 'LE86']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -112,15 +113,17 @@ if f1 or f2 or f3 or f5:
     trial_index = np.array(df.origidx)
     resp_len = np.array(df.resp_len)
     time_trajs = edd2.get_trajs_time(resp_len=resp_len,
-                                        traj_stamps=traj_stamps,
-                                        fix_onset=fix_onset, com=com,
-                                        sound_len=sound_len)
+                                     traj_stamps=traj_stamps,
+                                     fix_onset=fix_onset, com=com,
+                                     sound_len=sound_len)
     if f5:
         subjid = df.subjid.values
         print('Computing CoMs')
-        _, time_com, peak_com, com =\
-            fig_3.com_detection(trajectories=traj_y, decision=decision,
-                                time_trajs=time_trajs,
+        time_com, peak_com, com =\
+            fig_3.com_detection(subjects=subjects, data_folder=DATA_FOLDER,
+                                trajectories=traj_y, decision=decision,
+                                subjid=subjid,
+                                time_trajs_all=time_trajs,
                                 com_threshold=com_threshold)
         print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
@@ -150,7 +153,9 @@ if f3:
 
 # fig 5 (model)
 if f5:
+    simulate = False
     with_fb = False
+    save_new_data = False
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     n_sil = 0
@@ -177,7 +182,7 @@ if f5:
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=True)
+                                          subject_list=subjects, subjid=subjid, simulate=simulate)
     # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
     # basic_statistics(com, com_model_detected)  # com
     # basic_statistics(hit, hit_model)  # hit
@@ -202,6 +207,8 @@ if f5:
                                         num_tr + n_sil)
     df_sim['allpriors'] = zt
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
+    df_sim['normallpriors'] = df_sim['norm_allpriors']
+
     # simulation plots
     fp.plot_rt_sim(df_sim)
     fp.plot_fb_per_subj_from_df(df)
@@ -223,18 +230,21 @@ if f5:
     resp_len = []
     time_trajs = []
     # actual plot
-    fp.fig_5_model(coh=coh, sound_len=sound_len, zt=zt,
-                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                   decision_model=resp_fin, com=com, com_model=com_model,
-                   com_model_detected=com_model_detected,
-                   means=means, errors=errors, means_model=means_model,
-                   errors_model=errors_model, df_sim=df_sim)
+    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                      new_data=simulate, save_new_data=save_new_data,
+                      coh=coh, sound_len=sound_len, zt=zt,
+                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                      decision_model=resp_fin, com=com, com_model=com_model,
+                      com_model_detected=com_model_detected,
+                      means=means, errors=errors, means_model=means_model,
+                      errors_model=errors_model, df_sim=df_sim)
     fig, ax = plt.subplots(ncols=2, nrows=1)
     ax = ax.flatten()
     ax[0].set_title('Data')
-    fig_1.mt_matrix_ev_vs_zt(df, ax[0], silent_comparison=False, collapse_sides=True)
+    fig_1.mt_matrix_ev_vs_zt(df, ax[0], f=fig,
+                             silent_comparison=False, collapse_sides=True)
     ax[1].set_title('Model')
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], silent_comparison=False,
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], f=fig, silent_comparison=False,
                         collapse_sides=True)
     # fig.suptitle('DATA (top) vs MODEL (bottom)')
     fp.mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)

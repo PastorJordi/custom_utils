@@ -35,12 +35,10 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False):
         os.makedirs(os.path.dirname(com_data), exist_ok=True)
         if os.path.exists(com_data) and not rerun:
             com_data = np.load(com_data, allow_pickle=True)
-            com_trajs = com_data['com_trajs'].tolist()
             time_com = com_data['time_com'].tolist()
             peak_com = com_data['peak_com'].tolist()
             comlist = com_data['comlist'].tolist()
         else:   
-            com_trajs = []
             time_com = []
             peak_com = []
             comlist = []
@@ -58,7 +56,6 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False):
                             if peak < 0:
                                 peak_com.append(peak)
                             if peak < -com_threshold:
-                                com_trajs.append(traj)
                                 time_com.append(
                                     t_trajs[i_t]
                                     [np.where(signed_traj == peak)[0]][0])
@@ -69,14 +66,13 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False):
                             comlist.append(False)
                     else:
                         comlist.append(False)
-            data = {'com_trajs': com_trajs, 'time_com': time_com, 'comlist': comlist,
-                    'peak_com': peak_com}
-            np.savez(com_data, **data)
-        com_trajs_all += com_trajs
+                data = {'time_com': time_com, 'comlist': comlist,
+                        'peak_com': peak_com}
+                np.savez(com_data, **data)
         time_com_all += time_com
         peak_com_all += peak_com
         comlist_all += comlist
-    return com_trajs_all, time_com_all, peak_com_all, comlist_all
+    return time_com_all, peak_com_all, comlist_all
 
 def plot_proportion_corr_com_vs_stim(df, ax=None):
     if ax is None:
@@ -553,6 +549,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     _, time_com, peak_com, com = com_detection(df=df,
                                                data_folder=data_folder,
                                                com_threshold=com_th)
+
     com = np.array(com)
     df['CoM_sugg'] = com
     # TRACKING IMAGE PANEL

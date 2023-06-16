@@ -38,13 +38,13 @@ from skimage.transform import resize
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
 # SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -1237,26 +1237,26 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
             if plot_nn_alone:
-                fig, ax = plt.subplots(ncols=2)
+                fig, ax1 = plt.subplots(ncols=2)
                 fig.suptitle('Network + {}'.format(n_sim_train))
-                ax[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-                ax[0].set_title('Choice 0')
-                ax[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-                ax[0].set_ylabel('MT (ms)')
-                ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-                ax[0].set_xlabel('RT (ms)')
-                im1 = ax[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
-                ax[1].set_title('Choice 1')
-                ax[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-                ax[1].set_ylabel('MT (ms)')
-                ax[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
-                ax[1].set_xlabel('RT (ms)')
+                ax1[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax1[0].set_title('Choice 0')
+                ax1[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax1[0].set_ylabel('MT (ms)')
+                ax1[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax1[0].set_xlabel('RT (ms)')
+                im1 = ax1[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
+                ax1[1].set_title('Choice 1')
+                ax1[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
+                ax1[1].set_ylabel('MT (ms)')
+                ax1[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
+                ax1[1].set_xlabel('RT (ms)')
                 plt.colorbar(im1)
             # fig, ax = plt.subplots(ncols=2)
             # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
             ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
                          vmax=np.max((mat_0, mat_1)))
-            ax[0].contour(mat_0_nn, cmap='hot')
+            ax[0].contour(mat_0_nn, cmap='hot', linewidths=0.8)
             ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
             ax[0].set_ylabel('MT (ms)')
             if xt:
@@ -1264,18 +1264,26 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 ax[0].set_xlabel('RT (ms)')
             else:
                 ax[0].set_xticks([])
-            im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
+            im1 = ax[2].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
                                vmax=np.max((mat_0, mat_1)))
-            plt.sca(ax[1])
-            im2 = ax[1].contour(mat_1_nn, cmap='hot')
-            ax[1].set_yticks([])
+            plt.sca(ax[2])
+            im2 = ax[2].contour(mat_1_nn, cmap='hot', linewidths=0.8)
+            ax[2].set_yticks([])
             # ax[1].set_ylabel('MT (ms)')
             if xt:
-                ax[1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
-                ax[1].set_xlabel('RT (ms)')
+                ax[2].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[2].set_xlabel('RT (ms)')
             else:
-                ax[1].set_xticks([])
+                ax[2].set_xticks([])
             plt.colorbar(im1, fraction=0.04)
+            p_ch0_model = np.exp(np.nansum(mat_0))/np.exp(np.nansum(mat_0+mat_1))
+            p_ch1_model = 1-p_ch0_model
+            p_ch0_nn = np.exp(np.nansum(mat_0_nn))/np.exp(np.nansum(mat_0_nn+mat_1_nn))
+            p_ch1_nn = 1-p_ch0_nn
+            ax[1].set_ylim(-0.05, 1.05)
+            ax[3].set_ylim(-0.05, 1.05)
+            ax[1].bar(['Model', 'NN'], [p_ch0_model, p_ch0_nn], color='k')
+            ax[3].bar(['Model', 'NN'], [p_ch1_model, p_ch1_nn], color='k')
             # plt.colorbar(im2, fraction=0.04)
     if plot_model:
         fig, ax = plt.subplots(ncols=2)
@@ -1303,27 +1311,27 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
 
 
 def plot_lh_model_network(df):
-    fig, ax = plt.subplots(6, 2, figsize=(8, 12))
+    fig, ax = plt.subplots(4, 4, figsize=(8, 12))
     ax = ax.flatten()
     i = 0
     xt = False
-    ax[1].set_title('Choice 1')
+    ax[2].set_title('Choice 1')
     # ax[0].set_title('Choice 0')
     labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
-              'mid stim, high zt', 'inc. stim with zt', 'cong. low t.i.',
+              'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
               'cong. higher t.i.']
-    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.25, 0.25],
-                                    [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                    [400, 400, 400, 400, 10, 500]):
-        if i == 5:
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
+                                    [1.5, 0.05, 1.5, 0.5],
+                                    [400, 400, 400, 500]):
+        if i == 3:
             xt = True
-        plot_network_model_comparison(df, ax[2*i:2*(i+1)],
+        plot_network_model_comparison(df, ax[4*i:4*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                       n_list=[2000000], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
-        ax[2*i].set_title(labels[i])
+        ax[4*i].set_title(labels[i])
         i += 1
 
 
@@ -1439,6 +1447,7 @@ if __name__ == '__main__':
                                      sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
+            plot_lh_model_network(df)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
