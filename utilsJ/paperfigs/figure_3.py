@@ -17,16 +17,23 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 
-def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com_threshold=5):
+def com_detection(df, data_folder, com_threshold=5, rerun=False):
+    trajectories = df.trajectory_y.values
+    decision = np.array(df.R_response.values) * 2 - 1
+    time_trajs = df.time_trajs.values
+    subjects = df.subjid.unique()
     com_trajs_all = []
     time_com_all = []
     peak_com_all = []
     comlist_all = []
     for subj in subjects:
-        print(subj)
+        idx_sbj = df.subjid == subj
+        trajs = trajectories[idx_sbj]
+        dec = decision[idx_sbj]
+        t_trajs = time_trajs[idx_sbj]
         com_data = data_folder + subj + '/traj_data/' + subj + '_detected_coms.npz'
         os.makedirs(os.path.dirname(com_data), exist_ok=True)
-        if os.path.exists(com_data):
+        if os.path.exists(com_data) and not rerun:
             com_data = np.load(com_data, allow_pickle=True)
             com_trajs = com_data['com_trajs'].tolist()
             time_com = com_data['time_com'].tolist()
@@ -37,23 +44,23 @@ def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com
             time_com = []
             peak_com = []
             comlist = []
-            for i_t, traj in enumerate(trajectories):
+            for i_t, traj in enumerate(trajs):
                 if len(traj) > 1 and max(np.abs(traj)) > 100:
                     comlist.append(False)
                 else:
-                    if len(traj) > 1 and len(time_trajs[i_t]) > 1 and\
-                    sum(np.isnan(traj)) < 1 and sum(time_trajs[i_t] > 1) >= 1:
+                    if len(traj) > 1 and len(t_trajs[i_t]) > 1 and\
+                    sum(np.isnan(traj)) < 1 and sum(t_trajs[i_t] > 1) >= 1:
                         traj -= np.nanmean(traj[
-                            (time_trajs[i_t] >= -100)*(time_trajs[i_t] <= 0)])
-                        signed_traj = traj*decision[i_t]
-                        if abs(traj[time_trajs[i_t] >= 0][0]) < 20:
-                            peak = min(signed_traj[time_trajs[i_t] >= 0])
+                            (t_trajs[i_t] >= -100)*(t_trajs[i_t] <= 0)])
+                        signed_traj = traj*dec[i_t]
+                        if abs(traj[t_trajs[i_t] >= 0][0]) < 20:
+                            peak = min(signed_traj[t_trajs[i_t] >= 0])
                             if peak < 0:
                                 peak_com.append(peak)
                             if peak < -com_threshold:
                                 com_trajs.append(traj)
                                 time_com.append(
-                                    time_trajs[i_t]
+                                    t_trajs[i_t]
                                     [np.where(signed_traj == peak)[0]][0])
                                 comlist.append(True)
                             else:
@@ -62,9 +69,9 @@ def com_detection(subjects, trajectories, decision, time_trajs, data_folder, com
                             comlist.append(False)
                     else:
                         comlist.append(False)
-                data = {'com_trajs': com_trajs, 'time_com': time_com, 'comlist': comlist,
-                        'peak_com': peak_com}
-                np.savez(com_data, **data)
+            data = {'com_trajs': com_trajs, 'time_com': time_com, 'comlist': comlist,
+                    'peak_com': peak_com}
+            np.savez(com_data, **data)
         com_trajs_all += com_trajs
         time_com_all += time_com
         peak_com_all += peak_com
@@ -543,14 +550,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
         else:
             axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    traj_y = df.trajectory_y.values
-    decision = np.array(df.R_response) * 2 - 1
-    time_trajs = df.time_trajs
-    subjects = df.subjid.unique()
-    _, time_com, peak_com, com = com_detection(subjects=subjects,
-                                               trajectories=traj_y,
-                                               decision=decision,
-                                               time_trajs=time_trajs,
+    _, time_com, peak_com, com = com_detection(df=df,
                                                data_folder=data_folder,
                                                com_threshold=com_th)
     com = np.array(com)
