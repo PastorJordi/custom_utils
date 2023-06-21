@@ -142,6 +142,11 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                      n_subjects, max_mt=400, max_px=800,
                      condition='prior', interpolatespace=np.arange(500)):
+    """
+    Plots trajectories conditioned on stimulus and prior congruency.
+    For condition = 'prior', it will plot conditioning on prior congruency.
+    For any other value of condition, it will plot conditioning on stimulus.
+    """
     
     if condition == 'prior':
        colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
@@ -387,7 +392,6 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
         ax1.set_title(labs[i])
         ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                                        max_MT=max_mt+300, pval=0.01)
-        # ax1.axvline(ind, color='r')
         ax1.set_xlabel('Time (ms)')
         if i == 0:
             ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
@@ -547,9 +551,13 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
                          pos.height*2/5])
     ax_coms = [ax_com_stat, ax_inset]
+    # CoM peak/time distributions
     com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
                                                                     ax_coms[1]])
+    # mean CoM trajectories
     mean_com_traj_human(df_data=df_data, ax=ax[8])
+    # trajectories conditioned on stim/prior, splitting time (vs RT and example)
+    # and trajs in x-y plane
     human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt, plotxy=True)
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig6.png', dpi=400, bbox_inches='tight')
