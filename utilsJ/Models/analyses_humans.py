@@ -228,7 +228,7 @@ def process_trajectories_rep_alt(data_tr, data_traj):
     return dict_all
 
 
-def change_of_mind(data_tr, data_traj, rgrss_folder, sv_folder,
+def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
                    com_threshold=50, plot=False):
     """
 
@@ -453,9 +453,9 @@ def traj_analysis(data_folder, sv_folder, subjects, steps=[None], name=''):
         folder = data_folder+subj+'/'
         for i_stp, stp in enumerate(steps):
             data_tr, data_traj = get_data_traj(folder=folder)
-            df_data = change_of_mind(data_tr, data_traj, com_threshold=100,
-                                     plot=False, rgrss_folder=data_folder,
-                                     sv_folder=sv_folder)
+            df_data = data_processing(data_tr, data_traj, com_threshold=100,
+                                      plot=False, rgrss_folder=data_folder,
+                                      sv_folder=sv_folder)
     return df_data
 
 

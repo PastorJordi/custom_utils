@@ -11,7 +11,7 @@ import matplotlib
 import sys
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
@@ -21,6 +21,7 @@ from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_5 as fig_5
+from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 matplotlib.rcParams['font.size'] = 10   
 plt.rcParams['legend.title_fontsize'] = 8
@@ -33,14 +34,14 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
-    SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/figures_python/'  # Alex
-    DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+    SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM'  # Alex
+    DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
     TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
-    HUMAN_TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/g41085.png'
+    HUMAN_TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/Human/g41085.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
@@ -73,10 +74,10 @@ elif pc_name == 'alex_CRM':
 plt.close('all')
 f1 = False
 f2 = False
-f3 = True
+f3 = False
 f4 = False
 f5 = False
-f6 = False
+f6 = True
 f7 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -256,7 +257,7 @@ if f5:
 if f6:
     print('Plotting Figure 6')
     # human traj plots
-    fp.fig_humans_6(user_id='idibaps_alex', sv_folder=SV_FOLDER,
-                    human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
+    fig_6.fig_6_humans(user_id='Alex', sv_folder=SV_FOLDER,
+                       human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
 if f7:
     fp.fig_7(df, df_sim)

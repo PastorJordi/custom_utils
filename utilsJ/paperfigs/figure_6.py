@@ -6,7 +6,7 @@ import sys
 from scipy import interpolate
 from scipy.stats import sem
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append("C:/Users/alexg/Onedrive/Documentos/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
@@ -139,35 +139,26 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
 
 
-def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
-                interpolatespace=np.arange(500)):
-    # TRAJECTORIES
-    index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
-             (df_data.sound_len <= 300) &\
-             (df_data.sound_len >= 0)
-    df_data.avtrapz /= max(abs(df_data.avtrapz))
-    coh = df_data.avtrapz.values[index1]
-    decision = df_data.R_response.values[index1]
-    trajs = df_data.trajectory_y.values[index1]
-    times = df_data.times.values[index1]
-    sound_len = df_data.sound_len.values[index1]
-    prior = df_data['norm_allpriors'][index1] * (decision*2 - 1)
-    prior_raw = df_data['norm_allpriors'][index1]
-    prior_raw = prior_raw.values
-    prior = prior.values
-    ev_vals = np.unique(np.round(coh, 2))
-    subjects = df_data.subjid.values[index1]
-    ground_truth = (df_data.R_response.values*2-1) *\
-        (df_data.hithistory.values*2-1)
-    ground_truth = ground_truth[index1]
-    congruent_coh = np.round(coh, 2) * (decision*2 - 1)
-    colormap = pl.cm.coolwarm(np.linspace(0., 1, len(ev_vals)))
+def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
+                     n_subjects, max_mt=400, max_px=800,
+                     condition='prior', interpolatespace=np.arange(500)):
+    
+    if condition == 'prior':
+       colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
+    else:
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        ev_vals = bins
+        labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     vals_thr_traj = []
-    precision = 1
-    labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
-    for i_ev, ev in enumerate(ev_vals):
-        index = (congruent_coh == ev) &\
-            (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
+    for i_ev, ev in enumerate(bins):
+        if condition == 'prior':
+            if ev == 1:
+                break
+            index = (prior >= bins[i_ev])*(prior < bins[i_ev+1])
+
+        else:
+            index = (congruent_coh == ev) &\
+                (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
@@ -188,126 +179,130 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
         val_traj = np.nanmean(np.array([float(t[-1]) for t in
                                         times[index]
                                         if t[-1] != '']))*1e3
+        err_traj = np.nanstd(np.array([float(t[-1]) for t in
+                                        times[index]
+                                        if t[-1] != '']))*1e3/np.sqrt(n_subjects)
         vals_thr_traj.append(val_traj)
-        ax[2].scatter(ev, val_traj, color=colormap[i_ev], marker='D', s=40)
-        xvals = np.arange(len(mean_traj))*precision
+        x_val = i_ev if condition == 'prior' else ev
+        ax[1].errorbar(x_val, val_traj, err_traj, color=colormap[i_ev],
+                       marker='o')
+        xvals = np.arange(len(mean_traj))
         yvals = mean_traj
-        ax[1].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
-                   color=colormap[i_ev], label='{}'.format(labels_stim[i_ev]))
-        ax[1].fill_between(x=xvals[yvals <= max_px],
+        if condition == 'prior':
+            ax[0].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
+                       color=colormap[i_ev])
+        else:
+            ax[0].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
+                       color=colormap[i_ev], label='{}'.format(labels_stim[i_ev]))
+        ax[0].fill_between(x=xvals[yvals <= max_px],
                            y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
-    ax[2].plot(ev_vals, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    ax[1].set_xlim(-0.1, 470)
-    ax[1].set_ylim(-1, 620)
-    ax[1].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
-    ax[1].set_ylabel('x-coord (px)')
-    ax[1].set_xlabel('Time from movement onset (ms)')
-    ax[2].set_xticks([])
-    ax[2].set_xlabel('Stimulus')
-    ax[2].set_ylabel('MT (ms)')
+    x_vals = np.arange(5) if condition == 'prior' else ev_vals
+    ax[1].plot(x_vals, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[0].set_xlim(-0.1, 470)
+    ax[0].set_ylim(-1, 620)
+    ax[0].set_ylabel('x-coord (px)')
+    ax[0].set_xlabel('Time from movement onset (ms)')
+    ax[1].set_xticks([])
+    if condition == 'prior':
+        ax[1].set_xlabel('Prior')
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='cong.'),
+                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[2], lw=2, label='0'),
+                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[4], lw=2, label='inc.')]
+        ax[0].legend(handles=legendelements, title='Prior', loc='upper left',
+                     fontsize=7)
+    else:
+        ax[0].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
+        ax[1].set_xlabel('Stimulus')
+    ax[1].set_ylabel('MT (ms)')
+
+
+def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
+                interpolatespace=np.arange(500)):
+    """
+    Plots:
+        - Human trajectories conditioned to stim and prior
+        - Splitting time examples
+        - Splitting time vs RT
+        - Raw trajectories in x-y
+    """
+    # TRAJECTORIES
+    index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
+             (df_data.sound_len <= 300) &\
+             (df_data.sound_len >= 0)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    coh = df_data.avtrapz.values[index1]
+    decision = df_data.R_response.values[index1]
+    trajs = df_data.trajectory_y.values[index1]
+    times = df_data.times.values[index1]
+    sound_len = df_data.sound_len.values[index1]
+    prior_cong = df_data['norm_allpriors'][index1] * (decision*2 - 1)
+    prior_cong = prior_cong.values
+    ev_vals = np.unique(np.round(coh, 2))
+    subjects = df_data.subjid.values[index1]
+    ground_truth = (df_data.R_response.values*2-1) *\
+        (df_data.hithistory.values*2-1)
+    ground_truth = ground_truth[index1]
+    congruent_coh = np.round(coh, 2) * (decision*2 - 1)
+    # Trajs conditioned on stimulus congruency
+    human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                     trajs=trajs, prior=prior_cong, bins=ev_vals,
+                     times=times, ax=ax[1:3],
+                     n_subjects=len(df_data.subjid.unique()),
+                     condition='stimulus')
+    bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
+    # Trajs conditioned on prior congruency
+    human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                     trajs=trajs, prior=prior_cong, bins=bins,
+                     times=times, ax=ax[3:5],
+                     n_subjects=len(df_data.subjid.unique()),
+                     condition='prior')
+    # extract splitting time
     out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
                                              trajs=trajs, times=times, subjects=subjects,
                                              ground_truth=ground_truth,
                                              interpolatespace=interpolatespace,
                                              max_mt=max_mt)
+    # plot splitting time vs RT
+    splitting_time_plot(sound_len=sound_len, out_data=out_data,
+                        ax=ax, subjects=subjects)
     rtbins = np.array((rtbins[0], rtbins[1], rtbins[2]))
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
+    # plot splitting time examples
     splitting_time_example_human(rtbins=rtbins, ax=ax, sound_len=sound_len,
                                  ground_truth=ground_truth, coh=coh, trajs=trajs,
                                  times=times, max_mt=max_mt,
                                  interpolatespace=interpolatespace,
                                  colormap=colormap)
-    # now for the prior conditioned trajectories
-    # cong_prior = prior * (decision*2 - 1)
-    bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
-    colormap = pl.cm.copper(np.linspace(0, 1, len(bins)-1))
-    vals_thr_traj = []
-    for i_pr, pr_min in enumerate(bins):
-        if pr_min == 1:
+    # plot x-y trajectories
+    plot_xy(df_data=df_data, ax=ax[0])
+
+
+def plot_xy(df_data, ax):
+    cont = 0
+    subj_xy = 1
+    index_sub = df_data.subjid == subj_xy
+    for traj in range(800):
+        # np.random.seed(1)
+        tr_ind = np.random.randint(0, len(df_data['trajectory_y'][index_sub])-1)
+        x_coord = df_data['trajectory_y'][tr_ind]
+        y_coord = df_data['traj_y'][tr_ind]
+        time_max = df_data['times'][tr_ind][-1]
+        if time_max != '':
+            if time_max < 0.3 and time_max > 0.1 and not df_data.CoM_sugg[tr_ind]:
+                time = df_data['times'][tr_ind]
+                ind_time = [True if t != '' else False for t in time]
+                time = np.array(time)[np.array(ind_time)]
+                ax.plot(x_coord, y_coord, color='k', linewidth=0.5)
+                # ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
+                cont += 1
+        if cont == 50:
             break
-        index = (prior >= bins[i_pr])*(prior < bins[i_pr+1])  # * (coh == 0)
-        all_trajs = np.empty((sum(index), max_mt))
-        all_trajs[:] = np.nan
-        for tr in range(sum(index)):
-            if prior[index][tr] != 0:
-                vals = np.array(trajs[index][tr]) * (decision[index][tr]*2 - 1)
-                ind_time = [True if t != '' else False for t in times[index][tr]]
-                time = np.array(times[index][tr])[
-                    np.array(ind_time)].astype(float)*1e3
-                f = interpolate.interp1d(time, vals, bounds_error=False)
-                vals_in = f(interpolatespace)
-                vals_in = vals_in[~np.isnan(vals_in)]
-                max_time = max(time)
-                if max_time > max_mt:
-                    continue
-                all_trajs[tr, :len(vals_in)] = vals_in  # - vals[0]
-                all_trajs[tr, len(vals_in):-1] = np.repeat(vals[-1],
-                                                           int(max_mt
-                                                               - len(vals_in)-1))
-            else:
-                continue
-            if max_time > max_mt:
-                continue
-        mean_traj = np.nanmean(all_trajs, axis=0)
-        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
-        val_traj = np.nanmean(np.array([float(t[-1]) for t in
-                                        times[index]
-                                        if t[-1] != '']))*1e3
-        vals_thr_traj.append(val_traj)
-        ax[4].scatter(i_pr, val_traj, color=colormap[i_pr], marker='D', s=40)
-        xvals = np.arange(len(mean_traj))*precision
-        yvals = mean_traj
-        ax[3].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
-                   color=colormap[i_pr])
-        ax[3].fill_between(x=xvals[yvals <= max_px],
-                           y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
-                           y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
-                           color=colormap[i_pr])
-    ax[4].plot(np.arange(5), vals_thr_traj, color='k', linestyle='--', alpha=0.6)
-    # ax[3].set_xlim(-0.1, 360)
-    ax[1].set_xlim(-0.1, 470)
-    ax[3].set_ylim(-1, 620)
-    colormap = pl.cm.copper_r(np.linspace(0., 1, 5))
-    legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='cong.'),
-                      Line2D([0], [0], color=colormap[1], lw=2, label=''),
-                      Line2D([0], [0], color=colormap[2], lw=2, label='0'),
-                      Line2D([0], [0], color=colormap[2], lw=2, label=''),
-                      Line2D([0], [0], color=colormap[4], lw=2, label='inc.')]
-    ax[3].legend(handles=legendelements, title='Prior', loc='upper left',
-                 fontsize=7)
-    ax[3].set_ylabel('x-coord (px)')
-    ax[3].set_xlabel('Time from movement onset (ms)')
-    ax[4].set_xlabel('Prior')
-    ax[4].set_ylabel('MT (ms)')
-    ax[4].set_xticks([])
-    if plotxy:
-        cont = 0
-        subj_xy = 1
-        index_sub = df_data.subjid == subj_xy
-        for traj in range(800):
-            np.seed(1)
-            tr_ind = np.random.randint(0, len(df_data['trajectory_y'][index_sub])-1)
-            x_coord = df_data['trajectory_y'][tr_ind]
-            y_coord = df_data['traj_y'][tr_ind]
-            time_max = df_data['times'][tr_ind][-1]
-            if time_max != '':
-                if time_max < 0.3 and time_max > 0.1 and not df_data.CoM_sugg[tr_ind]:
-                    time = df_data['times'][tr_ind]
-                    ind_time = [True if t != '' else False for t in time]
-                    time = np.array(time)[np.array(ind_time)]
-                    ax[0].plot(x_coord, y_coord, color='k', linewidth=0.5)
-                    # ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
-                    cont += 1
-            if cont == 50:
-                break
-        ax[0].set_xlabel('x-coord (px)')
-        ax[0].set_ylabel('y-coord (px)')
-    # ax[5].set_xlabel('Time (ms)')
-    # ax[5].set_ylabel('x-coord (px)')
-    splitting_time_plot(sound_len=sound_len, out_data=out_data,
-                        ax=ax, subjects=subjects)
+    ax.set_xlabel('x-coord (px)')
+    ax.set_ylabel('y-coord (px)')
 
 
 def splitting_time_plot(sound_len, out_data, ax, subjects):
@@ -474,7 +469,7 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
 def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset_sz=.06,
                  marginx=0.006, marginy=0.04, fgsz=(8, 14)):
     if user_id == 'Alex':
-        folder = 'C:\\Users\\Alexandre\\Desktop\\CRM\\Human\\80_20\\'+nm+'ms\\'
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'AlexCRM':
         folder = 'C:/Users/agarcia/Desktop/CRM/human/'
     if user_id == 'Manuel':
