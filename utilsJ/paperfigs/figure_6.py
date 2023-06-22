@@ -472,11 +472,11 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
 
 def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset_sz=.06,
                  marginx=0.006, marginy=0.04, fgsz=(8, 14)):
-    if user_id == 'Alex':
+    if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
-    if user_id == 'AlexCRM':
+    if user_id == 'alex_CRM':
         folder = 'C:/Users/agarcia/Desktop/CRM/human/'
-    if user_id == 'Manuel':
+    if user_id == 'idibaps':
         folder =\
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     if user_id == 'idibaps_alex':
