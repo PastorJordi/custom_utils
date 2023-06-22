@@ -514,7 +514,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     pos_ax_0 = ax_task.get_position()
     # setting ax0 a bit bigger
     ax_task.set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
-                          pos_ax_0.width+pos_ax_0.width*2/3, pos_ax_0.height+0.025])
+                          pos_ax_0.width+pos_ax_0.width*2/2.5, pos_ax_0.height+0.025])
     
     pos = ax_task.get_position()
     ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
@@ -522,7 +522,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax_task.imshow(task, aspect='auto')
     # changing ax x-y plot width
     pos_ax_1 = ax[1].get_position()
-    ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width*4/5, pos_ax_1.y0,
+    ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
     # plotting x-y trajectories
     plot_xy(df_data=df_data, ax=ax[2])
