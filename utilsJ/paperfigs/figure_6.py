@@ -225,14 +225,13 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
     ax[1].set_ylabel('MT (ms)')
 
 
-def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
+def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                 interpolatespace=np.arange(500)):
     """
     Plots:
         - Human trajectories conditioned to stim and prior
         - Splitting time examples
         - Splitting time vs RT
-        - Raw trajectories in x-y
     """
     # TRAJECTORIES
     index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
@@ -255,14 +254,14 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
     # Trajs conditioned on stimulus congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
                      trajs=trajs, prior=prior_cong, bins=ev_vals,
-                     times=times, ax=ax[1:3],
+                     times=times, ax=ax[0:2],
                      n_subjects=len(df_data.subjid.unique()),
                      condition='stimulus')
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     # Trajs conditioned on prior congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
                      trajs=trajs, prior=prior_cong, bins=bins,
-                     times=times, ax=ax[3:5],
+                     times=times, ax=ax[2:4],
                      n_subjects=len(df_data.subjid.unique()),
                      condition='prior')
     # extract splitting time
@@ -273,7 +272,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
                                              max_mt=max_mt)
     # plot splitting time vs RT
     splitting_time_plot(sound_len=sound_len, out_data=out_data,
-                        ax=ax, subjects=subjects)
+                        ax=ax[-1], subjects=subjects)
     rtbins = np.array((rtbins[0], rtbins[1], rtbins[2]))
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     # plot splitting time examples
@@ -282,11 +281,12 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800, plotxy=False,
                                  times=times, max_mt=max_mt,
                                  interpolatespace=interpolatespace,
                                  colormap=colormap)
-    # plot x-y trajectories
-    plot_xy(df_data=df_data, ax=ax[0])
 
 
 def plot_xy(df_data, ax):
+    """
+    Plots raw trajectories in x-y
+    """
     cont = 0
     subj_xy = 1
     index_sub = df_data.subjid == subj_xy
@@ -321,7 +321,7 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
     out_data = np.swapaxes(out_data, 0, 1)
     out_data = out_data.astype(float)
     # binsize = np.diff(rtbins)
-    ax2 = ax[-1]
+    ax2 = ax
     # fig2, ax2 = plt.subplots(1)
     for i in range(len(np.unique(subjects))):
         for j in range(out_data.shape[2]):
@@ -522,6 +522,9 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     pos_ax_1 = ax[1].get_position()
     ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width*4/5, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
+    # plotting x-y trajectories
+    # plot x-y trajectories
+    plot_xy(df_data=df_data, ax=ax[2])
     # tachs and pright
     ax_tach = ax[3]
     ax_pright = ax[4]
@@ -540,7 +543,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax_inset = fp.add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
-    axes_trajs = [ax[2], ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12],
+    axes_trajs = [ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12],
                   ax[13], ax[14]]
     peak_com = -df_data.com_peak.values
     time_com = df_data.time_com.values
@@ -557,7 +560,6 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     # mean CoM trajectories
     mean_com_traj_human(df_data=df_data, ax=ax[8])
     # trajectories conditioned on stim/prior, splitting time (vs RT and example)
-    # and trajs in x-y plane
-    human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt, plotxy=True)
+    human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt)
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig6.png', dpi=400, bbox_inches='tight')
