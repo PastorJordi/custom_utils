@@ -484,10 +484,12 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     subj = ['general_traj']
     steps = [None]
     humans = True
+    # retrieve data
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
+    # create figure
     fig, ax = plt.subplots(nrows=5, ncols=3, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
@@ -523,16 +525,31 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width*4/5, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
     # plotting x-y trajectories
-    # plot x-y trajectories
     plot_xy(df_data=df_data, ax=ax[2])
     # tachs and pright
     ax_tach = ax[3]
     ax_pright = ax[4]
     ax_mat = [ax[10], ax[11]]
-    ax_traj = ax[5]
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
-    plot_coms(df=df_data, ax=ax_traj, human=humans)
+    # plots CoM trajectory examples
+    ax_examples_com = ax[5]
+    plot_coms(df=df_data, ax=ax_examples_com, human=humans)
+    # prepare data for CoM peak/time distros plot
+    peak_com = -df_data.com_peak.values
+    time_com = df_data.time_com.values
+    ax_com_stat = ax[9]
+    pos = ax_com_stat.get_position()
+    ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
+                              pos.height*2/5])
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+                         pos.height*2/5])
+    ax_coms = [ax_com_stat, ax_inset]
+    # CoM peak/time distributions
+    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=ax_coms)
+    # mean CoM trajectories
+    mean_com_traj_human(df_data=df_data, ax=ax[8])
+    # prepare axis for trajs conditioned on stim and prior
     ax_cohs = ax[6]
     ax_zt = ax[7]
     # trajs. conditioned on coh
@@ -545,20 +562,6 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax_zt = np.insert(ax_zt, 0, ax_inset)
     axes_trajs = [ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12],
                   ax[13], ax[14]]
-    peak_com = -df_data.com_peak.values
-    time_com = df_data.time_com.values
-    ax_com_stat = ax[9]
-    pos = ax_com_stat.get_position()
-    ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
-                              pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
-                         pos.height*2/5])
-    ax_coms = [ax_com_stat, ax_inset]
-    # CoM peak/time distributions
-    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=[ax_coms[0],
-                                                                    ax_coms[1]])
-    # mean CoM trajectories
-    mean_com_traj_human(df_data=df_data, ax=ax[8])
     # trajectories conditioned on stim/prior, splitting time (vs RT and example)
     human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt)
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
