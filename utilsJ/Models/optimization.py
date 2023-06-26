@@ -1020,13 +1020,13 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         stim[df.soundrfail, :] = 0
         # Prepare data:
         coh = np.resize(coh, num_simulations)
-        np.random.shuffle(coh)
+        # np.random.shuffle(coh)
         zt = np.resize(zt, num_simulations)
-        np.random.shuffle(zt)
+        # np.random.shuffle(zt)
         trial_index = np.resize(trial_index, num_simulations)
-        np.random.shuffle(trial_index)
+        # np.random.shuffle(trial_index)
         stim = np.resize(stim, (num_simulations, 20))
-        np.random.shuffle(stim)
+        # np.random.shuffle(stim)
         if not bads:
             # motor time: in seconds (must be multiplied then by 1e3)
             mt = df.resp_len.values
@@ -1048,6 +1048,7 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
             mt = []
         print('Data preprocessed, building prior distros')
         # build prior: ALL PARAMETERS ASSUMED POSITIVE
+        df = []  # ONLY FOR TRAINING
         prior, theta_all = build_prior_sample_theta(num_simulations=num_simulations)
         # add zt, coh, trial index
         theta_all_inp = theta_all.clone().detach()
@@ -1319,7 +1320,7 @@ def plot_lh_model_network(df):
             xt = True
         plot_network_model_comparison(df, ax[2*i:2*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                      n_list=[2000000], cohval=cohval,
+                                      n_list=[3000000], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
@@ -1423,14 +1424,14 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e6)  # number of simulations to train the network
+        num_simulations = int(3e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
-        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+        subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
         # subjects = ['LE85']  # to run only once and train
-        training = False
+        training = True
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
                 training = False
@@ -1439,6 +1440,7 @@ if __name__ == '__main__':
                                      sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
+            df = df.loc[df.special_trial == 0]
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
