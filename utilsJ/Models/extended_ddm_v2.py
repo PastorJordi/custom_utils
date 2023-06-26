@@ -948,9 +948,9 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
     # zeros before p_t_a
     dA[:p_t_a, :] = 0
     # adding leak
-    rolled_dW = np.roll(dW, 1)
-    rolled_dW[fixation + p_t_aff, :] = 0
-    dW += -rolled_dW*p_leak
+    rolled_dVe = np.roll(Ve, 1)
+    rolled_dVe[fixation + p_t_aff, :] = 0
+    dW += -rolled_dVe*p_leak
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior

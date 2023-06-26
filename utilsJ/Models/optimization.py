@@ -35,6 +35,7 @@ from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
+from scipy.special import rel_entr
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
@@ -1333,6 +1334,110 @@ def plot_lh_model_network(df):
                                       plot_nn_alone=False, xt=xt)
         ax[4*i].set_title(labels[i])
         i += 1
+
+
+def kl_vs_n_trials(df, theta, cohval, ztval, tival, sv_folder=SV_FOLDER,
+                   n_trials=[int(2e6), int(3e6), int(4e6)], simulate=False):
+    fig, ax = plt.subplots(ncols=2, nrows=4)
+    ax = ax.flatten()
+    if simulate:
+        stim = np.array(
+            [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+        theta = get_x0()
+        theta = torch.reshape(torch.tensor(theta),
+                              (1, len(theta))).to(torch.float32)
+        theta = theta.repeat(num_simulations, 1)
+        stim = np.array(
+            [np.concatenate((stim, stim)) for i in range(len(theta))])
+        trial_index = np.repeat(tival, len(theta))
+        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                 zt=np.repeat(ztval, len(theta)),
+                                 coh=np.repeat(cohval, len(theta)),
+                                 trial_index=trial_index)
+        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                .format(cohval, ztval, tival), x)
+    else:
+        trial_index = np.repeat(tival, int(5e5))
+        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival))
+    ch_model = x[:, 2]
+    mt_model = x[:, 0]
+    bins_rt = np.arange(-100, 301, 20) + 300
+    bins_mt = np.arange(100, 601, 5)
+    mt_model_distro0 = np.histogram(mt_model[ch_model == 0], density=True, bins=bins_mt)[0]
+    mt_model_distro0 /= sum(mt_model_distro0)
+    mt_model_distro1 = np.histogram(mt_model[ch_model == 1], density=True, bins=bins_mt)[0]
+    mt_model_distro1 /= sum(mt_model_distro1)
+    rt_model = x[:, 1]
+    rt_model_distro0 = np.histogram(rt_model[ch_model == 0], density=True, bins=bins_rt)[0]
+    rt_model_distro0 /= sum(rt_model_distro0)
+    rt_model_distro1 = np.histogram(rt_model[ch_model == 1], density=True, bins=bins_rt)[0]
+    rt_model_distro1 /= sum(rt_model_distro1)
+    grid_rt = bins_rt[:-1] + np.diff(bins_rt)[0]/2
+    grid_mt = bins_mt[:-1] + np.diff(bins_mt)[0]/2
+    ax[0].plot(grid_mt, mt_model_distro0, color='b', label='Model')
+    ax[2].plot(grid_mt, mt_model_distro1, color='b', label='Model')
+    ax[4].plot(grid_rt, rt_model_distro0, color='b', label='Model')
+    ax[6].plot(grid_rt, rt_model_distro1, color='b', label='Model')
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    colors = ['k', 'r']
+    for i_n, n_sim_train in enumerate(n_trials):
+        with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_sim_train),
+                  'rb') as f:
+            estimator = pickle.load(f)
+        estimator = estimator['estimator']
+        theta = theta_for_lh_plot()
+        theta = torch.reshape(torch.tensor(theta),
+                              (1, len(theta))).to(torch.float32)
+        theta = theta.repeat(len(x_o), 1)
+        theta[:, 0] *= torch.tensor(ztval)
+        theta[:, 1] *= torch.tensor(cohval)
+        theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                            torch.tensor(trial_index[
+                                                :len(x_o)]).to(torch.float32)))
+        theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+        theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+        theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                            theta_tri_ind[:, 9:15]))
+        lprobs = estimator.log_prob(x_o, theta_tri_ind)
+        lprobs = torch.exp(lprobs)
+        mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                  len(grid_rt)).detach().numpy()
+        mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                  len(grid_rt)).detach().numpy()
+        mt_nn_distro0 = np.nansum(mat_0_nn, axis=1)
+        mt_nn_distro0 /= sum(mt_nn_distro0)
+        ax[0].plot(grid_mt, mt_nn_distro0, color=colors[i_n], label=n_sim_train)
+        mt_nn_distro1 = np.nansum(mat_1_nn, axis=1)
+        mt_nn_distro1 /= sum(mt_nn_distro1)
+        ax[2].plot(grid_mt, mt_nn_distro1, color=colors[i_n])
+        rt_nn_distro0 = np.nansum(mat_0_nn, axis=0)
+        rt_nn_distro0 /= sum(rt_nn_distro0)
+        ax[4].plot(grid_rt, rt_nn_distro0, color=colors[i_n])
+        rt_nn_distro1 = np.nansum(mat_1_nn, axis=0)
+        rt_nn_distro1 /= sum(rt_nn_distro1)
+        ax[6].plot(grid_rt, rt_nn_distro1, color=colors[i_n])
+        kl_div_mt0 = sum(rel_entr(mt_model_distro0, mt_nn_distro0))
+        kl_div_mt1 = sum(rel_entr(mt_model_distro1, mt_nn_distro1))
+        kl_div_rt0 = sum(rel_entr(rt_model_distro0, rt_nn_distro0))
+        kl_div_rt1 = sum(rel_entr(rt_model_distro1, rt_nn_distro1))
+        ax[1].plot(n_sim_train, kl_div_mt0, 'o')
+        ax[3].plot(n_sim_train, kl_div_mt1, 'o')
+        ax[5].plot(n_sim_train, kl_div_rt0, 'o')
+        ax[7].plot(n_sim_train, kl_div_rt1, 'o')
+    ax[0].legend()
+    ax[1].set_title('mt_0')
+    ax[3].set_title('mt_1')
+    ax[5].set_title('rt_0')
+    ax[7].set_title('rt_1')
+    ax[0].set_xlabel('MT, ch=0')
+    ax[2].set_xlabel('MT, ch=1')
+    ax[4].set_xlabel('RT, ch=0')
+    ax[6].set_xlabel('RT, ch=1')
 
 
 # --- MAIN
