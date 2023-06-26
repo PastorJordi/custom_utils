@@ -23,7 +23,7 @@ from joblib import Parallel, delayed
 from scipy.stats import mannwhitneyu, wilcoxon
 import matplotlib.pylab as pl
 sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils/")  # Cluster Alex
 # import utilsJ
@@ -36,15 +36,15 @@ from utilsJ.paperfigs import figure_3 as fig_3
 # SV_FOLDER = '/archive/molano/CoMs/'  # Cluster Manuel
 # SV_FOLDER = '/home/garciaduran/'  # Cluster Alex
 # SV_FOLDER = '/home/molano/Dropbox/project_Barna/ChangesOfMind/'  # Manuel
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
-SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/'  # Jordi
 # DATA_FOLDER = '/archive/molano/CoMs/data/'  # Cluster Manuel
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
-DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
+# DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
 BINS = np.linspace(1, 301, 11)
 
 
@@ -816,13 +816,15 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         print(len(df))
     print(end - start)
     print('Ended loading data, start computing matrix')
-    time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
-                                sound_len=sound_len)
-    com_trajs, _, _, comlist = fig_3.com_detection(traj_y, decision, time_trajs,
-                                                   com_threshold=8)
-    comlist = np.array(comlist)
+    # time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
+    #                             sound_len=sound_len)
+    # df['time_trajs'] = time_trajs
+    # com_trajs, _, _, comlist = fig_3.com_detection(df=df,
+    #                                                data_folder=DATA_FOLDER,
+    #                                                com_threshold=8)
+    # comlist = np.array(comlist)
     # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
-    com = comlist
+    # com = comlist
     df_curve = {'CoM': com, 'sound_len': sound_len}
     df_curve = pd.DataFrame(df_curve)
     xpos = int(np.diff(BINS)[0])
@@ -948,13 +950,17 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
     # zeros before p_t_a
     dA[:p_t_a, :] = 0
     # adding leak
-    rolled_dVe = np.roll(Ve, 1)
-    rolled_dVe[fixation + p_t_aff, :] = 0
-    dW += -rolled_dVe*p_leak
+    # rolled_dW = np.roll(dW, 1)
+    # rolled_dW[fixation + p_t_aff, :] = 0
+    # dW += -rolled_dW*p_leak
     # accumulate
     A = np.cumsum(dA, axis=0)
     dW[0, :] = prior
-    E = np.cumsum(dW, axis=0)
+    E = np.copy(dW)
+    E[:fixation, :] = np.cumsum(E[:fixation, :], axis=0)
+    for i in range(fixation, N):
+        E[i, :] += E[i-1, :]*(1-p_leak)
+    # E = np.cumsum(dW, axis=0)
     com = False
     # check docstring for definitions
     first_ind = []
@@ -2760,12 +2766,12 @@ if __name__ == '__main__':
             p_w_stim = 0.14
             p_e_bound = 2
             p_com_bound = 0.
-            p_w_a_intercept = 0.056
+            p_w_a_intercept = 0.04
             p_w_a_slope = -2e-5  # fixed
             p_a_bound = 2.6  # fixed
             p_1st_readout = 40
             p_2nd_readout = 80
-            p_leak = 0.5
+            p_leak = 0.3
             p_mt_noise = 15
             p_MT_intercept = 310
             p_MT_slope = 0.10
@@ -2782,11 +2788,11 @@ if __name__ == '__main__':
             print('Number of trials: ' + str(stim.shape[1]))
             time_trajs = get_trajs_time(resp_len, traj_stamps, fix_onset, com,
                                         sound_len=sound_len)
-            com_trajs, _, _, comlist = fig_3.com_detection(
-                traj_y, decision, time_trajs, com_threshold=8)
-            comlist = np.array(comlist)
-            # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
-            com = comlist
+            # com_trajs, _, _, comlist = fig_3.com_detection(
+            #     traj_y, decision, time_trajs, com_threshold=8)
+            # comlist = np.array(comlist)
+            # # plot_com_methods(time_trajs, traj_y, com, comlist, subjname='LE44')
+            # com = comlist
             if plot:
                 # left_right_matrix(zt, coh, com, decision)
                 data_to_plot = {'sound_len': sound_len,
@@ -2800,7 +2806,7 @@ if __name__ == '__main__':
                                 'zt': zt, 'decision': decision,
                                 'trial_idxs': trial_index,
                                 'subjid': np.repeat(rat, len(com))}
-                plot_misc(data_to_plot, stim_res=stim_res, data=True)
+                # plot_misc(data_to_plot, stim_res=stim_res, data=True)
                 # mean_com_traj_peak(trajectories=traj_y, com=com, zt=zt,
                 #                    sound_len=sound_len, decision=decision,
                 #                    motor_time=resp_len,

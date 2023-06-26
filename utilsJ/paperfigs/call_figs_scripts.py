@@ -76,8 +76,8 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = False
-f6 = True
+f5 = True
+f6 = False
 f7 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -87,6 +87,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE85', 'LE86']
+    subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -117,14 +118,12 @@ if f1 or f2 or f3 or f5:
                                      traj_stamps=traj_stamps,
                                      fix_onset=fix_onset, com=com,
                                      sound_len=sound_len)
+    df['time_trajs'] = time_trajs
     if f5:
         subjid = df.subjid.values
         print('Computing CoMs')
         time_com, peak_com, com =\
-            fig_3.com_detection(subjects=subjects, data_folder=DATA_FOLDER,
-                                trajectories=traj_y, decision=decision,
-                                subjid=subjid,
-                                time_trajs_all=time_trajs,
+            fig_3.com_detection(df=df, data_folder=DATA_FOLDER,
                                 com_threshold=com_threshold)
         print('Ended Computing CoMs')
         com = np.array(com)  # new CoM list
@@ -154,7 +153,7 @@ if f3:
 
 # fig 5 (model)
 if f5:
-    simulate = False
+    simulate = True
     with_fb = False
     save_new_data = False
     print('Plotting Figure 5')

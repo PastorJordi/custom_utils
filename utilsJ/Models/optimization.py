@@ -883,7 +883,7 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.65
+    ub_leak = 0.2
     ub_mt_n = 30
     ub_mt_int = 370
     ub_mt_slope = 0.6
@@ -915,7 +915,7 @@ def get_pub():
     pub_a_bound = 3
     pub_1st_r = 400
     pub_2nd_r = 400
-    pub_leak = 0.5
+    pub_leak = 0.1
     pub_mt_n = 25
     pub_mt_int = 320
     pub_mt_slope = 0.12
@@ -947,7 +947,7 @@ def get_plb():
     plb_a_bound = 2.2
     plb_1st_r = 40
     plb_2nd_r = 40
-    plb_leak = 0.1
+    plb_leak = 1e-5
     plb_mt_n = 10
     plb_mt_int = 290
     plb_mt_slope = 0.04

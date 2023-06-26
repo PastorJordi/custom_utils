@@ -446,12 +446,12 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
         p_t_aff = 5
         p_t_eff = 4
         p_t_a = 14  # 90 ms (18) PSIAM fit includes p_t_eff
-        p_w_zt = 0.5
-        p_w_stim = 0.14
-        p_e_bound = 2.
+        p_w_zt = 0.1
+        p_w_stim = 0.08
+        p_e_bound = .6
         p_com_bound = 0.1
         p_w_a_intercept = 0.056
-        p_w_a_slope = -2e-5  # fixed
+        p_w_a_slope = 2e-5  # fixed
         p_a_bound = 2.6  # fixed
         p_1st_readout = 50
         p_2nd_readout = 90
@@ -475,7 +475,7 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
     p_t_eff = int(round(conf[5]++jitters[5]*np.random.rand()))
     p_t_a = int(round(conf[6]++jitters[6]*np.random.rand()))
     p_w_a_intercept = conf[7]+jitters[7]*np.random.rand()
-    p_w_a_slope = conf[8]+jitters[8]*np.random.rand()
+    p_w_a_slope = -conf[8]+jitters[8]*np.random.rand()
     p_a_bound = conf[9]+jitters[9]*np.random.rand()
     p_1st_readout = conf[10]+jitters[10]*np.random.rand()
     p_2nd_readout = conf[11]+jitters[11]*np.random.rand()
