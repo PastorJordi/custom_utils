@@ -27,15 +27,16 @@ import os
 # from pyvbmc import VBMC
 
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
-sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
+# sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
     data_augmentation, get_data_and_matrix
 from utilsJ.Behavior.plotting import binned_curve
 import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
 from scipy.special import rel_entr
+from utilsJ.paperfigs import figure_1 as fig1
 
 # DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
@@ -737,14 +738,14 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(simul_data), exist_ok=True)
     if os.path.exists(simul_data):
-        print('Loading Data')
+        print('Loading Simulated Data')
         x = np.load(simul_data, allow_pickle=True)
         x = torch.tensor(x).to(torch.float32)
     else:
         print('Starting simulation')
         time_start = time.time()
         for i_t, theta in enumerate(theta_all):
-            if (i_t+1) % 100000 == 0 and i_t != 0:
+            if (i_t+1) % 10000 == 0 and i_t != 0:
                 print('Simulation number: ' + str(i_t+1))
                 print('Time elapsed: ' + str((time.time()-time_start)/60) +
                       ' mins')
@@ -1150,10 +1151,14 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
     return mat_final
 
 
+def get_manual_kl_divergence(mat_model, mat_nn):
+    return np.sum(mat_model * np.log(mat_model/mat_nn))
+
+
 def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
                                   plot_nn=False, simulate=False, plot_model=True,
-                                  plot_nn_alone=False, xt=False):
+                                  plot_nn_alone=False, xt=False, eps=1e-5):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1235,8 +1240,18 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             lprobs = torch.exp(lprobs)
             mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
+            reshaped_mat_0_nn = resize(mat_0_nn.T, mat_0.shape)*(1-eps) + eps*1e-6
+            reshaped_mat_1_nn = resize(mat_1_nn.T, mat_1.shape)*(1-eps) + eps*1e-6
+            kl_0 = get_manual_kl_divergence(mat_model=(mat_0*(1-eps) + eps*1e-6) /
+                                            np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
+                                            mat_nn=reshaped_mat_0_nn /
+                                            np.sum(reshaped_mat_0_nn+reshaped_mat_1_nn))
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
+            kl_1 = get_manual_kl_divergence(mat_model=(mat_1*(1-eps) + eps*1e-6) /
+                                            np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
+                                            mat_nn=reshaped_mat_1_nn /
+                                            np.sum(reshaped_mat_1_nn+reshaped_mat_0_nn))
             if plot_nn_alone:
                 fig, ax1 = plt.subplots(ncols=2)
                 fig.suptitle('Network + {}'.format(n_sim_train))
@@ -1259,7 +1274,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                          vmax=np.max((mat_0, mat_1)))
             ax[0].contour(mat_0_nn, cmap='hot', linewidths=0.8)
             ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
-            ax[0].set_ylabel('MT (ms)')
+            ax[0].set_ylabel('MT (ms), KL = ' + str(round(kl_0, 3)))
             if xt:
                 ax[0].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
                 ax[0].set_xlabel('RT (ms)')
@@ -1270,6 +1285,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             plt.sca(ax[2])
             im2 = ax[2].contour(mat_1_nn, cmap='hot', linewidths=0.8)
             ax[2].set_yticks([])
+            ax[2].set_ylabel('KL = ' + str(round(kl_1, 3)))
             # ax[1].set_ylabel('MT (ms)')
             if xt:
                 ax[2].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
@@ -1311,7 +1327,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
         plt.colorbar(im1)
 
 
-def plot_lh_model_network(df):
+def plot_lh_model_network(df, n_trials=2000000):
     fig, ax = plt.subplots(4, 4, figsize=(8, 12))
     ax = ax.flatten()
     i = 0
@@ -1320,7 +1336,7 @@ def plot_lh_model_network(df):
     # ax[0].set_title('Choice 0')
     labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
               'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
-              'cong. higher t.i.']
+              'cong. higher t.i.', '0 stim, high prior', 'low stim incong']
     for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
                                     [1.5, 0.05, 1.5, 0.5],
                                     [400, 400, 400, 500]):
@@ -1328,7 +1344,7 @@ def plot_lh_model_network(df):
             xt = True
         plot_network_model_comparison(df, ax[4*i:4*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
-                                      n_list=[2000000], cohval=cohval,
+                                      n_list=[n_trials], cohval=cohval,
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
@@ -1336,8 +1352,101 @@ def plot_lh_model_network(df):
         i += 1
 
 
-def kl_vs_n_trials(df, theta, cohval, ztval, tival, sv_folder=SV_FOLDER,
-                   n_trials=[int(2e6), int(3e6), int(4e6)], simulate=False):
+def kl_vs_n_trials(n_trials=[2000000, 3000000], sv_folder=SV_FOLDER):
+    fig, ax = plt.subplots(nrows=4)
+    mat_kl_mt0 = np.zeros((2, 4))
+    mat_kl_mt1 = np.zeros((2, 4))
+    mat_kl_rt0 = np.zeros((2, 4))
+    mat_kl_rt1 = np.zeros((2, 4))
+    i = 0
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
+                                    [1.5, 0.05, 1.5, 0.5],
+                                    [400, 400, 400, 500]):
+        trial_index = np.repeat(tival, int(5e5))
+        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival))
+        ch_model = x[:, 2]
+        mt_model = x[:, 0]
+        bins_rt = np.arange(-100, 301, 20) + 300
+        bins_mt = np.arange(100, 601, 5)
+        mt_model_distro0 = np.histogram(mt_model[ch_model == 0], density=True, bins=bins_mt)[0]
+        mt_model_distro0 /= sum(mt_model_distro0)
+        mt_model_distro1 = np.histogram(mt_model[ch_model == 1], density=True, bins=bins_mt)[0]
+        mt_model_distro1 /= sum(mt_model_distro1)
+        rt_model = x[:, 1]
+        rt_model_distro0 = np.histogram(rt_model[ch_model == 0], density=True, bins=bins_rt)[0]
+        rt_model_distro0 /= sum(rt_model_distro0)
+        rt_model_distro1 = np.histogram(rt_model[ch_model == 1], density=True, bins=bins_rt)[0]
+        rt_model_distro1 /= sum(rt_model_distro1)
+        grid_rt = bins_rt[:-1] + np.diff(bins_rt)[0]/2
+        grid_mt = bins_mt[:-1] + np.diff(bins_mt)[0]/2
+        all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+        all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+        comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+        comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+        # generated data
+        x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+        colors = ['k', 'r']
+        for i_n, n_sim_train in enumerate(n_trials):
+            with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_sim_train),
+                      'rb') as f:
+                estimator = pickle.load(f)
+            estimator = estimator['estimator']
+            theta = theta_for_lh_plot()
+            theta = torch.reshape(torch.tensor(theta),
+                                  (1, len(theta))).to(torch.float32)
+            theta = theta.repeat(len(x_o), 1)
+            theta[:, 0] *= torch.tensor(ztval)
+            theta[:, 1] *= torch.tensor(cohval)
+            theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                                torch.tensor(trial_index[
+                                                    :len(x_o)]).to(torch.float32)))
+            theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+            theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+            theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                                theta_tri_ind[:, 9:15]))
+            lprobs = estimator.log_prob(x_o, theta_tri_ind)
+            lprobs = torch.exp(lprobs)
+            mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+            mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                      len(grid_rt)).detach().numpy()
+            mt_nn_distro0 = np.nansum(mat_0_nn, axis=1)
+            mt_nn_distro0 /= sum(mt_nn_distro0)
+            mt_nn_distro1 = np.nansum(mat_1_nn, axis=1)
+            mt_nn_distro1 /= sum(mt_nn_distro1)
+            rt_nn_distro0 = np.nansum(mat_0_nn, axis=0)
+            rt_nn_distro0 /= sum(rt_nn_distro0)
+            rt_nn_distro1 = np.nansum(mat_1_nn, axis=0)
+            rt_nn_distro1 /= sum(rt_nn_distro1)
+            kl_div_mt0 = sum(rel_entr(mt_model_distro0, mt_nn_distro0))
+            kl_div_mt1 = sum(rel_entr(mt_model_distro1, mt_nn_distro1))
+            kl_div_rt0 = sum(rel_entr(rt_model_distro0, rt_nn_distro0))
+            kl_div_rt1 = sum(rel_entr(rt_model_distro1, rt_nn_distro1))
+            mat_kl_mt0[i_n, i] = kl_div_mt0
+            mat_kl_mt1[i_n, i] = kl_div_mt1
+            mat_kl_rt0[i_n, i] = kl_div_rt0
+            mat_kl_rt1[i_n, i] = kl_div_rt1
+        i += 1
+        for j in range(4):
+            ax[0].plot(n_trials, mat_kl_mt0[:, j], color='k', alpha=0.2)
+            ax[1].plot(n_trials, mat_kl_mt1[:, j], color='k', alpha=0.2)
+            ax[2].plot(n_trials, mat_kl_rt0[:, j], color='k', alpha=0.2)
+            ax[3].plot(n_trials, mat_kl_rt1[:, j], color='k', alpha=0.2)
+    for a in range(len(ax)):
+        ax[a].set_ylabel('KL divergence')
+    ax[0].errorbar(n_trials, np.nanmean(mat_kl_mt0, axis=1),
+                   yerr=np.nanstd(mat_kl_mt0, axis=1), marker='o', color='k')
+    ax[1].errorbar(n_trials, np.nanmean(mat_kl_mt1, axis=1),
+                   yerr=np.nanstd(mat_kl_mt1, axis=1), marker='o', color='k')
+    ax[2].errorbar(n_trials, np.nanmean(mat_kl_rt0, axis=1),
+                   yerr=np.nanstd(mat_kl_rt0, axis=1), marker='o', color='k')
+    ax[3].errorbar(n_trials, np.nanmean(mat_kl_rt1, axis=1),
+                   yerr=np.nanstd(mat_kl_rt1, axis=1), marker='o', color='k')
+    ax[3].set_xlabel('N trials')
+
+
+def plot_kl_vs_n_trials(df, cohval, ztval, tival, sv_folder=SV_FOLDER,
+                        n_trials=[int(2e6), int(3e6), int(4e6)], simulate=False):
     fig, ax = plt.subplots(ncols=2, nrows=4)
     ax = ax.flatten()
     if simulate:
@@ -1438,6 +1547,81 @@ def kl_vs_n_trials(df, theta, cohval, ztval, tival, sv_folder=SV_FOLDER,
     ax[2].set_xlabel('MT, ch=1')
     ax[4].set_xlabel('RT, ch=0')
     ax[6].set_xlabel('RT, ch=1')
+
+
+def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e6),
+                           n_simul_training=int(3e6)):
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    stim = np.array([stim for stim in df.res_sound])
+    coh = np.array(df.coh2)
+    trial_index = np.array(df.origidx)
+    stim[df.soundrfail, :] = 0
+    # Prepare data:
+    coh = np.resize(coh, num_simulations)
+    zt = np.resize(zt, num_simulations)
+    trial_index = np.resize(trial_index, num_simulations)
+    # stim = np.resize(stim, (num_simulations, 20))
+    theta_all = torch.tensor(theta).repeat(num_simulations, 1)
+    theta_all_inp = theta_all.clone().detach()
+    theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
+    theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
+    theta_all_inp = torch.column_stack((
+        theta_all_inp, torch.tensor(
+            trial_index[:num_simulations].astype(float)).to(torch.float32)))
+    theta_all_inp = theta_all_inp.to(torch.float32)
+    # SIMULATION
+    x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index)
+    # now we have a matrix of (num_simulations x 3):
+    # MT, RT, CHOICE for each simulation
+
+    # NETWORK TRAINING
+    # transform parameters related to trial index. 14 params instead of 17
+    # MT_in = MT_0 + MT_1*trial_index
+    theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
+    # V_A = vA_0 - vA_1*trial_index
+    theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
+    theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
+                                        theta_all_inp[:, 9:15]))
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_simul_training),
+              'rb') as f:
+        estimator = pickle.load(f)
+    estimator = estimator['estimator']
+    x_nn = torch.tensor(())
+    print('Sampling from network')
+    for i_th, th in enumerate(theta_all_inp[:100]):
+        if i_th % 10000 == 0:
+            print('Sampling ' + str(i_th+1) + ' trial')
+        x_sample_tmp = estimator.sample(th.reshape(1, 14))
+        while x_sample_tmp[0][0] > 2000 or x_sample_tmp[0][1] > 2000:
+            x_sample_tmp = estimator.sample(th.reshape(1, 14))
+        x_nn = torch.cat((x_nn, x_sample_tmp))
+    x_nn = x_nn.detach().numpy()
+    fig, ax = plt.subplots(nrows=3)
+    # sns.kdeplot(df.resp_len.values*1e3, label='Data', ax=ax[0], color='k')
+    sns.kdeplot(x_nn[:, 0], label='MNLE', ax=ax[0], color='r')
+    sns.kdeplot(x[:, 0], label='Model', ax=ax[0], color='b')
+    ax[0].set_xlabel('MT (ms)')
+    ax[0].legend()
+    # sns.kdeplot(df.sound_len.values, label='Data', ax=ax[1], color='k')
+    sns.kdeplot(x_nn[:, 1]-300, label='MNLE', ax=ax[1], color='r')
+    sns.kdeplot(x[:, 1]-300, label='Model', ax=ax[1], color='b')
+    ax[1].set_xlabel('RT (ms)')
+    ax[1].legend()
+    # pright_data = []
+    pright_nn = []
+    pright_model = []
+    ev_vals = np.unique(coh)
+    for ev in ev_vals:
+        index = coh == ev
+        # pright_data.append(np.nanmean(df.R_response.values[index]))
+        pright_nn.append(np.nanmean(x_nn[:, 2][index]))
+        pright_model.append(np.nanmean(x[:, 2][index]))
+    # ax[2].plot(ev_vals, pright_data, label='Data', color='k')
+    ax[2].plot(ev_vals, pright_nn, marker='o', label='MNLE', color='r')
+    ax[2].plot(ev_vals, pright_model, marker='o', label='Model', color='b')
+    ax[2].set_xlabel('Stimulus')
+    ax[2].set_ylabel('Pright')
+    ax[2].legend()
 
 
 # --- MAIN
@@ -1552,7 +1736,13 @@ if __name__ == '__main__':
                                      sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
-            plot_lh_model_network(df)
+            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                                   num_simulations=len(df),
+                                   n_simul_training=int(3e6))
+            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                                   num_simulations=len(df),
+                                   n_simul_training=int(2e6))
+            # plot_lh_model_network(df)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
