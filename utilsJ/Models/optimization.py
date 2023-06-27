@@ -1004,7 +1004,8 @@ def prepare_fb_data(df):
     zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
     x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
                               torch.tensor(rt_vec),
-                              torch.tensor(ch_vec)))
+                              torch.tensor(-ch_vec+1)))  # flipping choice
+    # since right in our model is 0, whereas in data is 1
     data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
                                torch.tensor(tr_in_vec.astype(float)),
                                x_o))
