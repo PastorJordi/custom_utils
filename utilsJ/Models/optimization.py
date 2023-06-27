@@ -23,6 +23,7 @@ from sbi.analysis import pairplot
 import pickle
 import scipy
 from pybads import BADS
+import itertools
 import os
 # from pyvbmc import VBMC
 
@@ -744,7 +745,7 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
         print('Starting simulation')
         time_start = time.time()
         for i_t, theta in enumerate(theta_all):
-            if (i_t+1) % 10000 == 0 and i_t != 0:
+            if (i_t+1) % 100000 == 0 and i_t != 0:
                 print('Simulation number: ' + str(i_t+1))
                 print('Time elapsed: ' + str((time.time()-time_start)/60) +
                       ' mins')
@@ -1623,6 +1624,44 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
     ax[2].set_ylabel('Pright')
     ax[2].legend()
 
+
+def create_simulations_mt_rt_choice(df, cohval, tival, ztval, theta,
+                                    num_simulations=int(5e5)):
+    stim = np.array(
+        [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(num_simulations, 1)
+    stim = np.array(
+        [np.concatenate((stim, stim)) for i in range(len(theta))])
+    trial_index = np.repeat(tival, len(theta))
+    x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                             zt=np.repeat(ztval, len(theta)),
+                             coh=np.repeat(cohval, len(theta)),
+                             trial_index=trial_index)
+    np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+            .format(cohval, ztval, tival), x)
+
+
+def compute_simulations_diff_zt_coh(df, theta=theta_for_lh_plot()):
+    tival = 350
+    ztvals = np.linspace(-3.5, 3.5, 11)
+    cohvals = np.array((-1, -0.5, -0.25, 0., 0.25, 0.5, 1))
+    combinations = list(itertools.product(ztvals, cohvals))
+    for ztval, cohval in combinations:
+        create_simulations_mt_rt_choice(df=df, cohval=cohval,
+                                        tival=tival, ztval=ztval, theta=theta)
+
+
+def plot_kl_vs_zt_coh(df):
+    ztvals = np.linspace(-3.5, 3.5, 11)
+    cohvals = np.array((-1, -0.5, -0.25, 0., 0.25, 0.5, 1))
+    combinations = list(itertools.product(ztvals, cohvals))
+    tival = 350
+    for ztval, cohval in combinations:
+        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival))
+        # TODO: finish
 
 # --- MAIN
 if __name__ == '__main__':
