@@ -1589,9 +1589,9 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
     estimator = estimator['estimator']
     x_nn = torch.tensor(())
     print('Sampling from network')
-    for i_th, th in enumerate(theta_all_inp[:100]):
-        if i_th % 10000 == 0:
-            print('Sampling ' + str(i_th+1) + ' trial')
+    for i_th, th in enumerate(theta_all_inp):
+        if i_th % 10000 == 0 and i_th != 0:
+            print('Sampling the ' + str(i_th+1) + 'th trial')
         x_sample_tmp = estimator.sample(th.reshape(1, 14))
         while x_sample_tmp[0][0] > 2000 or x_sample_tmp[0][1] > 2000:
             x_sample_tmp = estimator.sample(th.reshape(1, 14))
