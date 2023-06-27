@@ -26,8 +26,8 @@ from pybads import BADS
 import os
 # from pyvbmc import VBMC
 
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
-sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
+# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
@@ -38,15 +38,14 @@ from skimage.transform import resize
 from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
 
-# DATA_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Alex/paper/data/'  # Alex
-# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/Alexandre/Desktop/CRM/Results_LE43/'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -820,7 +819,7 @@ def get_x0():
     p_a_bound = 2.6
     p_1st_readout = 40
     p_2nd_readout = 80
-    p_leak = 0.5
+    p_leak = 0.06
     p_mt_noise = 20
     p_MT_intercept = 320
     p_MT_slope = 0.07
@@ -884,7 +883,7 @@ def get_ub():
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.2
+    ub_leak = 0.6
     ub_mt_n = 30
     ub_mt_int = 370
     ub_mt_slope = 0.6
@@ -1721,7 +1720,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(2e6)  # number of simulations to train the network
+        num_simulations = int(3e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
@@ -1737,12 +1736,13 @@ if __name__ == '__main__':
                                      sv_folder=SV_FOLDER, after_correct=True,
                                      silent=True, all_trials=True,
                                      srfail=True)
-            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-                                   num_simulations=len(df),
-                                   n_simul_training=int(3e6))
-            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-                                   num_simulations=len(df),
-                                   n_simul_training=int(2e6))
+            df = df.loc[df.special_trial == 0]
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                        num_simulations=len(df),
+            #                        n_simul_training=int(3e6))
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                        num_simulations=len(df),
+            #                        n_simul_training=int(2e6))
             # plot_lh_model_network(df)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,

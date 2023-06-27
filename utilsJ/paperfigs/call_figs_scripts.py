@@ -34,7 +34,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -87,7 +87,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE85', 'LE86']
-    subjects = ['LE43']
+    subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -183,9 +183,9 @@ if f5:
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                           trial_index=trial_index, num_tr=num_tr,
                                           subject_list=subjects, subjid=subjid, simulate=simulate)
-    # basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-    # basic_statistics(com, com_model_detected)  # com
-    # basic_statistics(hit, hit_model)  # hit
+    # fp.basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
+    # fp.basic_statistics(com, com_model_detected)  # com
+    # fp.basic_statistics(hit, hit_model)  # hit
     MT = [len(t) for t in trajs]
     df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
                             'sound_len': reaction_time,
