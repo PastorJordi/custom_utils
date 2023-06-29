@@ -52,6 +52,10 @@ BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
 CTE_FB = 1/600
 
+plt.rcParams.update({'xtick.labelsize': 12})
+plt.rcParams.update({'ytick.labelsize': 12})
+plt.rcParams.update({'font.size': 14})
+
 
 def get_data(dfpath=DATA_FOLDER, after_correct=True, num_tr_per_rat=int(1e3),
              all_trials=False):
@@ -731,13 +735,14 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
     return log_liks_fb*weight_LLH_fb + log_liks_no_fb  # *(1-weight_LLH_fb)
 
 
-def simulations_for_mnle(theta_all, stim, zt, coh, trial_index):
+def simulations_for_mnle(theta_all, stim, zt, coh, trial_index,
+                         simulate=True):
     # run simulations
     x = torch.tensor(())
     simul_data = SV_FOLDER+'/network/NN_simulations'+str(len(zt))+'.npy'
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(simul_data), exist_ok=True)
-    if os.path.exists(simul_data):
+    if os.path.exists(simul_data) and not simulate:
         print('Loading Simulated Data')
         x = np.load(simul_data, allow_pickle=True)
         x = torch.tensor(x).to(torch.float32)
@@ -971,14 +976,25 @@ def nonbox_constraints_bads(x):
 
 def gumbel_plotter():
     # fits = scipy.stats.gumbel_r.fit(df.resp_len.values*1000)
-    fig, ax = plt.subplots(1)
+    fig, ax = plt.subplots(ncols=1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     val = np.arange(1, 81, 10)
+    val = [1]
     for v in val:
-        fff = []
-        for i in range(100000):
-            fff.append(v*np.random.gumbel())
-        sns.kdeplot(np.array(fff)[~np.isnan(fff)], ax=ax, label=v)
+        norm = []
+        gumb = []
+        for i in range(500000):
+            norm.append(v*np.random.randn())
+        for i in range(500000):
+            gumb.append(v*np.random.gumbel())
+        sns.kdeplot(np.array(norm)[~np.isnan(norm)], color='k',
+                    ax=ax, label='Normal')
+        sns.kdeplot(np.array(gumb)[~np.isnan(gumb)], color='r',
+                    ax=ax, label='Gumbel')
     ax.legend()
+    ax.set_yticks([])
+    ax.set_xlabel('x')
 
 
 def prepare_fb_data(df):
@@ -1583,20 +1599,9 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
     theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
     theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
                                         theta_all_inp[:, 9:15]))
-    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_simul_training),
-              'rb') as f:
-        estimator = pickle.load(f)
-    estimator = estimator['estimator']
-    x_nn = torch.tensor(())
-    print('Sampling from network')
-    for i_th, th in enumerate(theta_all_inp):
-        if i_th % 10000 == 0 and i_th != 0:
-            print('Sampling the ' + str(i_th+1) + 'th trial')
-        x_sample_tmp = estimator.sample(th.reshape(1, 14))
-        while x_sample_tmp[0][0] > 2000 or x_sample_tmp[0][1] > 2000:
-            x_sample_tmp = estimator.sample(th.reshape(1, 14))
-        x_nn = torch.cat((x_nn, x_sample_tmp))
-    x_nn = x_nn.detach().numpy()
+    x_nn = get_sampled_data_mnle(theta=theta_all_inp,
+                                 n_simul_training=n_simul_training,
+                                 cohztti='ALL_RAT_LE'+{}.format(df.subjid.unique()))
     fig, ax = plt.subplots(nrows=3)
     # sns.kdeplot(df.resp_len.values*1e3, label='Data', ax=ax[0], color='k')
     sns.kdeplot(x_nn[:, 0], label='MNLE', ax=ax[0], color='r')
@@ -1626,7 +1631,7 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
 
 
 def create_simulations_mt_rt_choice(df, cohval, tival, ztval, theta,
-                                    num_simulations=int(5e5)):
+                                    num_simulations=int(1e5)):
     stim = np.array(
         [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
     theta = torch.reshape(torch.tensor(theta),
@@ -1635,33 +1640,145 @@ def create_simulations_mt_rt_choice(df, cohval, tival, ztval, theta,
     stim = np.array(
         [np.concatenate((stim, stim)) for i in range(len(theta))])
     trial_index = np.repeat(tival, len(theta))
-    x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
-                             zt=np.repeat(ztval, len(theta)),
-                             coh=np.repeat(cohval, len(theta)),
-                             trial_index=trial_index)
-    np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
-            .format(cohval, ztval, tival), x)
+    simul_data = SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival)
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(simul_data), exist_ok=True)
+    if os.path.exists(simul_data):
+        print('Data already exists')
+        # x = np.load(simul_data, allow_pickle=True)
+        # x = torch.tensor(x).to(torch.float32)
+    else:
+        x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+                                 zt=np.repeat(ztval, len(theta)),
+                                 coh=np.repeat(cohval, len(theta)),
+                                 trial_index=trial_index,
+                                 simulate=True)
+        np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                .format(cohval, ztval, tival), x)
 
 
 def compute_simulations_diff_zt_coh(df, theta=theta_for_lh_plot()):
     tival = 350
-    ztvals = np.linspace(-3.5, 3.5, 11)
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    ztvals = np.quantile(zt, [(i+1)*1/6 for i in range(5)])
     cohvals = np.array((-1, -0.5, -0.25, 0., 0.25, 0.5, 1))
     combinations = list(itertools.product(ztvals, cohvals))
     for ztval, cohval in combinations:
         create_simulations_mt_rt_choice(df=df, cohval=cohval,
                                         tival=tival, ztval=ztval, theta=theta)
 
+def get_sampled_data_mnle(theta, n_simul_training, cohztti):
+    # load NN
+    simul_data = SV_FOLDER + 'simul_nn_{}.npy'.format(cohztti)
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(simul_data), exist_ok=True)
+    if os.path.exists(simul_data):
+        # print('Data already exists')
+        x_nn = np.load(simul_data, allow_pickle=True)
+        # x = torch.tensor(x).to(torch.float32)
+    else:
+        with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_simul_training),
+                  'rb') as f:
+            estimator = pickle.load(f)
+        estimator = estimator['estimator']
+        x_nn = torch.tensor(())
+        print('Sampling from network')
+        for i_th, th in enumerate(theta):
+            if i_th % 10000 == 0 and i_th != 0:
+                print('Sampling the ' + str(i_th+1) + 'th trial')
+            x_sample_tmp = estimator.sample(th.reshape(1, -1))
+            while x_sample_tmp[0][0] > 2000 or x_sample_tmp[0][1] > 2000:
+                x_sample_tmp = estimator.sample(th.reshape(1, -1))
+            x_nn = torch.cat((x_nn, x_sample_tmp))
+        x_nn = x_nn.detach().numpy()
+        np.save(SV_FOLDER + 'simul_nn_{}.npy'.format(cohztti), x_nn)
+    return x_nn
 
-def plot_kl_vs_zt_coh(df):
-    ztvals = np.linspace(-3.5, 3.5, 11)
+
+def plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
+                      n_simul_training=int(3e6)):
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    ztvals = np.quantile(zt, [(i+1)*1/6 for i in range(5)])
     cohvals = np.array((-1, -0.5, -0.25, 0., 0.25, 0.5, 1))
     combinations = list(itertools.product(ztvals, cohvals))
     tival = 350
+    bins_rt = np.arange(-100, 301, 75) + 300
+    bins_mt = np.arange(250, 601, 75)
+    kl_mt = []
+    kl_rt = []
+    kl_ch = []
     for ztval, cohval in combinations:
-        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
-                    .format(cohval, ztval, tival))
-        # TODO: finish
+        # load simulated data
+        try:
+            x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
+        except:
+            x = np.empty((num_simulations, 3))
+            x[:] = np.nan
+        mt_model = x[:, 0]
+        rt_model = x[:, 1]
+        ch_model = x[:, 2]
+        # Prepare data:
+        coh = np.resize(cohval, num_simulations)
+        zt = np.resize(ztval, num_simulations)
+        trial_index = np.resize(tival, num_simulations)
+        theta_all = torch.tensor(theta).repeat(num_simulations, 1)
+        theta_all_inp = theta_all.clone().detach()
+        theta_all_inp[:, 0] *= torch.tensor(zt[:num_simulations]).to(torch.float32)
+        theta_all_inp[:, 1] *= torch.tensor(coh[:num_simulations]).to(torch.float32)
+        theta_all_inp = torch.column_stack((
+            theta_all_inp, torch.tensor(
+                trial_index[:num_simulations].astype(float)).to(torch.float32)))
+        theta_all_inp = theta_all_inp.to(torch.float32)
+        theta_all_inp[:, 14] += theta_all_inp[:, 15]*theta_all_inp[:, -1]
+        theta_all_inp[:, 7] -= theta_all_inp[:, 8]*theta_all_inp[:, -1]
+        theta_all_inp = torch.column_stack((theta_all_inp[:, :8],
+                                            theta_all_inp[:, 9:15]))
+        x_nn = get_sampled_data_mnle(theta=theta_all_inp,
+                                     n_simul_training=n_simul_training,
+                                     cohztti=\
+                                         str(round(ztval, 2))+str(cohval)+str(tival))
+        mt_nn = x_nn[:, 0]
+        rt_nn = x_nn[:, 1]
+        ch_nn = x_nn[:, 2]
+        mt_model_distro = np.histogram(mt_model, density=True, bins=bins_mt)[0]
+        mt_model_distro /= sum(mt_model_distro)
+        mt_nn_distro = np.histogram(mt_nn, density=True, bins=bins_mt)[0]
+        mt_nn_distro /= sum(mt_nn_distro)
+        kl_mt.append(sum(rel_entr(mt_model_distro, mt_nn_distro)))
+        rt_model_distro = np.histogram(rt_model, density=True, bins=bins_rt)[0]
+        rt_model_distro /= sum(rt_model_distro)
+        rt_nn_distro = np.histogram(rt_nn, density=True, bins=bins_rt)[0]
+        rt_nn_distro /= sum(rt_nn_distro)
+        kl_rt.append(sum(rel_entr(rt_model_distro, rt_nn_distro)))
+        ch_model_distro = [np.mean(ch_model == 0), np.mean(ch_model == 1)]
+        ch_nn_distro = [np.mean(ch_nn == 0), np.mean(ch_nn == 1)]
+        kl_ch.append(sum(rel_entr(ch_model_distro, ch_nn_distro)))
+    fig, ax = plt.subplots(ncols=3)
+    mat_kl_mt = np.zeros((len(ztvals), len(cohvals)))
+    mat_kl_rt = np.zeros((len(ztvals), len(cohvals)))
+    mat_kl_ch = np.zeros((len(ztvals), len(cohvals)))
+    for i, [ztval, cohval] in enumerate(combinations):
+        indexzt = ztvals == ztval
+        indexcoh = cohvals == cohval
+        mat_kl_mt[indexzt, indexcoh] = kl_mt[i]
+        mat_kl_rt[indexzt, indexcoh] = kl_rt[i]
+        mat_kl_ch[indexzt, indexcoh] = kl_ch[i]
+    titles = ['MT', 'RT', 'choice']
+    for j in range(len(ax)):
+        ax[j].set_xticks([0, 3, 6], [-1, 0, 1])
+        ax[j].set_yticks([])
+        ax[j].set_xlabel('Stimulus')
+        ax[j].set_title(titles[j])
+    ax[0].set_yticks([0, 2, 4], [1, 0, -1])
+    ax[0].set_ylabel('Prior')
+    immt = ax[0].imshow(np.flipud(mat_kl_mt))
+    plt.colorbar(immt, fraction=0.04, label='KL-divergence')
+    imrt = ax[1].imshow(np.flipud(mat_kl_rt))
+    plt.colorbar(imrt, fraction=0.04, label='KL-divergence')
+    imch = ax[2].imshow(np.flipud(mat_kl_ch))
+    plt.colorbar(imch, fraction=0.04, label='KL-divergence')
+
 
 # --- MAIN
 if __name__ == '__main__':
@@ -1783,6 +1900,8 @@ if __name__ == '__main__':
             #                        num_simulations=len(df),
             #                        n_simul_training=int(2e6))
             # plot_lh_model_network(df)
+            plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
+                                  n_simul_training=int(3e6))
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
