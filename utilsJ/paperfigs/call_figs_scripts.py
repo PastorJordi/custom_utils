@@ -210,8 +210,8 @@ if f5:
     df_sim['normallpriors'] = df_sim['norm_allpriors']
 
     # simulation plots
-    fp.plot_rt_sim(df_sim)
-    fp.plot_fb_per_subj_from_df(df)
+    # fp.plot_rt_sim(df_sim)
+    # fp.plot_fb_per_subj_from_df(df)
     means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
     means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
     if not with_fb:

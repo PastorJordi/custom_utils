@@ -396,10 +396,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                     vel_all[tr, :len(vals_vel)] = vals_vel
                 try:
                     index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
-                                         > traj_all.shape[0] - 50)[0][0]
+                                          > traj_all.shape[0] - 50)[0][0]
                     mean_traj = func_final(traj_all[:, :index_vel], axis=0)
                     std_traj = np.nanstd(traj_all[:, :index_vel],
-                                         axis=0) / np.sqrt(len(subjects.unique()))
+                                          axis=0) / np.sqrt(len(subjects.unique()))
                 except Exception:
                     mean_traj = func_final(traj_all, axis=0)
                     std_traj = np.nanstd(traj_all, axis=0) /\
@@ -412,19 +412,18 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                 vals_thr_vel.append(val_vel)
                 mat_trajs_indsub[i_ev, :len(mean_traj)] = mean_traj
                 mat_vel_indsub[i_ev, :len(mean_vel)] = mean_vel
-            val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
-            val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
             if save_new_data:
                 data = {'mat_trajs_indsub': mat_trajs_indsub,
                         'mat_vel_indsub': mat_vel_indsub,
                         'vals_thr_traj': vals_thr_traj, 'vals_thr_vel': vals_thr_vel}
                 np.savez(traj_data, **data)
-            mat_vel_subs[:, :, i_s] = mat_trajs_indsub
-            mat_vel_subs[:, :, i_s] = mat_vel_indsub
+        mat_trajs_subs[:, :, i_s] = mat_trajs_indsub
+        mat_vel_subs[:, :, i_s] = mat_vel_indsub
+        val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
+        val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
     for i_ev, ev in enumerate(bins_ref):
-        if prior:
-            if ev == 1.01:
-                break
+        if prior and ev == 1.01:
+            break
         val_traj = np.nanmean(val_traj_subs[i_ev, :])
         std_mt = np.nanstd(val_traj_subs[i_ev, :]) /\
             np.sqrt(len(subjects.unique()))

@@ -1,5 +1,5 @@
 import seaborn as sns
-from utilsJ.Behavior import plotting, ComPipe
+from utilsJ.Behavior import plotting
 from scipy.interpolate import interp1d
 from scipy.stats import sem
 from matplotlib import cm

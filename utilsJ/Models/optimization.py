@@ -1369,16 +1369,19 @@ def plot_lh_model_network(df, n_trials=2000000):
         i += 1
 
 
-def kl_vs_n_trials(n_trials=[2000000, 3000000], sv_folder=SV_FOLDER):
+def kl_vs_n_trials(df, n_trials=[2000000, 3000000, 4000000], sv_folder=SV_FOLDER):
     fig, ax = plt.subplots(nrows=4)
-    mat_kl_mt0 = np.zeros((2, 4))
-    mat_kl_mt1 = np.zeros((2, 4))
-    mat_kl_rt0 = np.zeros((2, 4))
-    mat_kl_rt1 = np.zeros((2, 4))
     i = 0
-    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
-                                    [1.5, 0.05, 1.5, 0.5],
-                                    [400, 400, 400, 500]):
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    ztvals = np.quantile(zt, [(i+1)*1/6 for i in range(5)])
+    cohvals = np.array((-1, -0.5, -0.25, 0., 0.25, 0.5, 1))
+    combinations = list(itertools.product(ztvals, cohvals))
+    tival = 350
+    mat_kl_mt0 = np.zeros((len(n_trials), len(combinations)))
+    mat_kl_mt1 = np.zeros((len(n_trials), len(combinations)))
+    mat_kl_rt0 = np.zeros((len(n_trials), len(combinations)))
+    mat_kl_rt1 = np.zeros((len(n_trials), len(combinations)))
+    for ztval, cohval in combinations:
         trial_index = np.repeat(tival, int(5e5))
         x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'.format(cohval, ztval, tival))
         ch_model = x[:, 2]
@@ -1445,20 +1448,24 @@ def kl_vs_n_trials(n_trials=[2000000, 3000000], sv_folder=SV_FOLDER):
             mat_kl_rt1[i_n, i] = kl_div_rt1
         i += 1
         for j in range(4):
-            ax[0].plot(n_trials, mat_kl_mt0[:, j], color='k', alpha=0.2)
-            ax[1].plot(n_trials, mat_kl_mt1[:, j], color='k', alpha=0.2)
-            ax[2].plot(n_trials, mat_kl_rt0[:, j], color='k', alpha=0.2)
-            ax[3].plot(n_trials, mat_kl_rt1[:, j], color='k', alpha=0.2)
+            ax[0].plot(n_trials, mat_kl_mt0[:, j], color='gray', alpha=0.05)
+            ax[1].plot(n_trials, mat_kl_mt1[:, j], color='gray', alpha=0.05)
+            ax[2].plot(n_trials, mat_kl_rt0[:, j], color='gray', alpha=0.05)
+            ax[3].plot(n_trials, mat_kl_rt1[:, j], color='gray', alpha=0.05)
     for a in range(len(ax)):
         ax[a].set_ylabel('KL divergence')
     ax[0].errorbar(n_trials, np.nanmean(mat_kl_mt0, axis=1),
-                   yerr=np.nanstd(mat_kl_mt0, axis=1), marker='o', color='k')
+                   yerr=np.nanstd(mat_kl_mt0, axis=1), marker='o', color='k',
+                   lw=2)
     ax[1].errorbar(n_trials, np.nanmean(mat_kl_mt1, axis=1),
-                   yerr=np.nanstd(mat_kl_mt1, axis=1), marker='o', color='k')
+                   yerr=np.nanstd(mat_kl_mt1, axis=1), marker='o', color='k',
+                   lw=2)
     ax[2].errorbar(n_trials, np.nanmean(mat_kl_rt0, axis=1),
-                   yerr=np.nanstd(mat_kl_rt0, axis=1), marker='o', color='k')
+                   yerr=np.nanstd(mat_kl_rt0, axis=1), marker='o', color='k',
+                   lw=2)
     ax[3].errorbar(n_trials, np.nanmean(mat_kl_rt1, axis=1),
-                   yerr=np.nanstd(mat_kl_rt1, axis=1), marker='o', color='k')
+                   yerr=np.nanstd(mat_kl_rt1, axis=1), marker='o', color='k',
+                   lw=2)
     ax[3].set_xlabel('N trials')
 
 
@@ -1601,8 +1608,10 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
                                         theta_all_inp[:, 9:15]))
     x_nn = get_sampled_data_mnle(theta=theta_all_inp,
                                  n_simul_training=n_simul_training,
-                                 cohztti='ALL_RAT_LE'+{}.format(df.subjid.unique()))
+                                 cohztti='{}_ALL_RAT_{}'.format(n_simul_training,
+                                                                df.subjid.unique()))
     fig, ax = plt.subplots(nrows=3)
+    fig.suptitle(n_simul_training)
     # sns.kdeplot(df.resp_len.values*1e3, label='Data', ax=ax[0], color='k')
     sns.kdeplot(x_nn[:, 0], label='MNLE', ax=ax[0], color='r')
     sns.kdeplot(x[:, 0], label='Model', ax=ax[0], color='b')
@@ -1893,15 +1902,18 @@ if __name__ == '__main__':
                                      silent=True, all_trials=True,
                                      srfail=True)
             df = df.loc[df.special_trial == 0]
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                        num_simulations=len(df),
-            #                        n_simul_training=int(3e6))
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                        num_simulations=len(df),
-            #                        n_simul_training=int(2e6))
-            # plot_lh_model_network(df)
-            plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
-                                  n_simul_training=int(3e6))
+            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                                    num_simulations=len(df),
+                                    n_simul_training=int(2e6))
+            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                                    num_simulations=len(df),
+                                    n_simul_training=int(3e6))
+            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                                    num_simulations=len(df),
+                                    n_simul_training=int(4e6))
+            plot_lh_model_network(df, n_trials=4000000)
+            # plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
+            #                       n_simul_training=int(3e6))
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
