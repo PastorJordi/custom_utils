@@ -812,6 +812,29 @@ def theta_for_lh_plot():
             p_MT_intercept, p_MT_slope]
 
 
+def theta_for_lh_plot_v2():
+    p_t_aff = 7
+    p_t_eff = 3
+    p_t_a = 15  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.3
+    p_w_stim = 0.08
+    p_e_bound = 1.6
+    p_com_bound = 0.11
+    p_w_a_intercept = 0.04
+    p_w_a_slope = 2e-5
+    p_a_bound = 2.6
+    p_1st_readout = 70
+    p_2nd_readout = 50
+    p_leak = 0.5
+    p_mt_noise = 30
+    p_MT_intercept = 310
+    p_MT_slope = 0.06
+    return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
+            p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+            p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+            p_MT_intercept, p_MT_slope]
+
+
 def get_x0():
     p_t_aff = 6
     p_t_eff = 6
@@ -1574,7 +1597,7 @@ def plot_kl_vs_n_trials(df, cohval, ztval, tival, sv_folder=SV_FOLDER,
 
 
 def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e6),
-                           n_simul_training=int(3e6)):
+                           n_simul_training=int(3e6), vers_theta='1'):
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     stim = np.array([stim for stim in df.res_sound])
     coh = np.array(df.coh2)
@@ -1608,10 +1631,12 @@ def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e
                                         theta_all_inp[:, 9:15]))
     x_nn = get_sampled_data_mnle(theta=theta_all_inp,
                                  n_simul_training=n_simul_training,
-                                 cohztti='{}_ALL_RAT_{}'.format(n_simul_training,
-                                                                df.subjid.unique()))
+                                 cohztti='{}_ALL_RAT_{}_{}'.format(n_simul_training,
+                                                                df.subjid.unique(),
+                                                                vers_theta),
+                                 new_data=False)
     fig, ax = plt.subplots(nrows=3)
-    fig.suptitle(n_simul_training)
+    fig.suptitle('Training trials: ' + str(n_simul_training))
     # sns.kdeplot(df.resp_len.values*1e3, label='Data', ax=ax[0], color='k')
     sns.kdeplot(x_nn[:, 0], label='MNLE', ax=ax[0], color='r')
     sns.kdeplot(x[:, 0], label='Model', ax=ax[0], color='b')
@@ -1676,12 +1701,12 @@ def compute_simulations_diff_zt_coh(df, theta=theta_for_lh_plot()):
         create_simulations_mt_rt_choice(df=df, cohval=cohval,
                                         tival=tival, ztval=ztval, theta=theta)
 
-def get_sampled_data_mnle(theta, n_simul_training, cohztti):
+def get_sampled_data_mnle(theta, n_simul_training, cohztti, new_data=False):
     # load NN
     simul_data = SV_FOLDER + 'simul_nn_{}.npy'.format(cohztti)
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(simul_data), exist_ok=True)
-    if os.path.exists(simul_data):
+    if os.path.exists(simul_data) and not new_data:
         # print('Data already exists')
         x_nn = np.load(simul_data, allow_pickle=True)
         # x = torch.tensor(x).to(torch.float32)
