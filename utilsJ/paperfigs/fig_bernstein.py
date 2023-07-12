@@ -79,17 +79,19 @@ plt.rcParams.update({'font.size': 14})
 def fig_bernstein(df, data_folder=DATA_FOLDER, task_img=TASK_IMG, model_img=MODEL_IMG,
                   rat_nocom_img=RAT_noCOM_IMG, fgsz=(8, 12), inset_sz=.1,
                   marginx=-.04, marginy=0.1):
-    fig, ax = plt.subplots(ncols=2, nrows=5, figsize=(7, 14))
+    fig, ax = plt.subplots(ncols=3, nrows=4, figsize=(10, 15))
     ax = ax.flatten()
     ax_task = ax[0]
     ax_task.axis('off')
+    ax[10].axis('off')
+    ax[11].axis('off')
     for a in ax:
         fp.rm_top_right_lines(a)
     # pos_task = ax_task.get_position()
     # factor = 1.75
     # ax_task.set_position([pos_task.x0+0.05, pos_task.y0-0.05,
     #                       pos_task.width*factor, pos_task.height*factor])
-    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
+    # fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
     # TASK PANEL
     task = plt.imread(task_img)
     ax_task.imshow(task)
@@ -147,8 +149,8 @@ def fig_bernstein(df, data_folder=DATA_FOLDER, task_img=TASK_IMG, model_img=MODE
     ax_scrnsht.set_ylim([0, img.shape[0]])
     # trajectories
     # add insets
-    ax_zt = np.array([ax[5], ax[7]])
-    ax_cohs = np.array([ax[9], ax[6]])
+    ax_zt = np.array([ax[5], ax[8]])
+    ax_cohs = np.array([ax[7], ax[6]])
     ax_inset_1 = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
                               marginx=marginx, marginy=marginy, right=True)
     ax_inset_1.yaxis.set_ticks_position('none')
@@ -180,16 +182,16 @@ def fig_bernstein(df, data_folder=DATA_FOLDER, task_img=TASK_IMG, model_img=MODE
 
     ax[6].cla()
     ax[6].axis('off')
-    ax[8].cla()
-    ax[8].axis('off')
+    ax[9].cla()
+    ax[9].axis('off')
     ax_inset_1.cla()
     ax_inset_1.axis('off')
     # model
     ax_model = ax[6]
-    pos_ax8 = ax[8].get_position()
+    pos_ax9 = ax[9].get_position()
     model_image = plt.imread(model_img)
-    ax_model.set_position([pos_ax8.x0, pos_ax8.y0, pos_ax8.width,
-                        pos_ax8.height*2.3])
+    ax_model.set_position([pos_ax9.x0, pos_ax9.y0, pos_ax9.width,
+                           pos_ax9.height*3])
     ax_model.imshow(model_image)
 
 
