@@ -144,10 +144,10 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     # ax[7].set_title('Pright Model')
 
 
-def plot_pcom_matrices_model(df_sim, df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
+def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
-    for i_s, subj in enumerate(df_sim.subjid.unique()):
+    for i_s, subj in enumerate(df_model.subjid.unique()):
         matrix_side_0 =\
             fig_3.com_heatmap_marginal_pcom_side_mat(
                 df=df_model.loc[df_model.subjid == subj], side=0)
@@ -172,18 +172,18 @@ def plot_pcom_matrices_model(df_sim, df_model, n_subjs, ax_mat, pos_ax_0, nbins=
 
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticklabels(['']*nbins)
-        ax_i.set_xticklabels(['']*nbins)
+        # ax_i.set_yticklabels(['']*nbins)
+        # ax_i.set_xticklabels(['']*nbins)
     ax_mat[0].set_ylabel('Stimulus Evidence')
     ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
-                            pos_ax_0.width/2,
+                            pos_ax_0.width,
                             pos_ax_0.height])
     ax_mat[1].set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
-                            pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+                            pos_ax_0.y0, pos_ax_0.width, pos_ax_0.height])
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
     cbar.set_label('p(detected CoM)', rotation=270)
-
+    plt.sca(ax_mat[0])
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
                                       new_data, save_new_data, data_folder):
@@ -531,7 +531,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     ax_mat = [ax[10], ax_inset]
     n_subjs = len(df_sim.subjid.unique())
     # PCoM matrices
-    plot_pcom_matrices_model(df_sim=df_sim, df_model=df_model, n_subjs=n_subjs,
+    plot_pcom_matrices_model(df_model=df_model, n_subjs=n_subjs,
                              ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins)
     # MT matrix vs stim/prior
     fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], f=fig, silent_comparison=False,
