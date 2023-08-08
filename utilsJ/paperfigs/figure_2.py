@@ -93,17 +93,17 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
                           Line2D([0], [0], color=colormap[0], lw=2,
                                  label='incongr.')]
         title = 'Prior'
-    ax[0].legend(handles=legendelements, loc='upper left', title=title,
-                labelspacing=.2)
-    ax[1].set_xlabel(title)
     if condition == 'origidx':
         legendelements = []
         labs = ['100', '300', '500', '700', '900']
         for i in range(len(colormap)):
             legendelements.append(Line2D([0], [0], color=colormap[i], lw=2,
                                   label=labs[i]))
-        ax[0].legend(handles=legendelements, title='Trial index')
+        title = 'Trial index'
         ax[1].set_xlabel('Trial index')
+    ax[0].legend(handles=legendelements, loc='upper left', title=title,
+                labelspacing=.2)
+    ax[1].set_xlabel(title)
     ax[0].set_xlim([-20, 450])
     ax[0].set_xticklabels('')
     ax[0].axhline(0, c='gray')
@@ -789,17 +789,16 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
-def supp_plot_trajs_dep_trial_index(df, data_folder):
-    fig, ax = plt.subplots(nrows=2, ncols=2)
+def supp_trajs_cond_trial_index(df, data_folder):
+    fig, ax = plt.subplots(nrows=2)
     ax = ax.flatten()
+    fig2, ax2 = plt.subplots(nrows=2)
+    ax2 = ax2.flatten()
     for a in ax:
         fp.rm_top_right_lines(a)
-    ax_ti = [ax[1], ax[0], ax[3], ax[2]]
-    plots_trajs_conditioned(df, ax_ti, data_folder=data_folder,
-                            condition='origidx', cmap='jet',
-                            prior_limit=1, rt_lim=300,
+    ax = [ax[0], ax2[0], ax[1], ax2[1]]
+    plots_trajs_conditioned(df, ax, data_folder, condition='origidx', cmap='viridis',
+                            prior_limit=0.25, rt_lim=50,
                             after_correct_only=True,
                             trajectory="trajectory_y",
-                            velocity=("traj_d1", 1),
-                            acceleration=('traj_d2', 1), accel=False)
-
+                            velocity=("traj_d1", 1))
