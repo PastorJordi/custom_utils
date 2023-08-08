@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
+import seaborn as sns
 import sys
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
@@ -23,6 +24,7 @@ from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
+
 matplotlib.rcParams['font.size'] = 10   
 plt.rcParams['legend.title_fontsize'] = 8
 plt.rcParams['legend.fontsize'] = 8
@@ -71,6 +73,45 @@ elif pc_name == 'alex_CRM':
     TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
 
 
+def plot_psyc(decision_rat, decision_model, coh):
+    ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    dec_rat_01 = (decision_rat + 1)/2
+    dec_mod_01 = (decision_model + 1)/2
+    acc_rat = []
+    acc_mod = []
+    plt.figure()
+    for ev in ev_vals:
+        index = coh == ev
+        acc_rat.append(np.nanmean(dec_rat_01[index]))
+        acc_mod.append(np.nanmean(dec_mod_01[index]))
+    plt.plot(ev_vals, acc_rat, marker='o', color='blue', label='Data')
+    plt.plot(ev_vals, acc_mod, marker='o', color='red', label='Model')
+    plt.legend()
+
+
+def plot_MT_density_comparison(MT_data, MT_model):
+    plt.figure()
+    sns.kdeplot(MT_data, color='blue', label='Data')
+    sns.kdeplot(MT_model, color='red', label='Model')
+    plt.legend()
+    plt.xlabel('MT (ms)')
+
+
+def plot_RT_density_comparison(RT_data, RT_model):
+    plt.figure()
+    sns.kdeplot(RT_data, color='blue', label='Data')
+    sns.kdeplot(RT_model, color='red', label='Model')
+    plt.xlabel('RT (ms)')
+    plt.legend()
+
+
+def check_distros(df, df_sim):
+    # plot_psyc(df.R_response.values*2-1,
+    #           df_sim.R_response.values*2-1, df.coh2.values)
+    plot_MT_density_comparison(df.resp_len, df_sim.resp_len)
+    plot_RT_density_comparison(df.sound_len, df_sim.sound_len)
+
+
 plt.close('all')
 f1 = False
 f2 = False
@@ -87,7 +128,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE85', 'LE86']
-    subjects = ['LE42']
+    subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -153,8 +194,8 @@ if f3:
 
 # fig 5 (model)
 if f5:
-    simulate = True
-    with_fb = False
+    simulate = False
+    with_fb = True
     save_new_data = False
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
