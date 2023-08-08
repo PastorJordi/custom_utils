@@ -690,7 +690,7 @@ def get_log_likelihood_fb_psiam(rt_fb, theta_fb, eps, dt=5e-3):
     return -np.nansum(np.log(prob*(1-eps) + eps*CTE_FB))
 
 
-def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
+def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1):
     zt = data[:, 0]
     coh = data[:, 1]
     trial_index = data[:, 2]
@@ -736,7 +736,7 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1e-2):
 
 
 def simulations_for_mnle(theta_all, stim, zt, coh, trial_index,
-                         simulate=True):
+                         simulate=False):
     # run simulations
     x = torch.tensor(())
     simul_data = SV_FOLDER+'/network/NN_simulations'+str(len(zt))+'.npy'
@@ -849,7 +849,7 @@ def get_x0():
     p_1st_readout = 40
     p_2nd_readout = 80
     p_leak = 0.06
-    p_mt_noise = 20
+    p_mt_noise = 12
     p_MT_intercept = 320
     p_MT_slope = 0.07
     return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
@@ -902,7 +902,7 @@ def get_ub():
     """
     ub_aff = 12
     ub_eff = 12
-    ub_t_a = 18
+    ub_t_a = 22
     ub_w_zt = 1
     ub_w_st = 0.18
     ub_e_bound = 4
@@ -910,10 +910,10 @@ def get_ub():
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
     ub_a_bound = 4
-    ub_1st_r = 500
-    ub_2nd_r = 500
-    ub_leak = 0.6
-    ub_mt_n = 30
+    ub_1st_r = 400
+    ub_2nd_r = 400
+    ub_leak = 0.15
+    ub_mt_n = 20
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -945,7 +945,7 @@ def get_pub():
     pub_1st_r = 400
     pub_2nd_r = 400
     pub_leak = 0.1
-    pub_mt_n = 25
+    pub_mt_n = 13
     pub_mt_int = 320
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -988,11 +988,12 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 30
+    # cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 30
     # ~ min. action RT peak can't be < -150 ms
     cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.7
     # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
+    cond4 = x[:,0] < 1e-2 # lb for prior
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
     return np.bool_(cond4 + cond5)
 
@@ -1043,8 +1044,7 @@ def prepare_fb_data(df):
     zt_vec = np.nansum(np.column_stack((dwl_vec, dwt_vec)), axis=1)
     x_o = torch.column_stack((torch.tensor(mt_vec*1e3),
                               torch.tensor(rt_vec),
-                              torch.tensor(-ch_vec+1)))  # flipping choice
-    # since right in our model is 0, whereas in data is 1
+                              torch.tensor(ch_vec)))
     data = torch.column_stack((torch.tensor(zt_vec), torch.tensor(coh_vec),
                                torch.tensor(tr_in_vec.astype(float)),
                                x_o))
@@ -1122,12 +1122,15 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         time_start = time.time()
         print('Starting network training')
         # network training
-        estimator = trainer.append_simulations(theta_all_inp[~nan_mask, :],
-                                               x[~nan_mask, :]).train(
-                                                   show_train_summary=True)
+        trainer = trainer.append_simulations(theta_all_inp[~nan_mask, :],
+                                             x[~nan_mask, :])
+        estimator = trainer.train(show_train_summary=True)
         # save the network
         with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", "wb") as fh:
             pickle.dump(dict(estimator=estimator,
+                             num_simulations=num_simulations), fh)
+        with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise.p", "wb") as fh:
+            pickle.dump(dict(trainer=trainer,
                              num_simulations=num_simulations), fh)
         print('For a batch of ' + str(num_simulations) +
               ' simulations, it took ' + str(int(time.time() - time_start)/60)
@@ -1136,6 +1139,10 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         x_o = []
         with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", 'rb') as f:
             estimator = pickle.load(f)
+        if not bads:
+            with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise.p", 'rb') as f:
+                trainer = pickle.load(f)
+            trainer = estimator['trainer']
         estimator = estimator['estimator']
     if bads:
         # find starting point
@@ -1154,8 +1161,8 @@ def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub)
-        # , non_box_cons=nonbox_constraints_bads)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub,
+                    non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
@@ -1224,26 +1231,26 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
                                      zt=np.repeat(ztval, len(theta)),
                                      coh=np.repeat(cohval, len(theta)),
-                                     trial_index=trial_index)
-            np.save(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+                                     trial_index=trial_index, simulate=True)
+            np.save(sv_folder + '/10M/coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival), x)
             # let's compute prob for each bin
             mat_0 = matrix_probs(x[x[:, 2] == 0])
             mat_1 = matrix_probs(x[x[:, 2] == 1])
-            np.save(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+            np.save(sv_folder + '/10M/mat0_coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival), mat_0)
-            np.save(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+            np.save(sv_folder + '/10M/mat1_coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival), mat_1)
             x = []
             mat_0 = []
             mat_1 = []
     else:
         trial_index = np.repeat(tival, num_simulations)
-        mat_0 = np.load(SV_FOLDER + 'mat0_coh{}_zt{}_ti{}.npy'
+        mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
                         .format(cohval, ztval, tival))
-        mat_1 = np.load(SV_FOLDER + 'mat1_coh{}_zt{}_ti{}.npy'
+        mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
                         .format(cohval, ztval, tival))
-        x = np.load(SV_FOLDER + 'coh{}_zt{}_ti{}.npy'
+        x = np.load(SV_FOLDER + '/10M/coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival))
     # we load estimator
     # n_list = [10000, 50000, 250000]  # , 100000, 4000000]
@@ -1263,7 +1270,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                       'rb') as f:
                 estimator = pickle.load(f)
             estimator = estimator['estimator']
-            theta = theta_for_lh_plot()
+            theta = get_x0()
             theta = torch.reshape(torch.tensor(theta),
                                   (1, len(theta))).to(torch.float32)
             theta = theta.repeat(len(x_o), 1)
@@ -1310,8 +1317,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 plt.colorbar(im1)
             # fig, ax = plt.subplots(ncols=2)
             # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
-            ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0,
-                         vmax=np.max((mat_0, mat_1)))
+            ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0)
             ax[0].contour(mat_0_nn, cmap='hot', linewidths=0.8)
             ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
             ax[0].set_ylabel('MT (ms), KL = ' + str(round(kl_0, 3)))
@@ -1320,8 +1326,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 ax[0].set_xlabel('RT (ms)')
             else:
                 ax[0].set_xticks([])
-            im1 = ax[2].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0,
-                               vmax=np.max((mat_0, mat_1)))
+            im1 = ax[2].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0)
             plt.sca(ax[2])
             im2 = ax[2].contour(mat_1_nn, cmap='hot', linewidths=0.8)
             ax[2].set_yticks([])
@@ -1333,10 +1338,10 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             else:
                 ax[2].set_xticks([])
             plt.colorbar(im1, fraction=0.04)
-            p_ch0_model = np.exp(np.nansum(mat_0))/np.exp(np.nansum(mat_0+mat_1))
+            p_ch0_model = np.mean(x[:,2] == 0)
             p_ch1_model = 1-p_ch0_model
-            p_ch0_nn = np.exp(np.nansum(mat_0_nn))/np.exp(np.nansum(mat_0_nn+mat_1_nn))
-            p_ch1_nn = 1-p_ch0_nn
+            p_ch0_nn = np.nansum(mat_0_nn)/np.nansum(mat_0_nn+mat_1_nn)
+            p_ch1_nn = np.nansum(mat_1_nn)/np.nansum(mat_0_nn+mat_1_nn)
             ax[1].set_ylim(-0.05, 1.05)
             ax[3].set_ylim(-0.05, 1.05)
             ax[1].bar(['Model', 'NN'], [p_ch0_model, p_ch0_nn], color='k')
@@ -1378,8 +1383,8 @@ def plot_lh_model_network(df, n_trials=2000000):
               'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
               'cong. higher t.i.', '0 stim, high prior', 'low stim incong']
     for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
-                                    [1.5, 0.05, 1.5, 0.5],
-                                    [400, 400, 400, 500]):
+                                    [1.5, 0.05, 1.5, .5],
+                                    [400, 400, 400, 10]):
         if i == 3:
             xt = True
         plot_network_model_comparison(df, ax[4*i:4*(i+1)],
@@ -1597,7 +1602,7 @@ def plot_kl_vs_n_trials(df, cohval, ztval, tival, sv_folder=SV_FOLDER,
 
 
 def mnle_sample_simulation(df, theta=theta_for_lh_plot(), num_simulations=int(1e6),
-                           n_simul_training=int(3e6), vers_theta='1'):
+                           n_simul_training=int(3e6), vers_theta='2'):
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     stim = np.array([stim for stim in df.res_sound])
     coh = np.array(df.coh2)
@@ -1910,13 +1915,13 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(3e6)  # number of simulations to train the network
+        num_simulations = int(10e6)  # number of simulations to train the network
         n_trials = 100000  # number of trials to evaluate the likelihood for fitting
         # load real data
         subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                     'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                     'LE44']
-        # subjects = ['LE85']  # to run only once and train
+        # subjects = ['LE42']  # to run only once and train
         training = False
         for i_s, subject in enumerate(subjects):
             if i_s > 0:
@@ -1927,18 +1932,24 @@ if __name__ == '__main__':
                                      silent=True, all_trials=True,
                                      srfail=True)
             df = df.loc[df.special_trial == 0]
-            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-                                    num_simulations=len(df),
-                                    n_simul_training=int(2e6))
-            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-                                    num_simulations=len(df),
-                                    n_simul_training=int(3e6))
-            mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-                                    num_simulations=len(df),
-                                    n_simul_training=int(4e6))
-            plot_lh_model_network(df, n_trials=4000000)
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                         num_simulations=len(df),
+            #                         n_simul_training=int(2e6))
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                         num_simulations=len(df),
+            #                         n_simul_training=int(3e6))
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                         num_simulations=len(df),
+            #                         n_simul_training=int(4e6))
+            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+            #                         num_simulations=len(df),
+            #                         n_simul_training=int(10e6))
+            # plot_lh_model_network(df, n_trials=2000000)
+            # plot_lh_model_network(df, n_trials=3000000)
+            # plot_lh_model_network(df, n_trials=10000000)
             # plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
-            #                       n_simul_training=int(3e6))
+            #                       n_simul_training=int(10e6))
+            plot_lh_model_network(df, n_trials=10000000)
             try:
                 parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                       n_trials=n_trials, bads=True,
