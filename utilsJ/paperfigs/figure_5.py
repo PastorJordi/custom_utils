@@ -218,7 +218,7 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     index_com = df_sim.com_detected.values
     trajs_all = df_sim.trajectory_y.values
     dec = df_sim.R_response.values*2-1
-    max_ind = max([len(tr) for tr in trajs_all])
+    max_ind = 800
     subjects = df_sim.subjid.unique()
     matrix_com_tr = np.empty((len(subjects), max_ind))
     matrix_com_tr[:] = np.nan
@@ -241,11 +241,11 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
             i_com = 0
             i_nocom = 0
             i_und_com = 0
-            mat_nocom_erase = np.empty((sum(~(raw_com))+50, max_ind))
+            mat_nocom_erase = np.empty((sum(~(raw_com)), max_ind))
             mat_nocom_erase[:] = np.nan
-            mat_com_erase = np.empty((sum(index_com)+50, max_ind))
+            mat_com_erase = np.empty((sum(index_com), max_ind))
             mat_com_erase[:] = np.nan
-            mat_com_und_erase = np.empty((sum((~index_com) & (raw_com))+50, max_ind))
+            mat_com_und_erase = np.empty((sum((~index_com) & (raw_com)), max_ind))
             mat_com_und_erase[:] = np.nan
             for i_t, traj in enumerate(trajs_all[df_sim.subjid == subject]):
                 if index_com[i_t+it_subs]:
@@ -304,6 +304,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     # nanidx = df_sim.loc[df_sim.allpriors.isna()].index
     # df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
+    df_sim['choice_x_zt'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     bins_zt = [1.01]
     # TODO: fix issue with equipopulated bins
@@ -353,8 +354,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         os.makedirs(os.path.dirname(traj_data), exist_ok=True)
         if os.path.exists(traj_data) and not new_data:
             traj_data = np.load(traj_data, allow_pickle=True)
-            val_traj_subs = traj_data['val_traj_subs']
-            val_vel_subs = traj_data['val_vel_subs']
+            vals_thr_vel = traj_data['vals_thr_vel']
+            vals_thr_traj = traj_data['vals_thr_traj']
             mat_trajs_indsub = traj_data['mat_trajs_indsub']
             mat_vel_indsub = traj_data['mat_vel_indsub']
         else:
@@ -371,8 +372,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                 if prior:
                     if i_ev == len(bins_ref)-1:
                         break
-                    index = (df_sim.normallpriors.values >= bins_ref[i_ev]) *\
-                        (df_sim.normallpriors.values < bins_ref[i_ev + 1]) *\
+                    index = (df_sim.choice_x_zt.values >= bins_ref[i_ev]) *\
+                        (df_sim.choice_x_zt.values < bins_ref[i_ev + 1]) *\
                         (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
                         (subjects == subject)
                     if sum(index) == 0:
@@ -451,12 +452,12 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
                            y1=mean_traj - std_traj, y2=mean_traj + std_traj,
-                           color=colormap[i_ev])
+                           color=colormap[i_ev], alpha=0.3)
         ax[1].plot(np.arange(len(mean_vel)), mean_vel, label=label,
                    color=colormap[i_ev])
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
-                           color=colormap[i_ev])
+                           color=colormap[i_ev], alpha=0.3)
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 460)
     ax[0].set_yticks([0, 25, 50, 75])
@@ -551,9 +552,49 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
-    fig.savefig(sv_folder+'fig5.svg', dpi=400, bbox_inches='tight')
-    fig.savefig(sv_folder+'fig5.png', dpi=400, bbox_inches='tight')
+    
+    if len(df_sim.subjid.unique()) > 1:
+        subject = ''
+    else:
+        subject = df_sim.subjid.unique()[0]
+    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
     mean_com_traj_simul(df_sim, ax=ax[9], data_folder=data_folder, new_data=new_data,
                         save_new_data=save_new_data)
-    fig.savefig(sv_folder+'fig5.svg', dpi=400, bbox_inches='tight')
-    fig.savefig(sv_folder+'fig5.png', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
+
+
+def fig_5_part_1(sv_folder, data_folder,
+                 coh, sound_len, hit_model, sound_len_model, zt,
+                 decision_model, com, com_model, com_model_detected,
+                 df_sim, inset_sz=.06,
+                 marginx=0.006, marginy=0.07, fgsz=(8, 18)):
+    fig, ax = plt.subplots(2, 3)
+    ax = ax.flatten()
+    # select RT > 0 (no FB, as in data)
+    hit_model = hit_model[sound_len_model >= 0]
+    com_model_detected = com_model_detected[sound_len_model >= 0]
+    decision_model = decision_model[sound_len_model >= 0]
+    com_model = com_model[sound_len_model >= 0]
+    subjid = df_sim.subjid.values
+    zt_model = df_sim.norm_allpriors.values
+    # P(right) matrix
+    plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
+                      decision_model=decision_model, subjid=subjid, coh=coh,
+                      zt_model=zt_model, ax=ax[0])
+    # Tachometrics
+    _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
+                            sound_len=sound_len_model[sound_len_model >= 0],
+                            subjid=subjid, ax=ax[1], label='')
+    # MT matrix vs stim/prior
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[5], f=fig, silent_comparison=False,
+                             collapse_sides=True)
+    # MT vs stim/prior
+    fig2, ax2 = plt.subplots(1)
+    ax2 = ax2.flatten()
+    ax_final = [ax2, ax2, ax[3], ax[4], ax2, ax2, ax2, ax2]
+    plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax_final, new_data=False,
+                                      save_new_data=False,
+                                      inset_sz=inset_sz, data_folder=data_folder,
+                                      fgsz=fgsz, marginx=marginx, marginy=marginy)
