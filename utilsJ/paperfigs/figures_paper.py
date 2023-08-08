@@ -26,6 +26,7 @@ sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.Behavior.plotting import binned_curve, tachometric
+from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
@@ -81,6 +82,8 @@ elif pc_name == 'alex_CRM':
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
+COLOR_COM = 'coral'
+COLOR_NO_COM = 'tab:cyan'
 
 def plot_fixation_breaks_single(subject, ax):
     path = DATA_FOLDER + subject + '_clean.pkl'
@@ -1066,10 +1069,11 @@ def plot_mt_vs_rt_model_comparison(df, df_sim, bins_rt=np.linspace(0, 300, 31)):
 
 
 def plot_rt_sim(df_sim):
-    fig, ax = plt.subplots(nrows=4, ncols=4)
+    fig, ax = plt.subplots(nrows=5, ncols=3)
     ax = ax.flatten()
     colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     for isub, subj in enumerate(df_sim.subjid.unique()):
+        rm_top_right_lines(ax[isub])
         ax[isub].set_title(subj)
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             rts = df_sim.loc[(df_sim.coh2.abs() == ev) &
@@ -1077,16 +1081,18 @@ def plot_rt_sim(df_sim):
             sns.kdeplot(rts,
                         color=colormap[iev], ax=ax[isub])
             ax[isub].set_xlabel('RT (ms)')
-            ax[isub].set_title(subj + ' ' + str(np.round(np.mean(rts < 0), 4)))
+            # ax[isub].set_title(subj + ' ' + str(np.round(np.mean(rts < 0), 4)))
+            ax[isub].set_title(subj)
 
 
 def plot_fb_per_subj_from_df(df):
     # plots the RT distros conditioning on coh
-    fig, ax = plt.subplots(4, 4)
+    fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
+        rm_top_right_lines(ax[i_s])
         df_1 = df[df.subjid == subj]
         coh_vec = df_1.coh2.values
         for ifb, fb in enumerate(df_1.fb):
@@ -1097,10 +1103,12 @@ def plot_fb_per_subj_from_df(df):
                                       np.concatenate(df_1.fb.values)-0.3]))
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
-            fix_breaks_2 = fix_breaks[index]
+            fix_breaks_2 = fix_breaks[index]*1e3
             sns.kdeplot(fix_breaks_2.reshape(-1),
                         color=colormap[iev], ax=ax[i_s])
-        ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
+        # ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
+        ax[i_s].set_title(subj)
+        ax[i_s].set_xlabel('RT (ms)')
 
 
 def sess_t_index_stats(df, subjects):
@@ -1143,3 +1151,100 @@ def mt_diff_rev_nonrev(df):
     print(np.nanmean(mt_x_sub_rev)*1e3)
     print('+-')
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
+
+
+def supp_mt_per_rat(df, title='Data'):
+    fig, ax = plt.subplots(5, 3)
+    ax = ax.flatten()
+    for a in ax:
+        rm_top_right_lines(a)
+    subjects = df.subjid.unique()
+    for i_s, subj in enumerate(subjects):
+        df_1 = df[df.subjid == subj]
+        if title == 'Data':
+            mt_nocom = df_1.loc[~df_1['CoM_sugg'], 'resp_len']*1e3
+            mt_com = df_1.loc[df_1['CoM_sugg'], 'resp_len']*1e3
+        else:
+            mt_nocom = df_1.loc[~df_1['com_detected'], 'resp_len']*1e3
+            mt_com = df_1.loc[df_1['com_detected'], 'resp_len']*1e3
+        sns.kdeplot(mt_com, color=COLOR_COM, ax=ax[i_s],
+                    label='Rev.')
+        sns.kdeplot(mt_nocom, color=COLOR_NO_COM, ax=ax[i_s],
+                    label='No-Rev.')
+        ax[i_s].set_xlabel('MT (ms)')
+        ax[i_s].set_title(subj)
+    ax[0].legend()
+    fig.suptitle(title)
+
+
+def plot_model_trajs(df_sim, df):
+    """
+    Trajectories conditioned on median T.I. and changing coh/zt
+    """
+    fig, ax = plt.subplots(nrows=7, ncols=5)
+    ax = ax.flatten()
+    coh = df_sim.coh2.values
+    zt = np.round(df_sim.normallpriors.values, 1)
+    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
+               -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
+    i = 0
+    # t_index = df_sim.origidx.values
+    ztlabs = [-1, -0.2, 0, 0.2, 1]
+    err_mat = np.empty((len(coh_vals), len(zt_vals)-1))
+    bins = np.array([-1.1, 1.1])  # for data plotting
+    bintype = 'edges'
+    trajectory = 'trajectory_y'
+    df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
+    interpolatespace=np.linspace(-700000, 1000000, 1700)/1e3
+    for ie, ev in enumerate(coh_vals):
+        for ip, pr in enumerate(zt_vals):
+            if ip == 5:
+                break
+            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+            max_len = max([len(t) for t in df_sim.traj[index].values])
+            mat_fin = np.empty((sum(index), max_len))
+            mat_fin[:] = np.nan
+            trajs = df_sim.traj[index].values
+            for j in range(sum(index)):
+                mat_fin[j, :len(trajs[j])] = trajs[j]
+            # traj = df_sim.traj[index].values[np.random.choice(np.arange(0, sum(index)))]
+            # traj = df_sim.traj[index].values[1]
+            # if traj[-1] < 0:
+            #     traj = -traj
+            _, _, _, mat, idx, _ =\
+            trajectory_thr(df.loc[index], 'choice_x_prior', bins,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=None, bintype=bintype,
+                           trajectory=trajectory, plotmt=False, alpha_low=False)
+            mat_0 = np.roll(mat[0], -30, axis=1)
+            mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
+            traj_data = np.nanmedian(mat_0, axis=0)
+            err_data = np.nanstd(mat_0, axis=0)
+            traj = np.nanmedian(mat_fin, axis=0)[:250]
+            err = np.nanstd(mat_fin, axis=0)[:250]  # / np.sqrt(sum(index))
+            err_mat[ie, ip] = np.sum(err)
+            ax[i].plot(traj, color='r', label='Model')
+            ax[i].fill_between(np.arange(len(traj)), traj-err, traj+err,
+                               alpha=0.2, color='r')
+            ax[i].plot(interpolatespace, traj_data, color='k', label='Data')
+            ax[i].fill_between(interpolatespace, traj_data-err_data,
+                               traj_data+err_data,
+                               alpha=0.2, color='k')
+            ax[i].set_xlim(-5, 255)
+            ax[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
+            if i == 0 or i % 5 == 0:
+                ax[i].set_ylabel('Position, pixels')
+            if i >= 15:
+                ax[i].set_xlabel('Time (ms)')
+            i += 1
+            ax[0].legend()
+    fig1, ax1 = plt.subplots()
+    im = ax1.imshow(err_mat)
+    ax1.set_yticks(np.arange(len(coh_vals)), coh_vals)
+    ax1.set_xticks(np.arange(len(ztlabs)), ztlabs)
+    ax1.set_xlabel('zt')
+    ax1.set_ylabel('coh')
+    plt.colorbar(im, label='SD')
+
