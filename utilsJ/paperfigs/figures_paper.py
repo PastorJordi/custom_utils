@@ -1179,66 +1179,86 @@ def supp_mt_per_rat(df, title='Data'):
     fig.suptitle(title)
 
 
-def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=50):
-    fig2, ax2 = plt.subplots(nrows=7, ncols=5)
-    np.random.seed(seed=5)
+def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=50,
+                       pixel_precision=5, cmap='pink'):
+    """
+    Plots density of the position of the model, it can plot rat trajectories on top.
+
+    Parameters
+    ----------
+    df_sim : data frame
+        Data frame with simulations.
+    df : data frame, optional
+        Data frame with rat data. The default is None.
+    offset : int, optional
+        Padding. The default is 0.
+    plot_data_trajs : bool, optional
+        Whereas to plot rat trajectories on top or not. The default is False.
+    n_trajs_plot : int, optional
+        In case of plotting the trajectories, how many. The default is 50.
+    pixel_precision : float, optional
+        Pixel precision for the density (the smaller the cleaner the plot).
+        The default is 5.
+    cmap : str, optional
+        Colormap. The default is 'pink'.
+
+    Returns
+    -------
+    None.
+
+    """
+    fig2, ax2 = plt.subplots(nrows=5, ncols=5)
+    np.random.seed(seed=5)  # set seed
     # fig2.tight_layout()
     ax2 = ax2.flatten()
     coh = df_sim.coh2.values
     zt = np.round(df_sim.normallpriors.values, 1)
-    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    coh_vals = [-1, -0.25, 0, 0.25, 1]
     zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
                -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
     i = 0
-    # t_index = df_sim.origidx.values
     ztlabs = [-1, -0.2, 0, 0.2, 1]
-    gkde = scipy.stats.gaussian_kde
+    gkde = scipy.stats.gaussian_kde  # we define gkde that will generate the kde
     if plot_data_trajs:
         bins = np.array([-1.1, 1.1])  # for data plotting
         bintype = 'edges'
         trajectory = 'trajectory_y'
         df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
-        interpolatespace=np.linspace(-700000, 1000000, 1700)/1e3
     for ie, ev in enumerate(coh_vals):
         for ip, pr in enumerate(zt_vals):
             if ip == 5:
                 break
-            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # index of filtered
             max_len = max([len(t) for t in df_sim.traj[index].values])
             mat_fin = np.empty((sum(index), max_len+offset))
             mat_fin[:] = np.nan
             trajs = df_sim.traj[index].values
             for j in range(sum(index)):
-                mat_fin[j, :len(trajs[j])] = trajs[j]
-                mat_fin[j, len(trajs[j]):-1] = trajs[j][-1]
-            values = np.arange(-80, 81, 5)
-            mat_final_density = np.empty((len(values), 50))
+                mat_fin[j, :len(trajs[j])] = trajs[j]  # mat_fin contains trajectories by rows
+                mat_fin[j, len(trajs[j]):-1] = trajs[j][-1]  # set the last value (-75 or 75) until the end
+            values = np.arange(-80, 81, pixel_precision)
+            mat_final_density = np.empty((len(values), 50))  # matrix that will contain density by columns
             mat_final_density[:] = np.nan
             for j in range(2, 50):
-                yvalues = np.nanmean(mat_fin[:, j*5:(j+1)*5], axis=1)
-                kernel_1 = gkde(yvalues)
-                vals_density = kernel_1(values)
-                mat_final_density[:, j] = vals_density / np.nansum(vals_density)
-                # y_trajs[str(j)] = yvalues
-                # y_bins.append((j*50 + (j+1)*50)/2)
-                # sns.kdeplot(yvalues, color=colormap[j], fill=True,
-                #             ax=ax2[i], label=str(j*10) + ' to ' + str((j+1)*10) + ' ms')
-            # data = pd.DataFrame(y_trajs)
-            # sns.kdeplot(data, palette='Blues', ax=ax2[i])
-            # sns.violinplot(data=data, y='yvals', x='xvals',
-            #                ax=ax[i], color='blue', alpha=0.3)  #, label=str(j*50) + ' to ' + str((j+1)*50) + ' ms')
-            # norm_image = mat_final_density/np.max(mat_final_density)
-            ax2[i].imshow(np.flipud(mat_final_density), cmap='pink', aspect='auto',
-                          vmin=0)
+                yvalues = np.nanmean(mat_fin[:, j*5:(j+1)*5], axis=1)  # we get the trajectory values
+                kernel_1 = gkde(yvalues)  # we create the kernel using gkde
+                vals_density = kernel_1(values)  # we evaluate the values defined before
+                mat_final_density[:, j] = vals_density / np.nansum(vals_density)  # we normalize the density
+            ax2[i].imshow(np.flipud(mat_final_density), cmap=cmap, aspect='auto',
+                          vmin=0)  # plot the matrix
+            ax2[i].set_xlim(0, 50)
+            ax2[i].set_ylim(len(values), 0)
             ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
-            ax2[i].set_yticks(np.arange(0, len(values), 4), np.arange(80, -81, -20))
+            ax2[i].set_yticks(np.arange(0, len(values), int(20/pixel_precision)),
+                              np.arange(80, -81, -20))
             ax2[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
             if i == 0 or i % 5 == 0:
                 ax2[i].set_ylabel('Position, pixels')
-            if i >= 30:
+            if i >= 20:
                 ax2[i].set_xlabel('Time (ms)')
             if plot_data_trajs:
                 index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+                # to extract interpolated trajs in mat --> these aren't signed
                 _, _, _, mat, idx, _ =\
                 trajectory_thr(df.loc[index], 'choice_x_prior', bins,
                                collapse_sides=True, thr=30, ax=None, ax_traj=None,
@@ -1246,12 +1266,17 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                                cmap=None, bintype=bintype,
                                trajectory=trajectory, plotmt=False, alpha_low=False)
                 mat_0 = mat[0]
+                # we multiply by response to have the sign
                 mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
                 n_trajs = mat_0.shape[0]
+                # we select the number of trajectories that we want
                 index_trajs_plot = np.random.choice(np.arange(n_trajs), n_trajs_plot)
                 for ind in index_trajs_plot:
                     traj = mat_0[ind, :]
+                    # we do some filtering
                     if sum(np.abs(traj[700:950]) > 80) > 1:
+                        continue
+                    if np.abs(traj[700]) > 5:
                         continue
                     ax2[i].plot(np.arange(0, 50, 0.2), (-traj[700:950]+80)/160*len(values),
                                 color='blue', linewidth=0.5)
@@ -1259,14 +1284,14 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
 
 
 def plot_data_trajs_density(df):
-    fig, ax = plt.subplots(nrows=7, ncols=5)
+    fig, ax = plt.subplots(nrows=5, ncols=5)
     fig.tight_layout()
     # plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
     #                     hspace=0.2, wspace=0.1)
     ax = ax.flatten()
     coh = df.coh2.values
     zt = np.round(df.norm_allpriors.values, 1)
-    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    coh_vals = [-1, -0.25, 0, 0.25, 1]
     zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
                -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
     i = 0
@@ -1292,7 +1317,8 @@ def plot_data_trajs_density(df):
             mat_fin = mat_fin*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
             values = np.arange(-100, 101, 5)
             mat_final_density = np.empty((len(values), 50))
-            for j in range(1, 50):
+            mat_final_density[:] = np.nan
+            for j in range(2, 50):
                 yvalues = np.nanmean(mat_fin[:, 700+j*5:700+(j+1)*5], axis=1)
                 kernel_1 = gkde(yvalues[~np.isnan(yvalues)])
                 vals_density = kernel_1(values)
@@ -1303,7 +1329,7 @@ def plot_data_trajs_density(df):
             ax[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
             if i == 0 or i % 5 == 0:
                 ax[i].set_ylabel('Position, pixels')
-            if i >= 30:
+            if i >= 20:
                 ax[i].set_xlabel('Time (ms)')
             i += 1
 
