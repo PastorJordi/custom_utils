@@ -30,9 +30,9 @@ plt.rcParams['legend.title_fontsize'] = 8
 plt.rcParams['legend.fontsize'] = 8
 plt.rcParams['xtick.labelsize']= 8
 plt.rcParams['ytick.labelsize']= 8
-# matplotlib.rcParams['font.family'] = 'Arial'
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = 'Helvetica'
+matplotlib.rcParams['font.family'] = 'Arial'
+# plt.rcParams['font.family'] = 'sans-serif'
+# plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
@@ -249,51 +249,54 @@ if f5:
     df_sim['allpriors'] = zt
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
     df_sim['normallpriors'] = df_sim['norm_allpriors']
-
+    # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
+    #                     offset=0)
+    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True, n_trajs_plot=15)
+    # fp.plot_data_trajs_density(df=df)
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
-    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-    if not with_fb:
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # memory save:
-    stim = []
-    traj_y = []
-    trial_index = []
-    special_trial = []
-    # df = []
-    gt = []
-    subjid = []
-    traj_stamps = []
-    fix_onset = []
-    fix_breaks = []
-    resp_len = []
-    time_trajs = []
-    # actual plot
-    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate, save_new_data=save_new_data,
-                      coh=coh, sound_len=sound_len, zt=zt,
-                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                      decision_model=resp_fin, com=com, com_model=com_model,
-                      com_model_detected=com_model_detected,
-                      means=means, errors=errors, means_model=means_model,
-                      errors_model=errors_model, df_sim=df_sim)
-    fig, ax = plt.subplots(ncols=2, nrows=1)
-    ax = ax.flatten()
-    ax[0].set_title('Data')
-    fig_1.mt_matrix_ev_vs_zt(df, ax[0], f=fig,
-                             silent_comparison=False, collapse_sides=True)
-    ax[1].set_title('Model')
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], f=fig, silent_comparison=False,
-                        collapse_sides=True)
-    # fig.suptitle('DATA (top) vs MODEL (bottom)')
-    fp.mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
-    # supp_trajs_prior_cong(df_sim, ax=None)
-    # model_vs_data_traj(trajs_model=trajs, df_data=df)
-    if f4:
-        fp.fig_trajs_model_4(trajs_model=trajs, df=df,
-                            reaction_time=reaction_time)
+    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    # if not with_fb:
+    #     df_sim = df_sim[df_sim.sound_len.values >= 0]
+    # # memory save:
+    # stim = []
+    # traj_y = []
+    # trial_index = []
+    # special_trial = []
+    # # df = []
+    # gt = []
+    # subjid = []
+    # traj_stamps = []
+    # fix_onset = []
+    # fix_breaks = []
+    # resp_len = []
+    # time_trajs = []
+    # # actual plot
+    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+    #                   new_data=simulate, save_new_data=save_new_data,
+    #                   coh=coh, sound_len=sound_len, zt=zt,
+    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+    #                   decision_model=resp_fin, com=com, com_model=com_model,
+    #                   com_model_detected=com_model_detected,
+    #                   means=means, errors=errors, means_model=means_model,
+    #                   errors_model=errors_model, df_sim=df_sim)
+    # fig, ax = plt.subplots(ncols=2, nrows=1)
+    # ax = ax.flatten()
+    # ax[0].set_title('Data')
+    # fig_1.mt_matrix_ev_vs_zt(df, ax[0], f=fig,
+    #                          silent_comparison=False, collapse_sides=True)
+    # ax[1].set_title('Model')
+    # fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], f=fig, silent_comparison=False,
+    #                     collapse_sides=True)
+    # # fig.suptitle('DATA (top) vs MODEL (bottom)')
+    # fp.mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
+    # # supp_trajs_prior_cong(df_sim, ax=None)
+    # # model_vs_data_traj(trajs_model=trajs, df_data=df)
+    # if f4:
+    #     fp.fig_trajs_model_4(trajs_model=trajs, df=df,
+    #                         reaction_time=reaction_time)
 if f6:
     print('Plotting Figure 6')
     # human traj plots

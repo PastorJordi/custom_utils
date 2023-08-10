@@ -14,6 +14,8 @@ from sklearn.metrics import confusion_matrix
 from scipy.stats import ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
+from skimage import exposure
+import scipy
 # from scipy import interpolate
 # import shutil
 
@@ -1177,12 +1179,148 @@ def supp_mt_per_rat(df, title='Data'):
     fig.suptitle(title)
 
 
-def plot_model_trajs(df_sim, df):
+def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=50):
+    fig2, ax2 = plt.subplots(nrows=7, ncols=5)
+    np.random.seed(seed=5)
+    # fig2.tight_layout()
+    ax2 = ax2.flatten()
+    coh = df_sim.coh2.values
+    zt = np.round(df_sim.normallpriors.values, 1)
+    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
+               -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
+    i = 0
+    # t_index = df_sim.origidx.values
+    ztlabs = [-1, -0.2, 0, 0.2, 1]
+    gkde = scipy.stats.gaussian_kde
+    if plot_data_trajs:
+        bins = np.array([-1.1, 1.1])  # for data plotting
+        bintype = 'edges'
+        trajectory = 'trajectory_y'
+        df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
+        interpolatespace=np.linspace(-700000, 1000000, 1700)/1e3
+    for ie, ev in enumerate(coh_vals):
+        for ip, pr in enumerate(zt_vals):
+            if ip == 5:
+                break
+            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+            max_len = max([len(t) for t in df_sim.traj[index].values])
+            mat_fin = np.empty((sum(index), max_len+offset))
+            mat_fin[:] = np.nan
+            trajs = df_sim.traj[index].values
+            for j in range(sum(index)):
+                mat_fin[j, :len(trajs[j])] = trajs[j]
+                mat_fin[j, len(trajs[j]):-1] = trajs[j][-1]
+            values = np.arange(-80, 81, 5)
+            mat_final_density = np.empty((len(values), 50))
+            mat_final_density[:] = np.nan
+            for j in range(2, 50):
+                yvalues = np.nanmean(mat_fin[:, j*5:(j+1)*5], axis=1)
+                kernel_1 = gkde(yvalues)
+                vals_density = kernel_1(values)
+                mat_final_density[:, j] = vals_density / np.nansum(vals_density)
+                # y_trajs[str(j)] = yvalues
+                # y_bins.append((j*50 + (j+1)*50)/2)
+                # sns.kdeplot(yvalues, color=colormap[j], fill=True,
+                #             ax=ax2[i], label=str(j*10) + ' to ' + str((j+1)*10) + ' ms')
+            # data = pd.DataFrame(y_trajs)
+            # sns.kdeplot(data, palette='Blues', ax=ax2[i])
+            # sns.violinplot(data=data, y='yvals', x='xvals',
+            #                ax=ax[i], color='blue', alpha=0.3)  #, label=str(j*50) + ' to ' + str((j+1)*50) + ' ms')
+            # norm_image = mat_final_density/np.max(mat_final_density)
+            ax2[i].imshow(np.flipud(mat_final_density), cmap='pink', aspect='auto',
+                          vmin=0)
+            ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
+            ax2[i].set_yticks(np.arange(0, len(values), 4), np.arange(80, -81, -20))
+            ax2[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
+            if i == 0 or i % 5 == 0:
+                ax2[i].set_ylabel('Position, pixels')
+            if i >= 30:
+                ax2[i].set_xlabel('Time (ms)')
+            if plot_data_trajs:
+                index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+                _, _, _, mat, idx, _ =\
+                trajectory_thr(df.loc[index], 'choice_x_prior', bins,
+                               collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                               return_trash=True, error_kwargs=dict(marker='o'),
+                               cmap=None, bintype=bintype,
+                               trajectory=trajectory, plotmt=False, alpha_low=False)
+                mat_0 = mat[0]
+                mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
+                n_trajs = mat_0.shape[0]
+                index_trajs_plot = np.random.choice(np.arange(n_trajs), n_trajs_plot)
+                for ind in index_trajs_plot:
+                    traj = mat_0[ind, :]
+                    if sum(np.abs(traj[700:950]) > 80) > 1:
+                        continue
+                    ax2[i].plot(np.arange(0, 50, 0.2), (-traj[700:950]+80)/160*len(values),
+                                color='blue', linewidth=0.5)
+            i += 1
+
+
+def plot_data_trajs_density(df):
+    fig, ax = plt.subplots(nrows=7, ncols=5)
+    fig.tight_layout()
+    # plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
+    #                     hspace=0.2, wspace=0.1)
+    ax = ax.flatten()
+    coh = df.coh2.values
+    zt = np.round(df.norm_allpriors.values, 1)
+    coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
+               -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
+    i = 0
+    # t_index = df_sim.origidx.values
+    bins = np.array([-1.1, 1.1])  # for data plotting
+    bintype = 'edges'
+    trajectory = 'trajectory_y'
+    df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
+    gkde = scipy.stats.gaussian_kde
+    ztlabs = [-1, -0.2, 0, 0.2, 1]
+    for ie, ev in enumerate(coh_vals):
+        for ip, pr in enumerate(zt_vals):
+            if ip == 5:
+                break
+            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+            _, _, _, mat, idx, _ =\
+            trajectory_thr(df.loc[index], 'choice_x_prior', bins,
+                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                           return_trash=True, error_kwargs=dict(marker='o'),
+                           cmap=None, bintype=bintype,
+                           trajectory=trajectory, plotmt=False, alpha_low=False)
+            mat_fin = mat[0]
+            mat_fin = mat_fin*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
+            values = np.arange(-100, 101, 5)
+            mat_final_density = np.empty((len(values), 50))
+            for j in range(1, 50):
+                yvalues = np.nanmean(mat_fin[:, 700+j*5:700+(j+1)*5], axis=1)
+                kernel_1 = gkde(yvalues[~np.isnan(yvalues)])
+                vals_density = kernel_1(values)
+                mat_final_density[:, j] = vals_density / np.nansum(vals_density)
+            ax[i].imshow(np.flipud(mat_final_density), cmap='hot', aspect='auto')
+            ax[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
+            ax[i].set_yticks(np.arange(0, len(values), 4), np.arange(100, -101, -20))
+            ax[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
+            if i == 0 or i % 5 == 0:
+                ax[i].set_ylabel('Position, pixels')
+            if i >= 30:
+                ax[i].set_xlabel('Time (ms)')
+            i += 1
+
+
+def plot_model_trajs(df_sim, df, model_alone=False, align_y_onset=False, offset=200):
     """
     Trajectories conditioned on median T.I. and changing coh/zt
     """
     fig, ax = plt.subplots(nrows=7, ncols=5)
+    fig.tight_layout()
+    # plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
+    #                     hspace=0.2, wspace=0.1)
     ax = ax.flatten()
+    if model_alone:
+        fig2, ax2 = plt.subplots(nrows=7, ncols=5)
+        # fig2.tight_layout()
+        ax2 = ax2.flatten()
     coh = df_sim.coh2.values
     zt = np.round(df_sim.normallpriors.values, 1)
     coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
@@ -1197,47 +1335,96 @@ def plot_model_trajs(df_sim, df):
     trajectory = 'trajectory_y'
     df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     interpolatespace=np.linspace(-700000, 1000000, 1700)/1e3
+    gkde = scipy.stats.gaussian_kde
     for ie, ev in enumerate(coh_vals):
         for ip, pr in enumerate(zt_vals):
             if ip == 5:
                 break
             index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
             max_len = max([len(t) for t in df_sim.traj[index].values])
-            mat_fin = np.empty((sum(index), max_len))
+            mat_fin = np.empty((sum(index), max_len+offset))
+            time = np.arange(-offset, max_len)
             mat_fin[:] = np.nan
             trajs = df_sim.traj[index].values
             for j in range(sum(index)):
-                mat_fin[j, :len(trajs[j])] = trajs[j]
+                if not align_y_onset:
+                    mat_fin[j, :len(trajs[j])] = trajs[j]
+                    mat_fin[j, len(trajs[j]):-1] = trajs[j][-1]
+                else:
+                    traj_model = trajs[j]
+                    ind_model = np.where(np.abs(trajs[j]) >= 1)[0][0]
+                    mat_fin[j, offset-ind_model:offset+len(trajs[j])-ind_model] = traj_model
             # traj = df_sim.traj[index].values[np.random.choice(np.arange(0, sum(index)))]
             # traj = df_sim.traj[index].values[1]
             # if traj[-1] < 0:
             #     traj = -traj
-            _, _, _, mat, idx, _ =\
-            trajectory_thr(df.loc[index], 'choice_x_prior', bins,
-                           collapse_sides=True, thr=30, ax=None, ax_traj=None,
-                           return_trash=True, error_kwargs=dict(marker='o'),
-                           cmap=None, bintype=bintype,
-                           trajectory=trajectory, plotmt=False, alpha_low=False)
-            mat_0 = np.roll(mat[0], -30, axis=1)
-            mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
-            traj_data = np.nanmedian(mat_0, axis=0)
-            err_data = np.nanstd(mat_0, axis=0)
-            traj = np.nanmedian(mat_fin, axis=0)[:250]
-            err = np.nanstd(mat_fin, axis=0)[:250]  # / np.sqrt(sum(index))
+            if model_alone:
+                values = np.arange(-80, 81, 5)
+                mat_final_density = np.empty((len(values), 50))
+                # y_trajs = {}
+                # y_bins = []
+                for j in range(1, 50):
+                    yvalues = np.nanmean(mat_fin[:, j*5:(j+1)*5], axis=1)
+                    kernel_1 = gkde(yvalues)
+                    vals_density = kernel_1(values)
+                    mat_final_density[:, j] = vals_density / np.sum(vals_density)
+                    # y_trajs[str(j)] = yvalues
+                    # y_bins.append((j*50 + (j+1)*50)/2)
+                    # sns.kdeplot(yvalues, color=colormap[j], fill=True,
+                    #             ax=ax2[i], label=str(j*10) + ' to ' + str((j+1)*10) + ' ms')
+                # data = pd.DataFrame(y_trajs)
+                # sns.kdeplot(data, palette='Blues', ax=ax2[i])
+                # sns.violinplot(data=data, y='yvals', x='xvals',
+                #                ax=ax[i], color='blue', alpha=0.3)  #, label=str(j*50) + ' to ' + str((j+1)*50) + ' ms')
+                # norm_image = mat_final_density/np.max(mat_final_density)
+                ax2[i].imshow(np.flipud(mat_final_density), cmap='hot', aspect='auto')
+                ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
+                ax2[i].set_yticks(np.arange(0, len(values), 4), np.arange(80, -81, -20))
+            if not model_alone:
+                _, _, _, mat, idx, _ =\
+                trajectory_thr(df.loc[index], 'choice_x_prior', bins,
+                               collapse_sides=True, thr=30, ax=None, ax_traj=None,
+                               return_trash=True, error_kwargs=dict(marker='o'),
+                               cmap=None, bintype=bintype,
+                               trajectory=trajectory, plotmt=False, alpha_low=False)
+                mat_0 = mat[0]
+                if align_y_onset:
+                    for i_t, traj_d in enumerate(mat_0):
+                        traj_d = traj_d - np.nanmean(
+                            traj_d[500:700])
+                        if np.nansum(traj_d) == 0:
+                            continue
+                        try:
+                            ind_data = np.where(np.abs(traj_d) >= 1)[0][0]
+                        except IndexError:
+                            continue
+                        mat_0[i_t, :] = np.roll(mat_0[i_t, :], -ind_data)
+                # mat_0 = np.roll(mat[0], -30, axis=1)
+                mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
+                traj_data = np.nanmedian(mat_0, axis=0)
+                err_data = np.nanstd(mat_0, axis=0)
+                ax[i].plot(interpolatespace, traj_data, color='k', label='Data')
+                ax[i].fill_between(interpolatespace, traj_data-err_data,
+                                   traj_data+err_data,
+                                   alpha=0.2, color='k')
+            traj = np.nanmedian(mat_fin, axis=0)
+            err = np.nanstd(mat_fin, axis=0)  # / np.sqrt(sum(index))
             err_mat[ie, ip] = np.sum(err)
-            ax[i].plot(traj, color='r', label='Model')
-            ax[i].fill_between(np.arange(len(traj)), traj-err, traj+err,
+            ax[i].plot(time, traj, color='r', label='Model')
+            ax[i].fill_between(time, traj-err, traj+err,
                                alpha=0.2, color='r')
-            ax[i].plot(interpolatespace, traj_data, color='k', label='Data')
-            ax[i].fill_between(interpolatespace, traj_data-err_data,
-                               traj_data+err_data,
-                               alpha=0.2, color='k')
             ax[i].set_xlim(-5, 255)
             ax[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
+            ax2[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
             if i == 0 or i % 5 == 0:
                 ax[i].set_ylabel('Position, pixels')
-            if i >= 15:
+                ax2[i].set_ylabel('Position, pixels')
+            if i >= 30:
                 ax[i].set_xlabel('Time (ms)')
+                ax2[i].set_xlabel('Time (ms)')
+            rm_top_right_lines(ax[i])
+            ax[i].set_ylim(-125, 125)
+            ax[i].axhline(y=0, color='k', alpha=0.4, linestyle='--')
             i += 1
             ax[0].legend()
     fig1, ax1 = plt.subplots()
