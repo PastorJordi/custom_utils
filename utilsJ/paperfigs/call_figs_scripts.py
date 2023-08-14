@@ -251,9 +251,9 @@ if f5:
     df_sim['normallpriors'] = df_sim['norm_allpriors']
     # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
     #                     offset=0)
-    # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=False,
-    #                       n_trajs_plot=50, pixel_precision=1, cmap='pink')
-    fp.plot_data_trajs_density(df=df)
+    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=False,
+                          n_trajs_plot=50, pixel_precision=1, cmap='pink')
+    # fp.plot_data_trajs_density(df=df)
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)

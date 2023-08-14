@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 from scipy.stats import pearsonr
+import statsmodels.api as sm
 from matplotlib.lines import Line2D
 from scipy.stats import sem
 import sys
@@ -173,6 +174,62 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[1].plot(xpoints, mt_time, color='k', ls='-', lw=0.5)
 
 
+def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700,
+                              return_weights=True):
+    idx_1 = np.nan
+    i1 = True
+    idx_2 = np.nan
+    i2 = True
+    idx_3 = np.nan
+    i3 = True
+    w1 = []
+    w2 = []
+    w3 = []
+    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
+        pop_a = mat[:, startfrom + i]
+        nan_idx = ~np.isnan(pop_a)
+        pop_evidence = stim[:, nan_idx]
+        if i < 100:
+            pop_evidence = stim[:2, nan_idx]
+        if i < 50:
+            pop_evidence = stim[0, nan_idx]
+        pop_a = pop_a[nan_idx]
+        mod = sm.OLS(pop_a.T, pop_evidence.T).fit()
+        # sm.add_constant(pop_evidence.T)
+        p2 = mod.pvalues
+        params = mod.params
+        w1.append(params[0])
+        if i < 50 and stim.shape[0] > 1:
+            w2.append(np.nan)
+        if i > 50 and stim.shape[0] > 1:
+            w2.append(params[1])
+        if stim.shape[0] == 1:
+            w2.append(np.nan)
+        if i < 100 and stim.shape[0] > 2:
+            w3.append(np.nan)
+        if i > 100 and stim.shape[0] > 2:
+            w3.append(params[2])
+        if stim.shape[0] <= 2:
+            w3.append(np.nan)
+        if len(p2) == 1 and p2 > pval and i1:
+            idx_1 = i
+            i1 = False
+        if len(p2) > 1:
+            if p2[0] > pval and i1:
+                idx_1 = i
+                i1 = False
+            if p2[1] > pval and i2:
+                idx_2 = i
+                i2 = False
+        if len(p2) > 2:
+            if p2[2] > pval and i3:
+                idx_3 = i
+                i3 = False
+    if return_weights:
+        return [idx_1, idx_2, idx_3], [w1, w2, w3]
+    return [idx_1, idx_2, idx_3]
+
+
 def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True):
     # Returns index at which the trajectories and coh vector become uncorrelated
     # backwards in time
@@ -194,6 +251,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         if sim and np.isnan(p2):
             return i + 1
     return np.nan
+
 
 def get_splitting_mat_data(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
                            align='movement', trajectory="trajectory_y",
@@ -480,6 +538,30 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
     # plt.show()
 
 
+def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
+                   rtbin=0, align='sound', trajectory='trajectory_y'):
+    kw = {"trajectory": trajectory}
+    dat = df.loc[
+        (df.sound_len < rtbins[rtbin + 1])
+        & (df.sound_len >= rtbins[rtbin])
+        # & (df.resp_len)
+    ]  # &(df.R_response==side)
+    if align == 'movement':
+        kw["align"] = "action"
+    elif align == 'sound':
+        kw["align"] = "sound"
+    # idx = dat.rewside == 0
+    # mata_0 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+    # idx = dat.rewside == 1
+    # mata_1 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+    # mata = np.vstack([mata_0*-1, mata_1])
+    mata = np.vstack(dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+    mata = mata * (dat.R_response.values*2-1).reshape(-1, 1)
+    index_nan = ~np.isnan(mata).all(axis=1)
+    mata = mata[index_nan]
+    return mata, index_nan
+
+
 def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300,
                          sim=False,
                          rtbins=np.linspace(0, 150, 16), connect_points=False,
@@ -587,6 +669,97 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                     mew=1, color=(.6, .6, .6, .3)
                 )
 
+    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color='firebrick', marker='o', label='mean & SEM')
+    ax.errorbar(
+        binsize/2 + binsize * np.arange(rtbins.size-1),
+        # we do the mean across rtbin axis
+        np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
+        # other axes we dont care
+        yerr=sem(out_data.reshape(rtbins.size-1, -1),
+                 axis=1, nan_policy='omit'),
+        **error_kws
+    )
+    # if draw_line is not None:
+    #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
+    ax.plot([0, 155], [0, 155], color='k')
+    ax.fill_between([0, 250], [0, 250], [0, 0],
+                    color='grey', alpha=0.6)
+    ax.set_xlim(-5, 155)
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylabel('Splitting time (ms)')
+    # ax.set_title('Impact of stimulus')
+    # plt.show()
+
+
+def splitting_time_frames(df, ax, data_folder, max_rt=200, frame_len=50,
+                          rtbins=np.linspace(0, 150, 7), stim_reduction=True,
+                          trajectory="trajectory_y", threshold=300):
+    binsize = np.diff(rtbins)[0]
+    out_data = []
+    for subject in df.subjid.unique():
+        out_data_sbj = np.empty((len(rtbins)-1, 400, 3))
+        out_data_sbj[:] = np.nan
+        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_frames.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(split_data), exist_ok=True)
+        if os.path.exists(split_data):
+            split_data = np.load(split_data, allow_pickle=True)
+            out_data_sbj = split_data['out_data_sbj']
+        else:
+            df_sub = df.loc[df.subjid == subject]
+            reaction_time = df_sub.sound_len.values
+            stimulus = np.array(df_sub.res_sound)
+            first_frame = [stimulus[i][0] for i in range(len(stimulus))]
+            second_frame = [stimulus[i][1] for i in range(len(stimulus))]
+            third_frame = [stimulus[i][2] for i in range(len(stimulus))]
+            for i in range(rtbins.size-1):
+                matatmp, idx =\
+                    retrieve_trajs(df_sub, rtbins=rtbins,
+                                   rtbin=i, align='sound', trajectory=trajectory)
+                stim = np.zeros((int(i*binsize/frame_len)+1, len(stimulus)))
+                stim[0] = first_frame
+                if i*binsize >= 50:
+                    stim[1] = second_frame  
+                if i*binsize >= 100:
+                    stim[2] = third_frame
+                stim = stim[:, (reaction_time >= rtbins[i]) &
+                            (reaction_time < rtbins[i+1])][:, idx]
+                current_split_index, weights =\
+                    get_split_ind_corr_frames(matatmp, stim, pval=0.01)
+                out_data_sbj[i, :len(weights[0]), 0] = weights[0]
+                out_data_sbj[i, :len(weights[1]), 1] = weights[1]
+                out_data_sbj[i, :len(weights[2]), 2] = weights[2]
+            np.savez(split_data, out_data_sbj=out_data_sbj)
+        out_data += [out_data_sbj]
+       
+    # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
+    # ideally, make it NaN resilient
+    out_data = np.array(out_data).reshape(
+        df.subjid.unique().size, rtbins.size-1, -1)
+    # set axes: rtbins, subject, sides
+    out_data = np.swapaxes(out_data, 0, 1)
+       
+    # change the type so we can have NaNs
+    out_data = out_data.astype(float)
+       
+    out_data[out_data > threshold] = np.nan
+       
+    binsize = rtbins[1]-rtbins[0]
+       
+    scatter_kws = {'color': (.6, .6, .6, .3), 'edgecolor': (.6, .6, .6, 1)}
+    nrepeats = df.subjid.unique().size * 2  # two responses per subject
+    # because we might want to plot each subject connecting lines, lets iterate
+    # draw  datapoints
+    for i in range(df.subjid.unique().size):
+        for j in range(out_data.shape[2]):
+            ax.plot(
+                binsize/2 + binsize * np.arange(rtbins.size-1),
+                out_data[:, i, j],
+                marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                mew=1, color=(.6, .6, .6, .3)
+            )
+       
     error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='firebrick', marker='o', label='mean & SEM')
     ax.errorbar(
