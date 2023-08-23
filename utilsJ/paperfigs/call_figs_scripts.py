@@ -114,10 +114,10 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 com_threshold = 8
@@ -127,8 +127,8 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE85', 'LE86']
-    subjects = ['LE43']
+    subjects = ['LE42', 'LE43', 'LE38']
+    # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -181,9 +181,14 @@ if f1:
 # fig 2
 if f2:
     print('Plotting Figure 2')
-    fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
-                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
-                        st_cartoon_img=ST_CARTOON_IMG)
+    fig_2.splitting_time_frames(df, data_folder=DATA_FOLDER,
+                                frame_len=50,
+                                rtbins=np.linspace(0, 150, 7),
+                                trajectory="trajectory_y", new_data=True,
+                                pval=0.05)
+    # fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
+    #                   sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
+    #                     st_cartoon_img=ST_CARTOON_IMG)
 
 # fig 3
 if f3:
@@ -251,7 +256,7 @@ if f5:
     df_sim['normallpriors'] = df_sim['norm_allpriors']
     # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
     #                     offset=0)
-    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=False,
+    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
                           n_trajs_plot=50, pixel_precision=1, cmap='pink')
     # fp.plot_data_trajs_density(df=df)
     # simulation plots

@@ -197,18 +197,18 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700,
         mod = sm.OLS(pop_a.T, pop_evidence.T).fit()
         # sm.add_constant(pop_evidence.T)
         p2 = mod.pvalues
-        params = mod.params
-        w1.append(params[0])
+        # params = mod.params
+        w1.append(p2[0])
         if i < 50 and stim.shape[0] > 1:
             w2.append(np.nan)
         if i > 50 and stim.shape[0] > 1:
-            w2.append(params[1])
+            w2.append(p2[1])
         if stim.shape[0] == 1:
             w2.append(np.nan)
         if i < 100 and stim.shape[0] > 2:
             w3.append(np.nan)
         if i > 100 and stim.shape[0] > 2:
-            w3.append(params[2])
+            w3.append(p2[2])
         if stim.shape[0] <= 2:
             w3.append(np.nan)
         if len(p2) == 1 and p2 > pval and i1:
@@ -225,8 +225,8 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700,
             if p2[2] > pval and i3:
                 idx_3 = i
                 i3 = False
-    if return_weights:
-        return [idx_1, idx_2, idx_3], [w1, w2, w3]
+        if i1 + i2 + i3 == 0:
+            break
     return [idx_1, idx_2, idx_3]
 
 
@@ -556,7 +556,7 @@ def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
     # mata_1 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
     # mata = np.vstack([mata_0*-1, mata_1])
     mata = np.vstack(dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-    mata = mata * (dat.R_response.values*2-1).reshape(-1, 1)
+    mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
     index_nan = ~np.isnan(mata).all(axis=1)
     mata = mata[index_nan]
     return mata, index_nan
@@ -692,24 +692,26 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     # plt.show()
 
 
-def splitting_time_frames(df, ax, data_folder, max_rt=200, frame_len=50,
-                          rtbins=np.linspace(0, 150, 7), stim_reduction=True,
-                          trajectory="trajectory_y", threshold=300):
+def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 150, 7),
+                          trajectory="trajectory_y", new_data=True, pval=0.01):
+    fig, ax = plt.subplots(ncols=4)
     binsize = np.diff(rtbins)[0]
-    out_data = []
-    for subject in df.subjid.unique():
-        out_data_sbj = np.empty((len(rtbins)-1, 400, 3))
+    subjects = df.subjid.unique()
+    out_data = np.empty((len(rtbins)-1, 3, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        out_data_sbj = np.empty((len(rtbins)-1, 3))
         out_data_sbj[:] = np.nan
         split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_frames.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
-        if os.path.exists(split_data):
+        if os.path.exists(split_data) and not new_data:
             split_data = np.load(split_data, allow_pickle=True)
             out_data_sbj = split_data['out_data_sbj']
         else:
             df_sub = df.loc[df.subjid == subject]
             reaction_time = df_sub.sound_len.values
             stimulus = np.array(df_sub.res_sound)
+            response = df_sub.rewside.values*2-1
             first_frame = [stimulus[i][0] for i in range(len(stimulus))]
             second_frame = [stimulus[i][1] for i in range(len(stimulus))]
             third_frame = [stimulus[i][2] for i in range(len(stimulus))]
@@ -724,63 +726,52 @@ def splitting_time_frames(df, ax, data_folder, max_rt=200, frame_len=50,
                 if i*binsize >= 100:
                     stim[2] = third_frame
                 stim = stim[:, (reaction_time >= rtbins[i]) &
-                            (reaction_time < rtbins[i+1])][:, idx]
-                current_split_index, weights =\
-                    get_split_ind_corr_frames(matatmp, stim, pval=0.01)
-                out_data_sbj[i, :len(weights[0]), 0] = weights[0]
-                out_data_sbj[i, :len(weights[1]), 1] = weights[1]
-                out_data_sbj[i, :len(weights[2]), 2] = weights[2]
+                           (reaction_time < rtbins[i+1])][:, idx] *\
+                    response[(reaction_time >= rtbins[i]) &
+                             (reaction_time < rtbins[i+1])][idx]
+                current_split_index =\
+                    get_split_ind_corr_frames(matatmp, stim, pval=pval)
+                out_data_sbj[i, 0] = current_split_index[0]
+                out_data_sbj[i, 1] = current_split_index[1]
+                out_data_sbj[i, 2] = current_split_index[2]
             np.savez(split_data, out_data_sbj=out_data_sbj)
-        out_data += [out_data_sbj]
-       
-    # reshape out data so it makes sense. '0th dim=rtbin, 1st dim= n datapoints
-    # ideally, make it NaN resilient
-    out_data = np.array(out_data).reshape(
-        df.subjid.unique().size, rtbins.size-1, -1)
-    # set axes: rtbins, subject, sides
-    out_data = np.swapaxes(out_data, 0, 1)
-       
-    # change the type so we can have NaNs
-    out_data = out_data.astype(float)
-       
-    out_data[out_data > threshold] = np.nan
-       
-    binsize = rtbins[1]-rtbins[0]
-       
-    scatter_kws = {'color': (.6, .6, .6, .3), 'edgecolor': (.6, .6, .6, 1)}
-    nrepeats = df.subjid.unique().size * 2  # two responses per subject
-    # because we might want to plot each subject connecting lines, lets iterate
-    # draw  datapoints
-    for i in range(df.subjid.unique().size):
-        for j in range(out_data.shape[2]):
-            ax.plot(
-                binsize/2 + binsize * np.arange(rtbins.size-1),
-                out_data[:, i, j],
-                marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
-                mew=1, color=(.6, .6, .6, .3)
-            )
-       
-    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='firebrick', marker='o', label='mean & SEM')
-    ax.errorbar(
-        binsize/2 + binsize * np.arange(rtbins.size-1),
-        # we do the mean across rtbin axis
-        np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
-        # other axes we dont care
-        yerr=sem(out_data.reshape(rtbins.size-1, -1),
-                 axis=1, nan_policy='omit'),
-        **error_kws
-    )
-    # if draw_line is not None:
-    #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
-    ax.plot([0, 155], [0, 155], color='k')
-    ax.fill_between([0, 250], [0, 250], [0, 0],
-                    color='grey', alpha=0.6)
-    ax.set_xlim(-5, 155)
-    ax.set_xlabel('RT (ms)')
-    ax.set_ylabel('Splitting time (ms)')
-    # ax.set_title('Impact of stimulus')
-    # plt.show()
+        out_data[:, :, i_s] = out_data_sbj
+    ax[0].set_ylabel('Splitting Time (ms)')
+    titles = ['1st frame', '2nd frame', '3rd frame', ' ']
+    splt_data_all = np.empty((len(rtbins)-1, 3))
+    splt_data_all[:] = np.nan
+    err_data_all = np.empty((len(rtbins)-1, 3))
+    err_data_all[:] = np.nan
+    colors = ['r', 'k', 'b']
+    for i in range(len(ax)):
+        ax[i].plot([0, 155], [0, 155], color='k')
+        ax[i].fill_between([0, 250], [0, 250], [0, 0],
+                           color='grey', alpha=0.6)
+        ax[i].set_title(titles[i])
+        ax[i].set_xlim(-5, 155)
+        ax[i].set_ylim(-5, 405)
+        fp.rm_top_right_lines(ax[i])
+        ax[i].set_xlabel('Reaction Time (ms)')
+        if i <= 2:
+            splt_data = np.nanmedian(out_data[:, i, :], axis=1)
+            splt_data_all[:, i] = splt_data
+            err_data = np.nanstd(out_data[:, i, :], axis=1) / np.sqrt(len(subjects))
+            err_data_all[:, i] = err_data
+            ax[i].errorbar(rtbins[:-1]+binsize/2, splt_data, err_data, marker='o',
+                           color='firebrick', ecolor='firebrick')
+            for j in range(len(subjects)):
+                ax[i].plot(rtbins[:-1]+binsize/2, out_data[:, i, j],
+                           marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                           mew=1, color=(.6, .6, .6, .3))
+        else:
+            for j in range(splt_data_all.shape[1]):
+                ax[i].plot(rtbins[:-1]+binsize/2, splt_data_all[:, j],
+                           color=colors[j], label=titles[j])
+                ax[i].fill_between(rtbins[:-1]+binsize/2,
+                                   splt_data_all[:, j]-err_data_all[:, j],
+                                   splt_data_all[:, j]+err_data_all[:, j],
+                                   color=colors[j], alpha=0.3)
+            ax[i].legend()
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=(8, 12),

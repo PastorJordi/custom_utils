@@ -591,7 +591,7 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
     # M = get_Mt0te(jerk_lock_ms, resp_len)
     # M_1 = np.linalg.inv(M)
     m_sup = np.concatenate((get_m1_inv(), np.zeros((3, 3))), axis=1)
-    m_inf = np.concatenate((mult_m3(resp_len), get_m4_inv(resp_len)), axis=1)
+    m_inf = np.concatenate((get_m3_inv(resp_len), get_m4_inv(resp_len)), axis=1)
     M_1 = np.concatenate((m_sup, m_inf))
     vt = v_(t_arr)
     N = np.matmul(vt, M_1)
@@ -667,6 +667,13 @@ def mult_m3(t):
                    [0, 1, 2*t],
                    [0, 0, 2]])
     return -(m4_inv @ m3) @ m1_inv
+
+
+def get_m3_inv(t):
+    m3_inv = np.array([[-10/t**3, -6/t**2, -3/(2*t)],
+                       [15/t**4, 8/t**3, 3/(2*t**2)],
+                       [-6/t**5, -3/t**4, -1/(2*t**3)]])
+    return m3_inv
 
 
 def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',

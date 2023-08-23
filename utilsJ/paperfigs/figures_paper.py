@@ -1245,7 +1245,7 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 vals_density = kernel_1(values)  # we evaluate the values defined before
                 mat_final_density[:, j] = vals_density / np.nansum(vals_density)  # we normalize the density
             ax2[i].imshow(np.flipud(mat_final_density), cmap=cmap, aspect='auto',
-                          vmin=0)  # plot the matrix
+                          vmin=0, vmax=0.4)  # plot the matrix
             ax2[i].set_xlim(0, 50)
             ax2[i].set_ylim(len(values), 0)
             ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
