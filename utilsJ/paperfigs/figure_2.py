@@ -711,7 +711,7 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
             df_sub = df.loc[df.subjid == subject]
             reaction_time = df_sub.sound_len.values
             stimulus = np.array(df_sub.res_sound)
-            response = df_sub.rewside.values*2-1
+            category = df_sub.rewside.values*2-1
             first_frame = [stimulus[i][0] for i in range(len(stimulus))]
             second_frame = [stimulus[i][1] for i in range(len(stimulus))]
             third_frame = [stimulus[i][2] for i in range(len(stimulus))]
@@ -727,7 +727,7 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
                     stim[2] = third_frame
                 stim = stim[:, (reaction_time >= rtbins[i]) &
                            (reaction_time < rtbins[i+1])][:, idx] *\
-                    response[(reaction_time >= rtbins[i]) &
+                    category[(reaction_time >= rtbins[i]) &
                              (reaction_time < rtbins[i+1])][idx]
                 current_split_index =\
                     get_split_ind_corr_frames(matatmp, stim, pval=pval)
