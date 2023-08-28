@@ -181,11 +181,11 @@ if f1:
 # fig 2
 if f2:
     print('Plotting Figure 2')
+    fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 7))
     fig_2.splitting_time_frames(df, data_folder=DATA_FOLDER,
-                                frame_len=50,
-                                rtbins=np.linspace(0, 150, 7),
-                                trajectory="trajectory_y", new_data=True,
-                                pval=0.05)
+                                frame_len=50, new_data=False,
+                                rtbins=np.linspace(0, 300, 4),
+                                trajectory="trajectory_y", pval=0.05)
     # fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
     #                   sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
     #                     st_cartoon_img=ST_CARTOON_IMG)
