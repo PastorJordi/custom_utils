@@ -417,7 +417,7 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
             cbar_1.set_label(r'$MT \; - MT_{silent}(ms)$')
         else:
             cbar_1.set_label(r'$MT \;(ms)$')
-        ax1.set_yticks([0, 3, 6], ['', '', ''])
+        ax1.set_yticks([0, 3, 6], [' ', ' ', ' '])
         ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
         ax0pos = ax0.get_position()
         ax1pos = ax1.get_position()

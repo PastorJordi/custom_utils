@@ -172,8 +172,8 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
 
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        # ax_i.set_yticklabels(['']*nbins)
-        # ax_i.set_xticklabels(['']*nbins)
+        ax_i.set_yticks([0, 3, 6], ['1', '0', '-1'])
+        ax_i.set_xticks([0, 3, 6], ['-1', '0', '1'])
     ax_mat[0].set_ylabel('Stimulus Evidence')
     ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
                             pos_ax_0.width,
@@ -228,7 +228,7 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
         traj_data = data_folder+subject+'/sim_data/'+subject +\
-            '_mean_com_trajs'+'.npz'
+            '_mean_com_trajs.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(traj_data), exist_ok=True)
         if os.path.exists(traj_data) and not new_data:
@@ -364,17 +364,17 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
             lens = []
             for i_ev, ev in enumerate(bins_ref):
                 if not prior:
-                    index = (df_sim.choice_x_coh.values == ev) *\
-                        (df_sim.normallpriors.abs() <= prior_lim) *\
-                        (df_sim.special_trial == 0) * (~np.isnan(df_sim.allpriors)) *\
-                        (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                    index = (df_sim.choice_x_coh.values == ev) &\
+                        (df_sim.normallpriors.abs() <= prior_lim) &\
+                        (df_sim.special_trial == 0) & (~np.isnan(df_sim.allpriors)) *\
+                        (df_sim.sound_len >= 0) & (df_sim.sound_len <= rt_lim) &\
                         (subjects == subject)
                 if prior:
                     if i_ev == len(bins_ref)-1:
                         break
-                    index = (df_sim.choice_x_zt.values >= bins_ref[i_ev]) *\
-                        (df_sim.choice_x_zt.values < bins_ref[i_ev + 1]) *\
-                        (df_sim.sound_len >= 0) * (df_sim.sound_len <= rt_lim) *\
+                    index = (df_sim.choice_x_zt.values >= bins_ref[i_ev]) &\
+                        (df_sim.choice_x_zt.values < bins_ref[i_ev + 1]) &\
+                        (df_sim.sound_len >= 0) & (df_sim.sound_len <= rt_lim) &\
                         (subjects == subject)
                     if sum(index) == 0:
                         continue
@@ -508,8 +508,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                             sound_len=sound_len_model[sound_len_model >= 0],
                             subjid=subjid, ax=ax[1], label='')
-    ax2 = fp.add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
-                       marginy=0.07, right=True)
+    # ax2 = fp.add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
+    #                    marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
                                  'sound_len': sound_len[sound_len_model >= 0],
                                  'rt_model': sound_len_model[sound_len_model >= 0],
@@ -517,7 +517,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                  'com_model_detected': com_model_detected})
     zt_model = df_sim.norm_allpriors.values
     # PCoM vs RT
-    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax2)
+    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax[13])
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
@@ -561,7 +561,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
     mean_com_traj_simul(df_sim, ax=ax[9], data_folder=data_folder, new_data=new_data,
                         save_new_data=save_new_data)
-    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
 
 
