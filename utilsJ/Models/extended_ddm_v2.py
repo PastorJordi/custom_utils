@@ -1142,6 +1142,176 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
             rt_vals, rt_bins, None
 
 
+
+def trial_ev_vectorized_single_readout(
+        zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
+        p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
+        p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+        p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+        num_tr, stim_res, fixation_ms=300):
+    """
+    Generate stim and time integration and trajectories
+
+    Parameters
+    ----------
+    zt : array
+        priors for each trial (transition bias + lateral (CWJ) 1xnum-trials).
+    stim : array
+        stim sequence for each trial 20xnum-trials.
+    MT_slope : float
+        slope corresponding to motor time and trial index linear relation (0.15).
+    MT_intercep : float
+        intercept corresponding to motor-time and trial index relation (110).
+    p_w_zt : float
+        fitting parameter: gain for prior (zt).
+    p_w_stim : float
+        fitting parameter: gain for stim (stim).
+    p_e_bound : float
+        fitting parameter: bounds for the evidence integrator.
+    p_com_bound : float
+        fitting parameter: change-of-mind bound (will have opposite sign of
+        first choice).
+    p_t_eff : float
+        fitting parameter: efferent latency to initiate movement.
+    p_t_aff : float
+        fitting parameter: afferent latency to integrate stimulus.
+    p_t_a : float
+        fitting parameter: latency for action integration.
+    p_w_a_intercept : float
+        fitting parameter: drift of action noise.
+    p_a_bound : float
+        fitting parameter: bounds for the action integrator.
+    p_1st_readout : float
+        fitting parameter: slope of the linear realtion with time and evidence
+        for trajectory update.
+    num_tr : int
+        number of trials.
+    trajectories : boolean, optional
+        Whether trajectories are computed or not. The default is False.
+
+    Returns
+    -------
+    E : array
+        evidence integration matrix (num_tr x stim.shape[0]).
+    A : array
+        action integration matrix (num_tr x stim.shape[0]).
+    com : boolean array
+        whether each trial is or not a change-of-mind (num_tr x 1).
+    first_ind : list
+        first choice indexes (num_tr x 1).
+    second_ind : list
+        second choice indexes (num_tr x 1).
+    resp_first : list
+        first choice (-1 if left and 1 if right, num_tr x 1).
+    resp_fin : list
+        second (final) choice (-1 if left and 1 if right, num_tr x 1).
+    pro_vs_re : boolean array
+        whether each trial is reactive or not (proactive) ( num_tr x 1).
+    total_traj: tuple
+        total trajectory of the rat, containing the update (num_tr x 1).
+    init_trajs: tuple
+        pre-planned trajectory of the rat.
+    final_trajs: tuple
+        trajectory after the update.
+
+    """
+    # print('Starting simulation, PSIAM')
+    # start_eddm = time.time()
+    # TODO: COMMENT EVERY FORKING LINE
+    bound = p_e_bound
+    bound_a = p_a_bound
+    dt = stim_res*1e-3
+    p_e_noise = np.sqrt(dt)
+    p_a_noise = np.sqrt(dt)
+    fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
+    prior = zt*p_w_zt
+    # instantaneous evidence
+    Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
+    max_integration_time = Ve.shape[0]-1
+    N = Ve.shape[0]
+    zero_or_noise_evidence = np.concatenate((np.zeros((fixation, num_tr)),
+                                             np.random.randn(N - fixation, num_tr)))
+    # add noise
+    dW = zero_or_noise_evidence*p_e_noise+Ve
+    dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a_intercept +\
+        p_w_a_slope*trial_index
+    # zeros before p_t_a
+    dA[:p_t_a, :] = 0
+    # adding leak
+    # rolled_dW = np.roll(dW, 1)
+    # rolled_dW[fixation + p_t_aff, :] = 0
+    # dW += -rolled_dW*p_leak
+    # accumulate
+    A = np.cumsum(dA, axis=0)
+    dW[0, :] = prior
+    E = np.copy(dW)
+    E[:fixation, :] = np.cumsum(E[:fixation, :], axis=0)
+    for i in range(fixation, N):
+        E[i, :] += E[i-1, :]*(1-p_leak)
+    # E = np.cumsum(dW, axis=0)
+    # check docstring for definitions
+    first_ind = []
+    pro_vs_re = []
+    resp_first = np.ones(E.shape[1])
+    # evidences at 1st/2nd readout
+    first_ev = []
+    # start DDM
+    for i_t in range(E.shape[1]):
+        # search where evidence bound is reached
+        indx_hit_bound = np.abs(E[:, i_t]) >= bound
+        hit_bound = max_integration_time
+        if (indx_hit_bound).any():
+            hit_bound = np.where(indx_hit_bound)[0][0]
+        # search where action bound is reached
+        indx_hit_action = A[:, i_t] >= bound_a
+        hit_action = max_integration_time
+        if (indx_hit_action).any():
+            hit_action = np.where(indx_hit_action)[0][0]
+        # set first readout as the minimum
+        hit_dec = min(hit_bound, hit_action)
+        # XXX: this is not accurate because reactive trials are defined as
+        # EA reaching the bound, which includes influence of zt
+        pro_vs_re.append(np.argmin([hit_action, hit_bound]))
+        # store first readout index
+        first_ind.append(hit_dec)
+        # store first readout evidence
+        first_ev.append(E[hit_dec, i_t])
+        # first categorical response
+        resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
+        # CoM bound with sign depending on first response
+    first_ind = np.array(first_ind)
+    pro_vs_re = np.array(pro_vs_re)
+    # end_eddm = time.time()
+    # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
+    # XXX: put in a different function
+    # start_traj = time.time()
+    # Trajectories
+    # print('Starting with trajectories')
+    prechoice = resp_first
+    jerk_lock_ms = 0
+    # initial positions, speed and acc; final position, speed and acc
+    initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+    indx_trajs = np.arange(len(first_ind))
+    # check docstring for definitions
+    final_trajs = []
+    # first trajectory motor time w.r.t. first readout
+    # x value of trajectory at second readout update time
+    for i_t in indx_trajs:
+        # pre-planned Motor Time, the modulo prevents trial-index from
+        # growing indefinitely
+        MT = p_MT_slope*trial_index[i_t] + p_MT_intercept +\
+            p_mt_noise*np.random.gumbel()
+        first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
+        # first_resp_len: evidence influence on MT. The larger the ev,
+        # the smaller the motor time
+        initial_mu_side = initial_mu * prechoice[i_t]
+        prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                              resp_len=first_resp_len)
+        final_trajs.append(prior0)
+    # print('Time for trajectories: ' + str(end_traj - start_traj))
+    return E, A, first_ind, resp_first, pro_vs_re, final_trajs
+
+
 def run_model(stim, zt, coh, gt, com, trial_index, sound_len, traj_y, traj_stamps,
               fix_onset, configurations, jitters, stim_res,
               compute_trajectories=False, plot=False, existing_data=None,
