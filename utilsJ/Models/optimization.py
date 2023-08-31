@@ -1199,6 +1199,8 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
 
 
 def get_manual_kl_divergence(mat_model, mat_nn):
+    mat_model = mat_model.flatten()
+    mat_nn = mat_nn.flatten()
     return np.sum(mat_model * np.log(mat_model/mat_nn))
 
 
@@ -1452,6 +1454,8 @@ def plot_nn_to_nn_kldistance(n_trials=10000000):
     ax[0].set_ylabel('stim - Low T.I.')
     ax[2].set_ylabel('stim - Medium T.I.')
     ax[4].set_ylabel('stim - High T.I.')
+    ax[4].set_xlabel('prior')
+    ax[5].set_xlabel('prior')
     # we load estimator
     grid_rt = np.arange(-100, 300, 5) + 300
     grid_mt = np.arange(100, 600, 5)
@@ -1471,10 +1475,10 @@ def plot_nn_to_nn_kldistance(n_trials=10000000):
               'rb') as f:
         estimator_2 = pickle.load(f)
     estimator_2 = estimator_2['estimator']
-    # ztvals = np.linspace(-1.5, 1.5, 17)
-    ztvals = np.linspace(-1.5, 1.5, 9)
-    cohvals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    # cohvals = np.linspace(-1, 1, 17)
+    ztvals = np.linspace(-1.5, 1.5, 17)
+    # ztvals = np.linspace(-1.5, 1.5, 9)
+    # cohvals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    cohvals = np.linspace(-1, 1, 17)
     tivals = [10, 400, 800]
     p = 0
     for iti, tival in enumerate(tivals):
@@ -1502,20 +1506,30 @@ def plot_nn_to_nn_kldistance(n_trials=10000000):
                 lprobs1 = torch.exp(lprobs1)
                 mat_0_nn1 = lprobs1[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                             len(grid_rt)).detach().numpy()
+                mat_0_nn1 /= np.sum(mat_0_nn1)
                 mat_1_nn1 = lprobs1[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                             len(grid_rt)).detach().numpy()
+                mat_1_nn1 /= np.sum(mat_1_nn1)
                 lprobs2 = estimator_2.log_prob(x_o, theta_tri_ind)
                 lprobs2 = torch.exp(lprobs2)
                 mat_0_nn2 = lprobs2[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                             len(grid_rt)).detach().numpy()
+                mat_0_nn2 /= np.sum(mat_0_nn2)
                 mat_1_nn2 = lprobs2[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                             len(grid_rt)).detach().numpy()
+                mat_1_nn2 /= np.sum(mat_1_nn2)
                 kl_0 = get_manual_kl_divergence(mat_0_nn2, mat_0_nn1)
                 kl_1 = get_manual_kl_divergence(mat_1_nn2, mat_1_nn1)
                 mat_kl0[izt, icoh] = kl_0
                 mat_kl1[izt, icoh] = kl_1
-        ax[2*iti].imshow(mat_kl0)
-        ax[2*iti+1].imshow(mat_kl1)
+        im_1 = ax[2*iti].imshow(mat_kl0)
+        plt.colorbar(im_1, fraction=0.04, label='KL-divergence')
+        im_2 = ax[2*iti+1].imshow(mat_kl1)
+        plt.colorbar(im_2, fraction=0.04, label='KL-divergence')
+        ax[2*iti].set_yticks(np.arange(0, len(cohvals), 5), cohvals[::5])
+        ax[2*iti].set_xticks(np.arange(0, len(ztvals), 5), ztvals[::5])
+        ax[2*iti+1].set_xticks(np.arange(0, len(ztvals), 5), ztvals[::5])
+        ax[2*iti+1].set_yticks(np.arange(0, len(cohvals), 5), cohvals[::5])
 
 
 def plot_lh_model_network(df, n_trials=2000000):
