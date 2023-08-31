@@ -1526,10 +1526,10 @@ def plot_nn_to_nn_kldistance(n_trials=10000000):
         plt.colorbar(im_1, fraction=0.04, label='KL-divergence')
         im_2 = ax[2*iti+1].imshow(mat_kl1)
         plt.colorbar(im_2, fraction=0.04, label='KL-divergence')
-        ax[2*iti].set_yticks(np.arange(0, len(cohvals), 5), cohvals[::5])
-        ax[2*iti].set_xticks(np.arange(0, len(ztvals), 5), ztvals[::5])
-        ax[2*iti+1].set_xticks(np.arange(0, len(ztvals), 5), ztvals[::5])
-        ax[2*iti+1].set_yticks(np.arange(0, len(cohvals), 5), cohvals[::5])
+        ax[2*iti].set_yticks(np.arange(0, len(cohvals), 4), cohvals[::4])
+        ax[2*iti].set_xticks(np.arange(0, len(ztvals), 4), ztvals[::4])
+        ax[2*iti+1].set_xticks(np.arange(0, len(ztvals), 4), ztvals[::4])
+        ax[2*iti+1].set_yticks(np.arange(0, len(cohvals), 4), cohvals[::4])
 
 
 def plot_lh_model_network(df, n_trials=2000000):
