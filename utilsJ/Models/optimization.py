@@ -1372,6 +1372,152 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
         plt.colorbar(im1)
 
 
+def plot_nn_to_nn_comparison(n_trials=10000000):
+    fig, ax = plt.subplots(nrows=3, ncols=4)
+    ax = ax.flatten()
+    ax[1].set_title('Choice 1')
+    ax[0].set_title('Choice 0')
+    ax[3].set_title('Choice 1')
+    ax[2].set_title('Choice 0')
+    # we load estimator
+    grid_rt = np.arange(-100, 300, 1) + 300
+    grid_mt = np.arange(100, 600, 1)
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    mat_0_nn = np.empty((len(grid_mt), len(grid_rt)))
+    mat_1_nn = np.copy(mat_0_nn)
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_trials),
+              'rb') as f:
+        estimator_1 = pickle.load(f)
+    estimator_1 = estimator_1['estimator']
+    with open(SV_FOLDER + "/mnle_n{}_no_noise_v2.p".format(n_trials),
+              'rb') as f:
+        estimator_2 = pickle.load(f)
+    estimator_2 = estimator_2['estimator']
+    ztvals = [1.5, 0.05, 1.5, -1.5, .5, .5]
+    cohvals = [0, 1, 0.5, 0.5, 0.25, 0.25]
+    tivals = [400, 400, 400, 400, 10, 800]
+    p = 0
+    for ztval, cohval, tival in zip(ztvals, cohvals, tivals):
+        theta = get_x0()
+        theta = torch.reshape(torch.tensor(theta),
+                              (1, len(theta))).to(torch.float32)
+        theta = theta.repeat(len(x_o), 1)
+        trial_index = np.repeat(tival, len(theta))
+        theta[:, 0] *= torch.tensor(ztval)
+        theta[:, 1] *= torch.tensor(cohval)
+        theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                            torch.tensor(trial_index[
+                                                :len(x_o)]).to(torch.float32)))
+        theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+        theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+        theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                            theta_tri_ind[:, 9:15]))
+        lprobs1 = estimator_1.log_prob(x_o, theta_tri_ind)
+        lprobs1 = torch.exp(lprobs1)
+        mat_0_nn1 = lprobs1[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        mat_1_nn1 = lprobs1[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        lprobs2 = estimator_2.log_prob(x_o, theta_tri_ind)
+        lprobs2 = torch.exp(lprobs2)
+        mat_0_nn2 = lprobs2[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        mat_1_nn2 = lprobs2[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        im1 = ax[p].contour(mat_0_nn1, cmap='hot', linewidths=1.2)
+        # plt.sca(ax[p])
+        im2 = ax[p].contour(mat_0_nn2, cmap='cool', linewidths=1.2)
+        im3 = ax[p+1].contour(mat_1_nn1, cmap='hot', linewidths=1.2)
+        # plt.sca(ax[p+1])
+        im4 = ax[p+1].contour(mat_1_nn2, cmap='cool', linewidths=1.2)
+        p += 2
+        ax[p].set_xlabel('RT (ms)')
+        ax[p+1].set_xlabel('RT (ms)')
+        ax[p+1].set_ylabel('MT (ms)')
+        ax[p].set_ylabel('MT (ms)')
+        ax[p].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
+        ax[p].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+        ax[p+1].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
+        ax[p+1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+
+
+def plot_nn_to_nn_kldistance(n_trials=10000000):
+    fig, ax = plt.subplots(nrows=3, ncols=2)
+    ax = ax.flatten()
+    ax[0].set_ylabel('stim - Low T.I.')
+    ax[2].set_ylabel('stim - Medium T.I.')
+    ax[4].set_ylabel('stim - High T.I.')
+    # we load estimator
+    grid_rt = np.arange(-100, 300, 5) + 300
+    grid_mt = np.arange(100, 600, 5)
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    mat_0_nn = np.empty((len(grid_mt), len(grid_rt)))
+    mat_1_nn = np.copy(mat_0_nn)
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_trials),
+              'rb') as f:
+        estimator_1 = pickle.load(f)
+    estimator_1 = estimator_1['estimator']
+    with open(SV_FOLDER + "/mnle_n{}_no_noise_v2.p".format(n_trials),
+              'rb') as f:
+        estimator_2 = pickle.load(f)
+    estimator_2 = estimator_2['estimator']
+    # ztvals = np.linspace(-1.5, 1.5, 17)
+    ztvals = np.linspace(-1.5, 1.5, 9)
+    cohvals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    # cohvals = np.linspace(-1, 1, 17)
+    tivals = [10, 400, 800]
+    p = 0
+    for iti, tival in enumerate(tivals):
+        mat_kl0 = np.empty((len(ztvals), len(cohvals)))
+        mat_kl0[:] = np.nan
+        mat_kl1 = np.empty((len(ztvals), len(cohvals)))
+        mat_kl1[:] = np.nan
+        for izt, ztval in enumerate(ztvals):
+            for icoh, cohval in enumerate(cohvals):
+                theta = get_x0()
+                theta = torch.reshape(torch.tensor(theta),
+                                      (1, len(theta))).to(torch.float32)
+                theta = theta.repeat(len(x_o), 1)
+                trial_index = np.repeat(tival, len(theta))
+                theta[:, 0] *= torch.tensor(ztval)
+                theta[:, 1] *= torch.tensor(cohval)
+                theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                                    torch.tensor(trial_index[
+                                                        :len(x_o)]).to(torch.float32)))
+                theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+                theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+                theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                                    theta_tri_ind[:, 9:15]))
+                lprobs1 = estimator_1.log_prob(x_o, theta_tri_ind)
+                lprobs1 = torch.exp(lprobs1)
+                mat_0_nn1 = lprobs1[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                            len(grid_rt)).detach().numpy()
+                mat_1_nn1 = lprobs1[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                            len(grid_rt)).detach().numpy()
+                lprobs2 = estimator_2.log_prob(x_o, theta_tri_ind)
+                lprobs2 = torch.exp(lprobs2)
+                mat_0_nn2 = lprobs2[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                            len(grid_rt)).detach().numpy()
+                mat_1_nn2 = lprobs2[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                            len(grid_rt)).detach().numpy()
+                kl_0 = get_manual_kl_divergence(mat_0_nn2, mat_0_nn1)
+                kl_1 = get_manual_kl_divergence(mat_1_nn2, mat_1_nn1)
+                mat_kl0[izt, icoh] = kl_0
+                mat_kl1[izt, icoh] = kl_1
+        ax[2*iti].imshow(mat_kl0)
+        ax[2*iti+1].imshow(mat_kl1)
+
+
 def plot_lh_model_network(df, n_trials=2000000):
     fig, ax = plt.subplots(4, 4, figsize=(8, 12))
     ax = ax.flatten()
