@@ -860,6 +860,192 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
         subject
 
 
+
+def trial_ev_vectorized_n_readouts(
+        zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
+        p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
+        p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+        p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+        num_tr, stim_res, n_readouts=5, fixation_ms=300):
+    # TODO: finish
+    bound = p_e_bound
+    bound_a = p_a_bound
+    dt = stim_res*1e-3
+    p_e_noise = np.sqrt(dt)
+    p_a_noise = np.sqrt(dt)
+    fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
+    prior = zt*p_w_zt
+    # instantaneous evidence
+    Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
+    max_integration_time = Ve.shape[0]-1
+    N = Ve.shape[0]
+    zero_or_noise_evidence = np.concatenate((np.zeros((fixation, num_tr)),
+                                             np.random.randn(N - fixation, num_tr)))
+    # add noise
+    dW = zero_or_noise_evidence*p_e_noise+Ve
+    dA = np.random.randn(N, num_tr)*p_a_noise+p_w_a_intercept +\
+        p_w_a_slope*trial_index
+    # zeros before p_t_a
+    dA[:p_t_a, :] = 0
+    # adding leak
+    # rolled_dW = np.roll(dW, 1)
+    # rolled_dW[fixation + p_t_aff, :] = 0
+    # dW += -rolled_dW*p_leak
+    # accumulate
+    A = np.cumsum(dA, axis=0)
+    dW[0, :] = prior
+    E = np.copy(dW)
+    E[:fixation, :] = np.cumsum(E[:fixation, :], axis=0)
+    for i in range(fixation, N):
+        E[i, :] += E[i-1, :]*(1-p_leak)
+    # E = np.cumsum(dW, axis=0)
+    com = False
+    # check docstring for definitions
+    first_ind = []
+    second_ind = []
+    pro_vs_re = []
+    resp_first = np.ones(E.shape[1])
+    resp_fin = np.ones(E.shape[1])
+    # evidences at 1st/2nd readout
+    first_ev = []
+    second_ev = []
+    # start DDM
+    for i_t in range(E.shape[1]):
+        # search where evidence bound is reached
+        indx_hit_bound = np.abs(E[:, i_t]) >= bound
+        hit_bound = max_integration_time
+        if (indx_hit_bound).any():
+            hit_bound = np.where(indx_hit_bound)[0][0]
+        # search where action bound is reached
+        indx_hit_action = A[:, i_t] >= bound_a
+        hit_action = max_integration_time
+        if (indx_hit_action).any():
+            hit_action = np.where(indx_hit_action)[0][0]
+        # set first readout as the minimum
+        hit_dec = min(hit_bound, hit_action)
+        # XXX: this is not accurate because reactive trials are defined as
+        # EA reaching the bound, which includes influence of zt
+        pro_vs_re.append(np.argmin([hit_action, hit_bound]))
+        # store first readout index
+        first_ind.append(hit_dec)
+        # store first readout evidence
+        first_ev.append(E[hit_dec, i_t])
+        # first categorical response
+        resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
+        # CoM bound with sign depending on first response
+        com_bound_signed = (-resp_first[i_t])*p_com_bound
+        # second response
+        indx_final_ch = hit_dec+p_t_eff+p_t_aff
+        indx_final_ch = min(indx_final_ch, max_integration_time)
+        # get post decision accumulated evidence with respect to CoM bound
+        post_dec_integration = E[hit_dec:indx_final_ch, i_t]-com_bound_signed
+        # get CoMs indexes
+        # in this comparison, post_dec_integration is set with respect
+        # to com_bound_signed but E[hit_dec, i_t] isn't. However,
+        # it does not matter
+        # because:
+        # sign(E[hit_dec, i_t]) = sign(E[hit_dec, i_t]) - com_bound_signed
+        indx_com =\
+            np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
+        # get CoM effective index
+        indx_update_ch = indx_final_ch if len(indx_com) == 0\
+            else indx_com[0] + hit_dec
+        # get final decision
+        resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
+        second_ind.append(indx_update_ch)
+        second_ev.append(E[indx_update_ch, i_t])
+    com = resp_first != resp_fin
+    first_ind = np.array(first_ind)
+    pro_vs_re = np.array(pro_vs_re)
+    rt_vals, rt_bins = np.histogram((first_ind-fixation+p_t_eff)*stim_res,
+                                    bins=np.linspace(-100, 300, 81))
+    # end_eddm = time.time()
+    # print('Time for "PSIAM": ' + str(end_eddm - start_eddm))
+    # XXX: put in a different function
+    # start_traj = time.time()
+    # Trajectories
+    # print('Starting with trajectories')
+    RLresp = resp_fin
+    prechoice = resp_first
+    jerk_lock_ms = 0
+    # initial positions, speed and acc; final position, speed and acc
+    initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+    indx_trajs = np.arange(len(first_ind))
+    # check docstring for definitions
+    init_trajs = []
+    final_trajs = []
+    total_traj = []
+    # first trajectory motor time w.r.t. first readout
+    frst_traj_motor_time = []
+    # x value of trajectory at second readout update time
+    x_val_at_updt = []
+    for i_t in indx_trajs:
+        # pre-planned Motor Time, the modulo prevents trial-index from
+        # growing indefinitely
+        MT = p_MT_slope*trial_index[i_t] + p_MT_intercept +\
+            p_mt_noise*np.random.gumbel()
+        first_resp_len = float(MT-p_1st_readout*np.abs(first_ev[i_t]))
+        # first_resp_len: evidence influence on MT. The larger the ev,
+        # the smaller the motor time
+        initial_mu_side = initial_mu * prechoice[i_t]
+        prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
+                              resp_len=first_resp_len)
+        init_trajs.append(prior0)  # + np.random.randn(len(prior0))*0.15)
+        # TRAJ. UPDATE
+        try:
+            velocities = np.gradient(prior0)
+            accelerations = np.gradient(velocities)  # acceleration
+            t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+            t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
+            frst_traj_motor_time.append(t_updt)
+            vel = velocities[t_updt]  # velocity at the timepoint
+            acc = accelerations[t_updt]
+            pos = prior0[t_updt]  # position
+            mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                                  0, 0]).reshape(-1, 1)
+            # new mu, considering new position/speed/acceleration
+            remaining_m_time = first_resp_len-t_updt
+            sign_ = resp_first[i_t]
+            # this sets the maximum updating evidence equal to the ev bound
+            # and avoids having negative second_resp_len (impossibly fast
+            # responses) bc of very strong confirmation evidence.
+            updt_ev = np.clip(second_ev[i_t], a_min=-bound, a_max=bound)
+            # second_response_len: motor time update influenced by difference
+            # between the evidence at second readout and the signed p_com_bound
+            com_bound_signed = (-sign_)*p_com_bound
+            difference = (updt_ev - first_ev[i_t])*sign_
+            # offset = 120
+            second_response_len =\
+                float(remaining_m_time -  # offset*com[i_t] -
+                      p_2nd_readout*(difference))
+            # SECOND readout
+            traj_fin = compute_traj(jerk_lock_ms, mu=mu_update,
+                                    resp_len=second_response_len)
+            # joined trajectories
+            traj_before_uptd = prior0[0:t_updt]
+            traj_updt = np.concatenate((traj_before_uptd,  traj_fin))
+            # traj_updt += np.random.randn(len(traj_updt))*0.15  # noise
+            # traj_updt = np.concatenate((np.repeat(0, 30), traj_updt))
+            # np.random.randn(np.random.randint(15, 60))*0.2
+            if com[i_t]:
+                opp_side_values = traj_updt.copy()
+                opp_side_values[np.sign(traj_updt) == resp_fin[i_t]] = 0
+                max_val_towards_opposite = np.max(np.abs(opp_side_values))
+                x_val_at_updt.append(max_val_towards_opposite)
+            else:
+                x_val_at_updt.append(0)
+        except Exception:
+            traj_fin = [np.nan]
+            traj_updt = np.concatenate((prior0, traj_fin))
+            x_val_at_updt.append(0)
+        total_traj.append(traj_updt)
+        final_trajs.append(traj_fin)
+    # print('Time for trajectories: ' + str(end_traj - start_traj))
+    return E, A, com, first_ind, second_ind, resp_first, resp_fin, pro_vs_re,\
+        total_traj, init_trajs, final_trajs, frst_traj_motor_time,\
+        x_val_at_updt, rt_vals, rt_bins, indx_trajs
+
+
 def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
                         p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
