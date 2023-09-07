@@ -1117,7 +1117,7 @@ def prepare_fb_data(df):
     return data
 
 
-def opt_mnle(df, num_simulations, n_trials, bads=True, training=False):
+def opt_mnle(df, num_simulations, bads=True, training=False):
     if training:
         # 1st: loading data
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
@@ -2213,7 +2213,6 @@ if __name__ == '__main__':
     if optimization_mnle:
         num_simulations = int(10e6)  # number of simulations to train the network
         if not human:
-            n_trials = 100000  # number of trials to evaluate the likelihood for fitting
             # load real data
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
@@ -2249,8 +2248,7 @@ if __name__ == '__main__':
                 plot_lh_model_network(df, n_trials=10000000)
                 try:
                     parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                          n_trials=n_trials, bads=True,
-                                          training=training)
+                                          bads=True, training=training)
                     print('--------------')
                     print('p_w_zt: '+str(parameters[0]))
                     print('p_w_stim: '+str(parameters[1]))
