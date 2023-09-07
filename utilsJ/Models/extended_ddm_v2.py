@@ -1050,7 +1050,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
                         p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
                         p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
                         p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
-                        num_tr, stim_res,
+                        num_tr, stim_res, human=False,
                         compute_trajectories=False, num_trials_per_session=600,
                         all_trajs=True, num_computed_traj=int(3e4),
                         fixation_ms=300, compute_mat_and_pcom=False):
@@ -1122,6 +1122,10 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
     """
     # print('Starting simulation, PSIAM')
     # start_eddm = time.time()
+    if human:
+        px_final = 600
+    if not human:
+        px_final = 75
     # TODO: COMMENT EVERY FORKING LINE
     bound = p_e_bound
     bound_a = p_a_bound
@@ -1230,7 +1234,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
         prechoice = resp_first
         jerk_lock_ms = 0
         # initial positions, speed and acc; final position, speed and acc
-        initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
+        initial_mu = np.array([0, 0, 0, px_final, 0, 0]).reshape(-1, 1)
         indx_trajs = np.arange(len(first_ind)) if all_trajs\
             else np.random.choice(len(first_ind), num_computed_traj)
         # check docstring for definitions
@@ -1263,7 +1267,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
                 vel = velocities[t_updt]  # velocity at the timepoint
                 acc = accelerations[t_updt]
                 pos = prior0[t_updt]  # position
-                mu_update = np.array([pos, vel, acc, 75*RLresp[i_t],
+                mu_update = np.array([pos, vel, acc, px_final*RLresp[i_t],
                                       0, 0]).reshape(-1, 1)
                 # new mu, considering new position/speed/acceleration
                 remaining_m_time = first_resp_len-t_updt

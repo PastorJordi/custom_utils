@@ -36,7 +36,7 @@ matplotlib.rcParams['font.family'] = 'Arial'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -74,7 +74,7 @@ elif pc_name == 'alex_CRM':
 
 
 def plot_psyc(decision_rat, decision_model, coh):
-    ev_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+    ev_vals = np.unique(coh)
     dec_rat_01 = (decision_rat + 1)/2
     dec_mod_01 = (decision_model + 1)/2
     acc_rat = []
@@ -117,9 +117,10 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
+f8 = True
 com_threshold = 8
 if f1 or f2 or f3 or f5:
     # with silent: 42, 43, 44, 45, 46, 47
@@ -317,3 +318,13 @@ if f6:
                        human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
 if f7:
     fp.fig_7(df, df_sim)
+if f8:
+    df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
+    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+        _, trajs, x_val_at_updt =\
+        fp.simulate_model_humans(df_data)
+    MT = np.array([len(t) for t in trajs])
+    mt_human = np.array(fp.get_human_mt(df_data))
+    # plot_MT_density_comparison(
+    #     mt_human[mt_human < 800], MT[MT < 800])
+

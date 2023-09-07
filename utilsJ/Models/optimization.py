@@ -2074,7 +2074,7 @@ def human_fitting(df, subject, sv_folder=SV_FOLDER,  num_simulations=int(10e6)):
     choice = df_data.R_response.values
     coh = df_data.avtrapz.values*5
     zt = df_data.norm_allpriors.values*3
-    times = df_data.times
+    times = df_data.times.values
     trial_index = np.arange(len(df_data)) + 1
     motor_time = []
     for tr in range(len(choice)):
@@ -2273,7 +2273,7 @@ if __name__ == '__main__':
         else:
             df = get_human_data(user_id='alex_CRM')
             subjects = df.subjid.values
-            for subject in subjects:
+            for subject in np.unique(subjects):
                 parameters = human_fitting(df=df, subject=subject,
                                            num_simulations=num_simulations)
                 print('--------------')

@@ -32,6 +32,7 @@ from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
+from utilsJ.Models import analyses_humans as ah
 import matplotlib
 import matplotlib.pylab as pl
 
@@ -47,7 +48,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -438,15 +439,18 @@ def basic_statistics(decision, resp_fin):
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
 
 
-def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
-              load_params=True):
+def run_model(stim, zt, coh, gt, trial_index, human=False,
+              subject=None, num_tr=None, load_params=True):
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
     else:
         num_tr = int(len(zt))
     data_augment_factor = 10
-    detect_CoMs_th = 8
+    if not human:
+        detect_CoMs_th = 8
+    if human:
+        detect_CoMs_th = 200
     if not load_params:
         p_t_aff = 5
         p_t_eff = 4
@@ -469,7 +473,11 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
                 p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope]
         jitters = len(conf)*[0]
     else:
-        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        if human:
+            conf = np.load(SV_FOLDER +
+                           'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
+        else:
+            conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         jitters = len(conf)*[0]
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
@@ -516,7 +524,8 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
                                  p_2nd_readout=p_2nd_readout, p_leak=p_leak,
                                  p_mt_noise=p_mt_noise,
                                  compute_trajectories=compute_trajectories,
-                                 stim_res=stim_res, all_trajs=all_trajs)
+                                 stim_res=stim_res, all_trajs=all_trajs,
+                                 human=human)
     hit_model = resp_fin == gt
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
@@ -525,7 +534,8 @@ def run_model(stim, zt, coh, gt, trial_index, subject=None, num_tr=None,
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
-                                   subjid, num_tr=None, load_params=True, simulate=True):
+                                   subjid, human=False, num_tr=None, load_params=True,
+                                   simulate=True):
     hit_model = np.empty((0))
     reaction_time = np.empty((0))
     detected_com = np.empty((0))
@@ -539,7 +549,10 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             index = subjid == subject
         else:
             index = range(num_tr)
-        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
+        if not human:
+            sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
+        if human:
+            sim_data = DATA_FOLDER + '/Human/' + str(subject) + '/sim_data/' + str(subject) + '_simulation.pkl'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(sim_data), exist_ok=True)
         if os.path.exists(sim_data) and not simulate:
@@ -557,7 +570,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
                 com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
                 run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
                           gt=gt[index], trial_index=trial_index[index],
-                          subject=subject, load_params=load_params)
+                          subject=subject, load_params=load_params, human=human)
             data_simulation = {'hit_model_tmp': hit_model_tmp, 'reaction_time_tmp': reaction_time_tmp,
                                'detected_com_tmp': detected_com_tmp, 'resp_fin_tmp': resp_fin_tmp,
                                'com_model_tmp': com_model_tmp, 'pro_vs_re_tmp': pro_vs_re_tmp,
@@ -1461,3 +1474,59 @@ def plot_model_trajs(df_sim, df, model_alone=False, align_y_onset=False, offset=
     ax1.set_ylabel('coh')
     plt.colorbar(im, label='SD')
 
+
+def get_human_mt(df_data):
+    motor_time = []
+    times = df_data.times.values
+    for tr in range(len(df_data)):
+        ind_time = [True if t != '' else False for t in times[tr]]
+        time_tr = np.array(times[tr])[np.array(ind_time)].astype(float)
+        mt = time_tr[-1]
+        if mt > 1:
+            mt = 1
+        motor_time.append(mt*1e3)
+    return motor_time
+
+
+def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
+    if user_id == 'alex':
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'alex_CRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
+    if user_id == 'idibaps':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    subj = ['general_traj']
+    steps = [None]
+    # retrieve data
+    df = ah.traj_analysis(data_folder=folder,
+                          subjects=subj, steps=steps, name=nm,
+                          sv_folder=sv_folder)
+    return df
+
+
+def simulate_model_humans(df_data):
+    choice = df_data.R_response.values*2-1
+    hit = df_data.hithistory.values*2-1
+    subjects = df_data.subjid.unique()
+    subjid = df_data.subjid.values
+    gt = (choice*hit+1)/2
+    coh = df_data.avtrapz.values*5
+    stim = np.repeat(coh.reshape(-1, 1), 20, 1).T
+    zt = df_data.norm_allpriors.values*3
+    len_task = [len(df_data.loc[subjid == subject]) for subject in subjects]
+    trial_index = np.empty((0))
+    for j in range(len(len_task)):
+        trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
+    num_tr = len(trial_index)
+    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+        _, trajs, x_val_at_updt =\
+        run_simulation_different_subjs(
+            stim=stim, zt=zt, coh=coh, gt=gt,
+            trial_index=trial_index, num_tr=num_tr, human=True,
+            subject_list=subjects, subjid=subjid, simulate=True)
+    
+    return hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+        _, trajs, x_val_at_updt
