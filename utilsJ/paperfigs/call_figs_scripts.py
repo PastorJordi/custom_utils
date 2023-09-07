@@ -339,8 +339,9 @@ if f8:
     df_data['coh2'] = coh
     df_data['origidx'] = trial_index
     df_data['allpriors'] = df_data.norm_allpriors.values
-    # plot_MT_density_comparison(
-    #     mt_human[mt_human < 800], MT[MT < 800])
+    plot_MT_density_comparison(
+        mt_human[mt_human < 800], MT[MT < 800])
+    plot_psyc(df_data.R_response*2-1, resp_fin, coh=df_data.avtrapz.values*5)
     # df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
     #                        'sound_len': reaction_time,
     #                        'rewside': (gt + 1)/2,

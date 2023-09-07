@@ -1530,3 +1530,40 @@ def simulate_model_humans(df_data):
     
     return hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt
+
+
+
+def plot_params_all_subs_humans(subjects, sv_folder=SV_FOLDER, diff_col=True):
+    fig, ax = plt.subplots(4, 4)
+    if diff_col:
+        colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    else:
+        colors = ['k' for _ in range(len(subjects))]
+    ax = ax.flatten()
+    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
+              't aff', 't eff', 'tAction', 'intercept AI',
+              'slope AI', 'AI bound', 'DV weight 1st readout',
+              'DV weight 2nd readout', 'leak', 'MT noise std',
+              'MT offset', 'MT slope T.I.']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
+        conf_mat[:, i_s] = conf
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h')
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s]*5,
+                           0.05*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+        else:
+            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h')
+            for i_s in range(len(subjects)):
+                ax[i].plot(conf_mat[i, i_s],
+                           0.1*np.random.randn(),
+                           color=colors[i_s], marker='o', linestyle='',
+                           markersize=1.2)
+            ax[i].set_xlabel(labels[i] + str(' ms'))
+            ax[i].set_xlabel(labels[i])
