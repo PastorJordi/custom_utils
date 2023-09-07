@@ -28,7 +28,7 @@ import os
 # from pyvbmc import VBMC
 
 sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
-# sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # Jordi
 from utilsJ.Models.extended_ddm_v2 import trial_ev_vectorized,\
@@ -38,15 +38,16 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
 from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
+from utilsJ.Models import analyses_humans as ah
 
-DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -890,6 +891,38 @@ def get_lb():
             lb_mt_int, lb_mt_slope]
 
 
+def get_lb_human():
+    """
+    Returns list with hard lower bounds (LB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard lower bounds.
+
+    """
+    lb_aff = 3
+    lb_eff = 3
+    lb_t_a = 4
+    lb_w_zt = 0
+    lb_w_st = 0
+    lb_e_bound = 0.3
+    lb_com_bound = 0
+    lb_w_intercept = 0.01
+    lb_w_slope = 1e-6
+    lb_a_bound = 0.1
+    lb_1st_r = 25
+    lb_2nd_r = 25
+    lb_leak = 0
+    lb_mt_n = 1
+    lb_mt_int = 120
+    lb_mt_slope = 0.01
+    return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
+            lb_eff, lb_t_a, lb_w_intercept, lb_w_slope, lb_a_bound,
+            lb_1st_r, lb_2nd_r, lb_leak, lb_mt_n,
+            lb_mt_int, lb_mt_slope]
+
+
 def get_ub():
     """
     Returns list with hard upper bounds (UB) for BADS optimization.
@@ -905,6 +938,38 @@ def get_ub():
     ub_t_a = 22
     ub_w_zt = 1
     ub_w_st = 0.18
+    ub_e_bound = 4
+    ub_com_bound = 1
+    ub_w_intercept = 0.12
+    ub_w_slope = 1e-3
+    ub_a_bound = 4
+    ub_1st_r = 400
+    ub_2nd_r = 400
+    ub_leak = 0.15
+    ub_mt_n = 20
+    ub_mt_int = 370
+    ub_mt_slope = 0.6
+    return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
+            ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
+            ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
+            ub_mt_int, ub_mt_slope]
+
+
+def get_ub_human():
+    """
+    Returns list with hard upper bounds (UB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard upper bounds.
+
+    """
+    ub_aff = 12
+    ub_eff = 12
+    ub_t_a = 22
+    ub_w_zt = 1
+    ub_w_st = 0.2
     ub_e_bound = 4
     ub_com_bound = 1
     ub_w_intercept = 0.12
@@ -1979,6 +2044,76 @@ def plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
     plt.colorbar(imch, fraction=0.04, label='KL-divergence')
 
 
+def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
+    if user_id == 'alex':
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'alex_CRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
+    if user_id == 'idibaps':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    subj = ['general_traj']
+    steps = [None]
+    # retrieve data
+    df = ah.traj_analysis(data_folder=folder,
+                          subjects=subj, steps=steps, name=nm,
+                          sv_folder=sv_folder)
+    return df
+
+
+def human_fitting(df, subject, sv_folder=SV_FOLDER,  num_simulations=int(10e6)):
+    df_data = df.loc[df.subjid == subject]
+    reac_time = df_data.sound_len.values
+    reaction_time = []
+    for rt in reac_time:
+        if rt > 500:
+            rt = 500
+        reaction_time.append(rt+500)
+    choice = df_data.R_response.values
+    coh = df_data.avtrapz.values*5
+    zt = df_data.norm_allpriors.values*3
+    times = df_data.times
+    trial_index = np.arange(len(df_data)) + 1
+    motor_time = []
+    for tr in range(len(choice)):
+        ind_time = [True if t != '' else False for t in times[tr]]
+        time_tr = np.array(times[tr])[np.array(ind_time)].astype(float)
+        mt = time_tr[-1]
+        if mt > 1:
+            mt = 1
+        motor_time.append(mt*1e3)
+    x_o = torch.column_stack((torch.tensor(motor_time),
+                              torch.tensor(reaction_time),
+                              torch.tensor(choice)))
+    data = torch.column_stack((torch.tensor(zt), torch.tensor(coh),
+                               torch.tensor(trial_index.astype(float)),
+                               x_o))
+    # load network
+    with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", 'rb') as f:
+        estimator = pickle.load(f)
+    estimator = estimator['estimator']
+    x0 = get_x0()
+    print('Initial guess is: ' + str(x0))
+    lb = get_lb_human()
+    ub = get_ub_human()
+    pub = get_pub()
+    plb = get_plb()
+    print('Optimizing')
+    n_trials = len(data)
+    # define fun_target as function to optimize
+    # returns -LLH( data | parameters )
+    fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
+    # define optimizer (BADS)
+    bads = BADS(fun_target, x0, lb, ub, plb, pub,
+                non_box_cons=nonbox_constraints_bads)
+    # optimization
+    optimize_result = bads.optimize()
+    print(optimize_result.total_time)
+    return optimize_result.x
+
+
 # --- MAIN
 if __name__ == '__main__':
     plt.close('all')
@@ -1988,6 +2123,7 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
+    human = True
     if not optimization_mnle:
         stim, zt, coh, gt, com, pright, trial_index =\
             get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
@@ -2076,44 +2212,72 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
         num_simulations = int(10e6)  # number of simulations to train the network
-        n_trials = 100000  # number of trials to evaluate the likelihood for fitting
-        # load real data
-        subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
-                    'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
-                    'LE44']
-        # subjects = ['LE42']  # to run only once and train
-        training = False
-        for i_s, subject in enumerate(subjects):
-            if i_s > 0:
-                training = False
-            print('Fitting rat ' + str(subject))
-            df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
-                                     sv_folder=SV_FOLDER, after_correct=True,
-                                     silent=True, all_trials=True,
-                                     srfail=True)
-            df = df.loc[df.special_trial == 0]
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                         num_simulations=len(df),
-            #                         n_simul_training=int(2e6))
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                         num_simulations=len(df),
-            #                         n_simul_training=int(3e6))
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                         num_simulations=len(df),
-            #                         n_simul_training=int(4e6))
-            # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
-            #                         num_simulations=len(df),
-            #                         n_simul_training=int(10e6))
-            # plot_lh_model_network(df, n_trials=2000000)
-            # plot_lh_model_network(df, n_trials=3000000)
-            # plot_lh_model_network(df, n_trials=10000000)
-            # plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
-            #                       n_simul_training=int(10e6))
-            plot_lh_model_network(df, n_trials=10000000)
-            try:
-                parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                      n_trials=n_trials, bads=True,
-                                      training=training)
+        if not human:
+            n_trials = 100000  # number of trials to evaluate the likelihood for fitting
+            # load real data
+            subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+                        'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
+                        'LE44']
+            # subjects = ['LE42']  # to run only once and train
+            training = False
+            for i_s, subject in enumerate(subjects):
+                if i_s > 0:
+                    training = False
+                print('Fitting rat ' + str(subject))
+                df = get_data_and_matrix(dfpath=DATA_FOLDER + subject, return_df=True,
+                                         sv_folder=SV_FOLDER, after_correct=True,
+                                         silent=True, all_trials=True,
+                                         srfail=True)
+                df = df.loc[df.special_trial == 0]
+                # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                #                         num_simulations=len(df),
+                #                         n_simul_training=int(2e6))
+                # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                #                         num_simulations=len(df),
+                #                         n_simul_training=int(3e6))
+                # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                #                         num_simulations=len(df),
+                #                         n_simul_training=int(4e6))
+                # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
+                #                         num_simulations=len(df),
+                #                         n_simul_training=int(10e6))
+                # plot_lh_model_network(df, n_trials=2000000)
+                # plot_lh_model_network(df, n_trials=3000000)
+                # plot_lh_model_network(df, n_trials=10000000)
+                # plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
+                #                       n_simul_training=int(10e6))
+                plot_lh_model_network(df, n_trials=10000000)
+                try:
+                    parameters = opt_mnle(df=df, num_simulations=num_simulations,
+                                          n_trials=n_trials, bads=True,
+                                          training=training)
+                    print('--------------')
+                    print('p_w_zt: '+str(parameters[0]))
+                    print('p_w_stim: '+str(parameters[1]))
+                    print('p_e_bound: '+str(parameters[2]))
+                    print('p_com_bound: '+str(parameters[3]))
+                    print('p_t_aff: '+str(parameters[4]))
+                    print('p_t_eff: '+str(parameters[5]))
+                    print('p_t_a: '+str(parameters[6]))
+                    print('p_w_a_intercept: '+str(parameters[7]))
+                    print('p_w_a_slope: '+str(parameters[8]))
+                    print('p_a_bound: '+str(parameters[9]))
+                    print('p_1st_readout: '+str(parameters[10]))
+                    print('p_2nd_readout: '+str(parameters[11]))
+                    print('p_leak: '+str(parameters[12]))
+                    print('p_mt_noise: '+str(parameters[13]))
+                    print('p_MT_intercept: '+str(parameters[14]))
+                    print('p_MT_slope: '+str(parameters[15]))
+                    np.save(SV_FOLDER + 'parameters_MNLE_BADS' +
+                            subject + '.npy', parameters)
+                except Exception:
+                    continue
+        else:
+            df = get_human_data(user_id='alex_CRM')
+            subjects = df.subjid.values
+            for subject in subjects:
+                parameters = human_fitting(df=df, subject=subject,
+                                           num_simulations=num_simulations)
                 print('--------------')
                 print('p_w_zt: '+str(parameters[0]))
                 print('p_w_stim: '+str(parameters[1]))
@@ -2131,10 +2295,8 @@ if __name__ == '__main__':
                 print('p_mt_noise: '+str(parameters[13]))
                 print('p_MT_intercept: '+str(parameters[14]))
                 print('p_MT_slope: '+str(parameters[15]))
-                np.save(SV_FOLDER + 'parameters_MNLE_BADS' +
-                        subject + '.npy', parameters)
-            except Exception:
-                continue
+                np.save(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_' +
+                        str(subject) + '.npy', parameters)
     if rms_comparison and plotting:
         plt.figure()
         plt.scatter(rms_list, llk_list)
