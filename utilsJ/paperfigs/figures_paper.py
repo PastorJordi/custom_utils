@@ -964,6 +964,17 @@ def fig_trajs_model_4(trajs_model, df, reaction_time):
                     pl = False
 
 
+def plot_conf_bias_distro(subjects, sv_folder=SV_FOLDER):
+    fig, ax = plt.subplots(1)
+    conf_mat = np.empty((3, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_mat[:, i_s] = np.array((conf[1], conf[2], conf[3]))
+    mu = 5 * conf_mat[1, :]*conf_mat[2, :] / conf_mat[0, :]
+    sns.kdeplot(mu, ax=ax)
+    ax.set_xlabel('Time to reach CoM bound (ms)')
+
+
 def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
     fig, ax = plt.subplots(4, 4)
     if diff_col:

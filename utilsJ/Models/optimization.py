@@ -1608,7 +1608,7 @@ def plot_lh_model_network(df, n_trials=2000000):
               'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
               'cong. higher t.i.', '0 stim, high prior', 'low stim incong']
     for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
-                                    [1.5, 0.05, 1.5, .5],
+                                    [1.5, 0.05, -1.5, .5],
                                     [400, 400, 400, 10]):
         if i == 3:
             xt = True
@@ -1620,6 +1620,69 @@ def plot_lh_model_network(df, n_trials=2000000):
                                       plot_nn_alone=False, xt=xt)
         ax[4*i].set_title(labels[i])
         i += 1
+
+
+def plot_mse_vs_n(n_list=[2000000, 3000000, 4000000, 10000000]):
+    mse_mat = np.zeros((4, len(n_list)))
+    for i_n, n_trial in enumerate(n_list):
+        i = 0
+        for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
+                                        [1.5, 0.05, -1.5, .5],
+                                        [400, 400, 400, 10]):
+            mse = mse_lh_model_nn(n_trial, cohval, ztval,
+                                  tival, num_simulations=int(5e5))
+            mse_mat[i, i_n] = mse
+            i += 1
+    fig, ax = plt.subplots(1)
+    for j in range(4):
+        ax.plot(n_list, mse_mat[:, j], color='r', alpha=0.4)
+    mean_mse = np.nanmean(mse_mat, axis=1)
+    ax.plot(n_list, mean_mse, linewidth=2, color='r')    
+
+
+def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5)):
+    # we load estimator
+    grid_rt = np.arange(-100, 300, 1) + 300
+    grid_mt = np.arange(100, 600, 1)
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    trial_index = np.repeat(tival, num_simulations)
+    mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival))
+    mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
+                    .format(cohval, ztval, tival))
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_sim_train),
+              'rb') as f:
+        estimator = pickle.load(f)
+    estimator = estimator['estimator']
+    theta = get_x0()
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(len(x_o), 1)
+    theta[:, 0] *= torch.tensor(ztval)
+    theta[:, 1] *= torch.tensor(cohval)
+    theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                        torch.tensor(trial_index[
+                                            :len(x_o)]).to(torch.float32)))
+    theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+    theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+    theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                        theta_tri_ind[:, 9:15]))
+    lprobs = estimator.log_prob(x_o, theta_tri_ind)
+    lprobs = torch.exp(lprobs)
+    mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                              len(grid_rt)).detach().numpy()
+    mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                              len(grid_rt)).detach().numpy()
+    mat_0_nn = resize(mat_0_nn.T, mat_0.shape)
+    mat_1_nn = resize(mat_1_nn.T, mat_1.shape)
+    mse_0 = np.sum((mat_0_nn - mat_0)**2)
+    mse_1 = np.sum((mat_1_nn - mat_1)**2)
+    return mse_0 + mse_1
 
 
 def kl_vs_n_trials(df, n_trials=[2000000, 3000000, 4000000], sv_folder=SV_FOLDER):
