@@ -40,14 +40,15 @@ from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.Models import analyses_humans as ah
 
-# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+# DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
-# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/'  # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -1053,14 +1054,14 @@ def get_plb():
 
 def nonbox_constraints_bads(x):
     x_1 = np.atleast_2d(x)
-    # cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] < 30
+    cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] + np.int32(x_1[:, 5]) > 121
     # ~ min. action RT peak can't be < -150 ms
     cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.7
     # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
     cond4 = x[:,0] < 1e-2 # lb for prior
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
-    return np.bool_(cond4 + cond5)
+    return np.bool_(cond4 + cond5 + cond1)
 
 
 def gumbel_plotter():
@@ -2133,7 +2134,7 @@ def human_fitting(df, subject, sv_folder=SV_FOLDER,  num_simulations=int(10e6)):
     for rt in reac_time:
         if rt > 500:
             rt = 500
-        reaction_time.append(rt+500)
+        reaction_time.append(rt+300)
     choice = df_data.R_response.values
     coh = df_data.avtrapz.values*5
     zt = df_data.norm_allpriors.values*3
@@ -2334,9 +2335,10 @@ if __name__ == '__main__':
                 except Exception:
                     continue
         else:
-            df = get_human_data(user_id='alex_CRM')
+            df = get_human_data(user_id='alex')
             subjects = df.subjid.values
-            for subject in np.unique(subjects):
+            # df['subjid'] = np.repeat('all', len(subjects))
+            for subject in np.unique(df.subjid.unique()):
                 parameters = human_fitting(df=df, subject=subject,
                                            num_simulations=num_simulations)
                 print('--------------')
@@ -2356,7 +2358,7 @@ if __name__ == '__main__':
                 print('p_mt_noise: '+str(parameters[13]))
                 print('p_MT_intercept: '+str(parameters[14]))
                 print('p_MT_slope: '+str(parameters[15]))
-                np.save(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_' +
+                np.save(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_hlim_eff' +
                         str(subject) + '.npy', parameters)
     if rms_comparison and plotting:
         plt.figure()

@@ -48,7 +48,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -475,7 +475,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     else:
         if human:
             conf = np.load(SV_FOLDER +
-                           'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
+                           'parameters_MNLE_BADS_human_subj_hlim_eff' + str(subject) + '.npy')
         else:
             conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         jitters = len(conf)*[0]
@@ -973,6 +973,38 @@ def plot_conf_bias_distro(subjects, sv_folder=SV_FOLDER):
     mu = 5 * conf_mat[1, :]*conf_mat[2, :] / conf_mat[0, :]
     sns.kdeplot(mu, ax=ax)
     ax.set_xlabel('Time to reach CoM bound (ms)')
+
+
+def plot_params_all_subs_rats_humans(subjects, subjectsh, sv_folder=SV_FOLDER, diff_col=True):
+    fig, ax = plt.subplots(4, 4)
+    if diff_col:
+        colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    else:
+        colors = ['k' for _ in range(len(subjects))]
+    ax = ax.flatten()
+    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
+              't aff', 't eff', 'tAction', 'intercept AI',
+              'slope AI', 'AI bound', 'DV weight 1st readout',
+              'DV weight 2nd readout', 'leak', 'MT noise std',
+              'MT offset', 'MT slope T.I.']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    confh_mat = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_mat[:, i_s] = conf
+        confh = np.load(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_' + str(subjectsh[i_s]) + '.npy')
+        confh_mat[:, i_s] = confh
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            sns.kdeplot(conf_mat[i, :]*5, ax=ax[i], label='Rats')
+            sns.kdeplot(confh_mat[i, :]*5, ax=ax[i], label='Humans')
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+        else:
+            sns.kdeplot(conf_mat[i, :], ax=ax[i], label='Rats')
+            sns.kdeplot(confh_mat[i, :], ax=ax[i], label='Humans')
+            ax[i].set_xlabel(labels[i] + str(' ms'))
+            ax[i].set_xlabel(labels[i])
+    ax[0].legend(fontsize=12)
 
 
 def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):

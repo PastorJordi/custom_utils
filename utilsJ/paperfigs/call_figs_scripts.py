@@ -36,7 +36,7 @@ matplotlib.rcParams['font.family'] = 'Arial'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -102,6 +102,7 @@ def plot_RT_density_comparison(RT_data, RT_model):
     sns.kdeplot(RT_data, color='blue', label='Data')
     sns.kdeplot(RT_model, color='red', label='Model')
     plt.xlabel('RT (ms)')
+    plt.axvline(x=300, linestyle='--', color='k')
     plt.legend()
 
 
@@ -321,6 +322,7 @@ if f7:
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
+    # df_data['subjid'] = np.repeat('all', len(choice))
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
     subjid = df_data.subjid.values
@@ -342,6 +344,8 @@ if f8:
     plot_MT_density_comparison(
         mt_human[mt_human < 800], MT[MT < 800])
     plot_psyc(df_data.R_response*2-1, resp_fin, coh=df_data.avtrapz.values*5)
+    plot_RT_density_comparison(df_data.sound_len.values,
+                               reaction_time)
     # df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
     #                        'sound_len': reaction_time,
     #                        'rewside': (gt + 1)/2,
