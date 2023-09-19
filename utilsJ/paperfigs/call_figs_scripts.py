@@ -41,8 +41,8 @@ if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
-    RAT_noCOM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/screenShot230120.png'
-    TASK_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/panel_a.png'
+    RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
+    TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/panel_a.png'
     HUMAN_TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/Human/g41085.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
@@ -114,12 +114,12 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = False
+f1 = True
 f2 = False
 f3 = False
 f4 = False
 f5 = False
-f6 = True
+f6 = False
 f7 = False
 f8 = False
 com_threshold = 8

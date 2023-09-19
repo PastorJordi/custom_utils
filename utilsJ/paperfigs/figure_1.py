@@ -13,7 +13,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.paperfigs import figures_paper as fp
-from utilsJ.Behavior.plotting import tachometric
+from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
 
 # ---FUNCTIONS
@@ -31,7 +31,7 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
                                       np.concatenate(df_1.fb.values)-0.3]))
         fix_breaks = fix_breaks[index]
         counts_coh, bins = np.histogram(fix_breaks*1000,
-                                        bins=30, range=(-100, 200))
+                                        bins=20, range=(-100, 200))
         norm_counts = counts_coh/sum(counts_coh)
         ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
                 color=colormap[iev])
@@ -544,7 +544,7 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
         coh = df_sbj['coh2'].values
         prior = df_sbj['norm_allpriors'].values
         indx = ~np.isnan(prior)
-        mat_pright, _ = fp.com_heatmap(prior[indx], coh[indx], choice[indx],
+        mat_pright, _ = com_heatmap(prior[indx], coh[indx], choice[indx],
                                     return_mat=True, annotate=False)
         mat_pright_all += mat_pright
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
