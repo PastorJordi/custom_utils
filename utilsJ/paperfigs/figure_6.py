@@ -156,7 +156,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
         labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
-    vals_thr_traj = []
+    mov_time_list = []
     for i_ev, ev in enumerate(bins):
         if condition == 'prior':
             if ev == 1:
@@ -189,7 +189,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         err_traj = np.nanstd(np.array([float(t[-1]) for t in
                                         times[index]
                                         if t[-1] != '']))*1e3/np.sqrt(n_subjects)
-        vals_thr_traj.append(mov_time)
+        mov_time_list.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
         ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
                        marker='o')
@@ -206,7 +206,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
-    ax[1].plot(x_vals, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[1].plot(x_vals, mov_time_list, color='k', linestyle='--', alpha=0.6)
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
     ax[0].set_ylabel('x-coord (px)')
