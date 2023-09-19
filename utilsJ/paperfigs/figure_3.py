@@ -287,14 +287,17 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     plt.sca(ax_pright)
     plt.colorbar(im_2, fraction=0.04)
-
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticklabels(['']*nbins)
-        ax_i.set_xticklabels(['']*nbins)
+        ax_i.set_xticks([0, 3, 6])
+        ax_i.set_xticklabels(['L', '', 'R'])
     for ax_i in [ax_pright, ax_mat[0]]:
+        ax_i.set_yticks([0, 3, 6])
+        ax_i.set_yticklabels(['R', '', 'L'])
         ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+    ax_mat[1].set_yticklabels(['']*nbins)
+
 
 def com_statistics(peak_com, time_com, ax):
     ax2, ax1 = ax

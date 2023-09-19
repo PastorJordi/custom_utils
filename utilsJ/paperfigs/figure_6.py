@@ -149,9 +149,11 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
     """
     
     if condition == 'prior':
-       colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
+       colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
+       # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
     else:
-        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))[::-1]
+        # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
         labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
     vals_thr_traj = []
@@ -180,16 +182,16 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
             all_trajs[tr, len(vals_in):-1] = np.repeat(vals[-1],
                                                        int(max_mt - len(vals_in)-1))
         mean_traj = np.nanmean(all_trajs, axis=0)
-        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
-        val_traj = np.nanmean(np.array([float(t[-1]) for t in
+        std_traj = np.nanstd(all_trajs, axis=0) / np.sqrt(sum(index))
+        mov_time = np.nanmean(np.array([float(t[-1]) for t in
                                         times[index]
                                         if t[-1] != '']))*1e3
         err_traj = np.nanstd(np.array([float(t[-1]) for t in
                                         times[index]
                                         if t[-1] != '']))*1e3/np.sqrt(n_subjects)
-        vals_thr_traj.append(val_traj)
+        vals_thr_traj.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
-        ax[1].errorbar(x_val, val_traj, err_traj, color=colormap[i_ev],
+        ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
                        marker='o')
         xvals = np.arange(len(mean_traj))
         yvals = mean_traj
@@ -314,7 +316,10 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
-        xvals.append(rtb*0.5 + rtbins[irtb+1]*0.5)
+        sound_len_bin = sound_len[(sound_len >= rtb) &
+                                  (sound_len < rtbins[irtb+1])]
+        rtbins_window = np.median(sound_len_bin)
+        xvals.append(rtbins_window)
     # xplot = rtbins[:-1] + np.diff(rtbins)/2
     out_data = np.array(out_data).reshape(np.unique(subjects).size,
                                           rtbins.size-1, -1)
@@ -350,11 +355,13 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                                  times, max_mt, interpolatespace, colormap):
     # to plot trajectories with splitting time: (all subjects together)
     ev_vals = np.array([0, 0.25, 0.5, 1])
-    labs = ['Early RT', 'Late RT']
-    for i in range(rtbins.size-1):
+    rtbins = np.concatenate(([0], np.quantile(sound_len, [.3333])))
+    labs = ['Short RT', 'Long RT']
+    for i in range((rtbins.size-1)*2):
+        if i >= rtbins.size-1:
+            rtbins = np.concatenate(([0],
+                                     np.quantile(sound_len, [.6666, 1.])))
         ax1 = ax[-3+i]
-        if i > 0:
-            rtbins = np.array((rtbins[-3], rtbins[-2], rtbins[-1]))
         for i_ev, ev in enumerate(ev_vals):
             index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
                     (np.abs(np.round(coh, 2)) == ev)
@@ -394,7 +401,7 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                                        max_MT=max_mt+300, pval=0.01)
         ax1.set_xlabel('Time (ms)')
         if i == 0:
-            ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
+            ax1.arrow(ind, 35, 0, 25, color='k', width=1, head_width=5,
                       head_length=0.4)
             ax1.text(ind-30, 10, 'Splitting Time', fontsize=8)
             labels = ['0', '0.25', '0.5', '1']
@@ -406,9 +413,9 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
         else:
             if np.isnan(ind):
                 ind = rtbins[i]
-            ax1.arrow(ind, 145, 0, -65, color='k', width=1, head_width=5,
+            ax1.arrow(ind, 110, 0, -65, color='k', width=1, head_width=5,
                       head_length=0.4)
-            ax1.text(ind-60, 160, 'Splitting Time', fontsize=8)
+            ax1.text(ind-120, 140, 'Splitting Time', fontsize=8)
 
 
 def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
@@ -527,8 +534,8 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     # plotting x-y trajectories
     plot_xy(df_data=df_data, ax=ax[2])
     # tachs and pright
-    ax_tach = ax[3]
-    ax_pright = ax[4]
+    ax_tach = ax[4]
+    ax_pright = ax[3]
     ax_mat = [ax[10], ax[11]]
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)

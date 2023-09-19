@@ -119,9 +119,9 @@ f2 = False
 f3 = False
 f4 = False
 f5 = False
-f6 = False
+f6 = True
 f7 = False
-f8 = True
+f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
     # with silent: 42, 43, 44, 45, 46, 47
