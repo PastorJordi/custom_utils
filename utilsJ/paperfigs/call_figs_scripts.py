@@ -44,6 +44,8 @@ if pc_name == 'alex':
     RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
     TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/panel_a.png'
     HUMAN_TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/Human/g41085.png'
+    ST_CARTOON_IMG =\
+        'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/st_cartoon_violins.png'
 elif pc_name == 'idibaps':
     DATA_FOLDER = '/home/molano/ChangesOfMind/data/'  # Manuel
     SV_FOLDER = '/home/molano/Dropbox/project_Barna/' +\
@@ -114,11 +116,11 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = True
+f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
 f7 = False
 f8 = False
@@ -180,24 +182,24 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df.loc[df.soundrfail == 0],
+    fig_1.fig_1_rats_behav(df_data=df,
                            task_img=TASK_IMG, sv_folder=SV_FOLDER)
 
 # fig 2
 if f2:
     print('Plotting Figure 2')
-    fig_2.splitting_time_frames_ttest_across(
-        df, frame_len=50, rtbins=np.linspace(0, 300, 13),
-        trajectory="trajectory_y", pval=0.01,
-        max_MT=400)
+    # fig_2.splitting_time_frames_ttest_across(
+    #     df, frame_len=50, rtbins=np.linspace(0, 300, 13),
+    #     trajectory="trajectory_y", pval=0.01,
+    #     max_MT=400)
     # fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 7))
     # fig_2.splitting_time_frames(df, data_folder=DATA_FOLDER,
     #                             frame_len=50, new_data=False,
     #                             rtbins=np.linspace(0, 300, 4),
     #                             trajectory="trajectory_y", pval=0.05)
-    # fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
-    #                   sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
-    #                     st_cartoon_img=ST_CARTOON_IMG)
+    fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
+                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
+                      st_cartoon_img=ST_CARTOON_IMG)
 
 # fig 3
 if f3:
@@ -265,38 +267,38 @@ if f5:
     df_sim['normallpriors'] = df_sim['norm_allpriors']
     # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
     #                     offset=0)
-    # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
-    #                       n_trajs_plot=50, pixel_precision=1, cmap='pink')
+    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
+                          n_trajs_plot=50, pixel_precision=1, cmap='Reds')
     # fp.plot_data_trajs_density(df=df)
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
-    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-    if not with_fb:
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # memory save:
-    stim = []
-    traj_y = []
-    trial_index = []
-    special_trial = []
-    # df = []
-    gt = []
-    subjid = []
-    traj_stamps = []
-    fix_onset = []
-    fix_breaks = []
-    resp_len = []
-    time_trajs = []
-    # actual plot
-    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate, save_new_data=save_new_data,
-                      coh=coh, sound_len=sound_len, zt=zt,
-                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                      decision_model=resp_fin, com=com, com_model=com_model,
-                      com_model_detected=com_model_detected,
-                      means=means, errors=errors, means_model=means_model,
-                      errors_model=errors_model, df_sim=df_sim)
+    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    # if not with_fb:
+    #     df_sim = df_sim[df_sim.sound_len.values >= 0]
+    # # memory save:
+    # stim = []
+    # traj_y = []
+    # trial_index = []
+    # special_trial = []
+    # # df = []
+    # gt = []
+    # subjid = []
+    # traj_stamps = []
+    # fix_onset = []
+    # fix_breaks = []
+    # resp_len = []
+    # time_trajs = []
+    # # actual plot
+    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+    #                   new_data=simulate, save_new_data=save_new_data,
+    #                   coh=coh, sound_len=sound_len, zt=zt,
+    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+    #                   decision_model=resp_fin, com=com, com_model=com_model,
+    #                   com_model_detected=com_model_detected,
+    #                   means=means, errors=errors, means_model=means_model,
+    #                   errors_model=errors_model, df_sim=df_sim)
     # fig, ax = plt.subplots(ncols=2, nrows=1)
     # ax = ax.flatten()
     # ax[0].set_title('Data')

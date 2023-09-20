@@ -34,9 +34,11 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
                                         bins=20, range=(-100, 200))
         norm_counts = counts_coh/sum(counts_coh)
         ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
-                color=colormap[iev])
+                color=colormap[iev], label=ev)
     ax.set_ylabel('RT density')
     ax.set_xlabel('Reaction time (ms)')
+    ax.legend(title='Stim.')
+
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                         rt_lim=50, after_correct_only=True):
@@ -157,7 +159,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
 
     sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=palette, linewidth=0.8)
+                   palette=palette, linewidth=0.1)
     if t_index_w:
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
@@ -531,6 +533,12 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     pos = ax[11].get_position()
     ax[11].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
 
+    # RTs
+    df_rts = df_data.copy()
+    plot_rt_cohs_with_fb(df=df_rts, ax=ax_rts, subj='LE46')
+    del df_rts
+    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
+
     # TASK PANEL
     task = plt.imread(task_img)
     ax_task.imshow(task)
@@ -552,12 +560,7 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     f.colorbar(im_2, cax=pright_cbar_ax)
 
-    # RTs
-    df_rts = df_data.copy()
-    plot_rt_cohs_with_fb(df=df_rts, ax=ax_rts, subj='LE46')
-    del df_rts
-    ax_rts.axvline(x=0, linestyle='--', color='k', lw=0.5)
-
+    df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
     bin_size = 10
     labels = ['0', '0.25', '0.5', '1']

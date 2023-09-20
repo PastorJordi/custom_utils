@@ -506,7 +506,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         for i_l, lab in enumerate(labels):
             legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
                                   label=lab))
-        ax.legend(handles=legendelements, fontsize=7, loc='bottom right')
+        ax.legend(handles=legendelements, fontsize=7, loc='lower right')
     
     # if xlab:
         
@@ -606,7 +606,7 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
     ax.set_xlabel('RT (ms)')
     # ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
-    # ax.plot([0, 155], [0, 155], color='k')
+    ax.plot([0, 155], [0, 155], color='k')
     ax.fill_between([0, 155], [0, 155], [0, 0],
                     color='grey', alpha=0.2)
     ax.set_xlim(-5, 155)
@@ -651,7 +651,10 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     out_data = []
     for subject in df.subjid.unique():
         out_data_sbj = []
-        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim.npz'
+        if not sim:
+            split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim.npz'
+        if sim:
+            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):
@@ -666,7 +669,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                             matatmp =\
                                 splitfun(df=df.loc[(df.special_trial == 0)
                                                    & (df.subjid == subject)],
-                                         side=0, collapse_sides=True,
+                                         side=0,
                                          rtbin=i, rtbins=rtbins, coh1=ev,
                                          trajectory=trajectory, align="sound")
                         if sim:
@@ -758,8 +761,8 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
     ax.plot([0, 155], [0, 155], color='k')
-    ax.fill_between([0, 250], [0, 250], [0, 0],
-                    color='grey', alpha=0.6)
+    ax.fill_between([0, 155], [0, 155], [0, 0],
+                    color='grey', alpha=0.2)
     ax.set_xlim(-5, 155)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')

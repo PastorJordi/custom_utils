@@ -475,7 +475,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     else:
         if human:
             conf = np.load(SV_FOLDER +
-                           'parameters_MNLE_BADS_human_subj_hlim_eff' + str(subject) + '.npy')
+                           'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
         else:
             conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         jitters = len(conf)*[0]
@@ -1301,7 +1301,7 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 vals_density = kernel_1(values)  # we evaluate the values defined before
                 mat_final_density[:, j] = vals_density / np.nansum(vals_density)  # we normalize the density
             ax2[i].imshow(np.flipud(mat_final_density), cmap=cmap, aspect='auto',
-                          vmin=0, vmax=0.4)  # plot the matrix
+                          vmin=1e-2, vmax=0.4)  # plot the matrix
             ax2[i].set_xlim(0, 50)
             ax2[i].set_ylim(len(values), 0)
             ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
@@ -1550,26 +1550,23 @@ def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
     return df
 
 
-def simulate_model_humans(df_data):
+def simulate_model_humans(df_data, stim, load_params):
     choice = df_data.R_response.values*2-1
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
     subjid = df_data.subjid.values
     gt = (choice*hit+1)/2
     coh = df_data.avtrapz.values*5
-    stim = np.repeat(coh.reshape(-1, 1), 20, 1).T
     zt = df_data.norm_allpriors.values*3
-    len_task = [len(df_data.loc[subjid == subject]) for subject in subjects]
-    trial_index = np.empty((0))
-    for j in range(len(len_task)):
-        trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
+    trial_index = df_data.origidx.values
     num_tr = len(trial_index)
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt =\
         run_simulation_different_subjs(
             stim=stim, zt=zt, coh=coh, gt=gt,
             trial_index=trial_index, num_tr=num_tr, human=True,
-            subject_list=subjects, subjid=subjid, simulate=True)
+            subject_list=subjects, subjid=subjid, simulate=True,
+            load_params=load_params)
     
     return hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt
