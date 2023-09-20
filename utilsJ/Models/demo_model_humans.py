@@ -11,16 +11,17 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')
+sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils')
 from utilsJ.paperfigs import figures_paper as fp
 
-
-
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'sara'
 if pc_name == 'alex':
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
-
+if pc_name =='sara':
+    SV_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
+    DATA_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
 
 def plot_rt_all_subjs(reaction_time, subjid):
     subjects = np.unique(subjid)
@@ -29,17 +30,17 @@ def plot_rt_all_subjs(reaction_time, subjid):
         sns.kdeplot(rt, color='red', alpha=0.4)
         plt.axvline(300, color='k', linestyle='--')
 
-load_params = True  # wether to load or not parameters
+load_params = False  # wether to load or not parameters
 df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
 choice = df_data.R_response.values*2-1
 hit = df_data.hithistory.values*2-1
 subjects = df_data.subjid.unique()
-# subjid = df_data.subjid.values
+subjid = df_data.subjid.values
+len_task = [len(df_data.loc[subjid == subject]) for subject in subjects]
 subjid = np.repeat('all', len(choice))  # meta subject
 df_data['subjid'] = subjid
 gt = (choice*hit+1)/2
 coh = df_data.avtrapz.values*5
-len_task = [len(df_data.loc[subjid == subject]) for subject in subjects]
 trial_index = np.empty((0))
 for j in range(len(len_task)):
     trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
@@ -55,6 +56,5 @@ df_data['resp_len'] = mt_human
 df_data['coh2'] = coh
 df_data['origidx'] = trial_index
 df_data['allpriors'] = df_data.norm_allpriors.values
-
 # simulation output: hit_model, reaction_time, mt_human, resp_fin, com_model
 # trajs

@@ -14,6 +14,7 @@ from sklearn.metrics import confusion_matrix
 from scipy.stats import ttest_rel
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
+from matplotlib.colors import LogNorm
 from skimage import exposure
 import scipy
 # from scipy import interpolate
@@ -22,6 +23,7 @@ import scipy
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
+sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils')
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -81,6 +83,9 @@ elif pc_name == 'alex_CRM':
     RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
     HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
     TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
+elif pc_name == 'sara':
+    SV_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
+    DATA_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
 
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
@@ -1301,7 +1306,7 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 vals_density = kernel_1(values)  # we evaluate the values defined before
                 mat_final_density[:, j] = vals_density / np.nansum(vals_density)  # we normalize the density
             ax2[i].imshow(np.flipud(mat_final_density), cmap=cmap, aspect='auto',
-                          vmin=1e-2, vmax=0.4)  # plot the matrix
+                          norm=LogNorm(vmin=0.001, vmax=0.6))  # plot the matrix
             ax2[i].set_xlim(0, 50)
             ax2[i].set_ylim(len(values), 0)
             ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
@@ -1541,6 +1546,8 @@ def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     if user_id == 'idibaps_alex':
         folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    if user_id == 'sara':
+        folder = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS\\80_20\\'+nm+'ms\\'
     subj = ['general_traj']
     steps = [None]
     # retrieve data
