@@ -25,11 +25,11 @@ from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 
-matplotlib.rcParams['font.size'] = 10   
-plt.rcParams['legend.title_fontsize'] = 8
+matplotlib.rcParams['font.size'] = 12
+plt.rcParams['legend.title_fontsize'] = 9
 plt.rcParams['legend.fontsize'] = 8
-plt.rcParams['xtick.labelsize']= 8
-plt.rcParams['ytick.labelsize']= 8
+plt.rcParams['xtick.labelsize']= 12
+plt.rcParams['ytick.labelsize']= 12
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -38,7 +38,7 @@ matplotlib.rcParams['lines.markersize'] = 3
 # ---GLOBAL VARIABLES
 pc_name = 'alex'
 if pc_name == 'alex':
-    RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
+    RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
@@ -120,8 +120,8 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = True
-f6 = False
+f5 = False
+f6 = True
 f7 = False
 f8 = False
 com_threshold = 8
@@ -134,7 +134,7 @@ if f1 or f2 or f3 or f5:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    # subjects = ['LE42', 'LE43', 'LE38']
+    # subjects = ['LE42', 'LE38', 'LE46']
     # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:

@@ -37,7 +37,8 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
                 color=colormap[iev], label=ev)
     ax.set_ylabel('RT density')
     ax.set_xlabel('Reaction time (ms)')
-    ax.legend(title='Stim.')
+    legend = ax.legend(title='Stimulus', borderpad=0.3, fontsize=8, loc='center left')
+    legend.get_title().set_fontsize('8') #legend 'Title' fontsize
 
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
@@ -61,11 +62,17 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # unstack to have a matrix with rows for subjects and columns for bins
         mt_time = mt_time.unstack(fill_value=np.nan).values.T
         plot_bins = sorted(df.coh2.unique())
-        ax.set_xlabel('Stimulus congruent evidence')
+        ax.set_xlabel('Stimulus evidence towards response')
+        # ax.text(200, -1,
+        #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
+        #     fontsize=8, transform=ax.transAxes)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
-        ax.set_xlabel('Prior congruent evidence')
+        ax.set_xlabel('Prior evidence towards response')
+        # ax.text(200, -1,
+        #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
+        #     fontsize=8, transform=ax.transAxes)
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
     for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
@@ -82,6 +89,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
 
         ax.set_ylabel('Movement Time (ms)')
     ax.plot(plot_bins, np.median(mt_time, axis=0), color='k', ls='-', lw=0.5)
+    ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
 
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
@@ -131,7 +139,7 @@ def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
     if not f5:
         ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='gray',
                ecolor='blue')
-        ax.set_ylabel('Impact on MT (weights, a.u)')
+        ax.set_ylabel('Impact on MT')
     if f5:
         x = np.arange(len(labels))
         ax.bar(x=x-width/2, height=means, yerr=errors, width=width,
@@ -158,8 +166,10 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
             label_1.append(labels[j])
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
 
-    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=palette, linewidth=0.1)
+    violin = sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
+                            palette=palette, linewidth=0.1)
+    for plot in violin.collections[::2]:
+        plot.set_alpha(0.7)
     if t_index_w:
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
@@ -177,9 +187,9 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
         ax.set_xlim(-0.5, 1.5)
         ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
     if mt:
-        ax.set_ylabel('Impact on MT (weights, a.u)')
+        ax.set_ylabel('Impact on MT')
     else:
-        ax.set_ylabel('Impact on RT (weights, a.u)')
+        ax.set_ylabel('Impact on RT')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
 
 def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
@@ -506,7 +516,7 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     fp.add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
     # mt versus evidence panels
     # move axis 6 to the right
-    shift = 0.1
+    shift = 0.12
     factor = 0.8
     ax_mt_coh = ax[6]
     pos = ax_mt_coh.get_position()

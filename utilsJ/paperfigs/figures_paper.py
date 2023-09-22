@@ -40,10 +40,10 @@ import matplotlib.pylab as pl
 
 
 
-matplotlib.rcParams['font.size'] = 9
-plt.rcParams['legend.title_fontsize'] = 8
-plt.rcParams['xtick.labelsize']= 8
-plt.rcParams['ytick.labelsize']= 8
+matplotlib.rcParams['font.size'] = 12
+plt.rcParams['legend.title_fontsize'] = 12
+plt.rcParams['xtick.labelsize']= 12
+plt.rcParams['ytick.labelsize']= 12
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -1268,17 +1268,18 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
     None.
 
     """
-    fig2, ax2 = plt.subplots(nrows=5, ncols=5)
+    fig2, ax2 = plt.subplots(nrows=3, ncols=3)
     np.random.seed(seed=5)  # set seed
     # fig2.tight_layout()
     ax2 = ax2.flatten()
     coh = df_sim.coh2.values
     zt = np.round(df_sim.normallpriors.values, 1)
-    coh_vals = [-1, -0.25, 0, 0.25, 1]
-    zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
-               -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
+    coh_vals = [-1, 0, 1]
+    zt_vals = [-np.max(np.abs(zt)), -np.max(np.abs(zt))*0.75,
+               -0.05, 0.05,
+               np.max(np.abs(zt))*0.75, np.max(np.abs(zt))]
     i = 0
-    ztlabs = [-1, -0.2, 0, 0.2, 1]
+    ztlabs = [-1, 0, 1]
     gkde = scipy.stats.gaussian_kde  # we define gkde that will generate the kde
     if plot_data_trajs:
         bins = np.array([-1.1, 1.1])  # for data plotting
@@ -1287,9 +1288,10 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
         df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     for ie, ev in enumerate(coh_vals):
         for ip, pr in enumerate(zt_vals):
-            if ip == 5:
+            ip2 = 2*ip
+            if ip == 3:
                 break
-            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # index of filtered
+            index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev)  # index of filtered
             max_len = max([len(t) for t in df_sim.traj[index].values])
             mat_fin = np.empty((sum(index), max_len+offset))
             mat_fin[:] = np.nan
@@ -1309,16 +1311,26 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                           norm=LogNorm(vmin=0.001, vmax=0.6))  # plot the matrix
             ax2[i].set_xlim(0, 50)
             ax2[i].set_ylim(len(values), 0)
-            ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
-            ax2[i].set_yticks(np.arange(0, len(values), int(20/pixel_precision)),
-                              np.arange(80, -81, -20))
-            ax2[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
-            if i == 0 or i % 5 == 0:
+            if i == 2 or i == 5 or i == 8:
+                ax1 = ax2[i].twinx()
+                ax1.set_yticks([])
+                ax1.set_ylabel('zt = {}'.format(ztlabs[int((i-2) // 3)]),
+                               rotation=90, labelpad=5, fontsize=12)
+            if i >= 6:
+                ax2[i].set_xticks(np.arange(0, 51, 10), np.arange(0, 51, 10)*5)
+            else:
+                ax2[i].set_xticks([])
+            if i % 3 == 0:
+                ax2[i].set_yticks(np.arange(0, len(values), int(80/pixel_precision)),
+                                  np.arange(80, -81, -80))
+            else:
+                ax2[i].set_yticks([])
+            if i % 3 == 0:
                 ax2[i].set_ylabel('Position, pixels')
-            if i >= 20:
+            if i >= 6:
                 ax2[i].set_xlabel('Time (ms)')
             if plot_data_trajs:
-                index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+                index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev)  # index of filtered
                 # to extract interpolated trajs in mat --> these aren't signed
                 _, _, _, mat, idx, _ =\
                 trajectory_thr(df.loc[index], 'choice_x_prior', bins,
@@ -1342,6 +1354,9 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                     ax2[i].plot(np.arange(0, 50, 0.2), (-traj[700:950]+80)/160*len(values),
                                 color='blue', linewidth=0.5)
             i += 1
+    ax2[0].set_title('coh = -1')
+    ax2[1].set_title('coh = 0')
+    ax2[2].set_title('coh = 1')
 
 
 def plot_data_trajs_density(df):

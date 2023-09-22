@@ -106,10 +106,10 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
         std_corr.append(np.nanstd(m_corr_ev))
         std_corr_norm.append(np.nanstd(m_corr_normal))
     ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o', label='Reversal')
-    ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
-                marker='o', label='No-Reversal')
+    # ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
+    #             marker='o', label='No-Reversal')
     ax.set_xlabel('Stimulus evidence')
-    ax.set_ylabel('Fraction of correcting Reversal')
+    ax.set_ylabel('Reversal accuracy')
     ax.set_xticks([0, 0.25, 0.5, 1])
     ax.set_xticklabels(['0', '0.25', '0.5', '1'])
     ax.legend()
@@ -247,15 +247,16 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
-    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
-                             label='0'),
-                      Line2D([0], [0], color=colormap[1], lw=2,
-                             label='0.25'),
+    legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
+                             label='1'),
                       Line2D([0], [0], color=colormap[2], lw=2,
                              label='0.5'),
-                      Line2D([0], [0], color=colormap[3], lw=2,
-                             label='1')]
-    ax_tach.legend(handles=legendelements, fontsize=7)
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label='0.25'),
+                      Line2D([0], [0], color=colormap[0], lw=2,
+                             label='0')]
+    ax_tach.legend(handles=legendelements, fontsize=9, labelspacing=0.01,
+                   borderpad=0.1, title='Stimulus')
     # plot Pcoms matrices
     nbins = 7
     matrix_side_0 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=0)
@@ -286,7 +287,8 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     mat_pright = np.flipud(mat_pright)
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     plt.sca(ax_pright)
-    plt.colorbar(im_2, fraction=0.04)
+    cbar_right = plt.colorbar(im_2, fraction=0.04)
+    cbar_right.ax.set_title('p(Right)', pad=12)
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
@@ -374,6 +376,10 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
         all_trajs[i_s, :] += -np.nanmean(median_traj[(interpolatespace > -100000) &
                                                      (interpolatespace < 0)])
         all_trajs_nocom[i_s, :] = np.nanmedian(mat_nocom[0], axis=0)
+        ax.plot((interpolatespace)/1000, all_trajs[i_s, :], color=COLOR_COM, linewidth=0.8,
+                alpha=0.5)
+        ax.plot((interpolatespace)/1000, all_trajs_nocom[i_s, :], color=COLOR_NO_COM,
+                linewidth=0.8, alpha=0.5)
     mean_traj = np.nanmedian(all_trajs, axis=0)
     mean_traj += -np.nanmean(mean_traj[(interpolatespace > -100000) &
                                        (interpolatespace < 0)])
@@ -381,8 +387,7 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     mean_traj_nocom += -np.nanmean(mean_traj_nocom[(interpolatespace > -100000) &
                                                    (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
-    ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2,
-            label='No-Reversal')
+    ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('y-coord (pixels)')
     ax.set_ylim(-30, 85)
@@ -391,7 +396,7 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
                              label='Detected Reversal'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                              label='No-Reversal')]
-    ax.legend(handles=legendelements)
+    ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(20, -20, "Detection threshold", color='r')
 
@@ -636,8 +641,8 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
 
 
 def supp_com_marginal(df, sv_folder):
-    fig, ax = plt.subplots(nrows=len(df.subjid.unique()), ncols=2,
-                           figsize=(4, 12))
+    fig, ax = plt.subplots(nrows=5, ncols=6,
+                           figsize=(8, 8))
     ax = ax.flatten()
     for i_ax, subj in enumerate(df.subjid.unique()):
         df_1 = df.loc[df.subjid == subj]
@@ -647,7 +652,7 @@ def supp_com_marginal(df, sv_folder):
         # L-> R
         vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
         pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-        im = ax[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax)
+        im = ax[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
         plt.sca(ax[i_ax*2])
         plt.colorbar(im, fraction=0.04)
         # R -> L
@@ -655,15 +660,21 @@ def supp_com_marginal(df, sv_folder):
         im = ax[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
         ax[i_ax*2+1].yaxis.set_ticks_position('none')
         plt.sca(ax[i_ax*2+1])
-        plt.colorbar(im, fraction=0.04)
-        if i_ax == 0:
-            ax[i_ax].set_title(pcomlabel_1)
-            ax[i_ax+1].set_title(pcomlabel_0)
+        if (i_ax+1) % 3 == 0:    
+            plt.colorbar(im, fraction=0.04, label='p(Reversal)')
+        else:
+            plt.colorbar(im, fraction=0.04)
+        if i_ax <= 2:
+            ax[i_ax*2].set_title(pcomlabel_1 + '\n                                         ' + subj)
+            ax[i_ax*2+1].set_title(pcomlabel_0 + '\n' + ' ')
+        else:
+            ax[i_ax*2].set_title('                                         ' + subj)
         for ax_i in [ax[i_ax*2], ax[i_ax*2+1]]:
             ax_i.set_yticklabels(['']*nbins)
             ax_i.set_xticklabels(['']*nbins)
-        ax[i_ax*2].set_ylabel('stim. {}'.format(subj))
-        if i_ax == len(df.subjid.unique()) - 1:
+        if i_ax % 3 == 0:
+            ax[i_ax*2].set_ylabel('Stimulus evidence')
+        if i_ax >= 12:
             ax[i_ax*2].set_xlabel('Prior evidence')
             ax[i_ax*2+1].set_xlabel('Prior evidence')
     fig.savefig(sv_folder+'fig_supp_com_marginal.svg', dpi=400,
