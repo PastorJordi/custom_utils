@@ -514,15 +514,15 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         ax[2].set_xlabel('Prior')
         ax[3].set_xlabel('Prior')
     if not prior:
-        leg_title = 'Stimulus\n evidence'
+        leg_title = 'Stimulus'
         ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Evidence')
-        ax[3].set_xlabel('Evidence')
-    ax[0].legend(title=leg_title, labelspacing=0.2,
-                 loc='center left', bbox_to_anchor=(0.7, 0.3))
+        ax[2].set_xlabel('Stimulus')
+        ax[3].set_xlabel('Stimulus')
+    ax[0].legend(title=leg_title, labelspacing=0.15,
+                 loc='center left', bbox_to_anchor=(0.8, 0.45))
     ax[0].set_ylabel('Position')
     ax[0].set_xlabel('Time from movement onset (ms)')
     # ax[0].set_title('Mean trajectory', fontsize=10)
