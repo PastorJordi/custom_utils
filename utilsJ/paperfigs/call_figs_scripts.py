@@ -28,7 +28,7 @@ from utilsJ.paperfigs import figures_paper as fp
 
 matplotlib.rcParams['font.size'] = 9
 plt.rcParams['legend.title_fontsize'] = 8
-plt.rcParams['legend.fontsize'] = 8
+plt.rcParams['legend.fontsize'] = 9
 plt.rcParams['xtick.labelsize']= 9
 plt.rcParams['ytick.labelsize']= 9
 matplotlib.rcParams['font.family'] = 'Arial'
@@ -37,7 +37,7 @@ matplotlib.rcParams['font.family'] = 'Arial'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'idibaps_alex'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -118,11 +118,11 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = True
+f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
 f7 = False
 f8 = False
@@ -270,38 +270,38 @@ if f5:
     df_sim['normallpriors'] = df_sim['norm_allpriors']
     # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
     #                     offset=0)
-    fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
-                          n_trajs_plot=50, pixel_precision=1, cmap='Reds')
+    # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
+    #                       n_trajs_plot=50, pixel_precision=1, cmap='Reds')
     # fp.plot_data_trajs_density(df=df)
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
-    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-    # if not with_fb:
-    #     df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # # memory save:
-    # stim = []
-    # traj_y = []
-    # trial_index = []
-    # special_trial = []
-    # # df = []
-    # gt = []
-    # subjid = []
-    # traj_stamps = []
-    # fix_onset = []
-    # fix_breaks = []
-    # resp_len = []
-    # time_trajs = []
-    # # actual plot
-    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-    #                   new_data=simulate, save_new_data=save_new_data,
-    #                   coh=coh, sound_len=sound_len, zt=zt,
-    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-    #                   decision_model=resp_fin, com=com, com_model=com_model,
-    #                   com_model_detected=com_model_detected,
-    #                   means=means, errors=errors, means_model=means_model,
-    #                   errors_model=errors_model, df_sim=df_sim)
+    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    if not with_fb:
+        df_sim = df_sim[df_sim.sound_len.values >= 0]
+    # memory save:
+    stim = []
+    traj_y = []
+    trial_index = []
+    special_trial = []
+    # df = []
+    gt = []
+    subjid = []
+    traj_stamps = []
+    fix_onset = []
+    fix_breaks = []
+    resp_len = []
+    time_trajs = []
+    # actual plot
+    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                      new_data=simulate, save_new_data=save_new_data,
+                      coh=coh, sound_len=sound_len, zt=zt,
+                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                      decision_model=resp_fin, com=com, com_model=com_model,
+                      com_model_detected=com_model_detected,
+                      means=means, errors=errors, means_model=means_model,
+                      errors_model=errors_model, df_sim=df_sim)
     # fig, ax = plt.subplots(ncols=2, nrows=1)
     # ax = ax.flatten()
     # ax[0].set_title('Data')

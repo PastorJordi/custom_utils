@@ -246,7 +246,7 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
         return w_coh, w_t_i, w_zt
 
 
-def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
+def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50):
     subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
     subjid = df.subjid
     zt_cong = df.norm_allpriors.values * (df.R_response*2-1)

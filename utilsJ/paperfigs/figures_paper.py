@@ -236,7 +236,8 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
 
 
 
-def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
+def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
+                     legend=True):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len, 'subjid': subjid})
@@ -246,16 +247,17 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
     ax.set_ylim(0.24, 1.04)
-    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
-    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
-                             label='0'),
-                      Line2D([0], [0], color=colormap[1], lw=2,
-                             label='0.25'),
-                      Line2D([0], [0], color=colormap[2], lw=2,
-                             label='0.5'),
-                      Line2D([0], [0], color=colormap[3], lw=2,
-                             label='1')]
-    ax.legend(handles=legendelements, fontsize=7)
+    if legend:
+        colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                                 label='0'),
+                          Line2D([0], [0], color=colormap[1], lw=2,
+                                 label='0.25'),
+                          Line2D([0], [0], color=colormap[2], lw=2,
+                                 label='0.5'),
+                          Line2D([0], [0], color=colormap[3], lw=2,
+                                 label='1')]
+        ax.legend(handles=legendelements, fontsize=7)
     # ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
@@ -561,6 +563,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(sim_data), exist_ok=True)
         if os.path.exists(sim_data) and not simulate:
+            print('Loading simulated data')
             data_simulation = np.load(sim_data, allow_pickle=True)
             hit_model_tmp = data_simulation['hit_model_tmp']
             reaction_time_tmp = data_simulation['reaction_time_tmp']

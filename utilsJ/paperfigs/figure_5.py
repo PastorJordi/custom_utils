@@ -32,36 +32,68 @@ xpos_RT = int(np.diff(BINS_RT)[0])
 
 
 def create_figure_5_model(fgsz):
-    matplotlib.rcParams['font.size'] = 10
-    plt.rcParams['legend.title_fontsize'] = 9
-    plt.rcParams['xtick.labelsize'] = 9
-    plt.rcParams['ytick.labelsize'] = 9
-    fig, ax = plt.subplots(ncols=2, nrows=7,
+    matplotlib.rcParams['font.size'] = 13
+    plt.rcParams['legend.title_fontsize'] = 10.5
+    plt.rcParams['xtick.labelsize'] = 10.5
+    plt.rcParams['ytick.labelsize'] = 10.5
+    fig, ax = plt.subplots(ncols=4, nrows=4,
                            gridspec_kw={'top': 0.95, 'bottom': 0.055, 'left': 0.07,
-                                        'right': 0.95, 'hspace': 0.5, 'wspace': 0.4},
+                                        'right': 0.95, 'hspace': 0.6, 'wspace': 0.6},
                            figsize=fgsz)
     ax = ax.flatten()
-    labs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-            'n']
-    # set correct size for traj and velocity axis
+    labs = ['a', 'b', 'c', 'd',
+            'e', 'f', 'g', 'k',
+            'h', 'i', 'j', 'l',
+            'm', 'n', '', 'o']
+    # set correct size a, b panels
     pos_ax_0 = ax[0].get_position()
-    ax[0].set_position([pos_ax_0.x0-pos_ax_0.x0/8, pos_ax_0.y0, pos_ax_0.width,
-                        pos_ax_0.height])
-    pos_ax_0 = ax[10].get_position()
-    ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
-                         pos_ax_0.width/2,
-                         pos_ax_0.height])
-    ax_inset = plt.axes([pos_ax_0.x0 + pos_ax_0.width*0.8 + pos_ax_0.width/10,
-                         pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
-    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.2 + pos_ax_0.width/10,
-                         pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+    # ax[0].set_position([pos_ax_0.x0+pos_ax_0.width/1.2, pos_ax_0.y0, pos_ax_0.width,
+    #                     pos_ax_0.height])
+    # pos_ax_0 = ax[2].get_position()
+    # ax[2].set_position([pos_ax_0.x0-pos_ax_0.width/1.5, pos_ax_0.y0, pos_ax_0.width*1.4,
+    #                     pos_ax_0.height])
+    pos_ax_0 = ax[4].get_position()
+    ax[4].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*0.9,
+                        pos_ax_0.height*0.9])
+    pos_ax_0 = ax[8].get_position()
+    ax[8].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*0.9,
+                        pos_ax_0.height*0.9])
+    for i in [5, 9]:
+        pos_ax_0 = ax[i].get_position()
+        ax[i].set_position([pos_ax_0.x0-pos_ax_0.width/4, pos_ax_0.y0, pos_ax_0.width*1.15,
+                            pos_ax_0.height])
+    for i in [6, 10]:
+        pos_ax_0 = ax[i].get_position()
+        ax[i].set_position([pos_ax_0.x0-pos_ax_0.width/6, pos_ax_0.y0, pos_ax_0.width*1.15,
+                            pos_ax_0.height])    
+    # pos_ax_0 = ax[7].get_position()
+    # ax[7].set_position([pos_ax_0.x0+pos_ax_0.width/5.2, pos_ax_0.y0, pos_ax_0.width,
+    #                     pos_ax_0.height])
+    # pos_ax_0 = ax[10].get_position()
+    # ax[10].set_position([pos_ax_0.x0+pos_ax_0.width/5.2, pos_ax_0.y0, pos_ax_0.width,
+    #                     pos_ax_0.height])
+    # pos_ax_0 = ax[4].get_position()
+    # ax[4].set_position([pos_ax_0.x0+pos_ax_0.width/5.2, pos_ax_0.y0, pos_ax_0.width,
+    #                     pos_ax_0.height])
+    # pos_ax_0 = ax[8].get_position()
+    # ax[8].set_position([pos_ax_0.x0+pos_ax_0.width/4,
+    #                     pos_ax_0.y0-pos_ax_0.height/2, pos_ax_0.width*4/5,
+    #                     pos_ax_0.height])
+    # pos_ax_0 = ax[10].get_position()
+    # ax[10].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
+    #                      pos_ax_0.width/2,
+    #                      pos_ax_0.height])
+    # ax_inset = plt.axes([pos_ax_0.x0 + pos_ax_0.width*0.8 + pos_ax_0.width/10,
+    #                      pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
+    # ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.2 + pos_ax_0.width/10,
+    #                      pos_ax_0.y0, pos_ax_0.width/2, pos_ax_0.height])
     # letters for panels
     for n, ax_1 in enumerate(ax):
         fp.rm_top_right_lines(ax_1)
-        ax_1.text(-0.1, 1.4, labs[n], transform=ax_1.transAxes, fontsize=16,
+        ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
                   fontweight='bold', va='top', ha='right')
     ax[0].set_ylabel('Stimulus Evidence')
-    return fig, ax, ax_inset, pos_ax_0
+    return fig, ax, ax[14], pos_ax_0
 
 
 def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
@@ -104,11 +136,11 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
     ax.xaxis.tick_top()
     ax.xaxis.tick_bottom()
     legendelements = [Line2D([0], [0], color='k', lw=2,
-                             label='Data'),
+                             label='Rats'),
                       Line2D([0], [0], color='r', lw=2,
-                             label='Model Detected'),
+                             label='Model'),
                       Line2D([0], [0], color='r', lw=2, linestyle='--',
-                             label='Model All')]
+                             label='Model (All CoMs)')]
     ax.legend(handles=legendelements)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('P(CoM)')
@@ -134,7 +166,7 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     im = ax_pright.imshow(np.flipud(mat_pright_avg), vmin=0., vmax=1, cmap='PRGn_r')
     plt.sca(ax_pright)
     cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(Right)', rotation=270)
+    cbar.ax.set_title('p(Right)', pad=17)
     ax_pright.set_yticks([0, 3, 6])
     # ax_pright.set_ylim([-0.5, 6.5])
     ax_pright.set_yticklabels(['L', '', 'R'])
@@ -146,7 +178,11 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     # ax[7].set_title('Pright Model')
 
 
-def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
+def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
+                             margin=.03):
+    pos_ax_0 = ax_mat[1].get_position()
+    ax_mat[1].set_position([pos_ax_0.x0-pos_ax_0.width/3, pos_ax_0.y0, pos_ax_0.width,
+                           pos_ax_0.height])
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
     for i_s, subj in enumerate(df_model.subjid.unique()):
@@ -162,35 +198,38 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, nbins=7):
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
+    ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     # plt.sca(ax_mat[0])
     # plt.colorbar(im, fraction=0.04)
+    # plt.sca(ax_mat[1])
     ax_mat[1].set_title(pcomlabel_1)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
-
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticks([0, 3, 6], ['1', '0', '-1'])
         ax_i.set_xticks([0, 3, 6], ['-1', '0', '1'])
+    ax_mat[0].set_yticks([0, 3, 6], ['1', '0', '-1'])
+    ax_mat[1].set_yticks([0, 3, 6], ['']*3)
     ax_mat[0].set_ylabel('Stimulus Evidence')
-    ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
-                            pos_ax_0.width,
-                            pos_ax_0.height])
-    ax_mat[1].set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
-                            pos_ax_0.y0, pos_ax_0.width, pos_ax_0.height])
-    plt.sca(ax_mat[1])
-    cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(detected CoM)', rotation=270)
-    plt.sca(ax_mat[0])
+    # ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
+    #                         pos_ax_0.width,
+    #                         pos_ax_0.height])
+    # ax_mat[1].set_position([pos_ax_0.x0 + pos_ax_0.width*0.6 + pos_ax_0.width/15,
+    #                         pos_ax_0.y0, pos_ax_0.width, pos_ax_0.height])
+    pos = ax_mat[1].get_position()
+    cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
+                      pos.width/15, pos.height/1.5])
+    cbar = plt.colorbar(im, cax=cbar_ax)
+    cbar.set_label('p(detected CoM)', labelpad=12)
+
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
                                       new_data, save_new_data, data_folder):
-    ax_cohs = np.array([ax[5], ax[7], ax[3]])
-    ax_zt = np.array([ax[4], ax[6], ax[2]])
+    ax_cohs = np.array([ax[9], ax[10], ax[8]])
+    ax_zt = np.array([ax[5], ax[6], ax[4]])
 
     ax_inset = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
@@ -288,11 +327,11 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
                              label='No-Rev.')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('Position (pixels)')
+    ax.set_ylabel('Position')
     ax.set_xlim(-25, 400)
     ax.set_ylim(-25, 80)
     ax.axhline(-8, color='r', linestyle=':')
-    ax.text(200, -16, "Detection threshold", color='r')
+    ax.text(200, -19, "Detection threshold", color='r')
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
@@ -461,44 +500,48 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
                            color=colormap[i_ev], alpha=0.3)
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
-    ax[0].set_xlim(-5, 315)
+    ax[0].set_xlim(-5, 335)
     ax[0].set_yticks([0, 25, 50, 75])
     ax[0].set_ylim(-10, 85)
     ax[1].set_ylim(-0.08, 0.68)
-    ax[1].set_xlim(-5, 315)
+    ax[1].set_xlim(-5, 335)
     if prior:
         leg_title = 'Prior'
         ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Prior', fontsize=8)
-        ax[3].set_xlabel('Prior', fontsize=8)
+        ax[2].set_xlabel('Prior')
+        ax[3].set_xlabel('Prior')
     if not prior:
         leg_title = 'Stimulus\n evidence'
         ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Evidence', fontsize=8)
-        ax[3].set_xlabel('Evidence', fontsize=8)
-    ax[0].legend(title=leg_title, fontsize=7, loc='upper left')
-    ax[0].set_ylabel('Position (pixels)', fontsize=8)
-    ax[0].set_xlabel('Time from movement onset (ms)', fontsize=8)
+        ax[2].set_xlabel('Evidence')
+        ax[3].set_xlabel('Evidence')
+    ax[0].legend(title=leg_title, labelspacing=0.2,
+                 loc='center left', bbox_to_anchor=(0.7, 0.3))
+    ax[0].set_ylabel('Position')
+    ax[0].set_xlabel('Time from movement onset (ms)')
     # ax[0].set_title('Mean trajectory', fontsize=10)
     # ax[1].legend(title=leg_title)
-    ax[1].set_ylabel('Velocity (pixels/ms)', fontsize=8)
-    ax[1].set_xlabel('Time from movement onset (ms)', fontsize=8)
+    ax[1].set_ylabel('Velocity')
+    ax[1].set_xlabel('Time from movement onset (ms)')
     # ax[1].set_title('Mean velocity', fontsize=8)
-    ax[2].set_ylabel('MT (ms)', fontsize=8)
-    ax[3].set_ylabel('Peak (pixels/ms)', fontsize=8)
+    ax[2].set_ylabel('MT (ms)')
+    ax[3].set_xticks([])
+    ax[3].set_yticks([])
+    ax[3].set_ylabel('Peak')
+
 
 
 def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                 coh, sound_len, hit_model, sound_len_model, zt,
                 decision_model, com, com_model, com_model_detected,
                 df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-                marginx=0.006, marginy=0.07, fgsz=(8, 18)):
+                marginx=-0.02, marginy=0.08, fgsz=(13, 12)):
     fig, ax, ax_inset, pos_ax_0 = create_figure_5_model(fgsz=fgsz)
     # select RT > 0 (no FB, as in data)
     hit_model = hit_model[sound_len_model >= 0]
@@ -509,7 +552,18 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # Tachometrics
     _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                             sound_len=sound_len_model[sound_len_model >= 0],
-                            subjid=subjid, ax=ax[1], label='')
+                            subjid=subjid, ax=ax[1], label='', legend=False)
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
+                             label='1'),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label='0.5'),
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label='0.25'),
+                      Line2D([0], [0], color=colormap[0], lw=2,
+                             label='0')]
+    ax[1].legend(handles=legendelements, fontsize=8, loc='center left',
+                 bbox_to_anchor=(0.96, 0.5), title='Stimulus')
     # ax2 = fp.add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
     #                    marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
@@ -519,7 +573,9 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                  'com_model_detected': com_model_detected})
     zt_model = df_sim.norm_allpriors.values
     # PCoM vs RT
-    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[13], ax2=ax[13])
+    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
+    # slowing in MT
+    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.1, rt_max=50)
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
@@ -531,18 +587,17 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     df_model = df_model.loc[~df_model.norm_allpriors.isna()]
     nbins = 7
     # plot Pcoms matrices
-    ax_mat = [ax[10], ax_inset]
+    ax_mat = [ax[13], ax_inset]
     n_subjs = len(df_sim.subjid.unique())
     # PCoM matrices
     plot_pcom_matrices_model(df_model=df_model, n_subjs=n_subjs,
-                             ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins)
+                             ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins,
+                             f=fig)
     # MT matrix vs stim/prior
-    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[11], f=fig, silent_comparison=False,
-                             collapse_sides=True)
-    ax[11].set_position([pos_ax_0.x0 + pos_ax_0.width*1.4 + pos_ax_0.width/10,
-                         pos_ax_0.y0, pos_ax_0.width/1.5, pos_ax_0.height])
+    fig_1.mt_matrix_ev_vs_zt(df_sim, ax[2], f=fig, silent_comparison=False,
+                             collapse_sides=True, margin=0.03)
     # MT distributions
-    fig_3.mt_distros(df=df_sim, ax=ax[12])
+    fig_3.mt_distros(df=df_sim, ax=ax[11], xlmax=625)
     # plot trajs and MT conditioned on stim/prior
     plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=new_data,
                                       save_new_data=save_new_data,
@@ -550,7 +605,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
-                               data_folder=data_folder, ax=ax[8], collapse_sides=True,
+                               data_folder=data_folder, ax=ax[7], collapse_sides=True,
                                threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
@@ -561,7 +616,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
         subject = df_sim.subjid.unique()[0]
     fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
-    mean_com_traj_simul(df_sim, ax=ax[9], data_folder=data_folder, new_data=new_data,
+    mean_com_traj_simul(df_sim, ax=ax[12], data_folder=data_folder, new_data=new_data,
                         save_new_data=save_new_data)
     fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')

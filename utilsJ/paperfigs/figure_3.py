@@ -489,7 +489,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
 
 
 def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
-               sim=False):
+               sim=False, xlmax=755):
     subjid = df.subjid
     mt_com_mat = np.empty((len(mtbins)-1, len(subjid.unique())))
     mt_nocom_mat = np.empty((len(mtbins)-1, len(subjid.unique())))
@@ -520,7 +520,7 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
-    ax.set_xlim(45, 755)
+    ax.set_xlim(45, xlmax)
     ax.legend()
     ax.set_xlabel('MT (ms)')
     ax.set_ylabel('Density')
