@@ -1876,13 +1876,14 @@ def bhatt_dist(p, q):
 
 def supp_plot_dist_vs_n(ax, n_list=[1000, 10000, 100000, 500000, 1000000, 2000000,
                                     4000000, 10000000]):
-    bhat_mat = np.zeros((6, len(n_list)))
-    js_mat = np.zeros((6, len(n_list)))
+    cohvals = np.load(SV_FOLDER + '/10M/cohvals.npy')
+    ztvals = np.load(SV_FOLDER + '/10M/ztvals.npy')
+    tivals = np.load(SV_FOLDER + '/10M/tivals.npy')
+    bhat_mat = np.zeros((len(cohvals), len(n_list)))
+    js_mat = np.zeros((len(cohvals), len(n_list)))
     for i_n, n_trial in enumerate(n_list):
         i = 0
-        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                        [400, 400, 400, 400, 10, 800]):
+        for cohval, ztval, tival in zip(cohvals, ztvals, tivals):
             bhat, jens_shan = mse_lh_model_nn(n_trial, cohval, ztval,
                                               tival, num_simulations=int(5e5))
             bhat_mat[i, i_n] = bhat
