@@ -1618,7 +1618,7 @@ def plot_nn_to_nn_comparison_model_diff(n_trials=[2000000, 10000000]):
 
 
 def plot_nn_to_nn_comparison(n_trials=10000000):
-    fig, ax = plt.subplots(nrows=3, ncols=4, figsize=(12, 9))
+    fig, ax = plt.subplots(nrows=4, ncols=4, figsize=(12, 12))
     ax = ax.flatten()
     plt.subplots_adjust(top=0.9, bottom=0.15, left=0.12, right=0.95,
                         hspace=0.4, wspace=0.4)
@@ -1635,8 +1635,6 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
     comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
     # generated data
     x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
-    mat_0_nn = np.empty((len(grid_mt), len(grid_rt)))
-    mat_1_nn = np.copy(mat_0_nn)
     with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_trials),
               'rb') as f:
         estimator_1 = pickle.load(f)
@@ -1704,6 +1702,17 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
             ax[p].set_xticks([])
             ax[p+1].set_xticks([])
         p += 2
+    ax[13].axis('off')
+    ax[15].axis('off')
+    pos_ax_12 = ax[12].get_position()
+    ax[12].set_position([pos_ax_12.x0 + pos_ax_12.width/3,
+                         pos_ax_12.y0, pos_ax_12.width*1.8,
+                         pos_ax_12.height])
+    pos_ax_12 = ax[14].get_position()
+    ax[14].set_position([pos_ax_12.x0 + pos_ax_12.width/4,
+                         pos_ax_12.y0, pos_ax_12.width*1.8,
+                         pos_ax_12.height])
+    supp_plot_dist_vs_n(ax=[ax[12], ax[14]])
 
 
 def plot_nn_to_nn_kldistance(n_trials=10000000):
@@ -1849,34 +1858,41 @@ def bhatt_dist(p, q):
     return -np.log(np.sum(np.sqrt(p*q)))
 
 
-def plot_mse_vs_n(n_list=[1000, 10000, 100000, 500000, 1000000, 2000000,
-                          4000000, 10000000]):
-    mse_mat = np.zeros((6, len(n_list)))
+def supp_plot_dist_vs_n(ax, n_list=[1000, 10000, 100000, 500000, 1000000, 2000000,
+                                    4000000, 10000000]):
+    bhat_mat = np.zeros((6, len(n_list)))
+    js_mat = np.zeros((6, len(n_list)))
     for i_n, n_trial in enumerate(n_list):
         i = 0
         for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
                                         [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
                                         [400, 400, 400, 400, 10, 800]):
-            mse = mse_lh_model_nn(n_trial, cohval, ztval,
-                                  tival, num_simulations=int(5e5))
-            mse_mat[i, i_n] = mse
+            bhat, jens_shan = mse_lh_model_nn(n_trial, cohval, ztval,
+                                              tival, num_simulations=int(5e5))
+            bhat_mat[i, i_n] = bhat
+            js_mat[i, i_n] = jens_shan
             i += 1
         # mse_mat[:, i_n] = (mse_mat[:, i_n] - np.mean(mse_mat[:, i_n])) /\
         #     (np.max(mse_mat[:, i_n])-np.min(mse_mat[:, i_n]))
         # mse_mat[:, i_n] = mse_mat[:, i_n] / np.max(mse_mat[:, i_n])
-    fig, ax = plt.subplots(1)
-    ax.set_xscale('log')
-    mse_mat_norm_max = np.copy(mse_mat)
+    # fig, ax = plt.subplots(ncols=2, figsize=(8, 5))
+    # ax = ax.flatten()
+    for a in ax:
+        a.set_xscale('log')
+        rm_top_right_lines(a)
+        a.set_xlabel('N trials for training')
     for j in range(6):
         # mse_mat_norm_max[j, :] /= np.max(mse_mat_norm_max[j, :])
-        ax.plot(n_list,  mse_mat_norm_max[j, :] , color='r', alpha=0.4)
-    mean_mse = np.nanmean(mse_mat_norm_max, axis=0)
-    ax.plot(n_list, mean_mse, linewidth=2, color='r')
-    ax.set_xlabel('N trials for training')
+        ax[0].plot(n_list,  bhat_mat[j, :] , color='r', alpha=0.4)
+        ax[1].plot(n_list,  js_mat[j, :] , color='r', alpha=0.4)
+    mean_bhat = np.nanmean(bhat_mat, axis=0)
+    mean_js = np.nanmean(js_mat, axis=0)
+    ax[0].plot(n_list, mean_bhat, linewidth=2, color='r')
+    ax[1].plot(n_list, mean_js, linewidth=2, color='r')
     # ax.set_ylabel(r'KL divergence, $D(x,y)+D(y,x)$')
     # ax.set_ylabel('MSE(NN, model)')
-    # ax.set_ylabel('Bhattacharyya distance')
-    ax.set_ylabel('Jensen-Shannon distance')
+    ax[0].set_ylabel('Bhattacharyya \n distance')
+    ax[1].set_ylabel('Jensen-Shannon \n distance')
 
 
 def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5)):
@@ -1934,8 +1950,7 @@ def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5))
     # kl_all_1 = get_manual_kl_divergence(mat_model*(1-1e-3)+1e-9, mat_nn*(1-1e-3)+1e-9)
     # kl_all_2 = get_manual_kl_divergence(mat_nn*(1-1e-3)+1e-9, mat_model*(1-1e-3)+1e-9)
     estimator = []
-    # return bhatt_dist(mat_model, mat_nn)
-    return np.nansum(dist.jensenshannon(mat_model, mat_nn))
+    return bhatt_dist(mat_model, mat_nn), np.nansum(dist.jensenshannon(mat_model, mat_nn))
 
 
 def kl_vs_n_trials(df, n_trials=[2000000, 3000000, 4000000], sv_folder=SV_FOLDER):
