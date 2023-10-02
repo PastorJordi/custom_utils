@@ -24,6 +24,7 @@ import pickle
 import scipy
 from pybads import BADS
 import itertools
+from scipy.spatial import distance as dist
 import os
 # from pyvbmc import VBMC
 
@@ -1251,8 +1252,8 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
     # and compare distros
 
 
-def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
-                 bins_mt=np.arange(100, 600, 26)):
+def matrix_probs_v0(x, bins_rt=np.arange(200, 600, 13),
+                    bins_mt=np.arange(100, 600, 26)):
     mt = x[:, 0]
     rt = x[:, 1]
     n_total = len(mt)
@@ -1263,6 +1264,20 @@ def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
                 (rt >= rtb) & (rt < bins_rt[irt+1])
             mat_final[irt, imt] = sum(index)/n_total
     return mat_final
+
+
+def matrix_probs(x, bins_rt=np.arange(200, 600, 13),
+                 bins_mt=np.arange(100, 600, 26)):
+    mt = np.array(x[:, 0])
+    rt = np.array(x[:, 1])
+    counts = np.histogram2d(mt, rt, bins=[bins_mt, bins_rt])[0]
+    counts /= np.sum(counts)
+    # for irt, rtb in enumerate(bins_rt[:-1]):
+    #     for imt, mtb in enumerate(bins_mt[:-1]):
+    #         index = (mt >= mtb) & (mt < bins_mt[imt+1]) &\
+    #             (rt >= rtb) & (rt < bins_rt[irt+1])
+    #         mat_final[irt, imt] = sum(index)/n_total
+    return counts
 
 
 def get_manual_kl_divergence(mat_model, mat_nn):
@@ -1356,18 +1371,18 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             lprobs = torch.exp(lprobs)
             mat_0_nn = lprobs[x_o[:, 2] == 0].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
-            reshaped_mat_0_nn = resize(mat_0_nn.T, mat_0.shape)*(1-eps) + eps*1e-6
-            reshaped_mat_1_nn = resize(mat_1_nn.T, mat_1.shape)*(1-eps) + eps*1e-6
-            kl_0 = get_manual_kl_divergence(mat_model=(mat_0*(1-eps) + eps*1e-6) /
-                                            np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
-                                            mat_nn=reshaped_mat_0_nn /
-                                            np.sum(reshaped_mat_0_nn+reshaped_mat_1_nn))
+            # reshaped_mat_0_nn = resize(mat_0_nn, mat_0.shape)*(1-eps) + eps*1e-6
+            # reshaped_mat_1_nn = resize(mat_1_nn, mat_1.shape)*(1-eps) + eps*1e-6
+            # kl_0 = get_manual_kl_divergence(mat_model=(mat_0*(1-eps) + eps*1e-6) /
+            #                                 np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
+            #                                 mat_nn=reshaped_mat_0_nn /
+            #                                 np.sum(reshaped_mat_0_nn+reshaped_mat_1_nn))
             mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                                       len(grid_rt)).detach().numpy()
-            kl_1 = get_manual_kl_divergence(mat_model=(mat_1*(1-eps) + eps*1e-6) /
-                                            np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
-                                            mat_nn=reshaped_mat_1_nn /
-                                            np.sum(reshaped_mat_1_nn+reshaped_mat_0_nn))
+            # kl_1 = get_manual_kl_divergence(mat_model=(mat_1*(1-eps) + eps*1e-6) /
+            #                                 np.sum((mat_1+mat_0)*(1-eps) + eps*1e-6),
+            #                                 mat_nn=reshaped_mat_1_nn /
+            #                                 np.sum(reshaped_mat_1_nn+reshaped_mat_0_nn))
             if plot_nn_alone:
                 fig, ax1 = plt.subplots(ncols=2)
                 fig.suptitle('Network + {}'.format(n_sim_train))
@@ -1386,41 +1401,52 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 plt.colorbar(im1)
             # fig, ax = plt.subplots(ncols=2)
             # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
-            ax[0].imshow(resize(mat_0.T, mat_0_nn.shape), vmin=0)
-            ax[0].contour(mat_0_nn, cmap='hot', linewidths=0.8)
+            ax[0].imshow(resize(mat_0, mat_0_nn.shape), vmin=0, cmap='Blues')
+            ax[0].contour(mat_0_nn, cmap='Reds', linewidths=0.8)
             ax[0].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
-            ax[0].set_ylabel('MT (ms), KL = ' + str(round(kl_0, 3)))
+            ax[0].set_ylabel('MT (ms)')
             if xt:
-                ax[0].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
+                ax[0].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+                                 rotation=45)
                 ax[0].set_xlabel('RT (ms)')
             else:
                 ax[0].set_xticks([])
-            im1 = ax[2].imshow(resize(mat_1.T, mat_1_nn.shape), vmin=0)
-            plt.sca(ax[2])
-            im2 = ax[2].contour(mat_1_nn, cmap='hot', linewidths=0.8)
-            ax[2].set_yticks([])
-            ax[2].set_ylabel('KL = ' + str(round(kl_1, 3)))
+            im1 = ax[1].imshow(resize(mat_1, mat_1_nn.shape), vmin=0, cmap='Blues')
+            plt.sca(ax[1])
+            im2 = ax[1].contour(mat_1_nn, cmap='Reds', linewidths=0.8)
+            ax[1].set_yticks([])
             # ax[1].set_ylabel('MT (ms)')
             if xt:
-                ax[2].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
-                ax[2].set_xlabel('RT (ms)')
+                ax[1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+                                 rotation=45)
+                ax[1].set_xlabel('RT (ms)')
             else:
-                ax[2].set_xticks([])
-            plt.colorbar(im1, fraction=0.04)
-            p_ch0_model = np.mean(x[:,2] == 0)
+                ax[1].set_xticks([])
+            # plt.colorbar(im1, fraction=0.04)
+            p_ch0_model = np.nanmean(x[:,2] == 0)
+            p_fb_model = np.nanmean(x[:, 1] < 300)
             p_ch1_model = 1-p_ch0_model
             p_ch0_nn = np.nansum(mat_0_nn)/np.nansum(mat_0_nn+mat_1_nn)
             p_ch1_nn = np.nansum(mat_1_nn)/np.nansum(mat_0_nn+mat_1_nn)
-            ax[1].set_ylim(-0.05, 1.05)
-            ax[3].set_ylim(-0.05, 1.05)
-            ax[1].bar(['Model', 'NN'], [p_ch0_model, p_ch0_nn], color='k')
-            ax[3].bar(['Model', 'NN'], [p_ch1_model, p_ch1_nn], color='k')
+            idx = grid_rt < 300
+            p_fb_nn = (np.nansum(mat_0_nn[:, idx]) + np.nansum(mat_1_nn[:, idx])) /\
+                np.nansum(mat_0_nn + mat_1_nn)
+            ax[2].set_ylim(-0.05, 1.05)
+            ax[2].bar(['Model', 'NN'],
+                      [p_ch1_model, p_ch1_nn],
+                      color=['cornflowerblue', 'firebrick'])
+            ax[2].set_ylabel('p(Right)')
+            ax[3].set_ylim(-0.02, 0.15)
+            ax[3].bar(['Model', 'NN'],
+                      [p_fb_model, p_fb_nn],
+                      color=['cornflowerblue', 'firebrick'])
+            ax[3].set_ylabel('p(FB)')
             # plt.colorbar(im2, fraction=0.04)
     if plot_model:
         fig, ax = plt.subplots(ncols=2)
         fig.suptitle('Model + coh {}, zt {}, t_ind {}'.format(cohval,
                                                               ztval, tival))
-        ax[0].imshow(resize(mat_0.T, mat_0_nn.shape)
+        ax[0].imshow(resize(mat_0, mat_0_nn.shape)
                      * len(x[x[:, 2] == 0])/len(x[:, 2]),
                      vmin=0, vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
                                           mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
@@ -1429,7 +1455,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
         ax[0].set_ylabel('MT (ms)')
         ax[0].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
         ax[0].set_xlabel('RT (ms)')
-        im1 = ax[1].imshow(resize(mat_1.T, mat_1_nn.shape)*len(x[x[:, 2] == 1])
+        im1 = ax[1].imshow(resize(mat_1, mat_1_nn.shape)*len(x[x[:, 2] == 1])
                            / len(x[:, 2]), vmin=0,
                            vmax=np.max((mat_0*len(x[x[:, 2] == 0])/len(x[:, 2]),
                                         mat_1*len(x[x[:, 2] == 1])/len(x[:, 2]))))
@@ -1441,13 +1467,165 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
         plt.colorbar(im1)
 
 
+def get_lprobs_nn(estimator, x_o, theta_tri_ind):
+    lprobs1 = estimator.log_prob(x_o, theta_tri_ind)
+    lprobs1 = torch.exp(lprobs1)
+    return lprobs1
+
+
+def get_theta_tri_ind(x_o, cohval, ztval, tival):
+    theta = get_x0()
+    theta = torch.reshape(torch.tensor(theta),
+                          (1, len(theta))).to(torch.float32)
+    theta = theta.repeat(len(x_o), 1)
+    trial_index = np.repeat(tival, len(theta))
+    theta[:, 0] *= torch.tensor(ztval)
+    theta[:, 1] *= torch.tensor(cohval)
+    theta_tri_ind = torch.column_stack((theta[:len(x_o)],
+                                        torch.tensor(trial_index[
+                                            :len(x_o)]).to(torch.float32)))
+    theta_tri_ind[:, 14] += theta_tri_ind[:, 15]*theta_tri_ind[:, -1]
+    theta_tri_ind[:, 7] -= theta_tri_ind[:, 8]*theta_tri_ind[:, -1]
+    theta_tri_ind = torch.column_stack((theta_tri_ind[:, :8],
+                                        theta_tri_ind[:, 9:15]))
+    return theta_tri_ind
+
+
+def plot_nn_to_nn_comparison_model_diff(n_trials=[2000000, 10000000]):
+    fig, axl = plt.subplots(nrows=6, ncols=5, figsize=(15, 9))
+    axl = axl.flatten()
+    plt.subplots_adjust(top=0.9, bottom=0.15, left=0.12, right=0.95,
+                        hspace=0.4, wspace=0.4)
+    fig2, axr = plt.subplots(nrows=6, ncols=5, figsize=(15, 9))
+    axr = axr.flatten()
+    plt.subplots_adjust(top=0.9, bottom=0.15, left=0.12, right=0.95,
+                        hspace=0.4, wspace=0.4)
+    axl[0].set_title('Left choice - Model')
+    axl[1].set_title(str(n_trials[0]))
+    axl[2].set_title('Diff. ' + str(n_trials[0]))
+    axl[3].set_title('10M')
+    axl[4].set_title('Diff. 10M')
+    axr[0].set_title('Right choice - Model')
+    axr[1].set_title(str(n_trials[0]))
+    axr[2].set_title('Diff. ' + str(n_trials[0]))
+    axr[3].set_title('10M')
+    axr[4].set_title('Diff. 10M')
+    # we load estimator
+    grid_rt = np.arange(200, 600, 13)
+    grid_rt = grid_rt[:-1] + np.diff(grid_rt)[0]/2
+    grid_mt = np.arange(100, 600, 26)
+    grid_mt = grid_mt[:-1] + np.diff(grid_mt)[0]/2
+    all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
+    all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
+    comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
+    comb_1 = np.column_stack((all_mt, all_rt, np.repeat(1, len(all_mt))))
+    # generated data
+    x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_trials[0]),
+              'rb') as f:
+        estimator_1 = pickle.load(f)
+    estimator_1 = estimator_1['estimator']
+    with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_trials[1]),
+              'rb') as f:
+        estimator_2 = pickle.load(f)
+    estimator_2 = estimator_2['estimator']
+    ztvals = [1.5, 0.05, 1.5, -1.5, .5, .5]
+    cohvals = [0, 1, 0.5, 0.5, 0.25, 0.25]
+    tivals = [400, 400, 400, 400, 10, 800]
+    p = 0
+    mse_1 = []
+    mse_2 = []
+    for ztval, cohval, tival in zip(ztvals, cohvals, tivals):
+        # load model matrices
+        mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
+        mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
+        theta_tri_ind = get_theta_tri_ind(x_o, cohval, ztval, tival)
+        lprobs1 = get_lprobs_nn(estimator=estimator_1, x_o=x_o,
+                                theta_tri_ind=theta_tri_ind)
+        mat_0_nn1 = lprobs1[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        mat_1_nn1 = lprobs1[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        lprobs2 = get_lprobs_nn(estimator=estimator_2, x_o=x_o,
+                                theta_tri_ind=theta_tri_ind)
+        mat_0_nn2 = lprobs2[x_o[:, 2] == 0].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        mat_1_nn2 = lprobs2[x_o[:, 2] == 1].reshape(len(grid_mt),
+                                                    len(grid_rt)).detach().numpy()
+        cte_nn1 = np.sum(mat_0_nn1 + mat_1_nn1)
+        mat_0_nn1 /= cte_nn1
+        mat_1_nn1 /= cte_nn1
+        cte_nn2 = np.sum(mat_0_nn2 + mat_1_nn2)
+        mat_0_nn2 /= cte_nn2
+        mat_1_nn2 /= cte_nn2
+        cte_mod = np.sum(mat_0 + mat_1)
+        mat_0 /= cte_mod
+        mat_1 /= cte_mod
+        # left
+        max_im2 = np.max(mat_0_nn1 - mat_0)
+        max_im1 = np.max(mat_0_nn2 - mat_0)
+        vmax_0 = max(max_im2, max_im1)
+        min_im2 = np.min(mat_0_nn1 - mat_0)
+        min_im1 = np.min(mat_0_nn2 - mat_0)
+        vmin_0 = max(min_im2, min_im1)
+        im1 = axl[5*p].imshow(mat_0, cmap='Blues')
+        im3 = axl[5*p+1].imshow(mat_0_nn1, cmap='Blues')
+        im2 = axl[5*p+2].imshow(mat_0_nn1 - mat_0,
+                                cmap='Blues', vmin=vmin_0, vmax=vmax_0)
+        plt.colorbar(im2, ax=axl[5*p+2])
+        im4 = axl[5*p+3].imshow(mat_0_nn2, cmap='Blues')
+        im5 = axl[5*p+4].imshow(mat_0_nn2 - mat_0,
+                                cmap='Blues', vmin=vmin_0, vmax=vmax_0)
+        plt.colorbar(im5, ax=axl[5*p+4])
+        # right
+        max_im2 = np.max(mat_1_nn1 - mat_1)
+        max_im1 = np.max(mat_1_nn2 - mat_1)
+        vmax_1 = max(max_im2, max_im1)
+        min_im2 = np.min(mat_1_nn1 - mat_1)
+        min_im1 = np.min(mat_1_nn2 - mat_1)
+        vmin_1 = max(min_im2, min_im1)
+        axr[5*p].imshow(mat_1, cmap='Blues')
+        axr[5*p+1].imshow(mat_1_nn1, cmap='Blues')
+        im1 = axr[5*p+2].imshow(mat_1_nn1 - mat_1,
+                                cmap='Blues', vmin=vmin_1, vmax=vmax_1)
+        plt.colorbar(im1, ax=axr[5*p+2])
+        axr[5*p+3].imshow(mat_1_nn2, cmap='Blues')
+        im2 = axr[5*p+4].imshow(mat_1_nn2 - mat_1,
+                               cmap='Blues', vmin=vmin_1, vmax=vmax_1)
+        plt.colorbar(im2, ax=axr[5*p+4])
+        mse_1.append(np.sum((mat_1_nn1 - mat_1_nn2)**2))
+        mse_2.append(np.sum((mat_1_nn1 - mat_1)**2))
+        # if p % 4 == 0:
+        #     ax[p].set_ylabel('MT (ms)')
+        #     ax[p].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
+        #     ax[p+1].set_yticks([])
+        # else:
+        #     ax[p].set_yticks([])
+        #     ax[p+1].set_yticks([])
+        # if p >= 8:
+        #     ax[p].set_xlabel('RT (ms)')
+        #     ax[p+1].set_xlabel('RT (ms)')
+        #     ax[p].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+        #                      rotation=45)
+        #     ax[p+1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+        #                        rotation=45)
+        # else:
+        #     ax[p].set_xticks([])
+        #     ax[p+1].set_xticks([])
+        p += 1
+
+
 def plot_nn_to_nn_comparison(n_trials=10000000):
-    fig, ax = plt.subplots(nrows=3, ncols=4)
+    fig, ax = plt.subplots(nrows=3, ncols=4, figsize=(12, 9))
     ax = ax.flatten()
-    ax[1].set_title('Choice 1')
-    ax[0].set_title('Choice 0')
-    ax[3].set_title('Choice 1')
-    ax[2].set_title('Choice 0')
+    plt.subplots_adjust(top=0.9, bottom=0.15, left=0.12, right=0.95,
+                        hspace=0.4, wspace=0.4)
+    ax[1].set_title('Right choice')
+    ax[0].set_title('Left choice')
+    ax[3].set_title('Right choice')
+    ax[2].set_title('Left choice')
     # we load estimator
     grid_rt = np.arange(-100, 300, 1) + 300
     grid_mt = np.arange(100, 600, 1)
@@ -1472,6 +1650,10 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
     tivals = [400, 400, 400, 400, 10, 800]
     p = 0
     for ztval, cohval, tival in zip(ztvals, cohvals, tivals):
+        pos_ax_1 = ax[p+1].get_position()
+        ax[p+1].set_position([pos_ax_1.x0 - pos_ax_1.width/9,
+                              pos_ax_1.y0, pos_ax_1.width,
+                              pos_ax_1.height])
         theta = get_x0()
         theta = torch.reshape(torch.tensor(theta),
                               (1, len(theta))).to(torch.float32)
@@ -1504,15 +1686,24 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
         im3 = ax[p+1].contour(mat_1_nn1, cmap='hot', linewidths=1.2)
         # plt.sca(ax[p+1])
         im4 = ax[p+1].contour(mat_1_nn2, cmap='cool', linewidths=1.2)
+        if p % 4 == 0:
+            ax[p].set_ylabel('MT (ms)')
+            ax[p].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
+            ax[p+1].set_yticks([])
+        else:
+            ax[p].set_yticks([])
+            ax[p+1].set_yticks([])
+        if p >= 8:
+            ax[p].set_xlabel('RT (ms)')
+            ax[p+1].set_xlabel('RT (ms)')
+            ax[p].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+                             rotation=45)
+            ax[p+1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300,
+                               rotation=45)
+        else:
+            ax[p].set_xticks([])
+            ax[p+1].set_xticks([])
         p += 2
-        ax[p].set_xlabel('RT (ms)')
-        ax[p+1].set_xlabel('RT (ms)')
-        ax[p+1].set_ylabel('MT (ms)')
-        ax[p].set_ylabel('MT (ms)')
-        ax[p].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
-        ax[p].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
-        ax[p+1].set_yticks(np.arange(0, len(grid_mt), 100), grid_mt[::100])
-        ax[p+1].set_xticks(np.arange(0, len(grid_rt), 100), grid_rt[::100]-300)
 
 
 def plot_nn_to_nn_kldistance(n_trials=10000000):
@@ -1599,20 +1790,50 @@ def plot_nn_to_nn_kldistance(n_trials=10000000):
         ax[2*iti+1].set_yticks(np.arange(0, len(cohvals), 4), cohvals[::4])
 
 
+def rm_top_right_lines(ax, right=True):
+    if right:
+        ax.spines['right'].set_visible(False)
+    else:
+        ax.spines['left'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+
 def plot_lh_model_network(df, n_trials=2000000):
-    fig, ax = plt.subplots(4, 4, figsize=(8, 12))
+    fig, ax = plt.subplots(6, 4, figsize=(8, 12))
+    plt.subplots_adjust(top=0.95, bottom=0.1, left=0.12, right=0.95,
+                        hspace=0.4, wspace=0.4)
+    labs = ['a', 'b', 'c', 'd', 'e', 'f']
     ax = ax.flatten()
+    for j in range(6):
+        pos_ax_1 = ax[4*j].get_position()
+        ax[4*j].set_position([pos_ax_1.x0,
+                              pos_ax_1.y0, pos_ax_1.width*1.1, pos_ax_1.height])
+        pos_ax_1 = ax[4*j+1].get_position()
+        ax[4*j+1].set_position([pos_ax_1.x0 - pos_ax_1.width/4,
+                            pos_ax_1.y0, pos_ax_1.width*1.1, pos_ax_1.height])
+        pos_ax_1 = ax[4*j+2].get_position()
+        ax[4*j+2].set_position([pos_ax_1.x0,
+                                pos_ax_1.y0, pos_ax_1.width*0.7,
+                                pos_ax_1.height])
+        rm_top_right_lines(ax[4*j+2])
+        pos_ax_1 = ax[4*j+3].get_position()
+        ax[4*j+3].set_position([pos_ax_1.x0,
+                                pos_ax_1.y0, pos_ax_1.width*0.7,
+                                pos_ax_1.height])
+        rm_top_right_lines(ax[4*j+3])
+        ax[4*j].text(-0.4, 1.3, labs[j], transform=ax[4*j].transAxes, fontsize=14,
+                     fontweight='bold', va='top', ha='right')
     i = 0
     xt = False
-    ax[2].set_title('Choice 1')
-    # ax[0].set_title('Choice 0')
+    ax[1].set_title('Right choice', pad=14)
+    ax[0].set_title('Left choice', pad=14)
     labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
               'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
               'cong. higher t.i.', '0 stim, high prior', 'low stim incong']
-    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
-                                    [1.5, 0.05, -1.5, .5],
-                                    [400, 400, 400, 10]):
-        if i == 3:
+    for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.5, 0.25],
+                                    [1.5, 0.05, -1.5, .5, 1.5, 0.5],
+                                    [400, 400, 400, 10, 400, 800]):
+        if i == 5:
             xt = True
         plot_network_model_comparison(df, ax[4*i:4*(i+1)],
                                       sv_folder=SV_FOLDER, num_simulations=int(5e5),
@@ -1620,34 +1841,50 @@ def plot_lh_model_network(df, n_trials=2000000):
                                       ztval=ztval, tival=tival,
                                       plot_nn=True, simulate=False, plot_model=False,
                                       plot_nn_alone=False, xt=xt)
-        ax[4*i].set_title(labels[i])
+        # ax[3*i].set_title(labels[i])
         i += 1
 
 
-def plot_mse_vs_n(n_list=[1000000, 2000000, 10000000]):
-    mse_mat = np.zeros((4, len(n_list)))
+def bhatt_dist(p, q):
+    return -np.log(np.sum(np.sqrt(p*q)))
+
+
+def plot_mse_vs_n(n_list=[1000, 10000, 100000, 500000, 1000000, 2000000,
+                          4000000, 10000000]):
+    mse_mat = np.zeros((6, len(n_list)))
     for i_n, n_trial in enumerate(n_list):
         i = 0
-        for cohval, ztval, tival in zip([0, 1, 0.5, 0.25],
-                                        [1.5, 0.05, -1.5, .5],
-                                        [400, 400, 50, 10]):
+        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
+                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
+                                        [400, 400, 400, 400, 10, 800]):
             mse = mse_lh_model_nn(n_trial, cohval, ztval,
                                   tival, num_simulations=int(5e5))
             mse_mat[i, i_n] = mse
             i += 1
-        mse_mat[:, i_n] = (mse_mat[:, i_n] - np.mean(mse_mat[:, i_n])) /\
-            (np.max(mse_mat[:, i_n])-np.min(mse_mat[:, i_n]))
+        # mse_mat[:, i_n] = (mse_mat[:, i_n] - np.mean(mse_mat[:, i_n])) /\
+        #     (np.max(mse_mat[:, i_n])-np.min(mse_mat[:, i_n]))
+        # mse_mat[:, i_n] = mse_mat[:, i_n] / np.max(mse_mat[:, i_n])
     fig, ax = plt.subplots(1)
-    for j in range(4):
-        ax.plot(n_list, mse_mat[j, :], color='r', alpha=0.4)
-    mean_mse = np.nanmean(mse_mat, axis=0)
+    ax.set_xscale('log')
+    mse_mat_norm_max = np.copy(mse_mat)
+    for j in range(6):
+        # mse_mat_norm_max[j, :] /= np.max(mse_mat_norm_max[j, :])
+        ax.plot(n_list,  mse_mat_norm_max[j, :] , color='r', alpha=0.4)
+    mean_mse = np.nanmean(mse_mat_norm_max, axis=0)
     ax.plot(n_list, mean_mse, linewidth=2, color='r')
+    ax.set_xlabel('N trials for training')
+    # ax.set_ylabel(r'KL divergence, $D(x,y)+D(y,x)$')
+    # ax.set_ylabel('MSE(NN, model)')
+    # ax.set_ylabel('Bhattacharyya distance')
+    ax.set_ylabel('Jensen-Shannon distance')
 
 
 def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5)):
     # we load estimator
-    grid_rt = np.arange(-100, 300, 1) + 300
-    grid_mt = np.arange(100, 600, 1)
+    grid_rt = np.arange(200, 600, 13)
+    grid_rt = grid_rt[:-1] + np.diff(grid_rt)[0]/2
+    grid_mt = np.arange(100, 600, 26)
+    grid_mt = grid_mt[:-1] + np.diff(grid_mt)[0]/2
     all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
     all_mt = np.meshgrid(grid_rt, grid_mt)[1].flatten()
     comb_0 = np.column_stack((all_mt, all_rt, np.repeat(0, len(all_mt))))
@@ -1682,11 +1919,23 @@ def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5))
                                               len(grid_rt)).detach().numpy()
     mat_1_nn = lprobs[x_o[:, 2] == 1].reshape(len(grid_mt),
                                               len(grid_rt)).detach().numpy()
-    mat_0 = resize(mat_0.T, mat_0_nn.shape)
-    mat_1 = resize(mat_1.T, mat_1_nn.shape)
+    cte_nn = np.sum(mat_0_nn + mat_1_nn)
+    mat_0_nn /= cte_nn
+    mat_1_nn /= cte_nn
+    cte_mod = np.sum(mat_0 + mat_1)
+    mat_0 /= cte_mod
+    mat_1 /= cte_mod
     mse_0 = np.sum((mat_0_nn - mat_0)**2)
     mse_1 = np.sum((mat_1_nn - mat_1)**2)
-    return mse_0 + mse_1
+    mat_model = np.array((((mat_0), (mat_1))))
+    mat_nn = np.array((((mat_0_nn), (mat_1_nn))))
+    # kl0 = get_manual_kl_divergence(mat_0*(1-1e-3)+1e-9, mat_0_nn*(1-1e-3)+1e-9)
+    # kl1 = get_manual_kl_divergence(mat_1*(1-1e-3)+1e-9, mat_1_nn*(1-1e-3)+1e-9)
+    # kl_all_1 = get_manual_kl_divergence(mat_model*(1-1e-3)+1e-9, mat_nn*(1-1e-3)+1e-9)
+    # kl_all_2 = get_manual_kl_divergence(mat_nn*(1-1e-3)+1e-9, mat_model*(1-1e-3)+1e-9)
+    estimator = []
+    # return bhatt_dist(mat_model, mat_nn)
+    return np.nansum(dist.jensenshannon(mat_model, mat_nn))
 
 
 def kl_vs_n_trials(df, n_trials=[2000000, 3000000, 4000000], sv_folder=SV_FOLDER):
@@ -2284,7 +2533,7 @@ if __name__ == '__main__':
             subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE42']  # to run only once and train
+            # subjects = ['LE43']  # to run only once and train
             training = True
             for i_s, subject in enumerate(subjects):
                 if i_s > 0:

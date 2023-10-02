@@ -53,7 +53,7 @@ def plot_coms(df, ax, human=False):
     if not human:
         var = 'y'
     ax.set_ylabel('{}-coord (pixels)'.format(var))
-    ax.set_xlabel('Time from movement onset (ms)')
+    ax.set_xlabel('Time from movement \n onset (ms)')
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
@@ -137,7 +137,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
     ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
-              labelspacing=0.01, bbox_to_anchor=(0.2, 0.2))
+              labelspacing=0.01)
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
@@ -211,31 +211,31 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
     ax[0].set_ylabel('x-coord (px)')
-    ax[0].set_xlabel('Time from movement onset (ms)')
+    ax[0].set_xlabel('Time from movement \n onset (ms)')
     ax[1].set_xticks([])
     ax[1].set_title('MT (ms)', fontsize=10)
     if condition == 'prior':
         ax[1].set_xlabel('Prior')
         legendelements = [Line2D([0], [0], color=colormap[4], lw=1.5, label='cong.'),
-                          Line2D([0], [0], color=colormap[3], lw=1.5, label=''),
+                          Line2D([0], [0], color=colormap[3], lw=1.5, label=' '),
                           Line2D([0], [0], color=colormap[2], lw=1.5, label='0'),
-                          Line2D([0], [0], color=colormap[1], lw=1.5, label=''),
+                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
                           Line2D([0], [0], color=colormap[0], lw=1.5, label='inc.')]
         ax[1].set_ylim(160, 335)
-        ax[0].legend(handles=legendelements, title='Prior', loc='upper left',
-                     labelspacing=0.001)
+        ax[0].legend(handles=legendelements, title='Prior', loc='center left',
+                     labelspacing=0.001, bbox_to_anchor=(0., 1.2))
     else:
         legendelements = [Line2D([0], [0], color=colormap[0], lw=1.5, label='1'),
-                          Line2D([0], [0], color=colormap[1], lw=1.5, label=''),
-                          Line2D([0], [0], color=colormap[2], lw=1.5, label=''),
+                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[2], lw=1.5, label=' '),
                           Line2D([0], [0], color=colormap[3], lw=1.5, label='0'),
-                          Line2D([0], [0], color=colormap[4], lw=1.5, label=''),
-                          Line2D([0], [0], color=colormap[5], lw=1.5, label=''),
+                          Line2D([0], [0], color=colormap[4], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[5], lw=1.5, label=' '),
                           Line2D([0], [0], color=colormap[6], lw=1.5, label='-1')]
         ax[1].set_xlabel('Stimulus')
         ax[1].set_ylim(160, 285)
-        ax[0].legend(handles=legendelements, title='Stimulus', loc='upper left',
-                     labelspacing=0.001)
+        ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
+                     labelspacing=0.001, bbox_to_anchor=(0.8, 1.2))
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -491,7 +491,7 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
 
 
 def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset_sz=.06,
-                 marginx=0.004, marginy=0.025, fgsz=(10.5, 9.5)):
+                 marginx=0.004, marginy=0.025, fgsz=(11, 13.5)):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'alex_CRM':

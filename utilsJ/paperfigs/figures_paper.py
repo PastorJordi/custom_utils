@@ -1017,40 +1017,56 @@ def plot_params_all_subs_rats_humans(subjects, subjectsh, sv_folder=SV_FOLDER, d
     ax[0].legend(fontsize=12)
 
 
-def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
+def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     fig, ax = plt.subplots(4, 4)
+    plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
+                        hspace=0.5, wspace=0.4)
     if diff_col:
         colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
     else:
         colors = ['k' for _ in range(len(subjects))]
     ax = ax.flatten()
-    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
-              't aff', 't eff', 'tAction', 'intercept AI',
-              'slope AI', 'AI bound', 'DV weight 1st readout',
-              'DV weight 2nd readout', 'leak', 'MT noise std',
-              'MT offset', 'MT slope T.I.']
+    for a in ax:
+        rm_top_right_lines(a)
+    labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
+              r'EA bound, $\theta_{DV}$',
+              r'CoM bound, $\theta_{COM}$',
+              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
+              r'AI time offset, $t_{AI}$',
+              r'AI drift offset, $v_{AI}$',
+              r'AI drift slope, $w_{AI}$',
+              r'AI bound, $\theta_{AI}$',
+              r'DV weight 1st readout, $\beta_{DV}$',
+              r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
+              # r'MT noise variance, $\sigma_{MT}$',
+              r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
     conf_mat = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
-        conf_mat[:, i_s] = conf
+        conf_mat[:, i_s] = np.delete(conf, -3)
     for i in range(len(labels)):
         if i == 4 or i == 5 or i == 6:
-            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h')
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h', color='royalblue',
+                           fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s]*5,
                            0.05*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=1.2)
+                           markersize=2)
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
         else:
-            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h')
+            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h', color='royalblue',
+                           fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s],
                            0.1*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=1.2)
+                           markersize=2)
             ax[i].set_xlabel(labels[i] + str(' ms'))
             ax[i].set_xlabel(labels[i])
+        ax[i].set_yticks([])
+        ax[i].spines['left'].set_visible(False)
+    ax[-1].axis('off')
 
 
 def mt_vs_ti_data_comparison(df, df_sim):
@@ -1153,16 +1169,46 @@ def plot_rt_sim(df_sim):
             ax[isub].set_title(subj)
 
 
-def plot_fb_per_subj_from_df(df):
+def supp_plot_rt_distros_data_model(df, df_sim):
     # plots the RT distros conditioning on coh
-    fig, ax = plt.subplots(5, 3)
+    fig, ax = plt.subplots(6, 5)
+    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.06, right=0.95,
+                        hspace=0.4, wspace=0.4)
     ax = ax.flatten()
     colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     subjects = df.subjid.unique()
+    labs_data = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24]
+    labs_model = [5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 25, 26, 27, 28, 29]
     for i_s, subj in enumerate(subjects):
-        rm_top_right_lines(ax[i_s])
+        rm_top_right_lines(ax[labs_model[i_s]])
+        rm_top_right_lines(ax[labs_data[i_s]])
+        pos_ax_mod = ax[labs_model[i_s]].get_position()
+        ax[labs_model[i_s]].set_position([pos_ax_mod.x0,
+                                          pos_ax_mod.y0 + pos_ax_mod.height/15.5,
+                                          pos_ax_mod.width,
+                                          pos_ax_mod.height])
+        pos_ax_dat = ax[labs_data[i_s]].get_position()
+        ax[labs_data[i_s]].set_position([pos_ax_dat.x0,
+                                          pos_ax_dat.y0 - pos_ax_dat.height/15.5,
+                                          pos_ax_dat.width,
+                                          pos_ax_dat.height])
+        if (i_s+1) % 5 == 0:
+            axmod = ax[labs_model[i_s]].twinx()
+            axdat = ax[labs_data[i_s]].twinx()
+            axdat.set_ylabel('Data')
+            axmod.set_ylabel('Model')
+            axmod.set_yticks([])
+            axdat.set_yticks([])
+            axmod.spines['bottom'].set_visible(False)
+            axdat.spines['bottom'].set_visible(False)
+            rm_top_right_lines(axdat)
+            rm_top_right_lines(axmod)
         df_1 = df[df.subjid == subj]
+        df_sim_1 = df_sim[df_sim.subjid == subj]
         coh_vec = df_1.coh2.values
+        coh = df_sim_1.coh2.abs().values
+        ax[labs_data[i_s]].set_ylim(-0.0001, 0.011)
+        ax[labs_model[i_s]].set_ylim(-0.0001, 0.011)
         for ifb, fb in enumerate(df_1.fb):
             for j in range(len(fb)):
                 coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
@@ -1172,11 +1218,47 @@ def plot_fb_per_subj_from_df(df):
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
             fix_breaks_2 = fix_breaks[index]*1e3
+            rt_model = df_sim_1.sound_len.values[coh == ev]
             sns.kdeplot(fix_breaks_2.reshape(-1),
-                        color=colormap[iev], ax=ax[i_s])
-        # ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
+                        color=colormap[iev], ax=ax[labs_data[i_s]])
+            sns.kdeplot(rt_model,
+                        color=colormap[iev], ax=ax[labs_model[i_s]],
+                        linestyle='--')
+        ax[labs_data[i_s]].set_xticks([])        
+        ax[labs_data[i_s]].set_title(subj)
+        ax[labs_data[i_s]].set_xlim(-205, 410)
+        ax[labs_model[i_s]].set_xlim(-205, 410)
+        if i_s < 10:
+            ax[labs_model[i_s]].set_xticks([])        
+        if i_s >= 10:
+            ax[labs_model[i_s]].set_xlabel('RT (ms)')
+
+
+def supp_plot_rt_data_vs_model_all(df, df_sim):
+    # plots the RT distros of data vs model
+    fig, ax = plt.subplots(3, 5)
+    ax = ax.flatten()
+    subjects = df.subjid.unique()
+    for i_s, subj in enumerate(subjects):
+        rm_top_right_lines(ax[i_s])
+        df_1 = df[df.subjid == subj]
+        df_sim_1 = df_sim[df_sim.subjid == subj]
+        coh_vec = df_1.coh2.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
+        sns.kdeplot(fix_breaks.reshape(-1)*1e3,
+                    color='k', ax=ax[i_s], label='Rats')
+        sns.kdeplot(df_sim_1.sound_len,
+                    color='r', ax=ax[i_s], label='Model')
         ax[i_s].set_title(subj)
-        ax[i_s].set_xlabel('RT (ms)')
+        ax[i_s].set_xlim(-205, 410)
+        if i_s >= 10:
+            ax[i_s].set_xlabel('RT (ms)')
+    ax[0].legend()
 
 
 def sess_t_index_stats(df, subjects):
@@ -1221,7 +1303,7 @@ def mt_diff_rev_nonrev(df):
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
 
 
-def supp_mt_per_rat(df, title='Data'):
+def supp_mt_per_rat(df, df_sim, title=''):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     for a in ax:
@@ -1229,18 +1311,24 @@ def supp_mt_per_rat(df, title='Data'):
     subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
-        if title == 'Data':
-            mt_nocom = df_1.loc[~df_1['CoM_sugg'], 'resp_len']*1e3
-            mt_com = df_1.loc[df_1['CoM_sugg'], 'resp_len']*1e3
-        else:
-            mt_nocom = df_1.loc[~df_1['com_detected'], 'resp_len']*1e3
-            mt_com = df_1.loc[df_1['com_detected'], 'resp_len']*1e3
-        sns.kdeplot(mt_com, color=COLOR_COM, ax=ax[i_s],
-                    label='Rev.')
-        sns.kdeplot(mt_nocom, color=COLOR_NO_COM, ax=ax[i_s],
-                    label='No-Rev.')
+        df_sim_1 = df_sim[df_sim.subjid == subj]
+        # mt_nocom_data = df_1.loc[~df_1['CoM_sugg'], 'resp_len']*1e3
+        # mt_com_data = df_1.loc[df_1['CoM_sugg'], 'resp_len']*1e3
+        # mt_nocom_sim = df_sim_1.loc[~df_sim_1['com_detected'], 'resp_len']*1e3
+        # mt_com_sim = df_sim_1.loc[df_sim_1['com_detected'], 'resp_len']*1e3
+        mt_rat = df_1.resp_len.values*1e3
+        mt_model = df_sim_1.resp_len.values*1e3
+        sns.kdeplot(mt_rat, color='k', ax=ax[i_s],
+                    label='Rats')
+        sns.kdeplot(mt_model, color='r', ax=ax[i_s],
+                    label='Model')
+        # sns.kdeplot(mt_com_sim, color=COLOR_COM, ax=ax[i_s],
+        #             label='Model Rev.', linestyle='--')
+        # sns.kdeplot(mt_nocom_sim, color=COLOR_NO_COM, ax=ax[i_s],
+        #             label='Model No-Rev.', linestyle='--')
         ax[i_s].set_xlabel('MT (ms)')
         ax[i_s].set_title(subj)
+        ax[i_s].set_xlim(-5, 725)
     ax[0].legend()
     fig.suptitle(title)
 

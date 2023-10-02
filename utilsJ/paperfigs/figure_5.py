@@ -356,8 +356,13 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
             bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
     bins_zt.append(-1.01)
     bins_zt = bins_zt[::-1]
+    if prior:
+        condition = 'choice_x_prior'
+        bins_zt, _, _, _, _ =\
+              fp.get_bin_info(df=df_sim, condition=condition, prior_limit=1,
+                              after_correct_only=True)
     # xvals_zt = [-1, -0.5, 0, 0.5, 1]
-    xvals_zt = np.linspace(-1, 1, 7)
+    xvals_zt = np.linspace(-1, 1, 5)
     signed_response = df_sim.R_response.values
     # df_sim['normallpriors'] = df_sim['allpriors'] /\
     #     np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)

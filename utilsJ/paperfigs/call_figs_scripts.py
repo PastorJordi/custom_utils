@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import seaborn as sns
+# from imp import reload
 import sys
 
 
@@ -25,12 +26,13 @@ from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
+# reload(fig_5)
 
-matplotlib.rcParams['font.size'] = 9
-plt.rcParams['legend.title_fontsize'] = 8
-plt.rcParams['legend.fontsize'] = 9
-plt.rcParams['xtick.labelsize']= 9
-plt.rcParams['ytick.labelsize']= 9
+matplotlib.rcParams['font.size'] = 13
+plt.rcParams['legend.title_fontsize'] = 10.5
+plt.rcParams['legend.fontsize'] = 10.5
+plt.rcParams['xtick.labelsize']= 10.5
+plt.rcParams['ytick.labelsize']= 10.5
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -122,7 +124,7 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 f8 = False
@@ -207,8 +209,8 @@ if f2:
 # fig 3
 if f3:
     print('Plotting Figure 3')
-    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                     rat_com_img=RAT_COM_IMG)
+    # fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+    #                  rat_com_img=RAT_COM_IMG)
     fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
@@ -252,7 +254,7 @@ if f5:
                             'rewside': (gt + 1)/2,
                             'R_response': (resp_fin+1)/2,
                             'resp_len': np.array(MT)*1e-3})
-    df_sim['CoM_sugg'] = com_model.astype(bool)
+    df_sim['com_und'] = com_model.astype(bool)
     df_sim['traj_d1'] = [np.diff(t) for t in trajs]
     df_sim['aftererror'] =\
         np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
@@ -260,7 +262,7 @@ if f5:
     df_sim['origidx'] = trial_index
     df_sim['special_trial'] = special_trial
     df_sim['traj'] = df_sim['trajectory_y']
-    df_sim['com_detected'] = com_model_detected.astype(bool)
+    df_sim['CoM_sugg'] = com_model_detected.astype(bool)
     df_sim['peak_com'] = np.array(x_val_at_updt)
     df_sim['hithistory'] = np.array(resp_fin == gt)
     df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
@@ -268,6 +270,7 @@ if f5:
     df_sim['allpriors'] = zt
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
     df_sim['normallpriors'] = df_sim['norm_allpriors']
+    df_sim['framerate']=200
     # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
     #                     offset=0)
     # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
@@ -276,32 +279,35 @@ if f5:
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
-    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-    if not with_fb:
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # memory save:
-    stim = []
-    traj_y = []
-    trial_index = []
-    special_trial = []
-    # df = []
-    gt = []
-    subjid = []
-    traj_stamps = []
-    fix_onset = []
-    fix_breaks = []
-    resp_len = []
-    time_trajs = []
-    # actual plot
-    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate, save_new_data=save_new_data,
-                      coh=coh, sound_len=sound_len, zt=zt,
-                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                      decision_model=resp_fin, com=com, com_model=com_model,
-                      com_model_detected=com_model_detected,
-                      means=means, errors=errors, means_model=means_model,
-                      errors_model=errors_model, df_sim=df_sim)
+    fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
+    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    # if not with_fb:
+    #     df_sim = df_sim[df_sim.sound_len.values >= 0]
+    # # memory save:
+    # stim = []
+    # traj_y = []
+    # trial_index = []
+    # special_trial = []
+    # # df = []
+    # gt = []
+    # subjid = []
+    # traj_stamps = []
+    # fix_onset = []
+    # fix_breaks = []
+    # resp_len = []
+    # time_trajs = []
+    # # fp.supp_plot_rt_distros_data_model(df, df_sim)
+    
+    # # actual plot
+    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+    #                   new_data=simulate, save_new_data=save_new_data,
+    #                   coh=coh, sound_len=sound_len, zt=zt,
+    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+    #                   decision_model=resp_fin, com=com, com_model=com_model,
+    #                   com_model_detected=com_model_detected,
+    #                   means=means, errors=errors, means_model=means_model,
+    #                   errors_model=errors_model, df_sim=df_sim)
     # fig, ax = plt.subplots(ncols=2, nrows=1)
     # ax = ax.flatten()
     # ax[0].set_title('Data')

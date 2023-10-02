@@ -644,39 +644,37 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
 
 def supp_com_marginal(df, sv_folder):
     fig, ax = plt.subplots(nrows=5, ncols=6,
-                           figsize=(8, 8))
+                           figsize=(13, 10),
+                           gridspec_kw={'top': 0.92, 'bottom': 0.08,
+                                        'left': 0.08, 'right': 0.92,
+                                        'hspace': 0.4, 'wspace': 0.4})
     ax = ax.flatten()
     for i_ax, subj in enumerate(df.subjid.unique()):
+        ax[i_ax*2].text(1.25, 1.25, subj, transform=ax[i_ax*2].transAxes, fontsize=16,
+                        va='top', ha='right')
         df_1 = df.loc[df.subjid == subj]
         nbins = 7
         matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
         matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
         ax_mat = [ax[i_ax*2], ax[i_ax*2+1]]
         pos_com_0 = ax_mat[0].get_position()
-        ax_mat[0].set_position([pos_com_0.x0 + pos_com_0.width*0.1, pos_com_0.y0,
+        ax_mat[0].set_position([pos_com_0.x0 + pos_com_0.width*0.3, pos_com_0.y0,
                                 pos_com_0.width, pos_com_0.height])
-        ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.6, pos_com_0.y0,
+        ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
                                 pos_com_0.width, pos_com_0.height])
         # L-> R
         vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-        pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
         im = ax[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
         # plt.sca(ax[i_ax*2])
         # plt.colorbar(im, fraction=0.04)
         # R -> L
-        pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
         im = ax[i_ax*2+1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
         ax[i_ax*2+1].yaxis.set_ticks_position('none')
-        # plt.sca(ax[i_ax*2+1])
+        plt.sca(ax[i_ax*2+1])
         if (i_ax+1) % 3 == 0:    
             plt.colorbar(im, fraction=0.04, label='p(Reversal)')
         else:
             plt.colorbar(im, fraction=0.04)
-        if i_ax <= 2:
-            ax[i_ax*2].set_title(pcomlabel_1 + '\n                                         ' + subj)
-            ax[i_ax*2+1].set_title(pcomlabel_0 + '\n' + ' ')
-        else:
-            ax[i_ax*2].set_title('                                         ' + subj)
         for ax_i in [ax[i_ax*2], ax[i_ax*2+1]]:
             ax_i.set_yticklabels(['']*nbins)
             ax_i.set_xticklabels(['']*nbins)
