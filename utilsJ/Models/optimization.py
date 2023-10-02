@@ -41,15 +41,15 @@ from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.Models import analyses_humans as ah
 
-DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -1289,7 +1289,7 @@ def get_manual_kl_divergence(mat_model, mat_nn):
 def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=int(5e5),
                                   n_list=[4000000], cohval=0.5, ztval=0.5, tival=10,
                                   plot_nn=False, simulate=False, plot_model=True,
-                                  plot_nn_alone=False, xt=False, eps=1e-5):
+                                  plot_nn_alone=False, xt=False, eps=1e-5, n_trials_sim=100):
     grid_rt = np.arange(-100, 300, 12) + 300
     grid_mt = np.arange(100, 600, 25)
     # all_rt = np.meshgrid(grid_rt, grid_mt)[0].flatten()
@@ -1300,11 +1300,26 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
     # x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     # to simulate
     if simulate:
-        for cohval, ztval, tival in zip([0, 1, 0.5, 0.5, 0.25, 0.25],
-                                        [1.5, 0.05, 1.5, -1.5, 0.5, 0.5],
-                                        [400, 400, 400, 400, 10, 800]):
-            stim = np.array(
-                [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+        coh = df.coh2.values
+        zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+        trial_index = df.origidx.values
+        idxs = np.random.choice(np.arange(len(coh)), size=100)
+        cohvals = coh[idxs]
+        coh = []
+        ztvals = np.round(zt[idxs], 2)
+        zt = []
+        tivals = trial_index[idxs]
+        trial_index = []
+        stims = np.array(
+            [stim for stim in df.res_sound])[idxs]
+        np.save(sv_folder + '/10M/cohvals.npy', cohvals)
+        np.save(sv_folder + '/10M/ztvals.npy', ztvals)
+        np.save(sv_folder + '/10M/tivals.npy', tivals)
+        np.save(sv_folder + '/10M/stims.npy', stims)
+        np.save(sv_folder + '/10M/idxs.npy', idxs)
+        i = 0
+        for cohval, ztval, tival in zip(cohvals, ztvals, tivals):
+            stim = stims[i]
             theta = get_x0()
             theta = torch.reshape(torch.tensor(theta),
                                   (1, len(theta))).to(torch.float32)
@@ -1328,6 +1343,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             x = []
             mat_0 = []
             mat_1 = []
+            i += 1
     else:
         trial_index = np.repeat(tival, num_simulations)
         mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
