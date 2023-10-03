@@ -26,6 +26,7 @@ from pybads import BADS
 import itertools
 from scipy.spatial import distance as dist
 import os
+from scipy.signal import convolve2d
 # from pyvbmc import VBMC
 
 sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
@@ -41,15 +42,15 @@ from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.Models import analyses_humans as ah
 
-# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -1663,7 +1664,11 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
     cohvals = [0, 1, 0.5, 0.5, 0.25, 0.25]
     tivals = [400, 400, 400, 400, 10, 800]
     p = 0
+    letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g' , ' ']
     for ztval, cohval, tival in zip(ztvals, cohvals, tivals):
+        if p <= 12:
+            ax[p].text(-0.16, 1.2, letters[p // 2], transform=ax[p].transAxes,
+                       fontsize=16, fontweight='bold', va='top', ha='right')
         pos_ax_1 = ax[p+1].get_position()
         ax[p+1].set_position([pos_ax_1.x0 - pos_ax_1.width/9,
                               pos_ax_1.y0, pos_ax_1.width,
@@ -1717,18 +1722,26 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
         else:
             ax[p].set_xticks([])
             ax[p+1].set_xticks([])
+        pos_ax_12 = ax[p].get_position()
+        ax[p].set_position([pos_ax_12.x0 + pos_ax_12.width/12,
+                             pos_ax_12.y0, pos_ax_12.width, pos_ax_12.height])
+        pos_ax_12 = ax[p+1].get_position()
+        ax[p+1].set_position([pos_ax_12.x0 - pos_ax_12.width/7,
+                             pos_ax_12.y0, pos_ax_12.width, pos_ax_12.height])
         p += 2
     ax[13].axis('off')
     ax[15].axis('off')
     pos_ax_12 = ax[12].get_position()
     ax[12].set_position([pos_ax_12.x0 + pos_ax_12.width/3,
-                         pos_ax_12.y0, pos_ax_12.width*1.8,
+                         pos_ax_12.y0-pos_ax_12.height/5, pos_ax_12.width*1.8,
                          pos_ax_12.height])
     pos_ax_12 = ax[14].get_position()
     ax[14].set_position([pos_ax_12.x0 + pos_ax_12.width/4,
-                         pos_ax_12.y0, pos_ax_12.width*1.8,
+                         pos_ax_12.y0-pos_ax_12.height/5, pos_ax_12.width*1.8,
                          pos_ax_12.height])
     supp_plot_dist_vs_n(ax=[ax[12], ax[14]])
+    ax[12].text(-0.15, 1.2, letters[-2], transform=ax[12].transAxes,
+               fontsize=16, fontweight='bold', va='top', ha='right')
 
 
 def plot_nn_to_nn_kldistance(n_trials=10000000):
@@ -1876,9 +1889,9 @@ def bhatt_dist(p, q):
 
 def supp_plot_dist_vs_n(ax, n_list=[1000, 10000, 100000, 500000, 1000000, 2000000,
                                     4000000, 10000000]):
-    cohvals = np.load(SV_FOLDER + '/10M/cohvals.npy')
-    ztvals = np.load(SV_FOLDER + '/10M/ztvals.npy')
-    tivals = np.load(SV_FOLDER + '/10M/tivals.npy')
+    cohvals = np.load(SV_FOLDER + '/10M/100_sims/cohvals.npy', allow_pickle=True)
+    ztvals = np.load(SV_FOLDER + '/10M/100_sims/ztvals.npy', allow_pickle=True)
+    tivals = np.load(SV_FOLDER + '/10M/100_sims/tivals.npy', allow_pickle=True)
     bhat_mat = np.zeros((len(cohvals), len(n_list)))
     js_mat = np.zeros((len(cohvals), len(n_list)))
     for i_n, n_trial in enumerate(n_list):
@@ -1898,14 +1911,21 @@ def supp_plot_dist_vs_n(ax, n_list=[1000, 10000, 100000, 500000, 1000000, 200000
         a.set_xscale('log')
         rm_top_right_lines(a)
         a.set_xlabel('N trials for training')
-    for j in range(6):
-        # mse_mat_norm_max[j, :] /= np.max(mse_mat_norm_max[j, :])
-        ax[0].plot(n_list,  bhat_mat[j, :] , color='r', alpha=0.4)
-        ax[1].plot(n_list,  js_mat[j, :] , color='r', alpha=0.4)
+    # mse_mat_norm_max = np.copy(bhat_mat)
+    # for j in range(100):
+    #     # mse_mat_norm_max[j, :] /= np.max(mse_mat_norm_max[j, :])
+    #     ax[0].plot(n_list,  bhat_mat[j, :] , color='r', alpha=0.02)
+    #     ax[1].plot(n_list,  js_mat[j, :] , color='r', alpha=0.02)
     mean_bhat = np.nanmean(bhat_mat, axis=0)
     mean_js = np.nanmean(js_mat, axis=0)
+    err_bhat = np.nanstd(bhat_mat, axis=0)
+    err_js = np.nanstd(js_mat, axis=0)
     ax[0].plot(n_list, mean_bhat, linewidth=2, color='r')
     ax[1].plot(n_list, mean_js, linewidth=2, color='r')
+    ax[0].fill_between(n_list, mean_bhat-err_bhat, mean_bhat+err_bhat, color='r',
+                       alpha=0.2)
+    ax[1].fill_between(n_list, mean_js-err_js, mean_js+err_js, color='r',
+                       alpha=0.2)
     # ax.set_ylabel(r'KL divergence, $D(x,y)+D(y,x)$')
     # ax.set_ylabel('MSE(NN, model)')
     ax[0].set_ylabel('Bhattacharyya \n distance')
@@ -1925,9 +1945,9 @@ def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5))
     # generated data
     x_o = torch.tensor(np.concatenate((comb_0, comb_1))).to(torch.float32)
     trial_index = np.repeat(tival, num_simulations)
-    mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
+    mat_0 = np.load(SV_FOLDER + '/10M/100_sims/mat0_coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival))
-    mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
+    mat_1 = np.load(SV_FOLDER + '/10M/100_sims/mat1_coh{}_zt{}_ti{}.npy'
                     .format(cohval, ztval, tival))
     with open(SV_FOLDER + "/mnle_n{}_no_noise.p".format(n_sim_train),
               'rb') as f:
@@ -1964,7 +1984,19 @@ def mse_lh_model_nn(n_sim_train, cohval, ztval, tival, num_simulations=int(5e5))
     mat_nn = np.array((((mat_0_nn), (mat_1_nn))))
     # kl0 = get_manual_kl_divergence(mat_0*(1-1e-3)+1e-9, mat_0_nn*(1-1e-3)+1e-9)
     # kl1 = get_manual_kl_divergence(mat_1*(1-1e-3)+1e-9, mat_1_nn*(1-1e-3)+1e-9)
-    # kl_all_1 = get_manual_kl_divergence(mat_model*(1-1e-3)+1e-9, mat_nn*(1-1e-3)+1e-9)
+    # mat_0_nn_smooth = convolve2d(mat_0_nn, np.ones((5, 5)))
+    # mat_1_nn_smooth = convolve2d(mat_1_nn, np.ones((5, 5)))
+    # mat_0_smooth = convolve2d(mat_0, np.ones((5, 5)))
+    # mat_1_smooth = convolve2d(mat_1, np.ones((5, 5)))
+    # cte_nn = np.sum(mat_0_nn_smooth + mat_1_nn_smooth)
+    # mat_0_nn_smooth /= cte_nn
+    # mat_1_nn_smooth /= cte_nn
+    # cte_mod = np.sum(mat_0_smooth + mat_1_smooth)
+    # mat_0_smooth /= cte_mod
+    # mat_1_smooth /= cte_mod
+    # mat_model = np.array((((mat_0_smooth), (mat_1_smooth))))
+    # mat_nn = np.array((((mat_0_nn_smooth), (mat_1_nn_smooth))))
+    # kl_all_1 = get_manual_kl_divergence(mat_model, mat_nn)
     # kl_all_2 = get_manual_kl_divergence(mat_nn*(1-1e-3)+1e-9, mat_model*(1-1e-3)+1e-9)
     estimator = []
     return bhatt_dist(mat_model, mat_nn), np.nansum(dist.jensenshannon(mat_model, mat_nn))

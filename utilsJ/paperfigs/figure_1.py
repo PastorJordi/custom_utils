@@ -137,7 +137,7 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
 
 def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
                          errors_model=None, width=0.35):
-    labels = ['Prior', 'Stimulus']  # , 'Trial index'
+    labels = ['Prior', '\n Stimulus']  # , 'Trial index'
     if not f5:
         ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='gray',
                ecolor='blue')
@@ -449,8 +449,8 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         ax.set_xticklabels(['-1', '0', '1'])
         ax.set_ylim([-0.5, 6.5])
         ax.set_xlim([-0.5, 6.5])
-        ax.set_xlabel('Prior Evidence')
-        ax.set_ylabel('Stimulus Evidence')
+        ax.set_xlabel('Prior evidence')
+        ax.set_ylabel('Stimulus evidence')
         pos = ax.get_position()
         cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
                           pos.width/12, pos.height/3])
@@ -458,14 +458,16 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         cbar_ax.set_title(r'$MT \;(ms)$', fontsize=8)
 
 
-def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
+def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7.5, 9), margin=.05):
     f, ax = plt.subplots(nrows=4, ncols=3, figsize=figsize)  # figsize=(4, 3))
+    plt.subplots_adjust(top=0.85, bottom=0.15, left=0.05, right=0.85,
+                        hspace=0.5, wspace=0.4)
     ax = ax.flatten()
     # TUNE PANELS
     # all panels
     letters = ['', '',  'c', '', '', 'd', 'e', 'f', '', 'g', 'h', 'i']
     for n, ax_1 in enumerate(ax):
-        fp.add_text(ax=ax_1, letter=letters[n], x=-0.15, y=1.2)
+        fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
         if n not in [4, 10]:
             fp.rm_top_right_lines(ax_1)
 
@@ -474,10 +476,10 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     # task panel
     ax_task = ax[0]
     pos_task = ax_task.get_position()
-    factor = 1.75
-    ax_task.set_position([pos_task.x0+0.05, pos_task.y0-0.05,
+    factor = 2.3
+    ax_task.set_position([pos_task.x0+0.05, pos_task.y0-0.025,
                           pos_task.width*factor, pos_task.height*factor])
-    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
+    fp.add_text(ax=ax_task, letter='a', x=0.1, y=0.88)
     # rt panel
     ax_rts = ax[2]
     fp.rm_top_right_lines(ax=ax_rts)
@@ -501,13 +503,13 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     ax_pright.set_xticks([0, 3, 6])
     ax_pright.set_xlim([-0.5, 6.5])
     ax_pright.set_xticklabels(['Left', '', 'Right'])
-    ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_ylabel('Stimulus Evidence')
+    ax_pright.set_xlabel('Prior evidence')
+    ax_pright.set_ylabel('Stimulus evidence')
     pright_cbar_ax.set_title('p(Right)', fontsize=9)
-    fp.add_text(ax=ax_pright, letter='b', x=-0.2, y=1.15)
+    fp.add_text(ax=ax_pright, letter='b', x=-0.17, y=1.3)
     # tachometric panel
     ax_tach = ax[5]
-    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_xlabel('Reaction time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.5, 1.04)
     ax_tach.set_xlim(-101, 201)
@@ -534,14 +536,14 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     ax[8].axis('off')
     # regression weights panel
     # make axis 9 smaller and move it to the right
-    factor = 0.5
+    factor = 0.8
     pos = ax[9].get_position()
     ax[9].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
     # mt matrix panel
     # make axis 10 smaller and move it to the right
     factor = 0.8
     pos = ax[10].get_position()
-    ax[10].set_position([pos.x0+shift/3, pos.y0-margin, pos.width*factor, pos.height])
+    ax[10].set_position([pos.x0+shift/1.35, pos.y0-margin, pos.width*factor, pos.height])
     # mt versus silent panel
     # make axis 11 smaller
     pos = ax[11].get_position()

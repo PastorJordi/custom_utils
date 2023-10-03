@@ -28,11 +28,11 @@ from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
-matplotlib.rcParams['font.size'] = 13
-plt.rcParams['legend.title_fontsize'] = 10.5
-plt.rcParams['legend.fontsize'] = 10.5
-plt.rcParams['xtick.labelsize']= 10.5
-plt.rcParams['ytick.labelsize']= 10.5
+matplotlib.rcParams['font.size'] = 10
+plt.rcParams['legend.title_fontsize'] = 9
+plt.rcParams['legend.fontsize'] = 9
+plt.rcParams['xtick.labelsize']= 9
+plt.rcParams['ytick.labelsize']= 9
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -45,7 +45,7 @@ if pc_name == 'alex':
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
-    TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/panel_a.png'
+    TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/panel_a_all.png'
     HUMAN_TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/Human/g41085.png'
     ST_CARTOON_IMG =\
         'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/st_cartoon_violins.png'
@@ -121,7 +121,7 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
 f5 = False
@@ -138,7 +138,7 @@ if f1 or f2 or f3 or f5:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    # subjects = ['LE42', 'LE38', 'LE46']
+    subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -186,9 +186,9 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    # fig_1.fig_1_rats_behav(df_data=df,
-    #                        task_img=TASK_IMG, sv_folder=SV_FOLDER)
-    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    fig_1.fig_1_rats_behav(df_data=df,
+                            task_img=TASK_IMG, sv_folder=SV_FOLDER)
+    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
 if f2:

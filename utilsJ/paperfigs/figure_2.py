@@ -498,15 +498,16 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     # plot arrow
     al = 0.5
     hl = 0.4
-    ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=5,
+    ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=7,
              head_length=hl)
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
-        for i_l, lab in enumerate(labels):
-            legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+        for i_l, lab in enumerate(reversed(labels)):
+            legendelements.append(Line2D([0], [0], color=colormap[-i_l], lw=2,
                                   label=lab))
-        ax.legend(handles=legendelements, fontsize=7, loc='lower right')
+        ax.legend(handles=legendelements, fontsize=7, loc='lower right',
+                  labelspacing=0.1)
     
     # if xlab:
         
@@ -1041,11 +1042,11 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     # tune screenshot panel
     ax_scrnsht = ax[0]
     ax_scrnsht.set_xticks([])
-    right_port_y = 50
+    right_port_y = 70
     center_port_y = 250
-    left_port_y = 460
+    left_port_y = 440
     ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
-    ax_scrnsht.set_yticklabels([-85, 0, 85])
+    ax_scrnsht.set_yticklabels([-75, 0, 75])
     ax_scrnsht.set_xlabel('x dimension (pixels)')
     ax_scrnsht.set_ylabel('y dimension (pixels)')
     # add colorbar for screenshot
@@ -1059,7 +1060,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
     x_tcks_str[-1] += ' ms'
     ax_clbr.set_xticklabels(x_tcks_str)
-    ax_clbr.tick_params(labelsize=6)
+    ax_clbr.tick_params(labelsize=8)
     ax_clbr.set_yticks([])
     ax_clbr.xaxis.set_ticks_position("top")
     # tune trajectories panels
@@ -1111,7 +1112,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     # plt.show()
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
-    img = rat[150:646, 120:-10, :]
+    img = rat[80:576, 120:-10, :]
     ax_scrnsht.imshow(np.flipud(img)) # rat.shape = (796, 596, 4)
     ax_scrnsht.axhline(y=left_port_y, linestyle='--', color='k', lw=.5)
     ax_scrnsht.axhline(y=right_port_y, linestyle='--', color='k', lw=.5)
