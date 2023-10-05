@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 from scipy.stats import pearsonr
 import statsmodels.api as sm
+import matplotlib as mtp
 from matplotlib.lines import Line2D
 from scipy.stats import sem, ttest_1samp
 from sklearn.linear_model import LogisticRegression
@@ -105,7 +106,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Trial index'
         ax[1].set_xlabel('Trial index')
     ax[0].legend(handles=legendelements, loc='upper left', title=title,
-                labelspacing=.2)
+                labelspacing=.1, bbox_to_anchor=(0., 1.3))
     ax[1].set_xlabel(title)
     ax[0].set_xlim([-20, 450])
     ax[0].set_xticklabels('')
@@ -316,8 +317,8 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         pop_evidence = evl[nan_idx]
         pop_a = pop_a[nan_idx]
         try:
-            _, p2 = pearsonr(pop_a, pop_evidence)  # p2 = pvalue from pearson corr
-            plist.append(p2)
+            r, p2 = pearsonr(pop_a, pop_evidence)  # p2 = pvalue from pearson corr
+            plist.append(r)
         except Exception:  # TODO: really??
             continue
             # return np.nan
@@ -326,6 +327,148 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         if sim and np.isnan(p2):
             return i + 1
     return np.nan
+
+
+def get_corr_coef(mat, evl, pval=0.05, max_MT=400, startfrom=700, sim=True):
+    # Returns index at which the trajectories and coh vector become uncorrelated
+    # backwards in time
+    # mat: trajectories (n trials x time)
+    rlist = []
+    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
+        pop_a = mat[:, startfrom + i]
+        nan_idx = ~np.isnan(pop_a)
+        pop_evidence = evl[nan_idx]
+        pop_a = pop_a[nan_idx]
+        r, p2 = pearsonr(pop_a, pop_evidence)  # p2 = pvalue from pearson corr
+        rlist.append(r)
+    return rlist
+
+
+def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
+                       trajectory='trajectory_y', threshold=300):
+    # TODO: do analysis with equipopulated bins
+    # split time/subject by prior
+    cmap = mtp.colors.LinearSegmentedColormap.from_list("", ["chocolate", "white", "olivedrab"])
+    kw = {"trajectory": trajectory, "align": "sound"}
+    zt = df.norm_allpriors.values
+    out_data = np.empty((400, len(rtbins)-1, 15))
+    out_data[:] = np.nan
+    df_1 = df.copy()
+    out_data_sbj = []
+    split_data = data_folder + 'prior_matrix.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(split_data), exist_ok=True)
+    if os.path.exists(split_data):
+        out_data = np.load(split_data, allow_pickle=True)
+    else:
+        for i_s, subject in enumerate(df_1.subjid.unique()):
+            for i in range(rtbins.size-1):
+                dat = df_1.loc[(df_1.subjid == subject) &
+                            (df_1.sound_len < rtbins[i + 1]) &
+                            (df_1.sound_len >= rtbins[i]) &
+                            (~np.isnan(zt))]
+                ztl = zt[(df_1.subjid == subject) &
+                        (df_1.sound_len < rtbins[i + 1]) &
+                        (df_1.sound_len >= rtbins[i]) &
+                        (~np.isnan(zt))]
+                mat = np.vstack(
+                    dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+                ztl = ztl[~np.isnan(mat).all(axis=1)]
+                mat = mat[~np.isnan(mat).all(axis=1)]
+                current_split_index =\
+                    get_corr_coef(mat, ztl, pval=0.01, max_MT=400,
+                                  startfrom=700)
+                out_data[:, i, i_s] = current_split_index
+        np.save(split_data, out_data) 
+    # fig = plt.figure()
+    # ax = plt.axes(projection='3d')
+    r_coef_mean = np.nanmean(out_data, axis=2)
+    # timevals = np.arange(400)[::-1]
+    # xvalsrt = rtbins[:-1] + np.diff(rtbins)[0]
+    # rtgrid, timegrid = np.meshgrid(xvalsrt, timevals)
+    # ax.plot_surface(rtgrid, timegrid, r_coef_mean)
+    # ax.set_xlabel('RT (ms)')
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    # ax.set_zlabel('Corr. coef.')
+    # fig, ax = plt.subplots(1)
+    ax.set_title('Prior-Position \ncorrelation')
+    ax.plot([0, 14], [0, 150], color='k', linewidth=2)
+    im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
+                   vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylim(0, 304)
+    ax.set_yticks([])
+    # ax.set_ylabel('Time from stimulus onset (ms)')ç
+    pos = ax.get_position()
+    ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
+    # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.25,
+                                   pos.y0 + pos.height/10,
+                                   pos.width/20, pos.height/1.3])
+    cbar = plt.colorbar(im, cax=pright_cbar_ax)
+    cbar.set_label('Corr. coeff.')
+
+
+def corr_rt_time_stim(df, ax, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
+                      trajectory='trajectory_y', threshold=300):
+    # TODO: do analysis with equipopulated bins
+    # split time/subject by prior
+    cmap = mtp.colors.LinearSegmentedColormap.from_list("", ["chocolate", "white", "olivedrab"])
+    out_data = np.empty((400, len(rtbins)-1, 15))
+    out_data[:] = np.nan
+    splitfun = get_splitting_mat_data
+    df_1 = df.copy()
+    evs = [0, 0.25, 0.5, 1]
+    split_data = data_folder + 'stim_matrix.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(split_data), exist_ok=True)
+    if os.path.exists(split_data):
+        out_data = np.load(split_data, allow_pickle=True)
+    else:
+        for i_s, subject in enumerate(df_1.subjid.unique()):
+            for i in range(rtbins.size-1):
+                for iev, ev in enumerate(evs):
+                    matatmp =\
+                        splitfun(df=df.loc[(df.special_trial == 0)
+                                           & (df.subjid == subject)],
+                                 side=0,
+                                 rtbin=i, rtbins=rtbins, coh1=ev,
+                                 trajectory=trajectory, align="sound")
+                    if iev == 0:
+                        mat = matatmp
+                        evl = np.repeat(0, matatmp.shape[0])
+                    else:
+                        mat = np.concatenate((mat, matatmp))
+                        evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
+                current_split_index =\
+                    get_corr_coef(mat, evl, pval=0.05, max_MT=400,
+                                  startfrom=700)
+                out_data[:, i, i_s] = current_split_index
+        np.save(split_data, out_data)
+    # fig = plt.figure()
+    # fig.suptitle('Stimulus corr. coef.')
+    # ax = plt.axes(projection='3d')
+    r_coef_mean = np.nanmean(out_data, axis=2)
+    # timevals = np.arange(400)[::-1]
+    # xvalsrt = rtbins[:-1] + np.diff(rtbins)[0]
+    # rtgrid, timegrid = np.meshgrid(xvalsrt, timevals)
+    # ax.plot_surface(rtgrid, timegrid, r_coef_mean)
+    # ax.set_xlabel('RT (ms)')
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    # ax.set_zlabel('Corr. coef.')
+    # fig2, ax = plt.subplots(1)
+    # fig2.suptitle('Stimulus corr. coef.')
+    ax.set_title('Stimulus-Position \ncorrelation')
+    ax.plot([0, 14], [0, 150], color='k', linewidth=2)
+    ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
+              vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
+    ax.set_xlabel('RT (ms)')
+    ax.set_ylim(0, 304)
+    ax.set_ylabel('Time from stimulus onset (ms)')
+    ax.set_yticks([0, 100, 200, 300])
+    ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
+    # cbar = plt.colorbar(im, ax=ax)
+    # cbar.set_label('Corr. coeff.')
 
 
 def get_splitting_mat_data(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
@@ -476,7 +619,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         else:
             mat = np.concatenate((mat, matatmp))
             evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
-    ind = get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=startfrom)
+    ind = get_split_ind_corr(mat, evl, pval=0.05, max_MT=400, startfrom=startfrom)
     ind_y = np.max([m[ind+startfrom] for m in medians])
     ax.set_xlim(-10, 255)
     ax.set_ylim(-0.6, 5.2)
@@ -498,15 +641,15 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     # plot arrow
     al = 0.5
     hl = 0.4
-    ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=7,
+    ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=8,
              head_length=hl)
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
-        for i_l, lab in enumerate(reversed(labels)):
-            legendelements.append(Line2D([0], [0], color=colormap[-i_l], lw=2,
+        for i_l, lab in enumerate(labels[::-1]):
+            legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                   label=lab))
-        ax.legend(handles=legendelements, fontsize=7, loc='lower right',
+        ax.legend(handles=legendelements, fontsize=8, loc='lower right',
                   labelspacing=0.1)
     
     # if xlab:
@@ -535,13 +678,13 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
                           trajectory='trajectory_y', threshold=300):
     # TODO: do analysis with equipopulated bins
     # split time/subject by prior
-    ztbins = [0.1, 0.4, 1.1]
     kw = {"trajectory": trajectory, "align": "sound"}
+    zt = df.norm_allpriors.values
     out_data = []
     df_1 = df.copy()
     for subject in df_1.subjid.unique():
         out_data_sbj = []
-        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_prior.npz'
+        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_prior_005_fwd_9.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):
@@ -551,39 +694,20 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
             for i in range(rtbins.size-1):
                 dat = df_1.loc[(df_1.subjid == subject) &
                             (df_1.sound_len < rtbins[i + 1]) &
-                            (df_1.sound_len >= rtbins[i])]
-                matb_0 = np.vstack(
-                    dat.loc[(dat.norm_allpriors < 0.1) &
-                            (dat.norm_allpriors >= 0)]
-                    .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-                matb_1 = np.vstack(
-                    dat.loc[(dat.norm_allpriors > -0.1) &
-                            (dat.norm_allpriors <= 0)]
-                    .apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-                matb = np.vstack([matb_0*-1, matb_1])
-                mat = matb
-                ztl = np.repeat(0, matb.shape[0])
-                for i_z, zt1 in enumerate(ztbins[:-1]):
-                    mata_0 = np.vstack(
-                        dat.loc[(dat.norm_allpriors > zt1) &
-                                (dat.norm_allpriors <= ztbins[i_z+1])]
-                        .apply(lambda x: interpolapply(x, **kw),
-                            axis=1).values.tolist())
-                    mata_1 = np.vstack(
-                        dat.loc[(dat.norm_allpriors < -zt1) &
-                                (dat.norm_allpriors >= -ztbins[i_z+1])]
-                        .apply(lambda x: interpolapply(x, **kw),
-                            axis=1).values.tolist())
-                    mata = np.vstack([mata_0*-1, mata_1])
-                    ztl = np.concatenate((ztl, np.repeat(zt1, mata.shape[0])))
-                    mat = np.concatenate((mat, mata))
+                            (df_1.sound_len >= rtbins[i]) &
+                            (~np.isnan(zt))]
+                ztl = zt[(df_1.subjid == subject) &
+                        (df_1.sound_len < rtbins[i + 1]) &
+                        (df_1.sound_len >= rtbins[i]) &
+                        (~np.isnan(zt))]
+                mat = np.vstack(
+                    dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+                ztl = ztl[~np.isnan(mat).all(axis=1)]
+                mat = mat[~np.isnan(mat).all(axis=1)]
                 current_split_index =\
                     get_split_ind_corr(mat, ztl, pval=0.01, max_MT=400,
-                                    startfrom=700)
-                if current_split_index >= rtbins[i]:
-                    out_data_sbj += [current_split_index]
-                else:
-                    out_data_sbj += [np.nan]
+                                       startfrom=700)
+                out_data_sbj += [current_split_index]
             np.savez(split_data, out_data=out_data_sbj)
         out_data += [out_data_sbj]
     out_data = np.array(out_data).reshape(
@@ -653,7 +777,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     for subject in df.subjid.unique():
         out_data_sbj = []
         if not sim:
-            split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim.npz'
+            split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_005.npz'
         if sim:
             split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim.npz'
         # create folder if it doesn't exist
@@ -688,7 +812,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                             evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                     if not sim:
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.01, max_MT=400,
+                            get_split_ind_corr(mat, evl, pval=0.05, max_MT=400,
                                             startfrom=700)
                     if sim:
                         max_mt = 800
@@ -765,6 +889,8 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     ax.fill_between([0, 155], [0, 155], [0, 0],
                     color='grey', alpha=0.2)
     ax.set_xlim(-5, 155)
+    ax.set_ylim(-1, 305)
+    ax.set_yticks([0, 100, 200, 300])
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Splitting time (ms)')
     # ax.set_title('Impact of stimulus')
@@ -997,7 +1123,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
         if lett != 'X':
             fp.add_text(ax=a, letter=lett, x=-0.1, y=1.2)
     ax[8].axis('off')
-    ax[11].axis('off')
+    # ax[11].axis('off')
     # adjust panels positions
     plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
                         hspace=0.5, wspace=0.4)
@@ -1052,12 +1178,12 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     # add colorbar for screenshot
     n_stps = 100
     pos = ax_scrnsht.get_position()
-    ax_clbr = plt.axes([pos.x0+margin/4, pos.y0+pos.height+margin/8,
+    ax_clbr = plt.axes([pos.x0+margin/2, pos.y0+pos.height+margin/8,
                         pos.width*0.7, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
-    x_tcks = np.linspace(0, n_stps, 6)
+    x_tcks = np.linspace(0, n_stps, 5)
     ax_clbr.set_xticks(x_tcks)
-    x_tcks_str = ['0', '', '', '', '', str(4*n_stps)]
+    x_tcks_str = ['0', '', '', '', str(int(2.5*n_stps))]
     x_tcks_str[-1] += ' ms'
     ax_clbr.set_xticklabels(x_tcks_str)
     ax_clbr.tick_params(labelsize=8)
@@ -1079,7 +1205,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     pos_rawtr = ax_rawtr.get_position()
     ax_rawtr.set_position([pos_coh.x0, pos_rawtr.y0,
                            pos_rawtr.width/2, pos_rawtr.height])
-    fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=8)
+    fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=10)
     x_lim = [-100, 800]
     y_lim = [-100, 100]
     ax_ydim.set_xlim(x_lim)
@@ -1089,7 +1215,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     pos_ydim = ax_ydim.get_position()
     ax_ydim.set_position([pos_ydim.x0-1.5*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
-    fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=10)
     # tune splitting time panels
     factor_y = 0.5
     factor_x = 0.8
@@ -1108,7 +1234,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
         fp.rm_top_right_lines(a)
     # move ax[10] (spllting time coherence) to the right
     pos = ax[10].get_position()
-    ax[10].set_position([pos_coh.x0, pos.y0, pos.width, pos.height])
+    ax[10].set_position([pos_coh.x0, pos.y0+pos.height/12,
+                         pos.width*0.9, pos.height*0.9])
     # plt.show()
     # TRACKING SCREENSHOT
     rat = plt.imread(rat_nocom_img)
@@ -1158,9 +1285,14 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2),
                                   ylabel='Position')
     # TRAJECTORY SPLITTING PRIOR
-    trajs_splitting_prior(df=df, ax=ax[9], data_folder=data_folder)
+    # trajs_splitting_prior(df=df, ax=ax[9], data_folder=data_folder)
+    corr_rt_time_stim(df=df, ax=ax[10], data_folder=data_folder)
+    corr_rt_time_prior(df=df, fig=f, ax=ax[11], data_folder=data_folder)
+    pos = ax[11].get_position()
+    ax[11].set_position([pos.x0-pos.width/5, pos.y0+pos.height/12,
+                         pos.width*0.9, pos.height*0.9])
     # TRAJECTORY SPLITTING STIMULUS
-    trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[10],
+    trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[9],
                          connect_points=True)
     f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')

@@ -28,11 +28,11 @@ from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
-matplotlib.rcParams['font.size'] = 10
-plt.rcParams['legend.title_fontsize'] = 9
-plt.rcParams['legend.fontsize'] = 9
-plt.rcParams['xtick.labelsize']= 9
-plt.rcParams['ytick.labelsize']= 9
+matplotlib.rcParams['font.size'] = 11
+plt.rcParams['legend.title_fontsize'] = 10.5
+plt.rcParams['legend.fontsize'] = 10.5
+plt.rcParams['xtick.labelsize']= 10.5
+plt.rcParams['ytick.labelsize']= 10.5
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -121,8 +121,8 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = True
-f3 = False
+f2 = False
+f3 = True
 f4 = False
 f5 = False
 f6 = False
@@ -138,7 +138,7 @@ if f1 or f2 or f3 or f5:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    subjects = ['LE42', 'LE37', 'LE46']
+    # subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -209,9 +209,9 @@ if f2:
 # fig 3
 if f3:
     print('Plotting Figure 3')
-    # fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-    #                  rat_com_img=RAT_COM_IMG)
-    fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
+    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                     rat_com_img=RAT_COM_IMG)
+    # fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
 if f5:

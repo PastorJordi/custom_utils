@@ -194,7 +194,7 @@ def binning_mt_prior(df, bins):
         for bin in range(len(bins)-1):
             mt_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
                                 (df_sub.choice_x_prior < bins[bin+1]), 'resp_len']
-            mat_mt[i_s, bin] = np.nanmean(mt_sub)
+            mat_mt[i_s, bin] = np.nanmedian(mt_sub)
             if np.isnan(mat_mt[i_s, bin]):
                 print(1)
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)

@@ -112,7 +112,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.set_ylabel('Reversal accuracy')
     ax.set_xticks([0, 0.25, 0.5, 1])
     ax.set_xticklabels(['0', '0.25', '0.5', '1'])
-    ax.legend()
+    # ax.legend()
 
 
 def plot_coms_single_session(df, ax):
@@ -264,12 +264,12 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[0].set_title(pcomlabel_1, fontsize=9)
+    ax_mat[0].set_title(pcomlabel_1, fontsize=11.5)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
 
     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[1].set_title(pcomlabel_0, fontsize=9)
+    ax_mat[1].set_title(pcomlabel_0, fontsize=11.5)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
@@ -290,7 +290,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     cbar_right = plt.colorbar(im_2, fraction=0.03, location='top')
     for t in cbar_right.ax.get_yticklabels():
         t.set_fontsize(7.5)
-    cbar_right.ax.set_title('p(Right)', fontsize=8)
+    cbar_right.ax.set_title('p(Right)', fontsize=10)
     cbar_right.ax.tick_params(rotation=45)
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
@@ -396,9 +396,9 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     ax.set_ylim(-30, 85)
     ax.set_xlim(-100, 500)
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
-                             label='Detected Reversal'),
+                             label='Detected reversal'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
-                             label='No-Reversal')]
+                             label='No-reversal')]
     ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(20, -20, "Detection threshold", color='r')
@@ -481,10 +481,10 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
     ax_inset.boxplot(comlist_rats)
-    ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.2, comlist_rats, 'o',
+    ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.1, comlist_rats, 'o',
                   color='grey', alpha=0.4)
     ax_inset.set_xticks([])
-    ax_inset.set_ylabel('P(reversal)')
+    ax_inset.set_ylabel('P(Reversal)')
     # ax_inset.set_ylabel('# Rats')
 
 
@@ -514,9 +514,9 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         mt_com_mat[:, i_s] = counts_com/sum(counts_com)
         mt_nocom_mat[:, i_s] = counts_nocom/sum(counts_nocom)
     ax.plot(xvals, np.nanmean(mt_com_mat, axis=1), color=COLOR_COM,
-            label='Detected Reversal', linewidth=1.6)
+            label='Detected reversal', linewidth=1.6)
     ax.plot(xvals, np.nanmean(mt_nocom_mat, axis=1), color=COLOR_NO_COM,
-            label='No-Reversal', linewidth=1.6)
+            label='No-reversal', linewidth=1.6)
     if median_lines:
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
@@ -609,9 +609,9 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat = [ax[6], ax[7]]
     ax_mat[0].set_title(pcomlabel_0)
-    im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
+    im = ax_mat[0].imshow(np.flipud(matrix_side_1), vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].set_title(pcomlabel_1)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
+    im = ax_mat[1].imshow(np.flipud(matrix_side_0), vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     margin = 0.01
     for ax_i in [ax_mat[0], ax_mat[1]]:
@@ -625,7 +625,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
                                 pos.height])
     pos = ax_mat[1].get_position()
-    ax_mat[1].set_position([pos.x0-5*margin, pos.y0, pos.width,
+    ax_mat[1].set_position([pos.x0-10*margin, pos.y0, pos.width,
                                 pos.height])
     pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.2, pos.y0,
                                    pos.width/10, pos.height/2])
@@ -634,7 +634,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     # COM PROB VERSUS REACTION TIME PANEL
     fig2.e(df, sv_folder=sv_folder, ax=ax[8])
     ax[8].set_ylim(0, 0.075)
-    ax[8].set_ylabel('p(detected Reversal)')
+    ax[8].set_ylabel('p(detected reversal)')
     # MT DISTRIBUTIONS PANEL
     fp.rm_top_right_lines(ax=ax[9])
     mt_distros(df=df, ax=ax[9])
