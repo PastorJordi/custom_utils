@@ -481,15 +481,15 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     ax_task = ax[0]
     pos_task = ax_task.get_position()
     factor = 2.1
-    ax_task.set_position([pos_task.x0, pos_task.y0-0.025,
+    ax_task.set_position([pos_task.x0, pos_task.y0-0.04,
                           pos_task.width*factor, pos_task.height*factor])
     fp.add_text(ax=ax_task, letter='a', x=0.1, y=1)
     # rep-alt img
     ax_repalt = ax[2]
     pos_repalt = ax_repalt.get_position()
     factor = 1.25
-    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/5,
-                            pos_repalt.y0+0.025,
+    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/3,
+                            pos_repalt.y0+0.02,
                             pos_repalt.width*factor, pos_repalt.height*factor])
     # rt panel
     ax_rts = ax[4]
@@ -505,13 +505,14 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     pos_pright = ax_pright.get_position()
     factor = 1.1
     ax_pright.set_position([pos_pright.x0,
-                            pos_pright.y0 + 0.025,
+                            pos_pright.y0 + 0.05,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
     pos_pright = ax_pright.get_position()
-    # pright_cbar_ax = f.add_axes([pos_pright.x0+pos_pright.width/5,
-    #                              pos_pright.y0+pos_pright.height*1.1,
-    #                              pos_pright.width/2, pos_pright.height/10])
+    pright_cbar_ax = f.add_axes([pos_pright.x0+pos_pright.width/2.2,
+                                 pos_pright.y0+pos_pright.height*1.2,
+                                 pos_pright.width/2.2, pos_pright.height/10])
+    pright_cbar_ax.invert_yaxis()
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
     ax_pright.set_yticklabels(['L', '', 'R'])
@@ -593,13 +594,8 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
 
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
-    factor = 1.1
-    ax_pright.set_position([pos_pright.x0,
-                            pos_pright.y0 + pos_pright.height*factor,
-                            pos_pright.width*factor,
-                            pos_pright.height*factor])
-    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (Right)',
-                      shrink=0.45, aspect=5)
+    cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
+    pright_cbar_ax.set_title('p (Right)')
     cbar.ax.tick_params(rotation=45)
     df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
