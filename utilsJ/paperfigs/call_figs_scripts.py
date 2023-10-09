@@ -28,18 +28,18 @@ from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
-matplotlib.rcParams['font.size'] = 11
-plt.rcParams['legend.title_fontsize'] = 10.5
-plt.rcParams['legend.fontsize'] = 10.5
-plt.rcParams['xtick.labelsize']= 10.5
-plt.rcParams['ytick.labelsize']= 10.5
+matplotlib.rcParams['font.size'] = 8
+plt.rcParams['legend.title_fontsize'] = 9
+plt.rcParams['legend.fontsize'] = 8
+plt.rcParams['xtick.labelsize']= 8
+plt.rcParams['ytick.labelsize']= 8
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -76,7 +76,8 @@ elif pc_name == 'alex_CRM':
     RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
     RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
     HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
-    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
+    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/figures/panel_a.png'
+    REPALT_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/figures/repalt.png'
 
 
 def plot_psyc(decision_rat, decision_model, coh):
@@ -187,7 +188,8 @@ if f1 or f2 or f3 or f5:
 if f1:
     print('Plotting Figure 1')
     fig_1.fig_1_rats_behav(df_data=df,
-                            task_img=TASK_IMG, sv_folder=SV_FOLDER)
+                            task_img=TASK_IMG, sv_folder=SV_FOLDER,
+                            repalt_img=REPALT_IMG)
     # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
