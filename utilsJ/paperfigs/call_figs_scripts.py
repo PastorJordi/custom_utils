@@ -120,9 +120,9 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = False
+f1 = True
 f2 = False
-f3 = True
+f3 = False
 f4 = False
 f5 = False
 f6 = False

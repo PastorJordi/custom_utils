@@ -481,8 +481,8 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         mean_coms = np.nanmean(df_1.CoM_sugg.values)
         comlist_rats.append(mean_coms)
     ax_inset.boxplot(comlist_rats)
-    ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.1, comlist_rats, 'o',
-                  color='grey', alpha=0.4)
+    ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.06, comlist_rats, 'o',
+                  color='grey', alpha=0.5)
     ax_inset.set_xticks([])
     ax_inset.set_ylabel('P(Reversal)')
     # ax_inset.set_ylabel('# Rats')
@@ -542,7 +542,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     ax[2].set_position([pos_ax_2.x0 + pos_ax_0.width*0.2,
                         pos_ax_2.y0 + pos_ax_2.height/6,
                         pos_ax_2.width*0.8, pos_ax_2.height*4/6])
-    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', '', 'g', 'h', '', '']
+    labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '', 'h', '', '']
     for n, axis in enumerate(ax):
         if n == 4:
             axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
@@ -550,7 +550,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
         elif n == 1:
             axis.text(-0.1, 1.05, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-        elif n == 6:
+        elif n == 7:
             axis.text(-0.1, 1.3, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         else:
@@ -586,8 +586,8 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
     # PROPORTION CORRECT COM VS STIM PANEL
-    fp.rm_top_right_lines(ax=ax[5])
-    plot_proportion_corr_com_vs_stim(df, ax[5])
+    fp.rm_top_right_lines(ax=ax[6])
+    plot_proportion_corr_com_vs_stim(df, ax[6])
     # PCOM MATRICES
     n_subjs = len(df.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
@@ -605,9 +605,9 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat = [ax[6], ax[7]]
+    pcomlabel_1 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat = [ax[7], ax[8]]
     ax_mat[0].set_title(pcomlabel_0)
     im = ax_mat[0].imshow(np.flipud(matrix_side_1), vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].set_title(pcomlabel_1)
@@ -616,28 +616,30 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     margin = 0.01
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior Evidence')
-        ax_i.set_yticks([0, 3, 6])
-        ax_i.set_yticklabels(['R', '0', 'L'])
         ax_i.set_xticks([0, 3, 6])
-        ax_i.set_xticklabels(['R', '0', 'L'])
+        ax_i.set_xticklabels(['L', '0', 'R'])
         ax_i.set_ylim([-.5, 6.5])
+    ax_mat[0].set_yticks([0, 3, 6])
+    ax_mat[0].set_yticklabels(['L', '0', 'R'])
+    ax_mat[1].set_yticks([])
     pos = ax_mat[0].get_position()
     ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
                                 pos.height])
     pos = ax_mat[1].get_position()
     ax_mat[1].set_position([pos.x0-10*margin, pos.y0, pos.width,
                                 pos.height])
-    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.2, pos.y0,
-                                   pos.width/10, pos.height/2])
-    fig.colorbar(im, cax=pright_cbar_ax)
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.62, pos.y0,
+                                   pos.width/14, pos.height/2])
+    cbar = fig.colorbar(im, cax=pright_cbar_ax)
+    cbar.ax.set_title('           p(reversal)')
     ax_mat[0].set_ylabel('Stimulus Evidence')
     # COM PROB VERSUS REACTION TIME PANEL
-    fig2.e(df, sv_folder=sv_folder, ax=ax[8])
-    ax[8].set_ylim(0, 0.075)
-    ax[8].set_ylabel('p(detected reversal)')
+    fig2.e(df, sv_folder=sv_folder, ax=ax[9])
+    ax[9].set_ylim(0, 0.075)
+    ax[9].set_ylabel('p(reversal)')
     # MT DISTRIBUTIONS PANEL
-    fp.rm_top_right_lines(ax=ax[9])
-    mt_distros(df=df, ax=ax[9])
+    fp.rm_top_right_lines(ax=ax[5])
+    mt_distros(df=df, ax=ax[5])
     fig.savefig(sv_folder+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig3.png', dpi=400, bbox_inches='tight')
 

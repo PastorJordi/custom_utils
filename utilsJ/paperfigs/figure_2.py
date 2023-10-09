@@ -409,7 +409,7 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     cbar.set_label('Corr. coeff.')
 
 
-def corr_rt_time_stim(df, ax, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
+def corr_rt_time_stim(df, ax, split_data_all_s, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
                       trajectory='trajectory_y', threshold=300):
     # TODO: do analysis with equipopulated bins
     # split time/subject by prior
@@ -460,6 +460,8 @@ def corr_rt_time_stim(df, ax, data_folder, rtbins=np.linspace(0, 150, 16, dtype=
     # fig2.suptitle('Stimulus corr. coef.')
     ax.set_title('Stimulus-Position \ncorrelation')
     ax.plot([0, 14], [0, 150], color='k', linewidth=2)
+    ax.plot(np.arange(len(split_data_all_s)),
+            split_data_all_s, color='firebrick', linewidth=1.4, alpha=0.5)
     ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
               vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
     ax.set_xlabel('RT (ms)')
@@ -895,6 +897,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     ax.set_ylabel('Splitting time (ms)')
     # ax.set_title('Impact of stimulus')
     # plt.show()
+    return np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1)
 
 
 def splitting_time_frames_ttest_across(df, frame_len=50, rtbins=np.linspace(0, 150, 7),
@@ -1284,15 +1287,15 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
     plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2),
                                   ylabel='Position')
-    # TRAJECTORY SPLITTING PRIOR
+    # TRAJECTORY SPLITTING STIMULUS
+    split_data_all_s = trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[9],
+                                            connect_points=True)
     # trajs_splitting_prior(df=df, ax=ax[9], data_folder=data_folder)
-    corr_rt_time_stim(df=df, ax=ax[10], data_folder=data_folder)
+    corr_rt_time_stim(df=df, split_data_all_s=split_data_all_s,
+                      ax=ax[10], data_folder=data_folder)
     corr_rt_time_prior(df=df, fig=f, ax=ax[11], data_folder=data_folder)
     pos = ax[11].get_position()
     ax[11].set_position([pos.x0-pos.width/5, pos.y0+pos.height/12,
                          pos.width*0.9, pos.height*0.9])
-    # TRAJECTORY SPLITTING STIMULUS
-    trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[9],
-                         connect_points=True)
     f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')

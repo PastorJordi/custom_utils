@@ -89,7 +89,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.errorbar(bin, median_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o')
 
-        ax.set_ylabel('Movement Time (ms)')
+        ax.set_ylabel('Movement time (ms)')
     ax.plot(plot_bins, np.median(mt_time, axis=0), color='k', ls='-', lw=0.5)
     ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
 
@@ -277,7 +277,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50):
     # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     ax.set_xticks([-1, 0, 1])
     ax.set_xlabel('Stimulus')
-    ax.set_ylabel('MT (ms)')
+    ax.set_ylabel('Movement time (ms)')
 
 
 def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
