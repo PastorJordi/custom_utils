@@ -141,21 +141,21 @@ def plot_coms_single_session(df, ax):
     ax.set_yticks([-75, -50, -25, 0, 25, 50, 75])
 
 
-def tracking_image(ax, rat_com_img, margin=.01):
+def tracking_image(ax, rat_com_img, margin=.004):
     ax.axhline(y=50, linestyle='--', color='k', lw=.5)
     ax.axhline(y=210, linestyle='--', color='k', lw=.5)
     ax_scrnsht = ax
     pos = ax_scrnsht.get_position()
-    ax_scrnsht.set_position([pos.x0, pos.y0, pos.width,
+    ax_scrnsht.set_position([pos.x0-pos.width/10, pos.y0, pos.width,
                              pos.height])
     # add colorbar for screenshot
     n_stps = 100
-    ax_clbr = plt.axes([pos.x0+pos.width*1/7, pos.y0+pos.height+margin,
+    ax_clbr = plt.axes([pos.x0+pos.width*1/7, pos.y0+pos.height/1.05+margin,
                         pos.width*0.6, pos.height/15])
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     ax_clbr.set_xticks([0, n_stps-1])
     ax_clbr.set_xticklabels(['0', '400ms'])
-    ax_clbr.tick_params(labelsize=6)
+    ax_clbr.tick_params(labelsize=9)
     # ax_clbr.set_title('$N_{max}$', fontsize=6)
     ax_clbr.set_yticks([])
     ax_clbr.xaxis.set_ticks_position("top")
@@ -241,7 +241,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     else:
         tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
-    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_xlabel('Reaction time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.3, 1.04)
     ax_tach.spines['right'].set_visible(False)
@@ -263,18 +263,18 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     matrix_side_1 = com_heatmap_paper_marginal_pcom_side(df=df_data, side=1)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_1, fontsize=11.5)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
 
-    pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Right to reft'  # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[1].set_title(pcomlabel_0, fontsize=11.5)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
     cbar = plt.colorbar(im, fraction=0.04)
-    cbar.set_label('p(detected CoM)', rotation=270, labelpad=10)
+    cbar.set_label('p (reversal)', rotation=270, labelpad=14)
     # pright matrix
     if humans:
         coh = df_data['avtrapz'].values
@@ -290,17 +290,17 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     cbar_right = plt.colorbar(im_2, fraction=0.03, location='top')
     for t in cbar_right.ax.get_yticklabels():
         t.set_fontsize(7.5)
-    cbar_right.ax.set_title('p(Right)', fontsize=10)
+    cbar_right.ax.set_title('p( right)', fontsize=10)
     cbar_right.ax.tick_params(rotation=45)
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
-        ax_i.set_xlabel('Prior Evidence')
+        ax_i.set_xlabel('Prior evidence')
         ax_i.set_xticks([0, 3, 6])
         ax_i.set_xticklabels(['L', '', 'R'])
     for ax_i in [ax_pright, ax_mat[0]]:
         ax_i.set_yticks([0, 3, 6])
         ax_i.set_yticklabels(['R', '', 'L'])
-        ax_i.set_ylabel('Stimulus Evidence')  # , labelpad=-17)
+        ax_i.set_ylabel('Stimulus evidence')  # , labelpad=-17)
     ax_mat[1].set_yticklabels(['']*nbins)
 
 
@@ -314,11 +314,11 @@ def com_statistics(peak_com, time_com, ax):
     ax1.set_yscale('log')
     ax1.axvline(-8/75*100, linestyle=':', color='r')
     ax1.set_xlim(-100, 5)
-    ax1.set_xlabel('Deflection point (%)', fontsize=8)
+    ax1.set_xlabel('Deflection point (%)')
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
     ax2.hist(time_com, bins=80, range=(0, 500), color=COLOR_COM)
-    ax2.set_xlabel('Deflection time (ms)', fontsize=8)
+    ax2.set_xlabel('Deflection time (ms)')
 
 def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
                   after_correct_only=True, rt_lim=300,
@@ -399,7 +399,7 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
                              label='Detected reversal'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                              label='No-reversal')]
-    ax.legend(handles=legendelements, loc='upper left')
+    # ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(20, -20, "Detection threshold", color='r')
 
@@ -484,7 +484,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
     ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.06, comlist_rats, 'o',
                   color='grey', alpha=0.5)
     ax_inset.set_xticks([])
-    ax_inset.set_ylabel('P(Reversal)')
+    ax_inset.set_ylabel('p(reversal)')
     # ax_inset.set_ylabel('# Rats')
 
 
@@ -521,40 +521,50 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         ax.axvline(np.nanmedian(mt_nocom), color='k')
         ax.axvline(np.nanmedian(mt_com), color='k')
     ax.set_xlim(45, xlmax)
-    ax.legend()
+    if not sim:
+        ax.legend(loc='center left', bbox_to_anchor=(-0.1, 1.3))
+    if sim:
+        ax.legend(loc='center left', bbox_to_anchor=(0.1, 1.1))
     ax.set_xlabel('MT (ms)')
     ax.set_ylabel('Density')
 
 
-def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=8):
-    fig, ax = plt.subplots(4, 3, figsize=figsize)
+def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 5.5), com_th=8):
+    fig, ax = plt.subplots(2, 5, figsize=figsize)
     ax = ax.flatten()
-    ax[10].axis('off')
-    ax[11].axis('off')
-    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
-                        hspace=0.5, wspace=0.4)
+    # ax[10].axis('off')
+    # ax[11].axis('off')
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.06, right=0.99,
+                        hspace=0.6, wspace=0.5)
     pos_ax_0 = ax[0].get_position()
     ax[0].set_position([pos_ax_0.x0, pos_ax_0.y0, pos_ax_0.width*0.8,
                         pos_ax_0.height])
     ax[1].set_position([pos_ax_0.x0 + pos_ax_0.width*1.2, pos_ax_0.y0,
                         pos_ax_0.width*1.4, pos_ax_0.height])
     pos_ax_2 = ax[2].get_position()
-    ax[2].set_position([pos_ax_2.x0 + pos_ax_0.width*0.2,
+    ax[2].set_position([pos_ax_2.x0 + pos_ax_2.width/10,
                         pos_ax_2.y0 + pos_ax_2.height/6,
-                        pos_ax_2.width*0.8, pos_ax_2.height*4/6])
+                        pos_ax_2.width*0.65, pos_ax_2.height*0.5])
+    pos_ax_3 = ax[3].get_position()
+    ax[3].set_position([pos_ax_3.x0 - pos_ax_3.width/3,
+                        pos_ax_3.y0,
+                        pos_ax_3.width*1.2, pos_ax_3.height])
     labs = ['a', 'b', '', 'c', 'd', 'e', 'f', 'g', '', 'h', '', '']
     for n, axis in enumerate(ax):
-        if n == 4:
-            axis.text(-0.1, 3, labs[n], transform=axis.transAxes, fontsize=16,
+        if n == 7:
+            axis.text(-0.12, 1.3, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-        elif n == 1:
-            axis.text(-0.1, 1.05, labs[n], transform=axis.transAxes, fontsize=16,
+        elif n == 4:
+            axis.text(-0.17, 2.75, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-        elif n == 7:
-            axis.text(-0.1, 1.3, labs[n], transform=axis.transAxes, fontsize=16,
+        elif n == 0:
+            axis.text(-0.12, 1.35, labs[n], transform=axis.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')
+        elif n == 1 or n == 2:
+            axis.text(-0.12, 1.12, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         else:
-            axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
+            axis.text(-0.12, 1.17, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
     time_com, peak_com, com = com_detection(df=df,
                                             data_folder=data_folder,
@@ -578,11 +588,14 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     # REVERSAL STATISTICS PANELS
     ax_com_stat = ax[4]
     pos = ax_com_stat.get_position()
-    ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
+    ax_com_stat.set_position([pos.x0-pos.width/8, pos.y0, pos.width*1.1,
                               pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+    ax_inset = plt.axes([pos.x0-pos.width/8, pos.y0+pos.height*3.2/5, pos.width*1.1,
                          pos.height*2/5])
     ax_coms = [ax_com_stat, ax_inset]
+    pos_ax_9 = ax[9].get_position()
+    ax[9].set_position([pos_ax_9.x0-pos.width/8, pos_ax_9.y0,
+                        pos_ax_9.width*1.1, pos_ax_9.height])
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                              ax_coms[0]])
     # PROPORTION CORRECT COM VS STIM PANEL
@@ -605,17 +618,17 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat = [ax[7], ax[8]]
-    ax_mat[0].set_title(pcomlabel_0)
+    ax_mat[0].set_title(pcomlabel_0, fontsize=10)
     im = ax_mat[0].imshow(np.flipud(matrix_side_1), vmin=0, vmax=vmax, cmap='magma')
-    ax_mat[1].set_title(pcomlabel_1)
+    ax_mat[1].set_title(pcomlabel_1, fontsize=10)
     im = ax_mat[1].imshow(np.flipud(matrix_side_0), vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     margin = 0.01
     for ax_i in [ax_mat[0], ax_mat[1]]:
-        ax_i.set_xlabel('Prior Evidence')
+        ax_i.set_xlabel('Prior evidence')
         ax_i.set_xticks([0, 3, 6])
         ax_i.set_xticklabels(['L', '0', 'R'])
         ax_i.set_ylim([-.5, 6.5])
@@ -626,13 +639,13 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(8, 10), com_th=
     ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
                                 pos.height])
     pos = ax_mat[1].get_position()
-    ax_mat[1].set_position([pos.x0-10*margin, pos.y0, pos.width,
+    ax_mat[1].set_position([pos.x0-6*margin, pos.y0, pos.width,
                                 pos.height])
-    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.62, pos.y0,
-                                   pos.width/14, pos.height/2])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.65, pos.y0,
+                                   pos.width/12, pos.height/2])
     cbar = fig.colorbar(im, cax=pright_cbar_ax)
-    cbar.ax.set_title('           p(reversal)')
-    ax_mat[0].set_ylabel('Stimulus Evidence')
+    cbar.ax.set_title('     p(rev.)', fontsize=10)
+    ax_mat[0].set_ylabel('Stimuluse evidence')
     # COM PROB VERSUS REACTION TIME PANEL
     fig2.e(df, sv_folder=sv_folder, ax=ax[9])
     ax[9].set_ylim(0, 0.075)
@@ -674,7 +687,7 @@ def supp_com_marginal(df, sv_folder):
         ax[i_ax*2+1].yaxis.set_ticks_position('none')
         plt.sca(ax[i_ax*2+1])
         if (i_ax+1) % 3 == 0:    
-            plt.colorbar(im, fraction=0.04, label='p(Reversal)')
+            plt.colorbar(im, fraction=0.04, label='p(reversal)')
         else:
             plt.colorbar(im, fraction=0.04)
         for ax_i in [ax[i_ax*2], ax[i_ax*2+1]]:

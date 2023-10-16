@@ -60,7 +60,7 @@ def plot_coms(df, ax, human=False):
 
 
 def com_statistics_humans(peak_com, time_com, ax):
-    ax2, ax1 = ax
+    ax1, ax2 = ax
     fp.rm_top_right_lines(ax1)
     fp.rm_top_right_lines(ax2)
     ax1.hist(peak_com[peak_com != 0]/600*100, bins=67, range=(-100, -16.667),
@@ -132,12 +132,12 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.set_xlabel('Time from movement \n onset (ms)')
     ax.set_ylabel('Position')
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2, label='Rev.'),
-                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2, label='No-Rev.')]
+                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2, label='No-rev.')]
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=10.5)
     ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
-              labelspacing=0.01)
+              labelspacing=0.01, bbox_to_anchor=(0, 1.1))
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
@@ -189,7 +189,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                                         if t[-1] != '']))*1e3
         err_traj = np.nanstd(np.array([float(t[-1]) for t in
                                         times[index]
-                                        if t[-1] != '']))*1e3/np.sqrt(n_subjects)
+                                        if t[-1] != '']))*1e3 / np.sqrt(sum(index))
         mov_time_list.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
         ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
@@ -208,6 +208,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                            color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
     ax[1].plot(x_vals, mov_time_list, color='k', linestyle=':', alpha=0.6)
+    ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
     ax[0].set_ylabel('Position')
@@ -224,7 +225,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         ax[1].set_ylim(180, 315)
         ax[1].set_xlim(-0.4, 4.4)
         ax[0].legend(handles=legendelements, title='Prior', loc='center left',
-                     labelspacing=0.1, bbox_to_anchor=(0., 1.2))
+                     labelspacing=0.05, bbox_to_anchor=(0., 1.2))
     else:
         legendelements = [Line2D([0], [0], color=colormap[0], lw=1.5, label='1'),
                           Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
@@ -237,7 +238,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
         ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
-                     labelspacing=0.1, bbox_to_anchor=(0.8, 1.2))
+                     labelspacing=0.05, bbox_to_anchor=(0.8, 1.2))
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -356,7 +357,7 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
                  np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
                  yerr=sem(out_data.reshape(rtbins.size-1, -1),
                           axis=1, nan_policy='omit'), **error_kws)
-    ax2.set_xlabel('RT (ms)')
+    ax2.set_xlabel('Reaction time (ms)')
     ax2.set_title('Impact of stimulus', fontsize=11.5)
     # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
     # ax2.set_ylim(190, 410)
@@ -495,8 +496,9 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
 
 
 
-def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset_sz=.06,
-                 marginx=0.004, marginy=0.025, fgsz=(11, 13.5)):
+def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
+                 max_mt=600, inset_sz=.06, marginx=0.004, marginy=0.025,
+                 fgsz=(11, 13.5)):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'alex_CRM':
@@ -519,7 +521,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.6, wspace=0.5)
-    labs = ['a', '', '',  'b', 'c', 'd', 'e', 'f', 'g', '', 'h', 'i', 'j', 'k',
+    labs = ['', '', '',  'b', 'c', 'd', 'e', 'f', 'g', '', 'h', 'i', 'j', 'k',
             'l', '']
     for n, ax_1 in enumerate(ax):
         fp.rm_top_right_lines(ax_1)
@@ -529,8 +531,11 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
         elif n == 0:
             ax_1.text(-0.1, 1.15, labs[n], transform=ax_1.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-        elif n == 4 or n == 14:
+        elif n == 4:
             ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')     
+        elif n == 14:
+            ax_1.text(-0.1, 1.4, labs[n], transform=ax_1.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')            
         else:
             ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
@@ -541,13 +546,16 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
     ax_task = ax[0]
     pos_ax_0 = ax_task.get_position()
     # setting ax0 a bit bigger
-    ax_task.set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
-                          pos_ax_0.width+pos_ax_0.width*1.6, pos_ax_0.height+0.02])
+    ax_task.set_position([pos_ax_0.x0-0.04, pos_ax_0.y0-0.02,
+                          pos_ax_0.width*4, pos_ax_0.height+0.024])
     
     pos = ax_task.get_position()
     ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
     task = plt.imread(human_task_img)
-    ax_task.imshow(task, aspect='auto')
+    ax_task.imshow(task)
+    ax_task.text(0.08, 1.3, 'a', transform=ax_task.transAxes, fontsize=16,
+                 fontweight='bold', va='top', ha='right')
+
     # changing ax x-y plot width
     pos_ax_1 = ax[2].get_position()
     ax[3].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,

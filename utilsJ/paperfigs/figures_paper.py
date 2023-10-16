@@ -1017,7 +1017,7 @@ def plot_params_all_subs_rats_humans(subjects, subjectsh, sv_folder=SV_FOLDER, d
     ax[0].legend(fontsize=12)
 
 
-def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
+def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     fig, ax = plt.subplots(4, 4)
     plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
                         hspace=0.5, wspace=0.4)
@@ -1259,6 +1259,17 @@ def supp_plot_rt_data_vs_model_all(df, df_sim):
         if i_s >= 10:
             ax[i_s].set_xlabel('RT (ms)')
     ax[0].legend()
+
+
+def check_perc_silent(df):
+    subs_spec_trial = df.loc[df.special_trial == 2, 'subjid'].unique()
+    l=[]
+    for sub_sil in subs_spec_trial:
+        l.append(np.sum(df.loc[df.subjid == sub_sil, 'special_trial']==2)
+                 / len(df.loc[df.subjid == sub_sil, 'special_trial']))
+    mean_l = np.mean(l)*100
+    std_l = np.std(l)*100
+    print(str(np.round(mean_l, 1)) + ' % +- ' + str(np.round(std_l, 1)))
 
 
 def sess_t_index_stats(df, subjects):

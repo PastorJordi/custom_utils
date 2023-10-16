@@ -1346,13 +1346,14 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             mat_1 = []
             i += 1
     else:
+        if not plot_nn_alone:
+            mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
+                            .format(cohval, ztval, tival))
+            mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
+                            .format(cohval, ztval, tival))
+            x = np.load(SV_FOLDER + '/10M/coh{}_zt{}_ti{}.npy'
+                        .format(cohval, ztval, tival))
         trial_index = np.repeat(tival, num_simulations)
-        mat_0 = np.load(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
-                        .format(cohval, ztval, tival))
-        mat_1 = np.load(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
-                        .format(cohval, ztval, tival))
-        x = np.load(SV_FOLDER + '/10M/coh{}_zt{}_ti{}.npy'
-                    .format(cohval, ztval, tival))
     # we load estimator
     # n_list = [10000, 50000, 250000]  # , 100000, 4000000]
     grid_rt = np.arange(-100, 300, 1) + 300
@@ -1403,6 +1404,9 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
             if plot_nn_alone:
                 fig, ax1 = plt.subplots(ncols=2)
                 fig.suptitle('Network + {}'.format(n_sim_train))
+                cte_nn1 = np.sum(mat_0_nn + mat_1_nn)
+                mat_0_nn /= cte_nn1
+                mat_1_nn /= cte_nn1
                 ax1[0].imshow(mat_0_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
                 ax1[0].set_title('Choice 0')
                 ax1[0].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
@@ -1411,11 +1415,12 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 ax1[0].set_xlabel('RT (ms)')
                 im1 = ax1[1].imshow(mat_1_nn, vmin=0, vmax=np.max((mat_0_nn, mat_1_nn)))
                 ax1[1].set_title('Choice 1')
-                ax1[1].set_yticks(np.arange(0, len(grid_mt), 50), grid_mt[::50])
-                ax1[1].set_ylabel('MT (ms)')
+                ax1[1].set_yticks([])
+                # ax1[1].set_ylabel('MT (ms)')
                 ax1[1].set_xticks(np.arange(0, len(grid_rt), 50), grid_rt[::50]-300)
                 ax1[1].set_xlabel('RT (ms)')
                 plt.colorbar(im1)
+                return
             # fig, ax = plt.subplots(ncols=2)
             # fig.suptitle('Model vs Network(contour) + {}'.format(n_sim_train))
             ax[0].imshow(resize(mat_0, mat_0_nn.shape), vmin=0, cmap='Blues')
@@ -1836,12 +1841,16 @@ def rm_top_right_lines(ax, right=True):
     ax.spines['top'].set_visible(False)
 
 
-def plot_lh_model_network(df, n_trials=2000000):
+def supp_plot_lh_model_network(df, n_trials=2000000):
     fig, ax = plt.subplots(6, 4, figsize=(8, 12))
     plt.subplots_adjust(top=0.95, bottom=0.1, left=0.12, right=0.95,
                         hspace=0.4, wspace=0.4)
-    labs = ['a', 'b', 'c', 'd', 'e', 'f']
+    col_labs = ['a', '', 'b', 'c']
     ax = ax.flatten()
+    row_labs = ['i', 'ii', 'iii', 'iv', 'v', 'vi']
+    for i in range(4):
+        ax[i].text(-0.65, 1.45, col_labs[i], transform=ax[i].transAxes,
+                   fontsize=12, fontweight='bold', va='top', ha='right')
     for j in range(6):
         pos_ax_1 = ax[4*j].get_position()
         ax[4*j].set_position([pos_ax_1.x0,
@@ -1859,15 +1868,12 @@ def plot_lh_model_network(df, n_trials=2000000):
                                 pos_ax_1.y0, pos_ax_1.width*0.7,
                                 pos_ax_1.height])
         rm_top_right_lines(ax[4*j+3])
-        ax[4*j].text(-0.4, 1.3, labs[j], transform=ax[4*j].transAxes, fontsize=14,
-                     fontweight='bold', va='top', ha='right')
+        ax[4*j].text(-0.4, 1.3, row_labs[j], transform=ax[4*j].transAxes,
+                     fontsize=12, fontweight='bold', va='top', ha='right')
     i = 0
     xt = False
-    ax[1].set_title('Right choice', pad=14)
-    ax[0].set_title('Left choice', pad=14)
-    labels = ['Choice 0 \n No stim, high prior, t.i. median', 'high stim, low zt',
-              'mid stim, high zt',  # 'inc. stim with zt', 'cong. low t.i.',
-              'cong. higher t.i.', '0 stim, high prior', 'low stim incong']
+    ax[1].set_title('Right choice', pad=14, fontsize=11)
+    ax[0].set_title('Left choice', pad=14, fontsize=11)
     for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.5, 0.25],
                                     [1.5, 0.05, -1.5, .5, 1.5, 0.5],
                                     [400, 400, 400, 10, 400, 800]):
@@ -1918,8 +1924,8 @@ def supp_plot_dist_vs_n(ax, n_list=[1000, 10000, 100000, 500000, 1000000, 200000
     #     ax[1].plot(n_list,  js_mat[j, :] , color='r', alpha=0.02)
     mean_bhat = np.nanmean(bhat_mat, axis=0)
     mean_js = np.nanmean(js_mat, axis=0)
-    err_bhat = np.nanstd(bhat_mat, axis=0)
-    err_js = np.nanstd(js_mat, axis=0)
+    err_bhat = np.nanstd(bhat_mat, axis=0)/10
+    err_js = np.nanstd(js_mat, axis=0)/10
     ax[0].plot(n_list, mean_bhat, linewidth=2, color='r')
     ax[1].plot(n_list, mean_js, linewidth=2, color='r')
     ax[0].fill_between(n_list, mean_bhat-err_bhat, mean_bhat+err_bhat, color='r',

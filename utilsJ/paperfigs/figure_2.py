@@ -99,7 +99,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Prior'
     if condition == 'origidx':
         legendelements = []
-        labs = ['1-200', '201-400', '401-600', '601-700', '701-1000']
+        labs = ['1-200', '201-400', '401-600', '601-800', '801-1000']
         for i in range(len(colormap)):
             legendelements.append(Line2D([0], [0], color=colormap[i], lw=2,
                                   label=labs[i]))
@@ -391,11 +391,11 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     # ax.set_ylabel('Time from stimulus onset (ms)')
     # ax.set_zlabel('Corr. coef.')
     # fig, ax = plt.subplots(1)
-    ax.set_title('Prior-Position \ncorrelation')
+    ax.set_title('Prior-position \ncorrelation', fontsize=12)
     ax.plot([0, 14], [0, 150], color='k', linewidth=2)
     im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
                    vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylim(0, 304)
     ax.set_yticks([])
     # ax.set_ylabel('Time from stimulus onset (ms)')ç
@@ -458,13 +458,13 @@ def corr_rt_time_stim(df, ax, split_data_all_s, data_folder, rtbins=np.linspace(
     # ax.set_zlabel('Corr. coef.')
     # fig2, ax = plt.subplots(1)
     # fig2.suptitle('Stimulus corr. coef.')
-    ax.set_title('Stimulus-Position \ncorrelation')
+    ax.set_title('Stimulus-position \ncorrelation', fontsize=12)
     ax.plot([0, 14], [0, 150], color='k', linewidth=2)
     ax.plot(np.arange(len(split_data_all_s)),
             split_data_all_s, color='firebrick', linewidth=1.4, alpha=0.5)
     ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
               vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylim(0, 304)
     ax.set_ylabel('Time from stimulus onset (ms)')
     ax.set_yticks([0, 100, 200, 300])
@@ -639,6 +639,12 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     col_edge = [0.7, 0.7, 0.7, 0]
     ax.fill_between([0, mean_stim_dur], [3.5, 3.5], [4, 4],
                      facecolor=col_face, edgecolor=col_edge)
+    if rtbins[1] == 300:
+        ax.set_title('RT > 150 ms', fontsize=9.5)
+    if rtbins[1] == 65:
+        ax.set_title('RT = 50 ms', fontsize=9.5)
+    if rtbins[1] == 15:
+        ax.set_title('RT < 15 ms', fontsize=9.5)
 
     # plot arrow
     al = 0.5
@@ -730,7 +736,7 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
                 np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
                          axis=1, nan_policy='omit'), **error_kws)
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time(ms)')
     # ax.set_title('Impact of prior', fontsize=9)
     ax.set_ylabel('Splitting time (ms)')
     ax.plot([0, 155], [0, 155], color='k')
@@ -893,7 +899,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     ax.set_xlim(-5, 155)
     ax.set_ylim(-1, 305)
     ax.set_yticks([0, 100, 200, 300])
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('Splitting time (ms)')
     # ax.set_title('Impact of stimulus')
     # plt.show()
@@ -1102,7 +1108,7 @@ def log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16)):
         ax2[i_s].set_title(subj)
         ax2[i_s].legend()
         fp.rm_top_right_lines(ax2[i_s])
-        ax2[i_s].set_xlabel('RT (ms)')
+        ax2[i_s].set_xlabel('Reaction time (ms)')
         ax2[i_s].set_ylabel('Logistic Regression weight (a.u.)')
     weights_mean = np.nanmean(mat_total, axis=2).T
     weights_err = np.nanstd(mat_total, axis=2).T / np.sqrt(len(subjects))
@@ -1112,7 +1118,7 @@ def log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16)):
                 color=colors[j])
     ax.legend()
     fp.rm_top_right_lines(ax)
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('Logistic Regression weight (a.u.)')
 
 
@@ -1123,8 +1129,10 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     letters = 'abcdehfgXij'
     ax = ax.flatten()
     for lett, a in zip(letters, ax):
-        if lett != 'X':
+        if lett != 'X' and lett != 'h':
             fp.add_text(ax=a, letter=lett, x=-0.1, y=1.2)
+        if lett == 'h':
+            fp.add_text(ax=a, letter=lett, x=-0.1, y=1.)
     ax[8].axis('off')
     # ax[11].axis('off')
     # adjust panels positions
