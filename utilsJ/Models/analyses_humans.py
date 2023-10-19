@@ -37,10 +37,9 @@ model_cols = ['evidence',
 
 def get_data(subj, main_folder):
     # subject folder
-    # folder = main_folder+subj+'/'   # Manuel
-    folder = main_folder+'\\'+subj+'\\'  # Alex
+    folder = os.path.join(main_folder, subj, '*trials.csv')
     # find all data files
-    files = glob.glob(folder+'*trials.csv')
+    files = glob.glob(folder)
     # take files names
     file_list = [os.path.basename(x) for x in files
                  if x.endswith('trials.csv')]
@@ -59,8 +58,7 @@ def get_data(subj, main_folder):
     # go over all files
     for f in sorted_list:
         # read file
-        # df1 = pd.read_csv(main_folder+subj+'/'+f, sep=',')  # Manuel
-        df1 = pd.read_csv(main_folder+'\\'+subj+'\\'+f, sep=',')  # Alex
+        df1 = pd.read_csv(os.path.join(main_folder, subj, f), sep=',')
         for k in data.keys():
             values = df1[k].values
             if k == 'soundPlay_object1_leftRightBalance':
