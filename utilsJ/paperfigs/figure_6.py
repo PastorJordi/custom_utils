@@ -53,14 +53,14 @@ def plot_coms(df, ax, human=False):
     if not human:
         var = 'y'
     ax.set_ylabel('{}-coord (pixels)'.format(var))
-    ax.set_xlabel('Time from movement onset (ms)')
+    ax.set_xlabel('Time from movement \n onset (ms)')
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
 def com_statistics_humans(peak_com, time_com, ax):
-    ax2, ax1 = ax
+    ax1, ax2 = ax
     fp.rm_top_right_lines(ax1)
     fp.rm_top_right_lines(ax2)
     ax1.hist(peak_com[peak_com != 0]/600*100, bins=67, range=(-100, -16.667),
@@ -129,14 +129,15 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     xvals = np.arange(len(mean_traj))*precision
     yvals = mean_traj
     ax.plot(xvals, yvals, color=fig_3.COLOR_NO_COM, linewidth=2)
-    ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('x-coord. (px)')
+    ax.set_xlabel('Time from movement \n onset (ms)')
+    ax.set_ylabel('Position')
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2, label='Rev.'),
-                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2, label='No-Rev.')]
-    ax.legend(handles=legendelements, loc='upper left')
+                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2, label='No-rev.')]
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
-    ax.text(150, -200, 'Detection threshold', color='r', fontsize=8)
+    ax.text(150, -200, 'Detection threshold', color='r', fontsize=10.5)
+    ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
+              labelspacing=0.01, bbox_to_anchor=(0, 1.1))
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
@@ -149,12 +150,14 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
     """
     
     if condition == 'prior':
-       colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
+       colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
+       # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
     else:
-        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))[::-1]
+        # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
         labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
-    vals_thr_traj = []
+    mov_time_list = []
     for i_ev, ev in enumerate(bins):
         if condition == 'prior':
             if ev == 1:
@@ -180,16 +183,16 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
             all_trajs[tr, len(vals_in):-1] = np.repeat(vals[-1],
                                                        int(max_mt - len(vals_in)-1))
         mean_traj = np.nanmean(all_trajs, axis=0)
-        std_traj = np.sqrt(np.nanstd(all_trajs, axis=0) / sum(index))
-        val_traj = np.nanmean(np.array([float(t[-1]) for t in
+        std_traj = np.nanstd(all_trajs, axis=0) / np.sqrt(sum(index))
+        mov_time = np.nanmean(np.array([float(t[-1]) for t in
                                         times[index]
                                         if t[-1] != '']))*1e3
         err_traj = np.nanstd(np.array([float(t[-1]) for t in
                                         times[index]
-                                        if t[-1] != '']))*1e3/np.sqrt(n_subjects)
-        vals_thr_traj.append(val_traj)
+                                        if t[-1] != '']))*1e3 / np.sqrt(sum(index))
+        mov_time_list.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
-        ax[1].errorbar(x_val, val_traj, err_traj, color=colormap[i_ev],
+        ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
                        marker='o')
         xvals = np.arange(len(mean_traj))
         yvals = mean_traj
@@ -204,25 +207,38 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
-    ax[1].plot(x_vals, vals_thr_traj, color='k', linestyle='--', alpha=0.6)
+    ax[1].plot(x_vals, mov_time_list, color='k', linestyle=':', alpha=0.6)
+    ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
-    ax[0].set_ylabel('x-coord (px)')
-    ax[0].set_xlabel('Time from movement onset (ms)')
+    ax[0].set_ylabel('Position')
+    ax[0].set_xlabel('Time from movement \n onset (ms)')
     ax[1].set_xticks([])
+    ax[1].set_title('MT (ms)', fontsize=10)
     if condition == 'prior':
         ax[1].set_xlabel('Prior')
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='cong.'),
-                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
-                          Line2D([0], [0], color=colormap[2], lw=2, label='0'),
-                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
-                          Line2D([0], [0], color=colormap[4], lw=2, label='inc.')]
-        ax[0].legend(handles=legendelements, title='Prior', loc='upper left',
-                     fontsize=7)
+        legendelements = [Line2D([0], [0], color=colormap[4], lw=1.5, label='cong.'),
+                          Line2D([0], [0], color=colormap[3], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[2], lw=1.5, label='0'),
+                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[0], lw=1.5, label='inc.')]
+        ax[1].set_ylim(180, 315)
+        ax[1].set_xlim(-0.4, 4.4)
+        ax[0].legend(handles=legendelements, title='Prior', loc='center left',
+                     labelspacing=0.05, bbox_to_anchor=(0., 1.2))
     else:
-        ax[0].legend(title='Stimulus \n evidence', loc='upper left', fontsize=6)
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.5, label='1'),
+                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[2], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[3], lw=1.5, label='0'),
+                          Line2D([0], [0], color=colormap[4], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[5], lw=1.5, label=' '),
+                          Line2D([0], [0], color=colormap[6], lw=1.5, label='-1')]
         ax[1].set_xlabel('Stimulus')
-    ax[1].set_ylabel('MT (ms)')
+        ax[1].set_ylim(170, 285)
+        ax[1].set_xlim(-1.2, 1.2)
+        ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
+                     labelspacing=0.05, bbox_to_anchor=(0.8, 1.2))
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -290,6 +306,9 @@ def plot_xy(df_data, ax):
     cont = 0
     subj_xy = 1
     index_sub = df_data.subjid == subj_xy
+    ax.scatter(-500, 400, s=1100, color='grey', alpha=0.2)
+    ax.scatter(500, 400, s=1100, color='grey', alpha=0.2)
+    ax.scatter(0, -200, s=600, color='grey', alpha=0.8)
     for traj in range(800):
         # np.random.seed(1)
         tr_ind = np.random.randint(0, len(df_data['trajectory_y'][index_sub])-1)
@@ -301,20 +320,23 @@ def plot_xy(df_data, ax):
                 time = df_data['times'][tr_ind]
                 ind_time = [True if t != '' else False for t in time]
                 time = np.array(time)[np.array(ind_time)]
-                ax.plot(x_coord, y_coord, color='k', linewidth=0.5)
+                ax.plot(x_coord, y_coord, color='grey', lw=.5, alpha=0.6)
                 # ax[5].plot(time*1e3, x_coord, color='k', linewidth=0.5)
                 cont += 1
         if cont == 50:
             break
-    ax.set_xlabel('x-coord (px)')
-    ax.set_ylabel('y-coord (px)')
+    ax.set_xlabel('Position along x-axis')
+    ax.set_ylabel('Position along y-axis')
 
 
 def splitting_time_plot(sound_len, out_data, ax, subjects):
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
-        xvals.append(rtb*0.5 + rtbins[irtb+1]*0.5)
+        sound_len_bin = sound_len[(sound_len >= rtb) &
+                                  (sound_len < rtbins[irtb+1])]
+        rtbins_window = np.median(sound_len_bin)
+        xvals.append(rtbins_window)
     # xplot = rtbins[:-1] + np.diff(rtbins)/2
     out_data = np.array(out_data).reshape(np.unique(subjects).size,
                                           rtbins.size-1, -1)
@@ -335,8 +357,8 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
                  np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
                  yerr=sem(out_data.reshape(rtbins.size-1, -1),
                           axis=1, nan_policy='omit'), **error_kws)
-    ax2.set_xlabel('RT (ms)')
-    ax2.set_title('Impact of stimulus', fontsize=9)
+    ax2.set_xlabel('Reaction time (ms)')
+    ax2.set_title('Impact of stimulus', fontsize=11.5)
     # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
     # ax2.set_ylim(190, 410)
     ax2.plot([0, 310], [0, 310], color='k')
@@ -350,11 +372,13 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                                  times, max_mt, interpolatespace, colormap):
     # to plot trajectories with splitting time: (all subjects together)
     ev_vals = np.array([0, 0.25, 0.5, 1])
-    labs = ['Early RT', 'Late RT']
-    for i in range(rtbins.size-1):
+    rtbins = np.concatenate(([0], np.quantile(sound_len, [.3333])))
+    labs = ['Short RT', 'Long RT']
+    for i in range((rtbins.size-1)*2):
+        if i >= rtbins.size-1:
+            rtbins = np.concatenate(([0],
+                                     np.quantile(sound_len, [.6666, 1.])))
         ax1 = ax[-3+i]
-        if i > 0:
-            rtbins = np.array((rtbins[-3], rtbins[-2], rtbins[-1]))
         for i_ev, ev in enumerate(ev_vals):
             index = (sound_len < rtbins[i+1]) & (sound_len >= rtbins[i]) &\
                     (np.abs(np.round(coh, 2)) == ev)
@@ -389,26 +413,28 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                      color=colormap[i_ev])
         ax1.set_xlim(-5, 405)
         ax1.set_ylim(-2, 400)
-        ax1.set_title(labs[i])
+        ax1.set_title(labs[i], fontsize=11.5)
         ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                                        max_MT=max_mt+300, pval=0.01)
-        ax1.set_xlabel('Time (ms)')
+        ax1.set_xlabel('Time from stimulus \n onset (ms)')
+        ax1.set_ylabel('Position')
         if i == 0:
-            ax1.arrow(ind, 45, 0, 65, color='k', width=1, head_width=5,
-                      head_length=0.4)
-            ax1.text(ind-30, 10, 'Splitting Time', fontsize=8)
+            ax1.arrow(ind, 35, 0, 25, color='k', width=1.5, head_width=15,
+                      head_length=15)
+            ax1.text(ind-30, 10, 'Splitting Time', fontsize=10)
             labels = ['0', '0.25', '0.5', '1']
             legendelements = []
-            for i_l, lab in enumerate(labels):
-                legendelements.append(Line2D([0], [0], color=colormap[i_l], lw=2,
+            for i_l, lab in enumerate(reversed(labels)):
+                legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                       label=lab))
-            ax1.legend(handles=legendelements, fontsize=7, loc='upper left')
+            ax1.legend(handles=legendelements, fontsize=9, loc='upper left',
+                       title='Stimulus', labelspacing=0.01)
         else:
             if np.isnan(ind):
                 ind = rtbins[i]
-            ax1.arrow(ind, 145, 0, -65, color='k', width=1, head_width=5,
-                      head_length=0.4)
-            ax1.text(ind-60, 160, 'Splitting Time', fontsize=8)
+            ax1.arrow(ind, 110, 0, -65, color='k', width=1.5, head_width=15,
+                      head_length=15)
+            ax1.text(ind-150, 140, 'Splitting Time', fontsize=10)
 
 
 def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
@@ -470,8 +496,9 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
 
 
 
-def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset_sz=.06,
-                 marginx=0.006, marginy=0.04, fgsz=(8, 14)):
+def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
+                 max_mt=600, inset_sz=.06, marginx=0.004, marginy=0.025,
+                 fgsz=(11, 13.5)):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'alex_CRM':
@@ -490,78 +517,96 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300', max_mt=600, inset
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     # create figure
-    fig, ax = plt.subplots(nrows=5, ncols=3, figsize=fgsz)
+    fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
-                        hspace=0.5, wspace=0.6)
-    labs = ['a', '',  'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '', 'k',
-            '', 'l']
+                        hspace=0.6, wspace=0.5)
+    labs = ['', '', '',  'b', 'c', 'd', 'e', 'f', 'g', '', 'h', 'i', 'j', 'k',
+            'l', '']
     for n, ax_1 in enumerate(ax):
         fp.rm_top_right_lines(ax_1)
-        if n == 9:
+        if n == 13:
             ax_1.text(-0.1, 3, labs[n], transform=ax_1.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         elif n == 0:
             ax_1.text(-0.1, 1.15, labs[n], transform=ax_1.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
+        elif n == 4:
+            ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')     
+        elif n == 14:
+            ax_1.text(-0.1, 1.4, labs[n], transform=ax_1.transAxes, fontsize=16,
+                      fontweight='bold', va='top', ha='right')            
         else:
             ax_1.text(-0.1, 1.2, labs[n], transform=ax_1.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
-    for i in [0, 1]:
+    for i in [0, 1, 2]:
         ax[i].axis('off')
     # TASK PANEL
     ax_task = ax[0]
     pos_ax_0 = ax_task.get_position()
     # setting ax0 a bit bigger
-    ax_task.set_position([pos_ax_0.x0 + pos_ax_0.width/5, pos_ax_0.y0-0.02,
-                          pos_ax_0.width+pos_ax_0.width*2/2.5, pos_ax_0.height+0.025])
+    ax_task.set_position([pos_ax_0.x0-0.04, pos_ax_0.y0-0.02,
+                          pos_ax_0.width*4, pos_ax_0.height+0.024])
     
     pos = ax_task.get_position()
     ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
     task = plt.imread(human_task_img)
-    ax_task.imshow(task, aspect='auto')
+    ax_task.imshow(task)
+    ax_task.text(0.08, 1.3, 'a', transform=ax_task.transAxes, fontsize=16,
+                 fontweight='bold', va='top', ha='right')
+
     # changing ax x-y plot width
-    pos_ax_1 = ax[1].get_position()
-    ax[2].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,
+    pos_ax_1 = ax[2].get_position()
+    ax[3].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
     # plotting x-y trajectories
-    plot_xy(df_data=df_data, ax=ax[2])
+    plot_xy(df_data=df_data, ax=ax[3])
     # tachs and pright
-    ax_tach = ax[3]
+    ax_tach = ax[5]
     ax_pright = ax[4]
-    ax_mat = [ax[10], ax[11]]
+    ax_mat = [ax[14], ax[15]]
+    pos_com_0 = ax_mat[0].get_position()
+    ax_mat[0].set_position([pos_com_0.x0 + pos_com_0.width*0.3, pos_com_0.y0,
+                            pos_com_0.width, pos_com_0.height])
+    ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
+                            pos_com_0.width, pos_com_0.height])
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                   ax_mat=ax_mat, humans=humans)
+    pos_com_0 = ax_mat[0].get_position()
+    pos_com_1 = ax_mat[1].get_position()
+    ax_mat[0].set_position([pos_com_0.x0, pos_com_1.y0,
+                            pos_com_1.width, pos_com_1.height])
     # plots CoM trajectory examples
-    ax_examples_com = ax[5]
+    ax_examples_com = ax[11]
     plot_coms(df=df_data, ax=ax_examples_com, human=humans)
     # prepare data for CoM peak/time distros plot
     peak_com = -df_data.com_peak.values
     time_com = df_data.time_com.values
-    ax_com_stat = ax[9]
+    ax_com_stat = ax[13]
     pos = ax_com_stat.get_position()
     ax_com_stat.set_position([pos.x0, pos.y0, pos.width,
                               pos.height*2/5])
-    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3/5, pos.width,
+    ax_inset = plt.axes([pos.x0, pos.y0+pos.height*3.35/5, pos.width,
                          pos.height*2/5])
     ax_coms = [ax_com_stat, ax_inset]
     # CoM peak/time distributions
     com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=ax_coms)
     # mean CoM trajectories
-    mean_com_traj_human(df_data=df_data, ax=ax[8])
+    mean_com_traj_human(df_data=df_data, ax=ax[12])
     # prepare axis for trajs conditioned on stim and prior
-    ax_cohs = ax[6]
-    ax_zt = ax[7]
+    ax_cohs = ax[7]
+    ax_zt = ax[6]
     # trajs. conditioned on coh
-    ax_inset = fp.add_inset(ax=ax_cohs, inset_sz=inset_sz, fgsz=fgsz,
+    ax_inset = fp.add_inset(ax=ax_cohs, inset_sz=inset_sz, fgsz=(1, 1),
                          marginx=marginx, marginy=marginy, right=True)
     ax_cohs = np.insert(ax_cohs, 0, ax_inset)
     # trajs. conditioned on zt
-    ax_inset = fp.add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=fgsz,
+    ax_inset = fp.add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=(1, 1),
                          marginx=marginx, marginy=marginy, right=True)
     ax_zt = np.insert(ax_zt, 0, ax_inset)
-    axes_trajs = [ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[12],
-                  ax[13], ax[14]]
+    axes_trajs = [ax_cohs[1], ax_cohs[0], ax_zt[1], ax_zt[0], ax[8],
+                  ax[9], ax[10]]
     # trajectories conditioned on stim/prior, splitting time (vs RT and example)
     human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt)
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
