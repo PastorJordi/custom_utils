@@ -447,7 +447,7 @@ def basic_statistics(decision, resp_fin):
 
 
 def run_model(stim, zt, coh, gt, trial_index, human=False,
-              subject=None, num_tr=None, load_params=True):
+              subject=None, num_tr=None, load_params=True, params_to_explore=[]):
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
@@ -486,6 +486,13 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
         else:
             conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         jitters = len(conf)*[0]
+        # check if there are params to explore
+        if len(params_to_explore) != 0:
+            # update conf with params to explore
+            for i, index in enumerate(params_to_explore[0]):
+                conf[index] = params_to_explore[1][i]
+
+            
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
     p_w_stim = conf[1]+jitters[1]*np.random.rand()
