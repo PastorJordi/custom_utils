@@ -1923,40 +1923,36 @@ def tachometric(
     n_subs = len(df.subjid.unique())
     vals_tach_per_sub = np.empty((len(rtbins)-1, n_subs))
     vals_tach_per_sub[:] = np.nan
-    for i in range(evidence_bins.size-1):
+    evidence_bins = np.sort(np.round(tmp_df[evidence].abs(), 2).unique())
+    for i in range(evidence_bins.size):
         for i_s, subj in enumerate(df.subjid.unique()):
             tmp = (
-                tmp_df.loc[(tmp_df[evidence].abs() >= evidence_bins[i]) & (
-                    tmp_df[evidence].abs() < evidence_bins[i+1]) &
+                tmp_df.loc[(tmp_df[evidence].abs() == evidence_bins[i]) &
                     (df.subjid == subj)]  # select stim str
-                .groupby('rtbin')[hits].agg(['mean',
-                                             groupby_binom_ci]).reset_index())
-            vals_tach_per_sub[:len(tmp['mean'].values), i_s] = tmp['mean'].values
+                .groupby('rtbin')[hits].mean()).values
+            vals_tach_per_sub[:len(tmp), i_s] = tmp
         vals_total = np.nanmean(vals_tach_per_sub, axis=1)            
         error_total = np.nanstd(vals_tach_per_sub, axis=1)/np.sqrt(n_subs)
-        if labels is None:
-            clabel = f'{round(evidence_bins[i],2)} < sstr < {round(evidence_bins[i+1],2)}'
-        else:
-            clabel = labels[i]
+        clabel = evidence_bins[i]
         if fill_error and plot:
             ax.plot(
-                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                vals_total[:len(tmp.rtbin.values)], label=clabel, c=cmap(
-                    (i+2)/(evidence_bins.size)),
+                np.arange(7) * rtbinsize + 0.5 * rtbinsize,
+                vals_total, label=clabel, c=cmap(
+                    (i+1)/(evidence_bins.size)),
                 marker=error_kws.get('marker', ''),
                 linestyle=linestyle)
-            cmp_face = list(cmap(i+2/(evidence_bins.size)))
+            cmp_face = list(cmap(1/(evidence_bins.size)))
             cmp_face[-1] = 0.5
-            cmp_edge = list(cmap(i+2/(evidence_bins.size)))
+            cmp_edge = list(cmap(1/(evidence_bins.size)))
             cmp_edge[-1] = 0.
             if n_subs > 1:
                 ax.fill_between(
-                    tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                    vals_total[:len(tmp.rtbin.values)] +
-                    error_total[:len(tmp.rtbin.values)],
-                    y2=vals_total[:len(tmp.rtbin.values)] -
-                    error_total[:len(tmp.rtbin.values)],
-                    facecolor=cmp_face, edgecolor=cmp_edge)
+                    np.arange(7) * rtbinsize + 0.5 * rtbinsize,
+                    vals_total[:(len(rtbins)-1)] +
+                    error_total[:(len(rtbins)-1)],
+                    y2=vals_total[:(len(rtbins)-1)] -
+                    error_total[:(len(rtbins)-1)],
+                    facecolor=cmp_face, edgecolor=cmp_edge, alpha=0.6)
             else:
                 ax.fill_between(
                     tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
