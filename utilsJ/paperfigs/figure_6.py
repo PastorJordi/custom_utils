@@ -59,7 +59,7 @@ def plot_coms(df, ax, human=False):
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
 
 
-def com_statistics_humans(peak_com, time_com, ax):
+def com_statistics_humans(peak_com, time_com, ax, mean_mt):
     ax1, ax2 = ax
     fp.rm_top_right_lines(ax1)
     fp.rm_top_right_lines(ax2)
@@ -76,6 +76,12 @@ def com_statistics_humans(peak_com, time_com, ax):
     ax2.hist(time_com[time_com != -1]*1e3, bins=30, range=(0, 510),
              color=fig_3.COLOR_COM)
     ax2.set_xlabel('Deflection time (ms)')
+    # ax3 = ax2.twiny()
+    # ax3.set_xlim(ax2.get_xlim())
+    # ax3.set_xticks([0, mean_mt*0.5, mean_mt, mean_mt*1.5],
+    #                [0, 50, 100, 150])
+    # ax3.spines['right'].set_visible(False)
+    # ax3.set_xlabel('Proportion (%)')
 
 
 def mean_com_traj_human(df_data, ax, max_mt=400):
@@ -272,14 +278,14 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                      trajs=trajs, prior=prior_cong, bins=ev_vals,
                      times=times, ax=ax[0:2],
                      n_subjects=len(df_data.subjid.unique()),
-                     condition='stimulus')
+                     condition='stimulus', max_mt=400)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     # Trajs conditioned on prior congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
                      trajs=trajs, prior=prior_cong, bins=bins,
                      times=times, ax=ax[2:4],
                      n_subjects=len(df_data.subjid.unique()),
-                     condition='prior')
+                     condition='prior', max_mt=400)
     # extract splitting time
     out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
                                              trajs=trajs, times=times, subjects=subjects,
@@ -495,7 +501,6 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
     return out_data, rtbins
 
 
-
 def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
                  max_mt=600, inset_sz=.06, marginx=0.004, marginy=0.025,
                  fgsz=(11, 13.5)):
@@ -591,7 +596,9 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
                          pos.height*2/5])
     ax_coms = [ax_com_stat, ax_inset]
     # CoM peak/time distributions
-    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=ax_coms)
+    mean_mt = np.median(fp.get_human_mt(df_data.loc[~df_data.CoM_sugg]))
+    com_statistics_humans(peak_com=peak_com, time_com=time_com, ax=ax_coms,
+                          mean_mt=mean_mt)
     # mean CoM trajectories
     mean_com_traj_human(df_data=df_data, ax=ax[12])
     # prepare axis for trajs conditioned on stim and prior

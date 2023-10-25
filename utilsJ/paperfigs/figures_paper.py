@@ -457,7 +457,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     if not human:
         detect_CoMs_th = 8
     if human:
-        detect_CoMs_th = 200
+        detect_CoMs_th = 100
     if not load_params:
         p_t_aff = 5
         p_t_eff = 4
@@ -538,6 +538,16 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
         pro_vs_re, total_traj, x_val_at_updt
+
+
+def check_mean_std_time_com(df, com, time_com):
+    lsubs = pd.DataFrame(df.loc[com, 'subjid'].reset_index())
+    time_com = np.array(time_com)
+    timecom_list = []
+    for i_s, subj in enumerate(lsubs.subjid.unique()):
+        index = (lsubs['subjid'] == subj).values
+        timecom_list.append(np.nanmean(time_com[index]))
+
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
@@ -1649,8 +1659,8 @@ def get_human_mt(df_data):
         ind_time = [True if t != '' else False for t in times[tr]]
         time_tr = np.array(times[tr])[np.array(ind_time)].astype(float)
         mt = time_tr[-1]
-        if mt > 1:
-            mt = 1
+        if mt > 2:
+            mt = 2
         motor_time.append(mt*1e3)
     return motor_time
 

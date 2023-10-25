@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 15 01:01:54 2023
+Created on Tue Oct 17 12:40:00 2023
 
-@author: Alex Garcia-Duran
+@author: alexg
 """
 import numpy as np
 import os
@@ -260,8 +260,7 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
                             data_folder=data_folder, median=True, prior=True)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         save_new_data=save_new_data,
-                        new_data=new_data, data_folder=data_folder,
-                        prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
+                        new_data=new_data, data_folder=data_folder, prior_lim=1)
 
 
 def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
@@ -346,7 +345,7 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
-                        ax=None, median=True, prior=True, prior_lim=1, rt_lim=200):
+                        ax=None, median=True, prior=True, prior_lim=1, rt_lim=350):
     # TODO: save each matrix? or save the mean and std
     df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
@@ -355,8 +354,9 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         func_final = np.nanmean
     # nanidx = df_sim.loc[df_sim.allpriors.isna()].index
     # df_sim.loc[nanidx, 'allpriors'] = np.nan
-    df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
+    df_sim['choice_x_coh'] = np.round((df_sim.R_response*2-1) * df_sim.coh2, 2)
     df_sim['choice_x_prior'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
+    df_sim['choice_x_zt'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     bins_zt = [1.01]
     # TODO: fix issue with equipopulated bins
@@ -429,8 +429,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                 if prior:
                     if i_ev == len(bins_ref)-1:
                         break
-                    index = (df_sim.choice_x_zt.values >= bins_ref[i_ev]) &\
-                        (df_sim.choice_x_zt.values < bins_ref[i_ev + 1]) &\
+                    index = (df_sim.choice_x_prior.values >= bins_ref[i_ev]) &\
+                        (df_sim.choice_x_prior.values < bins_ref[i_ev + 1]) &\
                         (df_sim.sound_len >= 0) & (df_sim.sound_len <= rt_lim) &\
                         (subjects == subject)
                     if sum(index) == 0:
@@ -446,7 +446,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                     if sum(vals_traj) == 0:
                         continue
                     vals_traj = np.concatenate((vals_traj,
-                                                np.repeat(75, max_mt-len(vals_traj))))
+                                                np.repeat(600, max_mt-len(vals_traj))))
                     vals_vel = df_sim.traj_d1[index].values[tr] *\
                         (signed_response[index][tr]*2 - 1)
                     vals_vel = np.diff(vals_traj)
@@ -515,10 +515,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
                            color=colormap[i_ev], alpha=0.3)
-    ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
+    ax[0].axhline(y=600, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 335)
-    ax[0].set_yticks([0, 25, 50, 75])
-    ax[0].set_ylim(-10, 85)
+    ax[0].set_yticks([0, 200, 400, 600])
+    ax[0].set_ylim(-10, 650)
     ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 335)
     if prior:
@@ -591,7 +591,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # PCoM vs RT
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
     # slowing in MT
-    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=50)
+    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=150,
+                          human=True)
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
@@ -630,12 +631,12 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
         subject = ''
     else:
         subject = df_sim.subjid.unique()[0]
-    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
-    fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
     mean_com_traj_simul(df_sim, ax=ax[11], data_folder=data_folder, new_data=new_data,
                         save_new_data=save_new_data)
-    fig.savefig(sv_folder+subject+'/fig5.png', dpi=400, bbox_inches='tight')
-    fig.savefig(sv_folder+subject+'/fig5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
 
 
 def supp_model_trial_index(df_sim):

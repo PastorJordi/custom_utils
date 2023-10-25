@@ -3029,7 +3029,7 @@ def get_trajs_time(resp_len, traj_stamps, fix_onset, com, sound_len,
         sound_len_com = sound_len
     for j in range(len(traj_st_com)):
         t = traj_st_com[j] - fix_onset_com[j]
-        t = (t.astype(int) / 1000_000 - 250 - sound_len_com[j])
+        t = (t.astype(int) / 1000_000 - 300 - sound_len_com[j])
         time.append(t)
     return np.array(time, dtype='object')
 
