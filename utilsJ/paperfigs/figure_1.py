@@ -6,6 +6,7 @@ from scipy.stats import zscore
 from scipy.optimize import curve_fit
 import pandas as pd
 import sys
+
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM

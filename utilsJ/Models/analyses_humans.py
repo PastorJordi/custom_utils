@@ -17,6 +17,7 @@ from numpy import concatenate as conc
 from numpy import logical_and as and_
 import sys
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
+sys.path.append("C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils")
 from utilsJ.Behavior.plotting import binned_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.Models import extended_ddm_v2 as edd2

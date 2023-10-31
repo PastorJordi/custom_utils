@@ -58,3 +58,4 @@ df_data['origidx'] = trial_index
 df_data['allpriors'] = df_data.norm_allpriors.values
 # simulation output: hit_model, reaction_time, mt_human, resp_fin, com_model
 # trajs
+
