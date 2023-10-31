@@ -21,7 +21,7 @@ display(HTML("<style>.container { width:90% !important; }</style>"))
 def groupby_binom_ci(x, method="beta"):
     # so we can plot groupby with errorbars in binomial vars in 2 lines
     return [
-        abs(x.mean() - ci) for ci in proportion_confint(x.sum(), len(x), method=method)
+        abs(np.nanmean(x) - ci) for ci in proportion_confint(x.sum(), len(x), method=method)
     ]
 
 

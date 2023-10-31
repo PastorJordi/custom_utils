@@ -40,10 +40,10 @@ import matplotlib.pylab as pl
 
 
 
-matplotlib.rcParams['font.size'] = 9
-plt.rcParams['legend.title_fontsize'] = 8
-plt.rcParams['xtick.labelsize']= 8
-plt.rcParams['ytick.labelsize']= 8
+matplotlib.rcParams['font.size'] = 12
+plt.rcParams['legend.title_fontsize'] = 12
+plt.rcParams['xtick.labelsize']= 12
+plt.rcParams['ytick.labelsize']= 12
 # matplotlib.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -194,7 +194,7 @@ def binning_mt_prior(df, bins):
         for bin in range(len(bins)-1):
             mt_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
                                 (df_sub.choice_x_prior < bins[bin+1]), 'resp_len']
-            mat_mt[i_s, bin] = np.nanmean(mt_sub)
+            mat_mt[i_s, bin] = np.nanmedian(mt_sub)
             if np.isnan(mat_mt[i_s, bin]):
                 print(1)
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
@@ -236,7 +236,8 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
 
 
 
-def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
+def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
+                     legend=True):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len, 'subjid': subjid})
@@ -246,16 +247,17 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data'):
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
     ax.set_ylim(0.24, 1.04)
-    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
-    legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
-                             label='0'),
-                      Line2D([0], [0], color=colormap[1], lw=2,
-                             label='0.25'),
-                      Line2D([0], [0], color=colormap[2], lw=2,
-                             label='0.5'),
-                      Line2D([0], [0], color=colormap[3], lw=2,
-                             label='1')]
-    ax.legend(handles=legendelements, fontsize=7)
+    if legend:
+        colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=2,
+                                 label='0'),
+                          Line2D([0], [0], color=colormap[1], lw=2,
+                                 label='0.25'),
+                          Line2D([0], [0], color=colormap[2], lw=2,
+                                 label='0.5'),
+                          Line2D([0], [0], color=colormap[3], lw=2,
+                                 label='1')]
+        ax.legend(handles=legendelements, fontsize=7)
     # ax.legend([1, 0.5, 0.25, 0])
     return ax.get_position()
 
@@ -445,7 +447,7 @@ def basic_statistics(decision, resp_fin):
 
 
 def run_model(stim, zt, coh, gt, trial_index, human=False,
-              subject=None, num_tr=None, load_params=True):
+              subject=None, num_tr=None, load_params=True, params_to_explore=[]):
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
@@ -455,7 +457,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     if not human:
         detect_CoMs_th = 8
     if human:
-        detect_CoMs_th = 200
+        detect_CoMs_th = 100
     if not load_params:
         p_t_aff = 5
         p_t_eff = 4
@@ -484,6 +486,13 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
         else:
             conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         jitters = len(conf)*[0]
+        # check if there are params to explore
+        if len(params_to_explore) != 0:
+            # update conf with params to explore
+            for i, index in enumerate(params_to_explore[0]):
+                conf[index] = params_to_explore[1][i]
+
+            
     print('Number of trials: ' + str(stim.shape[1]))
     p_w_zt = conf[0]+jitters[0]*np.random.rand()
     p_w_stim = conf[1]+jitters[1]*np.random.rand()
@@ -538,6 +547,16 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
         pro_vs_re, total_traj, x_val_at_updt
 
 
+def check_mean_std_time_com(df, com, time_com):
+    lsubs = pd.DataFrame(df.loc[com, 'subjid'].reset_index())
+    time_com = np.array(time_com)
+    timecom_list = []
+    for i_s, subj in enumerate(lsubs.subjid.unique()):
+        index = (lsubs['subjid'] == subj).values
+        timecom_list.append(np.nanmean(time_com[index]))
+
+
+
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
                                    subjid, human=False, num_tr=None, load_params=True,
                                    simulate=True):
@@ -561,6 +580,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(sim_data), exist_ok=True)
         if os.path.exists(sim_data) and not simulate:
+            print('Loading simulated data')
             data_simulation = np.load(sim_data, allow_pickle=True)
             hit_model_tmp = data_simulation['hit_model_tmp']
             reaction_time_tmp = data_simulation['reaction_time_tmp']
@@ -815,86 +835,88 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
 
 def supp_com_threshold_matrices(df):
     dfth = pd.read_csv(SV_FOLDER + 'com_diff_thresholds.csv')
-    fig, ax = plt.subplots(nrows=3, ncols=10, figsize=(15, 6))
-    ax = ax.flatten()
-    thlist = np.linspace(1, 10, 10)
-    zt = df.allpriors.values
-    coh = df.coh2.values
-    decision = df.R_response.values*2 - 1
-    nbins = 7
-    for i_th, threshold in enumerate(thlist):
-        com = dfth['com_'+str(threshold)]
-        df_1 = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
-                             'norm_allpriors': zt/max(abs(zt)),
-                             'R_response': (decision+1)/2})
-        matrix_side_0 = fig_3.com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
-        matrix_side_1 = fig_3.com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
-        # L-> R
-        vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-        pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
-        im = ax[i_th].imshow(matrix_side_1, vmin=0, vmax=vmax)
-        plt.sca(ax[i_th])
-        plt.colorbar(im, fraction=0.04)
-        # R -> L
-        pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
-        im = ax[i_th+len(thlist)].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
-        ax[i_th+len(thlist)].yaxis.set_ticks_position('none')
-        plt.sca(ax[i_th+len(thlist)])
-        plt.colorbar(im, fraction=0.04)
-        ax[i_th].set_title('stim, th = {} px'.format(threshold))
-        ax[i_th+len(thlist)].set_xlabel('Prior evidence')
-        if i_th == 0:
-            ax[i_th].set_ylabel(pcomlabel_1 + ', avg. stim.')
-            ax[i_th+len(thlist)].set_ylabel(pcomlabel_0 + ', avg. stim.')
-            ax[i_th + 2*len(thlist)].set_ylabel('Position (px)')
-        for ax_i in [ax[i_th], ax[i_th+len(thlist)]]:
-            ax_i.set_yticklabels(['']*nbins)
-            ax_i.set_xticklabels(['']*nbins)
-        cont = 1
-        j = 1000
-        while cont <= 10:
-            if threshold < 10:
-                if com[j] and df.trajectory_y.values[j][-1] > 1 and\
-                  df.R_response.values[j] == 1 and\
-                  not dfth['com_'+str(threshold+0.5)][j] and\
-                  df.trajectory_y.values[j][-0] >= -2 and\
-                  df.trajectory_y.values[j][-0] <= 10:
-                    traj = df.trajectory_y.values[j]
-                    time_trajs = df.time_trajs.values[j]
-                    traj -= np.nanmean(traj[
-                        (time_trajs >= -100)*(time_trajs <= 0)])
-                    ax[i_th + 2*len(thlist)].plot(time_trajs,
-                                                  traj,
-                                                  color='k', alpha=0.7)
-                    cont += 1
-            if threshold == 10:
-                if com[j] and df.trajectory_y.values[j][-1] > 1 and\
-                  df.R_response.values[j] == 1 and\
-                  df.trajectory_y.values[j][-0] >= -2 and\
-                  df.trajectory_y.values[j][-0] <= 10:
-                    traj = df.trajectory_y.values[j]
-                    time_trajs = df.time_trajs.values[j]
-                    traj -= np.nanmean(traj[
-                        (time_trajs >= -100)*(time_trajs <= 0)])
-                    ax[i_th + 2*len(thlist)].plot(time_trajs,
-                                                  traj,
-                                                  color='k', alpha=0.7)
-                    cont += 1
-            j += 1
-        ax[i_th + 2*len(thlist)].set_xlabel('Time')
-        ax[i_th + 2*len(thlist)].set_ylim(-25, 25)
-        ax[i_th + 2*len(thlist)].set_xlim(-100, 500)
-        ax[i_th + 2*len(thlist)].axhline(-threshold, color='r', linestyle='--',
-                                         alpha=0.5)
-        ax[i_th + 2*len(thlist)].axvline(0, color='r', linestyle='--',
-                                         alpha=0.5)
+    # fig, ax = plt.subplots(nrows=3, ncols=10, figsize=(15, 6))
+    # ax = ax.flatten()
+    # thlist = np.linspace(1, 10, 10)
+    # zt = df.allpriors.values
+    # coh = df.coh2.values
+    # decision = df.R_response.values*2 - 1
+    # nbins = 7
+    # for i_th, threshold in enumerate(thlist):
+    #     com = dfth['com_'+str(threshold)]
+    #     df_1 = pd.DataFrame({'avtrapz': coh, 'CoM_sugg': com,
+    #                          'norm_allpriors': zt/max(abs(zt)),
+    #                          'R_response': (decision+1)/2})
+    #     matrix_side_0 = fig_3.com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
+    #     matrix_side_1 = fig_3.com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
+    #     # L-> R
+    #     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    #     pcomlabel_1 = 'Left to Right'   # r'$p(CoM_{L \rightarrow R})$'
+    #     im = ax[i_th].imshow(matrix_side_1, vmin=0, vmax=vmax)
+    #     plt.sca(ax[i_th])
+    #     plt.colorbar(im, fraction=0.04)
+    #     # R -> L
+    #     pcomlabel_0 = 'Right to Left'  # r'$p(CoM_{L \rightarrow R})$'
+    #     im = ax[i_th+len(thlist)].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
+    #     ax[i_th+len(thlist)].yaxis.set_ticks_position('none')
+    #     plt.sca(ax[i_th+len(thlist)])
+    #     plt.colorbar(im, fraction=0.04)
+    #     ax[i_th].set_title('stim, th = {} px'.format(threshold))
+    #     ax[i_th+len(thlist)].set_xlabel('Prior evidence')
+    #     if i_th == 0:
+    #         ax[i_th].set_ylabel(pcomlabel_1 + ', avg. stim.')
+    #         ax[i_th+len(thlist)].set_ylabel(pcomlabel_0 + ', avg. stim.')
+    #         ax[i_th + 2*len(thlist)].set_ylabel('Position (px)')
+    #     for ax_i in [ax[i_th], ax[i_th+len(thlist)]]:
+    #         ax_i.set_yticklabels(['']*nbins)
+    #         ax_i.set_xticklabels(['']*nbins)
+    #     cont = 1
+    #     j = 1000
+    #     while cont <= 10:
+    #         if threshold < 10:
+    #             if com[j] and df.trajectory_y.values[j][-1] > 1 and\
+    #               df.R_response.values[j] == 1 and\
+    #               not dfth['com_'+str(threshold+0.5)][j] and\
+    #               df.trajectory_y.values[j][-0] >= -2 and\
+    #               df.trajectory_y.values[j][-0] <= 10:
+    #                 traj = df.trajectory_y.values[j]
+    #                 time_trajs = df.time_trajs.values[j]
+    #                 traj -= np.nanmean(traj[
+    #                     (time_trajs >= -100)*(time_trajs <= 0)])
+    #                 ax[i_th + 2*len(thlist)].plot(time_trajs,
+    #                                               traj,
+    #                                               color='k', alpha=0.7)
+    #                 cont += 1
+    #         if threshold == 10:
+    #             if com[j] and df.trajectory_y.values[j][-1] > 1 and\
+    #               df.R_response.values[j] == 1 and\
+    #               df.trajectory_y.values[j][-0] >= -2 and\
+    #               df.trajectory_y.values[j][-0] <= 10:
+    #                 traj = df.trajectory_y.values[j]
+    #                 time_trajs = df.time_trajs.values[j]
+    #                 traj -= np.nanmean(traj[
+    #                     (time_trajs >= -100)*(time_trajs <= 0)])
+    #                 ax[i_th + 2*len(thlist)].plot(time_trajs,
+    #                                               traj,
+    #                                               color='k', alpha=0.7)
+    #                 cont += 1
+    #         j += 1
+    #     ax[i_th + 2*len(thlist)].set_xlabel('Time')
+    #     ax[i_th + 2*len(thlist)].set_ylim(-25, 25)
+    #     ax[i_th + 2*len(thlist)].set_xlim(-100, 500)
+    #     ax[i_th + 2*len(thlist)].axhline(-threshold, color='r', linestyle='--',
+    #                                      alpha=0.5)
+    #     ax[i_th + 2*len(thlist)].axvline(0, color='r', linestyle='--',
+    #                                      alpha=0.5)
     thlist = np.linspace(0.5, 10, 20)
     mean_com = []
     fig2, ax2 = plt.subplots(1)
+    rm_top_right_lines(ax2)
     for i_th, threshold in enumerate(thlist):
         com = dfth['com_'+str(threshold)]
         mean_com.append(np.nanmean(com))
     ax2.plot(thlist, mean_com, color='k', marker='o')
+    ax2.set_yscale('log')
     ax2.set_xlabel('Threshold (pixels)')
     ax2.set_ylabel('P(CoM)')
 
@@ -1012,40 +1034,56 @@ def plot_params_all_subs_rats_humans(subjects, subjectsh, sv_folder=SV_FOLDER, d
     ax[0].legend(fontsize=12)
 
 
-def plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=True):
+def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     fig, ax = plt.subplots(4, 4)
+    plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
+                        hspace=0.5, wspace=0.4)
     if diff_col:
         colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
     else:
         colors = ['k' for _ in range(len(subjects))]
     ax = ax.flatten()
-    labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
-              't aff', 't eff', 'tAction', 'intercept AI',
-              'slope AI', 'AI bound', 'DV weight 1st readout',
-              'DV weight 2nd readout', 'leak', 'MT noise std',
-              'MT offset', 'MT slope T.I.']
+    for a in ax:
+        rm_top_right_lines(a)
+    labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
+              r'EA bound, $\theta_{DV}$',
+              r'CoM bound, $\theta_{COM}$',
+              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
+              r'AI time offset, $t_{AI}$',
+              r'AI drift offset, $v_{AI}$',
+              r'AI drift slope, $w_{AI}$',
+              r'AI bound, $\theta_{AI}$',
+              r'DV weight 1st readout, $\beta_{DV}$',
+              r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
+              # r'MT noise variance, $\sigma_{MT}$',
+              r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
     conf_mat = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
-        conf_mat[:, i_s] = conf
+        conf_mat[:, i_s] = np.delete(conf, -3)
     for i in range(len(labels)):
         if i == 4 or i == 5 or i == 6:
-            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h')
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h', color='royalblue',
+                           fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s]*5,
                            0.05*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=1.2)
+                           markersize=2)
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
         else:
-            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h')
+            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h', color='royalblue',
+                           fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s],
                            0.1*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=1.2)
+                           markersize=2)
             ax[i].set_xlabel(labels[i] + str(' ms'))
             ax[i].set_xlabel(labels[i])
+        ax[i].set_yticks([])
+        ax[i].spines['left'].set_visible(False)
+    ax[-1].axis('off')
 
 
 def mt_vs_ti_data_comparison(df, df_sim):
@@ -1148,16 +1186,46 @@ def plot_rt_sim(df_sim):
             ax[isub].set_title(subj)
 
 
-def plot_fb_per_subj_from_df(df):
+def supp_plot_rt_distros_data_model(df, df_sim):
     # plots the RT distros conditioning on coh
-    fig, ax = plt.subplots(5, 3)
+    fig, ax = plt.subplots(6, 5)
+    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.06, right=0.95,
+                        hspace=0.4, wspace=0.4)
     ax = ax.flatten()
     colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
     subjects = df.subjid.unique()
+    labs_data = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24]
+    labs_model = [5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 25, 26, 27, 28, 29]
     for i_s, subj in enumerate(subjects):
-        rm_top_right_lines(ax[i_s])
+        rm_top_right_lines(ax[labs_model[i_s]])
+        rm_top_right_lines(ax[labs_data[i_s]])
+        pos_ax_mod = ax[labs_model[i_s]].get_position()
+        ax[labs_model[i_s]].set_position([pos_ax_mod.x0,
+                                          pos_ax_mod.y0 + pos_ax_mod.height/15.5,
+                                          pos_ax_mod.width,
+                                          pos_ax_mod.height])
+        pos_ax_dat = ax[labs_data[i_s]].get_position()
+        ax[labs_data[i_s]].set_position([pos_ax_dat.x0,
+                                          pos_ax_dat.y0 - pos_ax_dat.height/15.5,
+                                          pos_ax_dat.width,
+                                          pos_ax_dat.height])
+        if (i_s+1) % 5 == 0:
+            axmod = ax[labs_model[i_s]].twinx()
+            axdat = ax[labs_data[i_s]].twinx()
+            axdat.set_ylabel('Data')
+            axmod.set_ylabel('Model')
+            axmod.set_yticks([])
+            axdat.set_yticks([])
+            axmod.spines['bottom'].set_visible(False)
+            axdat.spines['bottom'].set_visible(False)
+            rm_top_right_lines(axdat)
+            rm_top_right_lines(axmod)
         df_1 = df[df.subjid == subj]
+        df_sim_1 = df_sim[df_sim.subjid == subj]
         coh_vec = df_1.coh2.values
+        coh = df_sim_1.coh2.abs().values
+        ax[labs_data[i_s]].set_ylim(-0.0001, 0.011)
+        ax[labs_model[i_s]].set_ylim(-0.0001, 0.011)
         for ifb, fb in enumerate(df_1.fb):
             for j in range(len(fb)):
                 coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
@@ -1167,11 +1235,58 @@ def plot_fb_per_subj_from_df(df):
         for iev, ev in enumerate([0, 0.25, 0.5, 1]):
             index = np.abs(coh_vec) == ev
             fix_breaks_2 = fix_breaks[index]*1e3
+            rt_model = df_sim_1.sound_len.values[coh == ev]
             sns.kdeplot(fix_breaks_2.reshape(-1),
-                        color=colormap[iev], ax=ax[i_s])
-        # ax[i_s].set_title(subj + str(sum(fix_breaks < 0)/len(fix_breaks)))
+                        color=colormap[iev], ax=ax[labs_data[i_s]])
+            sns.kdeplot(rt_model,
+                        color=colormap[iev], ax=ax[labs_model[i_s]],
+                        linestyle='--')
+        ax[labs_data[i_s]].set_xticks([])        
+        ax[labs_data[i_s]].set_title(subj)
+        ax[labs_data[i_s]].set_xlim(-205, 410)
+        ax[labs_model[i_s]].set_xlim(-205, 410)
+        if i_s < 10:
+            ax[labs_model[i_s]].set_xticks([])        
+        if i_s >= 10:
+            ax[labs_model[i_s]].set_xlabel('RT (ms)')
+
+
+def supp_plot_rt_data_vs_model_all(df, df_sim):
+    # plots the RT distros of data vs model
+    fig, ax = plt.subplots(3, 5)
+    ax = ax.flatten()
+    subjects = df.subjid.unique()
+    for i_s, subj in enumerate(subjects):
+        rm_top_right_lines(ax[i_s])
+        df_1 = df[df.subjid == subj]
+        df_sim_1 = df_sim[df_sim.subjid == subj]
+        coh_vec = df_1.coh2.values
+        for ifb, fb in enumerate(df_1.fb):
+            for j in range(len(fb)):
+                coh_vec = np.append(coh_vec, [df_1.coh2.values[ifb]])
+        fix_breaks =\
+            np.vstack(np.concatenate([df_1.sound_len/1000,
+                                      np.concatenate(df_1.fb.values)-0.3]))
+        sns.kdeplot(fix_breaks.reshape(-1)*1e3,
+                    color='k', ax=ax[i_s], label='Rats')
+        sns.kdeplot(df_sim_1.sound_len,
+                    color='r', ax=ax[i_s], label='Model')
         ax[i_s].set_title(subj)
-        ax[i_s].set_xlabel('RT (ms)')
+        ax[i_s].set_xlim(-205, 410)
+        if i_s >= 10:
+            ax[i_s].set_xlabel('RT (ms)')
+    ax[0].legend()
+
+
+def check_perc_silent(df):
+    subs_spec_trial = df.loc[df.special_trial == 2, 'subjid'].unique()
+    l=[]
+    for sub_sil in subs_spec_trial:
+        l.append(np.sum(df.loc[df.subjid == sub_sil, 'special_trial']==2)
+                 / len(df.loc[df.subjid == sub_sil, 'special_trial']))
+    mean_l = np.mean(l)*100
+    std_l = np.std(l)*100
+    print(str(np.round(mean_l, 1)) + ' % +- ' + str(np.round(std_l, 1)))
 
 
 def sess_t_index_stats(df, subjects):
@@ -1216,7 +1331,7 @@ def mt_diff_rev_nonrev(df):
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
 
 
-def supp_mt_per_rat(df, title='Data'):
+def supp_mt_per_rat(df, df_sim, title=''):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     for a in ax:
@@ -1224,18 +1339,24 @@ def supp_mt_per_rat(df, title='Data'):
     subjects = df.subjid.unique()
     for i_s, subj in enumerate(subjects):
         df_1 = df[df.subjid == subj]
-        if title == 'Data':
-            mt_nocom = df_1.loc[~df_1['CoM_sugg'], 'resp_len']*1e3
-            mt_com = df_1.loc[df_1['CoM_sugg'], 'resp_len']*1e3
-        else:
-            mt_nocom = df_1.loc[~df_1['com_detected'], 'resp_len']*1e3
-            mt_com = df_1.loc[df_1['com_detected'], 'resp_len']*1e3
-        sns.kdeplot(mt_com, color=COLOR_COM, ax=ax[i_s],
-                    label='Rev.')
-        sns.kdeplot(mt_nocom, color=COLOR_NO_COM, ax=ax[i_s],
-                    label='No-Rev.')
+        df_sim_1 = df_sim[df_sim.subjid == subj]
+        # mt_nocom_data = df_1.loc[~df_1['CoM_sugg'], 'resp_len']*1e3
+        # mt_com_data = df_1.loc[df_1['CoM_sugg'], 'resp_len']*1e3
+        # mt_nocom_sim = df_sim_1.loc[~df_sim_1['com_detected'], 'resp_len']*1e3
+        # mt_com_sim = df_sim_1.loc[df_sim_1['com_detected'], 'resp_len']*1e3
+        mt_rat = df_1.resp_len.values*1e3
+        mt_model = df_sim_1.resp_len.values*1e3
+        sns.kdeplot(mt_rat, color='k', ax=ax[i_s],
+                    label='Rats')
+        sns.kdeplot(mt_model, color='r', ax=ax[i_s],
+                    label='Model')
+        # sns.kdeplot(mt_com_sim, color=COLOR_COM, ax=ax[i_s],
+        #             label='Model Rev.', linestyle='--')
+        # sns.kdeplot(mt_nocom_sim, color=COLOR_NO_COM, ax=ax[i_s],
+        #             label='Model No-Rev.', linestyle='--')
         ax[i_s].set_xlabel('MT (ms)')
         ax[i_s].set_title(subj)
+        ax[i_s].set_xlim(-5, 725)
     ax[0].legend()
     fig.suptitle(title)
 
@@ -1268,17 +1389,18 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
     None.
 
     """
-    fig2, ax2 = plt.subplots(nrows=5, ncols=5)
+    fig2, ax2 = plt.subplots(nrows=3, ncols=3)
     np.random.seed(seed=5)  # set seed
     # fig2.tight_layout()
     ax2 = ax2.flatten()
     coh = df_sim.coh2.values
     zt = np.round(df_sim.normallpriors.values, 1)
-    coh_vals = [-1, -0.25, 0, 0.25, 1]
-    zt_vals = [-np.max(np.abs(zt)), -np.median(np.abs(zt)),
-               -0.1, 0.1, np.median(np.abs(zt)), np.max(np.abs(zt))]
+    coh_vals = [-1, 0, 1]
+    zt_vals = [-np.max(np.abs(zt)), -np.max(np.abs(zt))*0.75,
+               -0.05, 0.05,
+               np.max(np.abs(zt))*0.75, np.max(np.abs(zt))]
     i = 0
-    ztlabs = [-1, -0.2, 0, 0.2, 1]
+    ztlabs = [-1, 0, 1]
     gkde = scipy.stats.gaussian_kde  # we define gkde that will generate the kde
     if plot_data_trajs:
         bins = np.array([-1.1, 1.1])  # for data plotting
@@ -1287,9 +1409,10 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
         df['choice_x_prior'] = (df.R_response*2-1) * df.norm_allpriors
     for ie, ev in enumerate(coh_vals):
         for ip, pr in enumerate(zt_vals):
-            if ip == 5:
+            ip2 = 2*ip
+            if ip == 3:
                 break
-            index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # index of filtered
+            index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev)  # index of filtered
             max_len = max([len(t) for t in df_sim.traj[index].values])
             mat_fin = np.empty((sum(index), max_len+offset))
             mat_fin[:] = np.nan
@@ -1309,16 +1432,26 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                           norm=LogNorm(vmin=0.001, vmax=0.6))  # plot the matrix
             ax2[i].set_xlim(0, 50)
             ax2[i].set_ylim(len(values), 0)
-            ax2[i].set_xticks(np.arange(0, 50, 5), np.arange(0, 50, 5)*5)
-            ax2[i].set_yticks(np.arange(0, len(values), int(20/pixel_precision)),
-                              np.arange(80, -81, -20))
-            ax2[i].set_title('coh = {}, zt = {}'.format(ev, ztlabs[ip]))
-            if i == 0 or i % 5 == 0:
+            if i == 2 or i == 5 or i == 8:
+                ax1 = ax2[i].twinx()
+                ax1.set_yticks([])
+                ax1.set_ylabel('zt = {}'.format(ztlabs[int((i-2) // 3)]),
+                               rotation=90, labelpad=5, fontsize=12)
+            if i >= 6:
+                ax2[i].set_xticks(np.arange(0, 51, 10), np.arange(0, 51, 10)*5)
+            else:
+                ax2[i].set_xticks([])
+            if i % 3 == 0:
+                ax2[i].set_yticks(np.arange(0, len(values), int(80/pixel_precision)),
+                                  np.arange(80, -81, -80))
+            else:
+                ax2[i].set_yticks([])
+            if i % 3 == 0:
                 ax2[i].set_ylabel('Position, pixels')
-            if i >= 20:
+            if i >= 6:
                 ax2[i].set_xlabel('Time (ms)')
             if plot_data_trajs:
-                index = (zt >= pr) & (zt < zt_vals[ip+1]) & (coh == ev)  # & (t_index < np.median(t_index))
+                index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev)  # index of filtered
                 # to extract interpolated trajs in mat --> these aren't signed
                 _, _, _, mat, idx, _ =\
                 trajectory_thr(df.loc[index], 'choice_x_prior', bins,
@@ -1342,6 +1475,9 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                     ax2[i].plot(np.arange(0, 50, 0.2), (-traj[700:950]+80)/160*len(values),
                                 color='blue', linewidth=0.5)
             i += 1
+    ax2[0].set_title('coh = -1')
+    ax2[1].set_title('coh = 0')
+    ax2[2].set_title('coh = 1')
 
 
 def plot_data_trajs_density(df):
@@ -1530,8 +1666,8 @@ def get_human_mt(df_data):
         ind_time = [True if t != '' else False for t in times[tr]]
         time_tr = np.array(times[tr])[np.array(ind_time)].astype(float)
         mt = time_tr[-1]
-        if mt > 1:
-            mt = 1
+        if mt > 2:
+            mt = 2
         motor_time.append(mt*1e3)
     return motor_time
 

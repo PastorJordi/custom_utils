@@ -4,6 +4,7 @@ import matplotlib.pylab as pl
 import seaborn as sns
 from scipy.stats import zscore
 from scipy.optimize import curve_fit
+from matplotlib.lines import Line2D
 import pandas as pd
 import sys
 
@@ -14,6 +15,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
 from utilsJ.paperfigs import figures_paper as fp
+from utilsJ.paperfigs import figure_2 as fig2
 from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
 
@@ -36,9 +38,17 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
         norm_counts = counts_coh/sum(counts_coh)
         ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
                 color=colormap[iev], label=ev)
-    ax.set_ylabel('RT density')
+    ax.set_ylabel('Reaction time density')
     ax.set_xlabel('Reaction time (ms)')
-    ax.legend(title='Stim.')
+    
+    ax.fill_between([0, 50], [-0.01, -0.01], [0.15, 0.15], color='gray',
+                    alpha=0.2, linewidth=0)
+    ax.text(12, 0.09, 'express', rotation='vertical',
+            fontsize=9.5, style='italic')
+    legend = ax.legend(title='Stimulus', borderpad=0.3, fontsize=8,
+                       loc='center left', bbox_to_anchor=(0.7, 1.1),
+                       labelspacing=0.1)
+    legend.get_title().set_fontsize('8') #legend 'Title' fontsize
 
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
@@ -62,11 +72,19 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # unstack to have a matrix with rows for subjects and columns for bins
         mt_time = mt_time.unstack(fill_value=np.nan).values.T
         plot_bins = sorted(df.coh2.unique())
-        ax.set_xlabel('Stimulus congruent evidence')
+        ax.set_xlabel('Stimulus evidence towards response')
+        # ax.text(200, -1,
+        #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
+        #     fontsize=8, transform=ax.transAxes)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
-        ax.set_xlabel('Prior congruent evidence')
+        ax.set_xlabel('Prior evidence towards response')
+        # ax.text(200, -1,
+        #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
+        #     fontsize=8, transform=ax.transAxes)
+    ax.set_xlim(-1.15, 1.4)
+    ax.set_title(r'$\;\;\;\;\;\;\; \longleftarrow \it{inc.} \;\;\;\; \it{congruent} \longrightarrow \;\;\;\;\;\;$', fontsize=8)
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
     for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
@@ -77,12 +95,13 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                     mt_time[:, i_tr], color=colormap[i_tr], marker='o',
                     linestyle='None')
         else:
-            median_mt = np.median(mt_time[:, i_tr])
-            ax.errorbar(bin, median_mt, yerr=mt_time_err[i_tr],
+            mean_mt = np.mean(mt_time[:, i_tr])
+            ax.errorbar(bin,mean_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o')
 
-        ax.set_ylabel('Movement Time (ms)')
-    ax.plot(plot_bins, np.median(mt_time, axis=0), color='k', ls='-', lw=0.5)
+        ax.set_ylabel('Movement time (ms)')
+    ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5)
+    ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
 
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
@@ -128,11 +147,11 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
 
 def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
                          errors_model=None, width=0.35):
-    labels = ['Prior', 'Stimulus']  # , 'Trial index'
+    labels = ['Prior', '\n Stimulus']  # , 'Trial index'
     if not f5:
         ax.bar(x=labels, height=means, yerr=errors, capsize=3, color='gray',
                ecolor='blue')
-        ax.set_ylabel('Impact on MT (weights, a.u)')
+        ax.set_ylabel('Impact on movement time')
     if f5:
         x = np.arange(len(labels))
         ax.bar(x=x-width/2, height=means, yerr=errors, width=width,
@@ -159,8 +178,10 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
             label_1.append(labels[j])
     df_weights = pd.DataFrame({' ': label_1, 'weight': arr_weights})
 
-    sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
-                   palette=palette, linewidth=0.1)
+    violin = sns.violinplot(data=df_weights, x=" ", y="weight", ax=ax,
+                            palette=palette, linewidth=0.1)
+    for plot in violin.collections[::2]:
+        plot.set_alpha(0.7)
     if t_index_w:
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
@@ -178,10 +199,11 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
         ax.set_xlim(-0.5, 1.5)
         ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
     if mt:
-        ax.set_ylabel('Impact on MT (weights, a.u)')
+        ax.set_ylabel('Impact on MT')
     else:
-        ax.set_ylabel('Impact on RT (weights, a.u)')
+        ax.set_ylabel('Impact on RT')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
+
 
 def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
     w_coh = []
@@ -233,11 +255,15 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
     else:
         return w_coh, w_t_i, w_zt
 
-def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
-    subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
+
+def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
+    if not human:
+        subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
+    else:
+        subjects = df['subjid'].unique()
     subjid = df.subjid
     zt_cong = df.norm_allpriors.values * (df.R_response*2-1)
-    coh_cong = df.coh2.values * (df.R_response*2-1)
+    coh_cong = np.round(df.coh2.values * (df.R_response*2-1), 2)
     rt = df.sound_len.values
     spec_trial = df.special_trial.values
     mt = df.resp_len.values
@@ -255,7 +281,8 @@ def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
             mt_mat[i_s, iev] = np.nanmean(mt[index])*1e3
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
-    ax.axhline(np.nanmean(sil), color='k', linestyle='--', alpha=0.6)
+    ax.axhline(y=np.nanmean(sil), color='k', alpha=0.6)
+    ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
     coh_unq = np.unique(coh_cong)
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
@@ -263,8 +290,9 @@ def plot_mt_vs_stim(df, ax, prior_min=0.5, rt_max=50):
         ax.errorbar(x, y, e, color=color)
     # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     ax.set_xticks([-1, 0, 1])
-    ax.set_xlabel('Stimulus')
-    ax.set_ylabel('MT (ms)')
+    ax.text(0.65, np.nanmean(sil)+5, 'silent', color='k', fontsize=10.5, alpha=0.7)
+    ax.set_xlabel('Stimulus evidence towards response')
+    ax.set_ylabel('Movement time (ms)')
 
 
 def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
@@ -436,103 +464,121 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         ax.set_xticklabels(['-1', '0', '1'])
         ax.set_ylim([-0.5, 6.5])
         ax.set_xlim([-0.5, 6.5])
-        ax.set_xlabel('Prior Evidence')
-        ax.set_ylabel('Stimulus Evidence')
+        ax.set_xlabel('Prior evidence')
+        ax.set_ylabel('Stimulus evidence')
         pos = ax.get_position()
         cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
                           pos.width/12, pos.height/3])
         plt.colorbar(im_s, cax=cbar_ax)
-        cbar_ax.set_title(r'$MT \;(ms)$', fontsize=8)
+        cbar_ax.set_title(r'  $MT \;(ms)$', fontsize=8)
 
 
-def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
-    f, ax = plt.subplots(nrows=4, ncols=3, figsize=figsize)  # figsize=(4, 3))
+def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
+                     figsize=(10, 8), margin=.06):
+    f, ax = plt.subplots(nrows=3, ncols=4, figsize=figsize)  # figsize=(4, 3))
+    plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.98,
+                        hspace=0.45, wspace=0.6)
     ax = ax.flatten()
     # TUNE PANELS
     # all panels
-    letters = ['', '',  'c', '', '', 'd', 'e', 'f', '', 'g', 'h', 'i']
+    letters = ['', '',  '', '', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '']
     for n, ax_1 in enumerate(ax):
-        fp.add_text(ax=ax_1, letter=letters[n], x=-0.15, y=1.2)
-        if n not in [4, 10]:
+        fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
+        if n not in [4, 11]:
             fp.rm_top_right_lines(ax_1)
 
-    for i in [0, 1, 3]:
+    for i in [0, 1, 2, 11]:
         ax[i].axis('off')
     # task panel
     ax_task = ax[0]
     pos_task = ax_task.get_position()
-    factor = 1.75
-    ax_task.set_position([pos_task.x0+0.05, pos_task.y0-0.05,
+    factor = 2.5
+    ax_task.set_position([pos_task.x0, pos_task.y0-0.08,
                           pos_task.width*factor, pos_task.height*factor])
-    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.15)
+    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.12)
+    # rep-alt img
+    ax_repalt = ax[2]
+    pos_repalt = ax_repalt.get_position()
+    factor = 1.3
+    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/2,
+                            pos_repalt.y0+0.02,
+                            pos_repalt.width*factor, pos_repalt.height*factor])
     # rt panel
-    ax_rts = ax[2]
+    ax_rts = ax[4]
     fp.rm_top_right_lines(ax=ax_rts)
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
     ax_rts.set_xlim(-101, 201)
+    ax_rts.set_ylim(-0.01, 0.1495)
     pos_rt = ax_rts.get_position()
-    ax_rts.set_position([pos_rt.x0, pos_rt.y0+margin, pos_rt.width, pos_rt.height])
-    fp.add_text(ax=ax_rts, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    # ax_rts.set_position([pos_rt.x0, pos_rt.y0, pos_rt.width, pos_rt.height])
+    fp.add_text(ax=ax_rts, letter='rat LE46', x=0.35, y=1.08, fontsize=8)
     # pright panel
-    ax_pright = ax[4]
+    ax_pright = ax[3]
     pos_pright = ax_pright.get_position()
-    ax_pright.set_position([pos_pright.x0-pos_pright.width/1.6,
-                            pos_pright.y0, pos_pright.width*.9,
-                            pos_pright.height*.9])
-    pright_cbar_ax = f.add_axes([pos_pright.x0+pos_pright.width/2.3, pos_pright.y0,
-                                 pos_pright.width/10, pos_pright.height/2])
+    factor = 1.1
+    ax_pright.set_position([pos_pright.x0,
+                            pos_pright.y0 + 0.05,
+                            pos_pright.width*factor,
+                            pos_pright.height*factor])
+    pos_pright = ax_pright.get_position()
+    # pright_cbar_ax = f.add_axes([pos_pright.x0+pos_pright.width/2.2,
+    #                              pos_pright.y0+pos_pright.height*1.3,
+    #                              pos_pright.width/2.2, pos_pright.height/10])
+    # pright_cbar_ax.invert_yaxis()
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
     ax_pright.set_yticklabels(['L', '', 'R'])
     ax_pright.set_xticks([0, 3, 6])
     ax_pright.set_xlim([-0.5, 6.5])
-    ax_pright.set_xticklabels(['Left', '', 'Right'])
-    ax_pright.set_xlabel('Prior Evidence')
-    ax_pright.set_ylabel('Stimulus Evidence')
-    pright_cbar_ax.set_title('p(Right)', fontsize=9)
-    fp.add_text(ax=ax_pright, letter='b', x=-0.2, y=1.15)
+    ax_pright.set_xticklabels(['L', '', 'R'])
+    ax_pright.set_xlabel('Prior evidence')
+    ax_pright.set_ylabel('Stimulus evidence')
+    # pright_cbar_ax.set_title('p(Right)', fontsize=9)
+    fp.add_text(ax=ax_pright, letter='b', x=-0.17, y=1.3)
     # tachometric panel
     ax_tach = ax[5]
-    ax_tach.set_xlabel('Reaction Time (ms)')
+    ax_tach.set_xlabel('Reaction time (ms)')
     ax_tach.set_ylabel('Accuracy')
-    ax_tach.set_ylim(0.5, 1.04)
+    ax_tach.set_ylim(0.5, 1.02)
     ax_tach.set_xlim(-101, 201)
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
     ax_tach.set_yticks([0.5, 0.75, 1])
     ax_tach.set_yticklabels(['0.5', '0.75', '1'])
+    ax_tach.fill_between([0, 50], [0, 0], [1.04, 1.04], color='gray', alpha=0.2,
+                         linewidth=0)
     fp.rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
-    fp.add_text(ax=ax_tach, letter='rat LE46', x=0.32, y=1., fontsize=8)
+    fp.add_text(ax=ax_tach, letter='rat LE46', x=0.35, y=1.08, fontsize=8)
     # mt versus evidence panels
     # move axis 6 to the right
-    shift = 0.1
+    shift = 0.12
     factor = 0.8
     ax_mt_coh = ax[6]
     pos = ax_mt_coh.get_position()
-    pos_pright = ax_pright.get_position()
-    ax_mt_coh.set_position([pos_pright.x0, pos.y0, pos.width, pos.height*factor])
+    # pos_pright = ax_pright.get_position()
+    # ax_mt_coh.set_position([pos_pright.x0, pos.y0, pos.width, pos.height*factor])
     # move axis 7 to the right
     ax_mt_zt = ax[7]
-    pos = ax_mt_zt.get_position()
-    ax_mt_zt.set_position([pos_rt.x0, pos.y0, pos.width, pos.height*factor])
+    # pos = ax_mt_zt.get_position()
+    # ax_mt_zt.set_position([pos_rt.x0, pos.y0, pos.width, pos.height*factor])
     # remove axis 8
-    ax[8].axis('off')
+    # ax[8].axis('off')
     # regression weights panel
-    # make axis 9 smaller and move it to the right
-    factor = 0.5
-    pos = ax[9].get_position()
-    ax[9].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
+    # make axis 9 bigger and move it to the right
+    factor = 1.2
+    pos = ax[8].get_position()
+    ax[8].set_position([pos.x0, pos.y0-margin, pos.width*factor, pos.height])
     # mt matrix panel
-    # make axis 10 smaller and move it to the right
-    factor = 0.8
-    pos = ax[10].get_position()
-    ax[10].set_position([pos.x0+shift/3, pos.y0-margin, pos.width*factor, pos.height])
+    # make axis 10 bigger and move it to the right
+    factor = 1.2
+    pos = ax[9].get_position()
+    ax[9].set_position([pos.x0+shift/1.8, pos.y0-margin, pos.width*factor, pos.height])
     # mt versus silent panel
-    # make axis 11 smaller
-    pos = ax[11].get_position()
-    ax[11].set_position([pos.x0+shift, pos.y0-margin, pos.width*factor, pos.height])
+    # make axis 11 bigger
+    pos = ax[10].get_position()
+    ax[10].set_position([pos.x0+shift*1.6, pos.y0-margin, pos.width*factor, pos.height])
 
     # RTs
     df_rts = df_data.copy()
@@ -543,6 +589,10 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     # TASK PANEL
     task = plt.imread(task_img)
     ax_task.imshow(task)
+
+    # REPALT PANEL
+    task = plt.imread(repalt_img)
+    ax_repalt.imshow(task)
 
     # P(RIGHT) MATRIX
     mat_pright_all = np.zeros((7, 7))
@@ -559,8 +609,22 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     mat_pright = mat_pright_all / len(df_data.subjid.unique())
 
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
-    f.colorbar(im_2, cax=pright_cbar_ax)
-
+    # cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
+    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (right)',
+                      shrink=0.55, aspect=5)
+    im = ax_pright.images
+    cb = im[-1].colorbar
+    pos_cb = cb.ax.get_position()
+    pos_pright = ax_pright.get_position()
+    factor = 1.3
+    ax_pright.set_position([pos_pright.x0-pos_pright.width/3,
+                            pos_pright.y0 + 0.07,
+                            pos_pright.width*factor,
+                            pos_pright.height*factor])
+    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.02,
+                        pos_cb.y0+0.115, pos_cb.width, pos_cb.height])
+    # pright_cbar_ax.set_title('p (right)')
+    cbar.ax.tick_params(rotation=45)
     df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
     bin_size = 10
@@ -584,16 +648,16 @@ def fig_1_rats_behav(df_data, task_img, sv_folder, figsize=(7, 9), margin=.05):
     del df_mt
     # REGRESSION WEIGHTS
     df_wghts = df_data.copy()
-    mt_weights(df=df_wghts, ax=ax[9], plot=True, means_errs=False)
+    mt_weights(df=df_wghts, ax=ax[8], plot=True, means_errs=False)
     del df_wghts
     # MT MATRIX
     df_mtx = df_data.copy()
-    mt_matrix_ev_vs_zt(df=df_mtx, ax=ax[10], f=f, silent_comparison=False,
+    mt_matrix_ev_vs_zt(df=df_mtx, ax=ax[9], f=f, silent_comparison=False,
                           rt_bin=60, collapse_sides=True)
     del df_mtx
     # SLOWING
     df_slow = df_data.copy()
-    plot_mt_vs_stim(df=df_slow, ax=ax[11], prior_min=0.8, rt_max=50)
+    plot_mt_vs_stim(df=df_slow, ax=ax[10], prior_min=0.8, rt_max=50)
     del df_slow
 
     f.savefig(sv_folder+'fig1.svg', dpi=400, bbox_inches='tight')
@@ -627,10 +691,10 @@ def supp_fig_traj_tr_idx(df, sv_folder, fgsz=(15, 5), accel=False, marginx=0.01,
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')
 
 
-def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
-    fig, ax = plt.subplots(nrows=2)
-    for a in ax:
-        fp.rm_top_right_lines(a)
+def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16), ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(nrows=1)
+    fp.rm_top_right_lines(ax)
     coh_weights = []
     zt_weights = []
     ti_weights = []
@@ -650,20 +714,52 @@ def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16)):
         ti_err.append(err_sub[2])
     error_kws = dict(ecolor='goldenrod', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='goldenrod', marker='o', label='Prior')
-    ax[0].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, zt_weights, zt_err,
-                   **error_kws)
+    ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, zt_weights, zt_err,
+                **error_kws)
     error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='firebrick', marker='o', label='Stimulus')
-    ax[0].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, coh_weights, coh_err,
-                   **error_kws)
+    ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, coh_weights, coh_err,
+                **error_kws)
     error_kws = dict(ecolor='steelblue', capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color='steelblue', marker='o', label='Trial index')
-    ax[1].errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, ti_weights, ti_err,
-                   **error_kws)
-    ax[0].set_ylabel('MT weight')
-    ax[0].set_xlabel('RT (ms)')
-    ax[0].legend()
-    ax[1].set_ylabel('MT weight')
-    ax[1].set_xlabel('RT (ms)')
-    ax[1].legend()
+    ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, ti_weights, ti_err,
+                **error_kws)
+    ax.set_ylabel('Impact on MT')
+    ax.set_xlabel('Reaction time (ms)')
+    ax.legend()
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.8)
 
+
+def supp_trajs_cond_trial_index(df, data_folder, ax):
+    # fig, ax = plt.subplots(nrows=2)
+    # ax = ax.flatten()
+    fig, ax2 = plt.subplots(2)
+    ax2 = ax2.flatten()
+    for a in ax:
+        fp.rm_top_right_lines(a)
+    ax = [ax[0], ax2[0], ax[1], ax2[1]]
+    fig2.plots_trajs_conditioned(df, ax, data_folder, condition='origidx',
+                                 cmap='viridis',
+                                 prior_limit=0.25, rt_lim=50,
+                                 after_correct_only=True,
+                                 trajectory="trajectory_y",
+                                 velocity=("traj_d1", 1))
+    plt.close(fig)
+
+
+def supp_trial_index_analysis(df, data_folder):
+    fig, ax = plt.subplots(ncols=2, nrows=2)
+    fig.tight_layout()
+    plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
+                        hspace=0.4, wspace=0.35)
+    ax = ax.flatten()
+    labs = ['a', 'c', 'b', 'd']
+    for i_ax, a in enumerate(ax):
+        fp.rm_top_right_lines(a)
+        a.text(-0.11, 1.12, labs[i_ax], transform=a.transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    supp_trajs_cond_trial_index(df=df, data_folder=data_folder,
+                                ax=[ax[0], ax[2]])
+    ax[2].set_ylim(-0.05, 0.455)
+    plot_mt_weights_rt_bins(df=df, ax=ax[3])
+    mt_weights(df=df, ax=ax[1], plot=True, t_index_w=True, means_errs=False)

@@ -264,7 +264,7 @@ def e(df, ax, average=False, rtbins= np.arange(0,201,10), sv_folder=None, dist=F
         counts = np.stack(hist_list).mean(axis=0)
         ax.hist(bns[:-1], bns, weights=0.5*ymax * counts /
                 counts.max(), alpha=.4, label='RT distribution')
-    ax.set_xlabel('Reaction Time (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('p(detected CoM)')
     # ax.legend(fancybox=False, frameon=False)
     ax.spines['right'].set_visible(False)

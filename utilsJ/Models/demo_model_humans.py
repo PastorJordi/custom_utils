@@ -37,7 +37,7 @@ hit = df_data.hithistory.values*2-1
 subjects = df_data.subjid.unique()
 subjid = df_data.subjid.values
 len_task = [len(df_data.loc[subjid == subject]) for subject in subjects]
-subjid = np.repeat('all', len(choice))  # meta subject
+# subjid = np.repeat('all', len(choice))  # meta subject
 df_data['subjid'] = subjid
 gt = (choice*hit+1)/2
 coh = df_data.avtrapz.values*5
@@ -46,6 +46,23 @@ for j in range(len(len_task)):
     trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
 df_data['origidx'] = trial_index
 stim = np.repeat(coh.reshape(-1, 1), 20, 1).T
+# MT ANALYSIS
+index1 = (df_data.subjid != 5) & (df_data.subjid != 6)
+df_data.avtrapz /= max(abs(df_data.avtrapz))
+coh = df_data.avtrapz.values[index1]
+decision = df_data.R_response.values[index1]
+trajs = df_data.trajectory_y.values[index1]
+times = df_data.times.values[index1]
+sound_len = df_data.sound_len.values[index1]
+prior_cong = df_data['norm_allpriors'][index1] * (decision*2 - 1)
+prior_cong = prior_cong.values
+ev_vals = np.unique(np.round(coh, 2))
+congruent_coh = np.round(coh, 2) * (decision*2 - 1)
+
+
+
+
+# SIMULATION
 hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
     _, trajs, x_val_at_updt =\
     fp.simulate_model_humans(df_data=df_data, stim=stim,

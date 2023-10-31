@@ -727,12 +727,14 @@ def get_data_and_matrix(dfpath='C:/Users/Alexandre/Desktop/CRM/Alex/paper/',
                                     resp_len <=1 and R_response>= 0\
                                         and hithistory >= 0\
                                             and aftererror==0")
+                                            #  and resp_len >= 0.05
                     else:
                         return df.query(
                                 "sound_len <= 400 and soundrfail ==\
                                     False and resp_len <=1 and R_response>= 0\
                                         and hithistory >= 0\
                                             and aftererror==0")
+                                            # and resp_len >= 0.05
             else:
                 if not silent:
                     if srfail:
@@ -3027,7 +3029,7 @@ def get_trajs_time(resp_len, traj_stamps, fix_onset, com, sound_len,
         sound_len_com = sound_len
     for j in range(len(traj_st_com)):
         t = traj_st_com[j] - fix_onset_com[j]
-        t = (t.astype(int) / 1000_000 - 250 - sound_len_com[j])
+        t = (t.astype(int) / 1000_000 - 300 - sound_len_com[j])
         time.append(t)
     return np.array(time, dtype='object')
 
