@@ -1936,7 +1936,7 @@ def tachometric(
         clabel = evidence_bins[i]
         if fill_error and plot:
             ax.plot(
-                np.arange(7) * rtbinsize + 0.5 * rtbinsize,
+                np.arange(len(rtbins)-1) * rtbinsize + 0.5 * rtbinsize,
                 vals_total, label=clabel, c=cmap(
                     (i+1)/(evidence_bins.size)),
                 marker=error_kws.get('marker', ''),
@@ -1947,7 +1947,7 @@ def tachometric(
             cmp_edge[-1] = 0.
             if n_subs > 1:
                 ax.fill_between(
-                    np.arange(7) * rtbinsize + 0.5 * rtbinsize,
+                    np.arange(len(rtbins)-1) * rtbinsize + 0.5 * rtbinsize,
                     vals_total[:(len(rtbins)-1)] +
                     error_total[:(len(rtbins)-1)],
                     y2=vals_total[:(len(rtbins)-1)] -

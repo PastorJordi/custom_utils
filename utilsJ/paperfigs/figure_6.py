@@ -223,28 +223,28 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
     ax[1].set_title('MT (ms)', fontsize=10)
     if condition == 'prior':
         ax[1].set_xlabel('Prior')
-        legendelements = [Line2D([0], [0], color=colormap[4], lw=1.5, label='cong.'),
-                          Line2D([0], [0], color=colormap[3], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[2], lw=1.5, label='0'),
-                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[0], lw=1.5, label='inc.')]
+        legendelements = [Line2D([0], [0], color=colormap[4], lw=1.3, label='cong.'),
+                          Line2D([0], [0], color=colormap[3], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[2], lw=1.3, label='0'),
+                          Line2D([0], [0], color=colormap[1], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[0], lw=1.3, label='inc.')]
         ax[1].set_ylim(180, 315)
         ax[1].set_xlim(-0.4, 4.4)
         ax[0].legend(handles=legendelements, title='Prior', loc='center left',
-                     labelspacing=0.05, bbox_to_anchor=(0., 1.2))
+                     labelspacing=0.01, bbox_to_anchor=(0., 1.2), fontsize=9)
     else:
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.5, label='1'),
-                          Line2D([0], [0], color=colormap[1], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[2], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[3], lw=1.5, label='0'),
-                          Line2D([0], [0], color=colormap[4], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[5], lw=1.5, label=' '),
-                          Line2D([0], [0], color=colormap[6], lw=1.5, label='-1')]
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3, label='1'),
+                          Line2D([0], [0], color=colormap[1], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[2], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[3], lw=1.3, label='0'),
+                          Line2D([0], [0], color=colormap[4], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[5], lw=1.3, label=''),
+                          Line2D([0], [0], color=colormap[6], lw=1.3, label='-1')]
         ax[1].set_xlabel('Stimulus')
         ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
         ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
-                     labelspacing=0.05, bbox_to_anchor=(0.8, 1.2))
+                     labelspacing=0.01, bbox_to_anchor=(0.8, 1.2), fontsize=9)
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,

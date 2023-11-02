@@ -125,12 +125,12 @@ def check_distros(df, df_sim):
 plt.close('all')
 f1 = False
 f2 = False
-f3 = True
+f3 = False
 f4 = False
 f5 = False
-f6 = True
+f6 = False
 f7 = False
-f8 = False
+f8 = True
 com_threshold = 8
 if f1 or f2 or f3 or f5:
     # with silent: 42, 43, 44, 45, 46, 47
@@ -349,7 +349,7 @@ if f7:
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
-    df_data['subjid'] = np.repeat('all', len(choice))
+    # df_data['subjid'] = np.repeat('all', len(choice))
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
     subjid = df_data.subjid.values

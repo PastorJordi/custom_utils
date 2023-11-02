@@ -568,7 +568,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # Tachometrics
     _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                             sound_len=sound_len_model[sound_len_model >= 0],
-                            subjid=subjid, ax=ax[1], label='', legend=False)
+                            subjid=subjid, ax=ax[1], label='', legend=False,
+                            rtbins=np.linspace(0, 300, num=8))
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
                              label='1'),

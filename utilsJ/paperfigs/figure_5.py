@@ -622,7 +622,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
-                               threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
+                               threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
     

@@ -516,6 +516,8 @@ def get_data_traj(folder, plot=False):
         df2 = pd.read_csv(folder+'/'+sorted_list_tls[i_f], sep=',')
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
         if np.mean(df2['correct']) < 0.7:
+            print('subject discarded: ' + str(i_f+1))
+            print('acc: ' + str(np.mean(df2['correct'])))
             continue
         else:
             pos_x = df1['answer_positionsX'].dropna().values[:num_tr]

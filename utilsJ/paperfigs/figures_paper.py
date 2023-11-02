@@ -237,11 +237,12 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
 
 
 def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
-                     legend=True):
+                     legend=True, rtbins=np.arange(0, 201, 3)):
     rm_top_right_lines(ax)
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len, 'subjid': subjid})
-    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg')
+    tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg',
+                rtbins=rtbins)
     ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax.set_xlabel('RT (ms)')
     ax.set_ylabel('Accuracy')

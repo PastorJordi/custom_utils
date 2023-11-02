@@ -787,7 +787,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
         if not sim:
             split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_005.npz'
         if sim:
-            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim.npz'
+            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):
@@ -825,7 +825,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                     if sim:
                         max_mt = 800
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.01, max_MT=max_mt,
+                            get_split_ind_corr(mat, evl, pval=0.05, max_MT=max_mt,
                                             startfrom=0)+1
                     if current_split_index >= rtbins[i]:
                         out_data_sbj += [current_split_index]
