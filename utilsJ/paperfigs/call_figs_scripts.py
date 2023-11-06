@@ -213,20 +213,20 @@ if f2:
 # fig 3
 if f3:
     print('Plotting Figure 3')
-    # fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-    #                   rat_com_img=RAT_COM_IMG)
-    fig, ax = plt.subplots(1)
-    fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
-                       condition='choice_x_prior', prior_limit=1,
-                       after_correct_only=True, rt_lim=300,
-                       trajectory=("traj_d1", 1),
-                       interpolatespace=np.linspace(-700000, 1000000, 1700))
-    fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
-                       condition='choice_x_prior', prior_limit=1,
-                       after_correct_only=True, rt_lim=300,
-                       trajectory=("traj_d1", 1),
-                       interpolatespace=np.linspace(-700000, 1000000, 1700),
-                       cong=True)
+    fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                     rat_com_img=RAT_COM_IMG)
+    # fig, ax = plt.subplots(1)
+    # fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
+    #                    condition='choice_x_prior', prior_limit=1,
+    #                    after_correct_only=True, rt_lim=300,
+    #                    trajectory=("traj_d1", 1),
+    #                    interpolatespace=np.linspace(-700000, 1000000, 1700))
+    # fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
+    #                    condition='choice_x_prior', prior_limit=1,
+    #                    after_correct_only=True, rt_lim=300,
+    #                    trajectory=("traj_d1", 1),
+    #                    interpolatespace=np.linspace(-700000, 1000000, 1700),
+    #                    cong=True)
     # fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)

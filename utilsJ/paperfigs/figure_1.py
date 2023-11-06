@@ -53,6 +53,7 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                         rt_lim=50, after_correct_only=True):
     subjects = df['subjid'].unique()
+    ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
     df['allpriors'] = np.nansum(df[['dW_trans', 'dW_lat']].values, axis=1)
     df.loc[nanidx, 'allpriors'] = np.nan
@@ -100,7 +101,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
 
         ax.set_ylabel('Movement time (ms)')
     ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5)
-    ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
+
 
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
@@ -256,6 +257,7 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
 
 
 def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
+    ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     if not human:
         subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
     else:
@@ -508,7 +510,7 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
     ax_rts.set_xlim(-101, 201)
-    ax_rts.set_ylim(-0.01, 0.1495)
+    ax_rts.set_ylim(0, 0.1495)
     pos_rt = ax_rts.get_position()
     # ax_rts.set_position([pos_rt.x0, pos_rt.y0, pos_rt.width, pos_rt.height])
     fp.add_text(ax=ax_rts, letter='rat LE46', x=0.35, y=1.08, fontsize=8)
@@ -609,7 +611,7 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
 
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     # cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
-    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (right)',
+    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (right response)',
                       shrink=0.55, aspect=5)
     im = ax_pright.images
     cb = im[-1].colorbar
@@ -630,7 +632,7 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     labels = ['0', '0.25', '0.5', '1']
     df_tachos = df_data.copy()
     tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
-                labels=labels, rtbins=np.arange(0, 201, bin_size))
+                labels=labels, rtbins=np.arange(0, 201, bin_size), evidence='coh2')
     del df_tachos
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
 
