@@ -269,12 +269,12 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[0].set_title(pcomlabel_1, fontsize=11.5)
+    ax_mat[0].set_title(pcomlabel_1, fontsize=8)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     plt.sca(ax_mat[0])
 
     pcomlabel_0 = 'Right to reft'  # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[1].set_title(pcomlabel_0, fontsize=11.5)
+    ax_mat[1].set_title(pcomlabel_0, fontsize=8)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     plt.sca(ax_mat[1])
@@ -295,7 +295,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     cbar_right = plt.colorbar(im_2, fraction=0.03, location='top')
     for t in cbar_right.ax.get_yticklabels():
         t.set_fontsize(7.5)
-    cbar_right.ax.set_title('p( right)', fontsize=10)
+    cbar_right.ax.set_title('p (right response)', fontsize=8)
     cbar_right.ax.tick_params(rotation=45)
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:

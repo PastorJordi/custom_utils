@@ -32,18 +32,18 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
 
-matplotlib.rcParams['font.size'] = 10.5
-plt.rcParams['legend.title_fontsize'] = 12
-plt.rcParams['legend.fontsize'] = 10.5
-plt.rcParams['xtick.labelsize']= 10.5
-plt.rcParams['ytick.labelsize']= 10.5
+matplotlib.rcParams['font.size'] = 8
+plt.rcParams['legend.title_fontsize'] = 7.5
+plt.rcParams['legend.fontsize'] = 7.5
+plt.rcParams['xtick.labelsize']= 8.5
+plt.rcParams['ytick.labelsize']= 8.5
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -66,13 +66,21 @@ elif pc_name == 'idibaps':
         'figures/Figure_1/panel_a.png'
     ST_CARTOON_IMG ='/home/molano/Dropbox/project_Barna/ChangesOfMind/' +\
         'figures/Figure_2/st_cartoon_violins.png'
+elif pc_name == 'alex_CRM':
+    SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+    DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+    RAT_COM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/001965.png'
+    RAT_noCOM_IMG = 'C:/Users/agarcia/Desktop/CRM/proves/screenShot230120.png'
+    HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
+    TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/figures/panel_a.png'
+    REPALT_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/figures/repalt.png'
 
 
-def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
-                 inset_sz=.1, marginx=-.04, marginy=0.1):
-    f, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
+def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
+                 figsize=(6, 6), inset_sz=.1, marginx=-.04, marginy=0.1):
+    figure, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
     plt.subplots_adjust(top=0.85, bottom=0.05, left=0.08, right=0.98,
-                        hspace=0.45, wspace=0.6)
+                        hspace=0.6, wspace=0.6)
     ax = ax.flatten()
     # TUNE PANELS
     # all panels
@@ -84,19 +92,23 @@ def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
 
     for i in [0, 1]:
         ax[i].axis('off')
+    for i in [3, 4, 5]:
+        pos_ax = ax[i].get_position()
+        ax[i].set_position([pos_ax.x0, pos_ax.y0+0.02,
+                            pos_ax.width, pos_ax.height])
     # task panel
     ax_task = ax[0]
     pos_task = ax_task.get_position()
-    factor = 2.5
-    ax_task.set_position([pos_task.x0, pos_task.y0-0.08,
+    factor = 2
+    ax_task.set_position([pos_task.x0-0.05, pos_task.y0-0.05,
                           pos_task.width*factor, pos_task.height*factor])
-    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.12)
+    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.14)
     # rep-alt img
     ax_repalt = ax[1]
     pos_repalt = ax_repalt.get_position()
-    factor = 1.3
-    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/2,
-                            pos_repalt.y0+0.02,
+    factor = 1
+    ax_repalt.set_position([pos_repalt.x0+pos_repalt.width/3,
+                            pos_repalt.y0+0.04,
                             pos_repalt.width*factor, pos_repalt.height*factor])
     # TASK PANEL
     task = plt.imread(task_img)
@@ -107,9 +119,9 @@ def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
     # PRIGHT PANEL
     ax_pright = ax[2]
     pos_pright = ax_pright.get_position()
-    factor = 1.1
-    ax_pright.set_position([pos_pright.x0,
-                            pos_pright.y0 + 0.05,
+    factor = 0.9
+    ax_pright.set_position([pos_pright.x0-pos_pright.width/10,
+                            pos_pright.y0 - 0.08,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
     pos_pright = ax_pright.get_position()
@@ -138,21 +150,31 @@ def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
 
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     # cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
-    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (right)',
-                      shrink=0.55, aspect=5)
+    cbar = figure.colorbar(im_2, ax=ax_pright, location='top', label='p (right response)',
+                           shrink=0.5, aspect=5)
     im = ax_pright.images
     cb = im[-1].colorbar
     pos_cb = cb.ax.get_position()
     pos_pright = ax_pright.get_position()
-    factor = 1.3
-    ax_pright.set_position([pos_pright.x0-pos_pright.width/3,
-                            pos_pright.y0 + 0.07,
+    factor = 1.2
+    ax_pright.set_position([pos_pright.x0,
+                            pos_pright.y0 + 0.01,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
-    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.02,
-                        pos_cb.y0+0.115, pos_cb.width, pos_cb.height])
+    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.075,
+                        pos_cb.y0+0.045, pos_cb.width, pos_cb.height])
     # pright_cbar_ax.set_title('p (right)')
     cbar.ax.tick_params(rotation=45)
+    # change pos stim panels
+    pos_ax4 = ax[4].get_position()
+    ax[4].set_position([pos_ax4.x0-pos_ax4.width/4.5, pos_ax4.y0,
+                        pos_ax4.width, pos_ax4.height])
+    pos_ax7 = ax[7].get_position()
+    ax[7].set_position([pos_ax7.x0-pos_ax7.width/4.5, pos_ax7.y0,
+                        pos_ax7.width, pos_ax7.height])
+    pos_ax5 = ax[5].get_position()
+    ax[5].set_position([pos_ax5.x0-pos_ax5.width/6, pos_ax5.y0,
+                        pos_ax5.width, pos_ax5.height])
     # VIGOR PANEL
     ax_mt_zt = ax[3]
     ax_mt_coh = ax[4]
@@ -167,10 +189,12 @@ def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
     fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax_mt_coh, prior_limit=0.1,  # 10% quantile
                               condition='choice_x_coh', rt_lim=50)
     del df_mt
+    ax_mt_coh.set_xlabel('Stimulus evidence towards\nresponse')
+    ax_mt_zt.set_xlabel('Prior evidence towards\nresponse')
     # trajs
     # TRAJECTORIES CONDITIONED ON PRIOR
     # add insets
-    ax = f.axes
+    ax = figure.axes
     fig, ax2 = plt.subplots(1)
     ax_zt = np.array([ax[6], ax2])
     ax_cohs = np.array([ax[7], ax2])
@@ -196,24 +220,87 @@ def fig_1_cosyne(df, data_folder, task_img, repalt_img, figsize=(10, 8),
                                    condition='choice_x_coh',
                                    prior_limit=0.1,  # 10% quantile
                                    cmap='coolwarm')
+    ax[7].set_yticks([0, 25, 50, 75], ['', '', '', ''])
+    ax[7].set_ylabel('')
+    ax[4].set_ylabel('')
+    ax[6].set_xlabel('Time from movement onset\n (ms)')
+    ax[7].set_xlabel('Time from movement onset\n (ms)')
     plt.close(fig)
+    ax_mat_r = ax[8]
+    pos_ax_mat = ax_mat_r.get_position()
+    factor = 1.5
+    ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/5,
+                           pos_ax_mat.y0+pos_ax_mat.height/12,
+                           pos_ax_mat.width/factor,
+                           pos_ax_mat.height/factor])
+    ax_mat_l = figure.add_axes([pos_ax_mat.x0-pos_ax_mat.width/2,
+                                pos_ax_mat.y0+pos_ax_mat.height/12,
+                                pos_ax_mat.width/factor,
+                                pos_ax_mat.height/factor])
+    ax_mat = [ax_mat_l, ax_mat_r]
+    # PCOM MATRICES
+    n_subjs = len(df.subjid.unique())
+    mat_side_0_all = np.zeros((7, 7, n_subjs))
+    mat_side_1_all = np.zeros((7, 7, n_subjs))
+    for i_s, subj in enumerate(df.subjid.unique()):
+        matrix_side_0 =\
+            fig_3.com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
+                                                     side=0)
+        matrix_side_1 =\
+            fig_3.com_heatmap_marginal_pcom_side_mat(df=df.loc[df.subjid == subj],
+                                                     side=1)
+        mat_side_0_all[:, :, i_s] = matrix_side_0
+        mat_side_1_all[:, :, i_s] = matrix_side_1
+    matrix_side_0 = np.nanmean(mat_side_0_all, axis=2)
+    matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
+    # L-> R
+    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    pcomlabel_1 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_0, fontsize=8)
+    im = ax_mat[0].imshow(np.flipud(matrix_side_1), vmin=0, vmax=vmax, cmap='magma')
+    ax_mat[1].set_title(pcomlabel_1, fontsize=8)
+    im = ax_mat[1].imshow(np.flipud(matrix_side_0), vmin=0, vmax=vmax, cmap='magma')
+    ax_mat[1].yaxis.set_ticks_position('none')
+    margin = 0.01
+    for ax_i in [ax_mat[0], ax_mat[1]]:
+        ax_i.set_xlabel('Prior evidence')
+        ax_i.set_xticks([0, 3, 6])
+        ax_i.set_xticklabels(['L', '0', 'R'])
+        ax_i.set_ylim([-.5, 6.5])
+    ax_mat[0].set_yticks([0, 3, 6])
+    ax_mat[0].set_yticklabels(['L', '0', 'R'])
+    ax_mat[1].set_yticks([])
+    pos = ax_mat_r.get_position()
+    pright_cbar_ax = figure.add_axes([pos.x0+pos.width*1.07, pos.y0,
+                                      pos.width/12, pos.height/2])
+    cbar = fig.colorbar(im, cax=pright_cbar_ax)
+    cbar.ax.set_title('       p(rev.)', fontsize=8)
+    ax_mat[0].set_ylabel('Stimuluse evidence')
     # ax_mean_com = ax[5]
-    fig_3.mean_com_traj(df=df, ax=ax[5], data_folder=data_folder, condition='choice_x_prior',
+    fig_3.mean_com_traj(df=df, ax=ax[5], data_folder=data_folder,
+                        condition='choice_x_prior',
                         prior_limit=1, after_correct_only=True, rt_lim=400,
                         trajectory='trajectory_y',
                         interpolatespace=np.linspace(-700000, 1000000, 1700))
+    figure.savefig(sv_folder+'/fig1_cosyne24.png', dpi=400, bbox_inches='tight')
 
 
 def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300'):
-    f, ax = plt.subplots(nrows=2, ncols=3, figsize=(6, 5))  # figsize=(3, 3))
-    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
-                        hspace=0.5, wspace=0.5)
+    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(3, 3))  # figsize=(3, 3))
+    plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9,
+                        hspace=0.7, wspace=0.7)
     ax = ax.flatten()
-    ax[0].axis('off')
-    ax_tach=ax[1]
-    ax_pright=ax[3]
-    ax_mat=[ax[4], ax[5]]
-    ax_traj=ax[2]
+    fig, ax2 = plt.subplots(1)
+    ax_tach = ax2
+    ax_pright = ax[0]
+    ax_mat = [ax[2], ax[3]]
+    ax_traj = ax[1]
+    letters = ['a', 'b', 'c']
+    fp.add_text(ax=ax[0], letter=letters[0], x=-0.12, y=1.2)
+    fp.add_text(ax=ax[1], letter=letters[1], x=-0.12, y=1.12)
+    fp.add_text(ax=ax[2], letter=letters[2], x=-0.09, y=1.25)
+
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'alex_CRM':
@@ -232,6 +319,8 @@ def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300'):
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
                         ax_mat=ax_mat, humans=humans)
     fig_6.plot_coms(df=df_data, ax=ax_traj, human=humans)
+    plt.close(fig)
+    f.savefig(sv_folder+'/fig2_cosyne24.png', dpi=400, bbox_inches='tight')
 
 
 def fig_3_cosyne(df_sim, data_folder):
@@ -280,8 +369,8 @@ def fig_3_cosyne(df_sim, data_folder):
                               save_new_data=False)
 
 
-f1 = False  # rats
-f2 = True  # humans
+f1 = True  # rats
+f2 = False  # humans
 f3 = False  # model
 com_threshold = 8
 if f1 or f3:
@@ -338,7 +427,8 @@ if f1 or f3:
     df['norm_allpriors'] = fp.norm_allpriors_per_subj(df)
     df['time_trajs'] = time_trajs
 if f1:
-    fig_1_cosyne(df, data_folder=DATA_FOLDER, task_img=TASK_IMG, repalt_img=REPALT_IMG)
+    fig_1_cosyne(df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                 task_img=TASK_IMG, repalt_img=REPALT_IMG)
 if f2:
     fig_2_cosyne(user_id=pc_name, sv_folder=SV_FOLDER, humans=True, nm='300')
 if f3:
