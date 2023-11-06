@@ -88,14 +88,14 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Stimulus'
     if condition == 'choice_x_prior':
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
-                                 label='congr.'),
+                                 label='con.'),
                           Line2D([0], [0], color=colormap[3], lw=2,
                                  label=''),
                           Line2D([0], [0], color=colormap[2], lw=2,
                                  label='0'),
                           Line2D([0], [0], color=colormap[1], lw=2, label=''),
                           Line2D([0], [0], color=colormap[0], lw=2,
-                                 label='incongr.')]
+                                 label='inc.')]
         title = 'Prior'
     if condition == 'origidx':
         legendelements = []
