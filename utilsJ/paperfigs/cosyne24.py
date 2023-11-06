@@ -235,15 +235,19 @@ def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300'):
 
 
 def fig_3_cosyne(df_sim, data_folder):
-    f, ax = plt.subplots(ncols=4, nrows=2)
+    f, ax = plt.subplots(ncols=3, nrows=2, figsize=(7, 6))
     plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.98,
-                        hspace=0.45, wspace=0.3)
+                        hspace=0.6, wspace=0.6)
     ax = ax.flatten()
     fig, ax2 = plt.subplots(1)
-    ax_cohs = np.array([ax[5], ax2, ax[1], ax2])
-    ax_zt = np.array([ax[4], ax2, ax[0], ax2])
+    ax_cohs = np.array([ax[4], ax2, ax[1], ax2])
+    ax_zt = np.array([ax[3], ax2, ax[0], ax2])
     for a in ax:
         fp.rm_top_right_lines(a)
+    for i in [1, 4]:
+        pos_ax = ax[i].get_position()
+        ax[i].set_position([pos_ax.x0-0.03, pos_ax.y0,
+                            pos_ax.width, pos_ax.height])
     if sum(df_sim.special_trial == 2) > 0:
         fig_5.traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                                   new_data=False, data_folder=data_folder,
@@ -258,11 +262,11 @@ def fig_3_cosyne(df_sim, data_folder):
                               save_new_data=False,
                               new_data=False, data_folder=data_folder,
                               prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
+    ax[3].get_legend().remove()
+    ax[4].get_legend().remove()
     plt.close(fig)
     # PCoM matrices
     pos_ax_0 = ax[2].get_position()
-    ax[2].set_position([pos_ax_0.x0-pos_ax_0.width/6, pos_ax_0.y0, pos_ax_0.width*1.15,
-                        pos_ax_0.height])
     df_model = pd.DataFrame({'avtrapz': df_sim.coh2.values,
                              'CoM_sugg': df_sim.com_detected,
                              'norm_allpriors': df_sim.norm_allpriors,
@@ -270,11 +274,22 @@ def fig_3_cosyne(df_sim, data_folder):
                              'subjid': df_sim.subjid,
                              'sound_len': df_sim.sound_len.values})
     df_model = df_model.loc[df_model.sound_len >= 0]
+    ax_mat_r = ax[5]
+    pos_ax_mat = ax_mat_r.get_position()
+    factor = 2
+    ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/1.5,
+                           pos_ax_mat.y0+pos_ax_mat.height/12,
+                           pos_ax_mat.width/factor,
+                           pos_ax_mat.height/factor])
+    ax_mat_l = f.add_axes([pos_ax_mat.x0-pos_ax_mat.width/6,
+                           pos_ax_mat.y0+pos_ax_mat.height/12,
+                           pos_ax_mat.width/factor,
+                           pos_ax_mat.height/factor])
     fig_5.plot_pcom_matrices_model(df_model=df_model, n_subjs=len(df_sim.subjid.unique()),
-                                   ax_mat=[ax[6], ax[7]],
+                                   ax_mat=[ax_mat_l, ax_mat_r],
                                    pos_ax_0=pos_ax_0, nbins=7,
                                    f=f)
-    ax_mean_com = ax[3]
+    ax_mean_com = ax[2]
     fig_5.mean_com_traj_simul(df_sim, ax=ax_mean_com,
                               data_folder=data_folder, new_data=False,
                               save_new_data=False)
@@ -293,7 +308,7 @@ if f1 or f3:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    # subjects = ['LE42', 'LE37', 'LE46']
+    subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
