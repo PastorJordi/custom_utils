@@ -29,7 +29,8 @@ COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
 # ---FUNCTIONS
-def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False):
+def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False,
+                  interpolatespace=np.linspace(-700000, 1000000, 1701)):
     trajectories = df.trajectory_y.values
     decision = np.array(df.R_response.values) * 2 - 1
     time_trajs = df.time_trajs.values
@@ -37,6 +38,7 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False)
     time_com_all = []
     peak_com_all = []
     comlist_all = []
+    # kw = {"trajectory": 'trajectory_y', "align": "action"}
     for subj in subjects:
         idx_sbj = df.subjid == subj
         trajs = trajectories[idx_sbj]
@@ -50,6 +52,9 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False)
             peak_com = com_data['peak_com'].tolist()
             comlist = com_data['comlist'].tolist()
         else:   
+            # trajs = np.vstack(df.loc[idx_sbj].
+            #                   apply(lambda x: interpolapply(x, **kw),
+            #                         axis=1).values.tolist())
             time_com = []
             peak_com = []
             comlist = []
@@ -68,7 +73,7 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False)
                                 peak_com.append(peak)
                             if peak < -com_threshold:
                                 time_com.append(
-                                    t_trajs[i_t]
+                                    t_trajs[i_t] # interpolatespace
                                     [np.where(signed_traj == peak)[0]][0])
                                 comlist.append(True)
                             else:
@@ -585,10 +590,11 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
 
     common_cond = (df.norm_allpriors.abs() <= prior_limit) &\
         ac_cond & (df.special_trial == 0) & (df.sound_len < rt_lim)
+    common_cond = (df.norm_allpriors.abs() <= prior_limit)
     for i_s, subj in enumerate(df.subjid.unique()):
         if subj == 'LE86':
             continue
-        com_data = data_folder + subj + '/traj_data/' + subj + '_traj_coms.npz'
+        com_data = data_folder + subj + '/traj_data/' + subj + '_traj_coms_redo_v2.npz'
         os.makedirs(os.path.dirname(com_data), exist_ok=True)
         if os.path.exists(com_data):
             com_data = np.load(com_data, allow_pickle=True)
