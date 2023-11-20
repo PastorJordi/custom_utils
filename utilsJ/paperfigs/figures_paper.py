@@ -549,8 +549,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
 
 
 def check_mean_std_time_com(df, com, time_com):
-    lsubs = pd.DataFrame(df.loc[com, 'subjid'].reset_index())
-    time_com = np.array(time_com)
+    lsubs = pd.DataFrame(df.loc[com & (df.special_trial == 0), 'subjid'].reset_index())
+    time_com = np.array(time_com)[lsubs.index]
     timecom_list = []
     for i_s, subj in enumerate(lsubs.subjid.unique()):
         index = (lsubs['subjid'] == subj).values
@@ -1187,13 +1187,15 @@ def plot_rt_sim(df_sim):
             ax[isub].set_title(subj)
 
 
-def supp_plot_rt_distros_data_model(df, df_sim):
+def supp_plot_rt_distros_data_model(df, df_sim, sv_folder):
     # plots the RT distros conditioning on coh
-    fig, ax = plt.subplots(6, 5)
+    fig, ax = plt.subplots(6, 5, figsize=(9, 10))
     plt.subplots_adjust(top=0.95, bottom=0.05, left=0.06, right=0.95,
                         hspace=0.4, wspace=0.4)
     ax = ax.flatten()
-    colormap = pl.cm.gist_gray_r(np.linspace(0.2, 1, 4))
+    ev_vals = [0, 1]
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, len(ev_vals)))
+    cmap_model = pl.cm.Reds(np.linspace(0.4, 1, len(ev_vals)))
     subjects = df.subjid.unique()
     labs_data = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24]
     labs_model = [5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 25, 26, 27, 28, 29]
@@ -1202,12 +1204,12 @@ def supp_plot_rt_distros_data_model(df, df_sim):
         rm_top_right_lines(ax[labs_data[i_s]])
         pos_ax_mod = ax[labs_model[i_s]].get_position()
         ax[labs_model[i_s]].set_position([pos_ax_mod.x0,
-                                          pos_ax_mod.y0 + pos_ax_mod.height/15.5,
+                                          pos_ax_mod.y0 + pos_ax_mod.height/12.5,
                                           pos_ax_mod.width,
                                           pos_ax_mod.height])
         pos_ax_dat = ax[labs_data[i_s]].get_position()
         ax[labs_data[i_s]].set_position([pos_ax_dat.x0,
-                                          pos_ax_dat.y0 - pos_ax_dat.height/15.5,
+                                          pos_ax_dat.y0 - pos_ax_dat.height/12.5,
                                           pos_ax_dat.width,
                                           pos_ax_dat.height])
         if (i_s+1) % 5 == 0:
@@ -1233,23 +1235,31 @@ def supp_plot_rt_distros_data_model(df, df_sim):
         fix_breaks =\
             np.vstack(np.concatenate([df_1.sound_len/1000,
                                       np.concatenate(df_1.fb.values)-0.3]))
-        for iev, ev in enumerate([0, 0.25, 0.5, 1]):
+        for iev, ev in enumerate(ev_vals):
             index = np.abs(coh_vec) == ev
             fix_breaks_2 = fix_breaks[index]*1e3
             rt_model = df_sim_1.sound_len.values[coh == ev]
             sns.kdeplot(fix_breaks_2.reshape(-1),
                         color=colormap[iev], ax=ax[labs_data[i_s]])
             sns.kdeplot(rt_model,
-                        color=colormap[iev], ax=ax[labs_model[i_s]],
-                        linestyle='--')
+                        color=cmap_model[iev], ax=ax[labs_model[i_s]])
         ax[labs_data[i_s]].set_xticks([])        
         ax[labs_data[i_s]].set_title(subj)
         ax[labs_data[i_s]].set_xlim(-205, 410)
         ax[labs_model[i_s]].set_xlim(-205, 410)
+        if (i_s) % 5 != 0:
+            axmod = ax[labs_model[i_s]]
+            axdat = ax[labs_data[i_s]]
+            axdat.set_ylabel('')
+            axmod.set_ylabel('')
+            axdat.set_yticks([])
+            axmod.set_yticks([])
         if i_s < 10:
             ax[labs_model[i_s]].set_xticks([])        
         if i_s >= 10:
             ax[labs_model[i_s]].set_xlabel('RT (ms)')
+    fig.savefig(sv_folder+'supp_fig_8.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_fig_8.png', dpi=400, bbox_inches='tight')
 
 
 def supp_plot_rt_data_vs_model_all(df, df_sim):
@@ -1355,15 +1365,22 @@ def supp_mt_per_rat(df, df_sim, title=''):
         #             label='Model Rev.', linestyle='--')
         # sns.kdeplot(mt_nocom_sim, color=COLOR_NO_COM, ax=ax[i_s],
         #             label='Model No-Rev.', linestyle='--')
-        ax[i_s].set_xlabel('MT (ms)')
+        if i_s >= 12:
+            ax[i_s].set_xlabel('MT (ms)')
+        else:
+            ax[i_s].set_xticks([])
+        if i_s % 3 != 0:
+            ax[i_s].set_ylabel('')
+            ax[i_s].set_yticks([])
         ax[i_s].set_title(subj)
         ax[i_s].set_xlim(-5, 725)
+        ax[i_s].set_ylim(0, 0.0085)
     ax[0].legend()
     fig.suptitle(title)
 
 
-def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=50,
-                       pixel_precision=5, cmap='pink'):
+def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=150,
+                       pixel_precision=1, cmap='Reds', max_ms=400):
     """
     Plots density of the position of the model, it can plot rat trajectories on top.
 
@@ -1378,28 +1395,29 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
     plot_data_trajs : bool, optional
         Whereas to plot rat trajectories on top or not. The default is False.
     n_trajs_plot : int, optional
-        In case of plotting the trajectories, how many. The default is 50.
+        In case of plotting the trajectories, how many. The default is 150.
     pixel_precision : float, optional
         Pixel precision for the density (the smaller the cleaner the plot).
         The default is 5.
     cmap : str, optional
-        Colormap. The default is 'pink'.
+        Colormap. The default is 'Reds'.
 
     Returns
     -------
     None.
 
     """
+    n_steps = int(max_ms/5)
     fig2, ax2 = plt.subplots(nrows=3, ncols=3)
     np.random.seed(seed=5)  # set seed
     # fig2.tight_layout()
     ax2 = ax2.flatten()
     coh = df_sim.coh2.values
-    zt = np.round(df_sim.normallpriors.values, 1)
+    zt = np.round(df_sim.norm_allpriors.values, 1)
     coh_vals = [-1, 0, 1]
-    zt_vals = [-np.max(np.abs(zt)), -np.max(np.abs(zt))*0.75,
+    zt_vals = [-np.max(np.abs(zt)), -np.max(np.abs(zt))*0.4,
                -0.05, 0.05,
-               np.max(np.abs(zt))*0.75, np.max(np.abs(zt))]
+               np.max(np.abs(zt))*0.4, np.max(np.abs(zt))]
     i = 0
     ztlabs = [-1, 0, 1]
     gkde = scipy.stats.gaussian_kde  # we define gkde that will generate the kde
@@ -1422,24 +1440,24 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 mat_fin[j, :len(trajs[j])] = trajs[j]  # mat_fin contains trajectories by rows
                 mat_fin[j, len(trajs[j]):-1] = trajs[j][-1]  # set the last value (-75 or 75) until the end
             values = np.arange(-80, 81, pixel_precision)
-            mat_final_density = np.empty((len(values), 50))  # matrix that will contain density by columns
+            mat_final_density = np.empty((len(values), n_steps))  # matrix that will contain density by columns
             mat_final_density[:] = np.nan
-            for j in range(2, 50):
+            for j in range(2, n_steps):
                 yvalues = np.nanmean(mat_fin[:, j*5:(j+1)*5], axis=1)  # we get the trajectory values
                 kernel_1 = gkde(yvalues)  # we create the kernel using gkde
                 vals_density = kernel_1(values)  # we evaluate the values defined before
                 mat_final_density[:, j] = vals_density / np.nansum(vals_density)  # we normalize the density
             ax2[i].imshow(np.flipud(mat_final_density), cmap=cmap, aspect='auto',
                           norm=LogNorm(vmin=0.001, vmax=0.6))  # plot the matrix
-            ax2[i].set_xlim(0, 50)
+            ax2[i].set_xlim(0, n_steps+0.2)
             ax2[i].set_ylim(len(values), 0)
             if i == 2 or i == 5 or i == 8:
                 ax1 = ax2[i].twinx()
                 ax1.set_yticks([])
-                ax1.set_ylabel('zt = {}'.format(ztlabs[int((i-2) // 3)]),
+                ax1.set_ylabel('prior = {}'.format(ztlabs[int((i-2) // 3)]),
                                rotation=90, labelpad=5, fontsize=12)
             if i >= 6:
-                ax2[i].set_xticks(np.arange(0, 51, 10), np.arange(0, 51, 10)*5)
+                ax2[i].set_xticks(np.arange(0, n_steps+1, 20), np.arange(0, n_steps+1, 20)*5)
             else:
                 ax2[i].set_xticks([])
             if i % 3 == 0:
@@ -1463,22 +1481,28 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 mat_0 = mat[0]
                 # we multiply by response to have the sign
                 mat_0 = mat_0*(df.loc[idx[0]].R_response.values*2-1).reshape(-1, 1)
+                mtime = df.loc[idx[0]].resp_len.values
                 n_trajs = mat_0.shape[0]
                 # we select the number of trajectories that we want
                 index_trajs_plot = np.random.choice(np.arange(n_trajs), n_trajs_plot)
                 for ind in index_trajs_plot:
                     traj = mat_0[ind, :]
+                    traj = traj - np.nanmean(traj[500:700])
                     # we do some filtering
-                    if sum(np.abs(traj[700:950]) > 80) > 1:
+                    if sum(np.abs(traj[700:700+int(max_ms)]) > 80) > 1:
                         continue
                     if np.abs(traj[700]) > 5:
                         continue
-                    ax2[i].plot(np.arange(0, 50, 0.2), (-traj[700:950]+80)/160*len(values),
-                                color='blue', linewidth=0.5)
+                    if mtime[ind] > 0.4:
+                        continue
+                    if np.abs(traj[920]) < 10:
+                        continue
+                    ax2[i].plot(np.arange(0, n_steps, 0.2), (-traj[700:700+int(max_ms)]+80)/160*len(values),
+                                color='blue', linewidth=0.3)
             i += 1
-    ax2[0].set_title('coh = -1')
-    ax2[1].set_title('coh = 0')
-    ax2[2].set_title('coh = 1')
+    ax2[0].set_title('stimulus = -1')
+    ax2[1].set_title('stimulus = 0')
+    ax2[2].set_title('stimulus = 1')
 
 
 def plot_data_trajs_density(df):
