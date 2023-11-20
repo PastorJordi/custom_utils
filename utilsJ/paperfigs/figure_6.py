@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.lines import Line2D
 import matplotlib.pylab as pl
 import sys
@@ -14,6 +15,7 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.Models import analyses_humans as ah
+from utilsJ.Behavior.plotting import binned_curve
 
 def plot_coms(df, ax, human=False):
     coms = df.CoM_sugg.values
@@ -57,6 +59,12 @@ def plot_coms(df, ax, human=False):
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
+    legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
+                             label='Detected reversal'),
+                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
+                             label='No-reversal')]
+    ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
+              labelspacing=0.15, bbox_to_anchor=(0, 1.25), handlelength=1.5)
 
 
 def com_statistics_humans(peak_com, time_com, ax, mean_mt):
@@ -137,13 +145,15 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.plot(xvals, yvals, color=fig_3.COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time from movement \n onset (ms)')
     ax.set_ylabel('Position')
-    legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2, label='Rev.'),
-                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2, label='No-rev.')]
+    legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
+                             label='Detected reversal'),
+                      Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
+                             label='No-reversal')]
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=10.5)
     ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
-              labelspacing=0.01, bbox_to_anchor=(0, 1.1))
+              labelspacing=0.15, bbox_to_anchor=(0, 1.2), handlelength=1.5)
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
@@ -162,7 +172,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))[::-1]
         # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
-        labels_stim = ['-1', ' ', ' ', '0', ' ', ' ', '1']
+        labels_stim = ['inc.', ' ', ' ', '0', ' ', ' ', 'cong.']
     mov_time_list = []
     for i_ev, ev in enumerate(bins):
         if condition == 'prior':
@@ -198,8 +208,12 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                                         if t[-1] != '']))*1e3 / np.sqrt(sum(index))
         mov_time_list.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
-        ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
-                       marker='o')
+        if condition != 'prior':
+            ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[::-1][i_ev],
+                           marker='o')
+        if condition == 'prior':
+            ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
+                           marker='o')
         xvals = np.arange(len(mean_traj))
         yvals = mean_traj
         if condition == 'prior':
@@ -213,7 +227,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
                            y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
                            color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
-    ax[1].plot(x_vals, mov_time_list, color='k', linestyle=':', alpha=0.6)
+    ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5)
     ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
@@ -231,20 +245,22 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         ax[1].set_ylim(180, 315)
         ax[1].set_xlim(-0.4, 4.4)
         ax[0].legend(handles=legendelements, title='Prior', loc='center left',
-                     labelspacing=0.01, bbox_to_anchor=(0., 1.2), fontsize=9)
+                     labelspacing=0.01, bbox_to_anchor=(0., 1.2), fontsize=9,
+                     handlelength=1.5)
     else:
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3, label='1'),
+        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3, label='cong.'),
                           Line2D([0], [0], color=colormap[1], lw=1.3, label=''),
                           Line2D([0], [0], color=colormap[2], lw=1.3, label=''),
                           Line2D([0], [0], color=colormap[3], lw=1.3, label='0'),
                           Line2D([0], [0], color=colormap[4], lw=1.3, label=''),
                           Line2D([0], [0], color=colormap[5], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[6], lw=1.3, label='-1')]
+                          Line2D([0], [0], color=colormap[6], lw=1.3, label='inc.')]
         ax[1].set_xlabel('Stimulus')
         ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
         ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
-                     labelspacing=0.01, bbox_to_anchor=(0.8, 1.2), fontsize=9)
+                     labelspacing=0.01, bbox_to_anchor=(0.8, 1.2), fontsize=9,
+                     handlelength=1.5)
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -267,7 +283,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
     sound_len = df_data.sound_len.values[index1]
     prior_cong = df_data['norm_allpriors'][index1] * (decision*2 - 1)
     prior_cong = prior_cong.values
-    ev_vals = np.unique(np.round(coh, 2))
+    ev_vals = np.sort(np.unique(np.round(coh, 2)))
     subjects = df_data.subjid.values[index1]
     ground_truth = (df_data.R_response.values*2-1) *\
         (df_data.hithistory.values*2-1)
@@ -364,7 +380,7 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
                  yerr=sem(out_data.reshape(rtbins.size-1, -1),
                           axis=1, nan_policy='omit'), **error_kws)
     ax2.set_xlabel('Reaction time (ms)')
-    ax2.set_title('Impact of stimulus', fontsize=11.5)
+    # ax2.set_title('Impact of stimulus', fontsize=11.5)
     # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
     # ax2.set_ylim(190, 410)
     ax2.plot([0, 310], [0, 310], color='k')
@@ -434,7 +450,7 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                 legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                       label=lab))
             ax1.legend(handles=legendelements, fontsize=9, loc='upper left',
-                       title='Stimulus', labelspacing=0.01)
+                       title='Stimulus', labelspacing=0.01, handlelength=1.5)
         else:
             if np.isnan(ind):
                 ind = rtbins[i]
@@ -520,6 +536,8 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
+    idx = (df_data.subjid != 5) & (df_data.subjid != 6)
+    df_data = df_data.loc[idx]
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     # create figure
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
@@ -618,3 +636,133 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     human_trajs(df_data, sv_folder=sv_folder, ax=axes_trajs, max_mt=max_mt)
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig6.png', dpi=400, bbox_inches='tight')
+
+def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
+    if user_id == 'alex':
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'alex_CRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
+    if user_id == 'idibaps':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    subj = ['general_traj']
+    steps = [None]
+    # retrieve data
+    df_data = ah.traj_analysis(data_folder=folder,
+                               subjects=subj, steps=steps, name=nm,
+                               sv_folder=sv_folder)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    com_list = df_data.CoM_sugg
+    reaction_time = df_data.sound_len
+    ev = df_data.avtrapz
+    df_plot = pd.DataFrame({'sound_len': reaction_time, 'CoM': com_list,
+                            'ev': ev})
+    bins = np.linspace(50, 300, 11)  # rt bins
+    xpos = np.diff(bins)[0]  # rt binss
+    fp.rm_top_right_lines(ax)
+    binned_curve(df_plot, 'CoM', 'sound_len', bins=bins,
+                 xoffset=min(bins), xpos=xpos, ax=ax,
+                 errorbar_kw={'marker': 'o', 'color': 'k'})
+    ax.set_xlabel('Reaction time (ms)')
+    ax.set_ylabel('p(reversal)')
+    ax.set_ylim(0, 0.12)
+    ax.get_legend().remove()
+
+
+def get_opts_krnls(plot_opts, tag):
+    opts = {k: x for k, x in plot_opts.items() if k.find('_a') == -1}
+    opts['color'] = plot_opts['color'+tag]
+    opts['linestyle'] = plot_opts['lstyle'+tag]
+    return opts
+
+
+def plot_trans_lat_weights(decays_all_ac, decays_all_ae, ax):
+    naranja = np.array((255, 127, 0))/255
+    plot_opts = {'lw': 3,  'label': '', 'alpha': 0.1, 'color_ac': naranja,
+                 'fntsz': 10, 'color_ae': (0, 0, 0), 'lstyle_ac': '-',
+                 'lstyle_ae': '-', 'marker': ''}
+    # plot_opts.update(kwargs)
+    decays_ac = decays_all_ac[0]
+    decays_ac_lat = decays_all_ac[1]
+    decays_ae = decays_all_ae[0]
+    decays_ae_lat = decays_all_ae[1]
+    fntsz = plot_opts['fntsz']
+    del plot_opts['fntsz']
+    ax[0].set_ylabel('T++ weight', fontsize=fntsz)
+    ax[0].set_xlabel('Trial lag', fontsize=fntsz)
+    ax[1].set_ylabel('L+ weight', fontsize=fntsz)
+    ax[1].set_xlabel('Trial lag', fontsize=fntsz)
+    # After correct
+    opts = get_opts_krnls(plot_opts=plot_opts, tag='_ac')
+    for decay in decays_ac:
+        ax[0].plot(decay, **opts)
+    for decay in decays_ac_lat:
+        ax[1].plot(decay, **opts)
+    decays_ac = np.array(decays_ac)
+    decays_ac_lat = np.array(decays_ac_lat)
+    mean_decay_ac = np.mean(decays_ac, axis=0)
+    mean_decay_ac_lat = np.mean(decays_ac_lat, axis=0)
+    s_ac = np.std(decays_ac, axis=0)
+    s_ac_lat = np.std(decays_ac_lat, axis=0)
+    ax[0].errorbar(x=np.arange(6), y=mean_decay_ac, yerr=s_ac, linewidth=3,
+                   color=naranja, marker='.', alpha=1)
+    ax[1].errorbar(x=np.arange(6), y=mean_decay_ac_lat, yerr=s_ac_lat,
+                   linewidth=3, color=naranja, marker='.', alpha=1)
+    # After error
+    opts = get_opts_krnls(plot_opts=plot_opts, tag='_ae')
+    for decay in decays_ae:
+        ax[0].plot(decay, **opts)
+    for decay in decays_ae_lat:
+        ax[1].plot(decay, **opts)
+    decays_ae = np.array(decays_ae)
+    decays_ae_lat = np.array(decays_ae_lat)
+    mean_decay_ae = np.mean(decays_ae, axis=0)
+    mean_decay_ae_lat = np.mean(decays_ae_lat, axis=0)
+    s_ae = np.std(decays_ae, axis=0)
+    s_ae_lat = np.std(decays_ae_lat, axis=0)
+    ax[0].errorbar(x=np.arange(5), y=mean_decay_ae, yerr=s_ae, linewidth=3,
+                   color=(0, 0, 0), marker='.', alpha=1)
+    ax[1].errorbar(x=np.arange(5), y=mean_decay_ae_lat, yerr=s_ae_lat,
+                   linewidth=3, color=(0, 0, 0), marker='.', alpha=1)
+    for a in ax:
+        a.set_xticks([0, 1, 2, 3, 4, 5])
+        a.set_xticklabels(['6-10', '5', '4', '3', '2', '1'])
+        a.set_xlim([-0.5, 5.5])
+        # ax.set_yticks([-1, 0, 1])
+        a.spines['top'].set_visible(False)
+        a.spines['right'].set_visible(False)
+        # ax.set_ylim([-1, 1])
+        ytckslbls = ['-1', '0', '1']
+        a.axhline(y=0, linestyle='--', color='k', lw=0.5)
+        ylims = a.get_ylim()
+        ylims = [-np.max(np.abs(ylims)), np.max(np.abs(ylims))]
+        a.set_ylim(ylims)
+        # ax.set_ylabel('')
+        yticks = [ylims[0], 0, ylims[1]]
+        a.set_yticks(yticks)
+        a.set_yticklabels(ytckslbls)
+
+
+def supp_human_behavior(user_id, sv_folder):
+    decays_ac = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac.npy')
+    decays_ac_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac_lat.npy')
+    decays_ae = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae.npy')
+    decays_ae_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae_lat.npy')
+    fig, ax = plt.subplots(2, 2)
+    ax = ax.flatten()
+    plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
+                        hspace=0.6, wspace=0.5)
+    letters = ['a', '', 'b', '']
+    for n, ax_1 in enumerate(ax):
+        fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
+        fp.rm_top_right_lines(ax_1)
+
+    plot_trans_lat_weights([decays_ac, decays_ac_lat],
+                           [decays_ae, decays_ae_lat],
+                           [ax[0], ax[1]])
+    supp_pcom_rt(user_id='alex', sv_folder=sv_folder, ax=ax[2])
+    ax[3].axis('off')
+    fig.savefig(sv_folder+'supp_human.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_human.png', dpi=400, bbox_inches='tight')
