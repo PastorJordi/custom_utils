@@ -26,6 +26,14 @@ from utilsJ.Behavior.plotting import trajectory_thr, interpolapply,\
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_1 as fig_1
+
+# ---GLOBAL VARIABLES
+VAR_INC = fig_1.VAR_INC
+VAR_CON = fig_1.VAR_CON
+VAR_INC_SHORT = fig_1.VAR_INC_SHORT
+VAR_CON_SHORT = fig_1.VAR_CON_SHORT
+VAR_L = fig_1.VAR_L
+VAR_R = fig_1.VAR_R
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
 xpos_RT = int(np.diff(BINS_RT)[0])
@@ -129,7 +137,8 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
         xpos_plot, median_pcom_mod_all, _ =\
             binned_curve(df_plot, 'com_model', 'rt_model', bins=BINS_RT,
                          xpos=xpos_RT,
-                         errorbar_kw={'label': 'Model all', 'color': 'red',
+                         errorbar_kw={'label': 'Model all',
+                                      'color': 'saddlebrown',
                                       'linestyle': '--'},
                          ax=ax2, legend=False, return_data=True)
         com_data[i_s, :len(median_pcom_dat)] = median_pcom_dat
@@ -141,7 +150,7 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
     ax.errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
                 yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
     ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
-                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='r',
+                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='saddlebrown',
                  linestyle='--')
     ax.xaxis.tick_top()
     ax.xaxis.tick_bottom()
@@ -149,9 +158,10 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
                              label='Rats'),
                       Line2D([0], [0], color='r', lw=2,
                              label='Model'),
-                      Line2D([0], [0], color='r', lw=2, linestyle='--',
+                      Line2D([0], [0], color='saddlebrown', lw=2, linestyle='--',
                              label='Model (All CoMs)')]
-    ax.legend(handles=legendelements)
+    ax.legend(handles=legendelements, loc='upper left',
+              bbox_to_anchor=(0.4, 1.2))
     ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('p(reversal)')
     ax2.set_ylabel('p(reversal)')
@@ -179,10 +189,10 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     cbar.ax.set_title('p(right)', pad=17, fontsize=10)
     ax_pright.set_yticks([0, 3, 6])
     # ax_pright.set_ylim([-0.5, 6.5])
-    ax_pright.set_yticklabels(['L', '', 'R'])
+    ax_pright.set_yticklabels([VAR_R, '0', VAR_L])
     ax_pright.set_xticks([0, 3, 6])
     # ax_pright.set_xlim([-0.5, 6.5])
-    ax_pright.set_xticklabels(['L', '', 'R'])
+    ax_pright.set_xticklabels([VAR_L, '0', VAR_R])
     ax_pright.set_xlabel('Prior evidence')
     ax_pright.set_ylabel('Stimulus evidence')
     # ax[7].set_title('Pright Model')
@@ -220,8 +230,8 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
     ax_mat[1].yaxis.set_ticks_position('none')
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior evidence')
-        ax_i.set_xticks([0, 3, 6], ['-1', '0', '1'])
-    ax_mat[0].set_yticks([0, 3, 6], ['1', '0', '-1'])
+        ax_i.set_xticks([0, 3, 6], [VAR_L, '0', VAR_R])
+    ax_mat[0].set_yticks([0, 3, 6], [VAR_R, '0', VAR_L])
     ax_mat[1].set_yticks([0, 3, 6], ['']*3)
     ax_mat[0].set_ylabel('Stimulus evidence')
     # ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
@@ -325,18 +335,18 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     mean_com_all_traj = np.nanmean(matrix_com_und_tr, axis=0)
     ax.plot(np.arange(len(mean_com_traj)), mean_com_traj, color=fig_3.COLOR_COM,
             linewidth=2)
-    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color=fig_3.COLOR_COM,
+    ax.plot(np.arange(len(mean_com_all_traj)), mean_com_all_traj, color='saddlebrown',
             linewidth=1.4, linestyle='--')
     ax.plot(np.arange(len(mean_nocom_traj)), mean_nocom_traj, color=fig_3.COLOR_NO_COM,
             linewidth=2)
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
-                             label='Detected rev.'),
-                      Line2D([0], [0], color=fig_3.COLOR_COM, lw=1.5,  linestyle='--',
-                             label='All rev.'),
+                             label='Detected reversal'),
+                      Line2D([0], [0], color='saddlebrown', lw=1.5,  linestyle='--',
+                             label='All CoMs'),
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
-                             label='No-rev.')]
+                             label='No-reversal')]
     ax.legend(handles=legendelements, loc='upper left',
-              bbox_to_anchor=(0.05, 1.2))
+              bbox_to_anchor=(0.05, 1.32), handlelength=1.2)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Position')
     ax.set_xlim(-25, 400)
@@ -380,8 +390,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if ax is None:
         fig, ax = plt.subplots(nrows=2, ncols=2)
         ax = ax.flatten()
-    labels_zt = ['inc.', ' ', '0', ' ', 'cong.']
-    labels_coh = ['-1', ' ', ' ', '0', ' ', ' ', '1']
+    labels_zt = [VAR_INC_SHORT, ' ', '0', ' ', VAR_CON_SHORT]
+    labels_coh = [VAR_INC_SHORT, ' ', ' ', '0', ' ', ' ', VAR_CON_SHORT]
     if prior:
         bins_ref = bins_zt
         colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
@@ -509,12 +519,12 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
                            y1=mean_traj - std_traj, y2=mean_traj + std_traj,
-                           color=colormap[i_ev], alpha=0.3)
+                           color=colormap[i_ev], alpha=0.1)
         ax[1].plot(np.arange(len(mean_vel)), mean_vel, label=label,
                    color=colormap[i_ev])
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
-                           color=colormap[i_ev], alpha=0.3)
+                           color=colormap[i_ev], alpha=0.1)
     ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 335)
     ax[0].set_yticks([0, 25, 50, 75])
@@ -524,21 +534,25 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if prior:
         leg_title = 'Prior'
         ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
+                   color='k', ls='-', lw=0.5)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Prior')
+                   color='k', ls='-', lw=0.5)
+        ax[2].set_xlabel('Prior evidence towards response')
         ax[3].set_xlabel('Prior')
     if not prior:
         leg_title = 'Stimulus'
         ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
+                   color='k', ls='-', lw=0.5)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
-        ax[2].set_xlabel('Stimulus')
+                   color='k', ls='-', lw=0.5)
+        ax[2].set_xlabel('Stimulus evidence towards response')
         ax[3].set_xlabel('Stimulus')
+    ax[2].set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax[0].legend(title=leg_title, labelspacing=0.15,
-                 loc='center left', bbox_to_anchor=(0.7, 0.45))
+                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5)
+    handles, labels = ax[0].get_legend_handles_labels()
+    ax[0].legend(handles[::-1], labels[::-1], title=leg_title, labelspacing=0.15,
+                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5)
     ax[0].set_ylabel('Position')
     ax[0].set_xlabel('Time from movement onset (ms)')
     # ax[0].set_title('Mean trajectory', fontsize=10)
@@ -546,7 +560,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     ax[1].set_ylabel('Velocity')
     ax[1].set_xlabel('Time from movement onset (ms)')
     # ax[1].set_title('Mean velocity', fontsize=8)
-    ax[2].set_ylabel('MT (ms)')
+    ax[2].set_ylabel('Movement time (ms)')
     ax[3].set_xticks([])
     ax[3].set_yticks([])
     ax[3].set_ylabel('Peak')
@@ -579,7 +593,9 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                       Line2D([0], [0], color=colormap[0], lw=2,
                              label='0')]
     ax[1].legend(handles=legendelements, fontsize=8, loc='center left',
-                 bbox_to_anchor=(0.96, 0.5), title='Stimulus')
+                 bbox_to_anchor=(0.92, 1.2), title='Stimulus',
+                 handlelength=1.3)
+    ax[1].set_ylim(0.4, 1)
     # ax2 = fp.add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
     #                    marginy=0.07, right=True)
     df_plot_pcom = pd.DataFrame({'com': com[sound_len_model >= 0],
@@ -614,6 +630,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                              collapse_sides=True, margin=0.03)
     # MT distributions
     fig_3.mt_distros(df=df_sim, ax=ax[14], xlmax=625, sim=True)
+    ax[14].get_legend().remove()
     # plot trajs and MT conditioned on stim/prior
     plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=new_data,
                                       save_new_data=save_new_data,
@@ -624,6 +641,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
                                threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y")
+    ax[7].set_ylim(0, 205)
     # plot mean com traj
     
     if len(df_sim.subjid.unique()) > 1:

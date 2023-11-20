@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.pylab as pl
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 import sys
 sys.path.append("/home/jordi/Repos/custom_utils")  # alex idibaps
@@ -10,14 +11,24 @@ sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Ale
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 import utilsJ.paperfigs.fig2 as fig2
+from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import tachometric, com_heatmap, trajectory_thr,\
     interpolapply
 
+
+# ---GLOBAL VARIABLES
+VAR_INC = fig_1.VAR_INC
+VAR_CON = fig_1.VAR_CON
+VAR_INC_SHORT = fig_1.VAR_INC_SHORT
+VAR_CON_SHORT = fig_1.VAR_CON_SHORT
+VAR_L = fig_1.VAR_L
+VAR_R = fig_1.VAR_R
+
 COLOR_COM = 'coral'
 COLOR_NO_COM = 'tab:cyan'
 
-
+# ---FUNCTIONS
 def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False):
     trajectories = df.trajectory_y.values
     decision = np.array(df.R_response.values) * 2 - 1
@@ -111,7 +122,7 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     ax.errorbar(np.unique(coh), m_corr, std_corr, color='k', marker='o', label='Reversal')
     # ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
     #             marker='o', label='No-Reversal')
-    ax.set_xlabel('Stimulus evidence')
+    ax.set_xlabel('Stimulus strength')
     ax.set_ylabel('Reversal accuracy')
     ax.set_xticks([0, 0.25, 0.5, 1])
     ax.set_xticklabels(['0', '0.25', '0.5', '1'])
@@ -136,7 +147,7 @@ def plot_coms_single_session(df, ax):
         if coms[index][itr] and decision[index][itr] == 0:
             ax.plot(time, traj, color=COLOR_COM)
     ax.set_xlim(-100, 650)
-    ax.set_ylabel('y-coord (pixels)')
+    ax.set_ylabel('Position')
     ax.set_xlabel('Time from movement onset (ms)')
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
@@ -269,16 +280,18 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[0].set_title(pcomlabel_1, fontsize=8)
+    ax_mat[0].set_title(pcomlabel_1, fontsize=11.5)
     im = ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
-    plt.sca(ax_mat[0])
+    # plt.sca(ax_mat[0])
 
-    pcomlabel_0 = 'Right to reft'  # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[1].set_title(pcomlabel_0, fontsize=8)
+    pcomlabel_0 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[1].set_title(pcomlabel_0, fontsize=11.5)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
-    plt.sca(ax_mat[1])
-    cbar = plt.colorbar(im, fraction=0.04)
+    # plt.sca(ax_mat[1])
+    divider = make_axes_locatable(ax_mat[1])
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    cbar = plt.colorbar(im, fraction=0.04, cax=cax)
     cbar.set_label('p (reversal)', rotation=270, labelpad=14)
     # pright matrix
     if humans:
@@ -295,16 +308,16 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     cbar_right = plt.colorbar(im_2, fraction=0.03, location='top')
     for t in cbar_right.ax.get_yticklabels():
         t.set_fontsize(7.5)
-    cbar_right.ax.set_title('p (right response)', fontsize=8)
+    cbar_right.ax.set_title('p (right response)', fontsize=10)
     cbar_right.ax.tick_params(rotation=45)
     # R -> L
     for ax_i in [ax_pright, ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior evidence')
         ax_i.set_xticks([0, 3, 6])
-        ax_i.set_xticklabels(['L', '', 'R'])
+        ax_i.set_xticklabels([VAR_L, '0', VAR_R])
     for ax_i in [ax_pright, ax_mat[0]]:
         ax_i.set_yticks([0, 3, 6])
-        ax_i.set_yticklabels(['R', '', 'L'])
+        ax_i.set_yticklabels([VAR_R, '0', VAR_L])
         ax_i.set_ylabel('Stimulus evidence')  # , labelpad=-17)
     ax_mat[1].set_yticklabels(['']*nbins)
 
@@ -326,7 +339,7 @@ def com_statistics(peak_com, time_com, ax, mean_mt):
     ax1.axhline(y=1e4, color='k', linestyle='--', alpha=0.5)
     ax2.set_ylabel('# Trials')
     ax2.hist(time_com, bins=80, range=(0, 500), color=COLOR_COM)
-    # ax2.set_xlabel('Deflection time (ms)')
+    ax2.set_xlabel('Deflection time (ms)')
     # ax3 = ax2.twiny()
     # ax3.set_xlim(ax2.get_xlim())
     # ax3.set_xticks([0, mean_mt*0.5, mean_mt, mean_mt*1.5],
@@ -510,7 +523,7 @@ def mean_com_vel(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
                 linestyle=linestyle)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2,
             linestyle=linestyle)
-    ax.set_xlabel('Time (ms)')
+    ax.set_xlabel('Time from movement onset (ms)')
     ax.set_ylabel('Velocity')
     # ax.axhline(y=np.nanmin(mean_traj), color='k', linestyle='--', alpha=0.5)
     ax.set_xlim(-100, 500)
@@ -597,8 +610,8 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
                                                    (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2)
-    ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('y-coord (pixels)')
+    ax.set_xlabel('Time from movement onset (ms)')
+    ax.set_ylabel('Position')
     ax.set_ylim(-30, 105)
     ax.set_xlim(-100, 500)
     ax.set_yticks([-25, 0, 25, 50, 75])
@@ -691,6 +704,7 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
     ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.06, comlist_rats, 'o',
                   color='grey', alpha=0.5)
     ax_inset.set_xlim(0.7, 1.3)
+    ax_inset.set_ylim(0, 0.05)
     ax_inset.set_xticks([])
     ax_inset.set_title('p(reversal)', fontsize=10.5)
     # ax_inset.set_ylabel('# Rats')
@@ -733,7 +747,7 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         ax.legend(loc='center left', bbox_to_anchor=(-0.1, 1.3))
     if sim:
         ax.legend(loc='center left', bbox_to_anchor=(0.1, 1.1))
-    ax.set_xlabel('MT (ms)')
+    ax.set_xlabel('Movement time (ms)')
     ax.set_ylabel('Density')
 
 
@@ -767,7 +781,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 5.5),
             axis.text(-0.17, 2.8, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         elif n == 0:
-            axis.text(-0.12, 1.35, labs[n], transform=axis.transAxes, fontsize=16,
+            axis.text(-0.1, 1.2, labs[n], transform=axis.transAxes, fontsize=16,
                       fontweight='bold', va='top', ha='right')
         elif n == 1 or n == 2:
             axis.text(-0.12, 1.12, labs[n], transform=axis.transAxes, fontsize=16,
@@ -785,6 +799,10 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 5.5),
     df['CoM_sugg'] = com
     # TRACKING IMAGE PANEL
     ax_trck = ax[0]
+    pos_ax_trck = ax_trck.get_position()
+    factor = 1.15
+    ax_trck.set_position([pos_ax_trck.x0-0.02, pos_ax_trck.y0-0.02,
+                          pos_ax_trck.width*factor, pos_ax_trck.height*factor])
     tracking_image(ax_trck, rat_com_img=rat_com_img)
     # TRAJECTORIES PANEL
     plot_coms_single_session(df=df, ax=ax[1])
@@ -847,10 +865,10 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 5.5),
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior evidence')
         ax_i.set_xticks([0, 3, 6])
-        ax_i.set_xticklabels(['L', '0', 'R'])
+        ax_i.set_xticklabels([VAR_L, '0', VAR_R])
         ax_i.set_ylim([-.5, 6.5])
     ax_mat[0].set_yticks([0, 3, 6])
-    ax_mat[0].set_yticklabels(['L', '0', 'R'])
+    ax_mat[0].set_yticklabels([VAR_L, '0', VAR_R])
     ax_mat[1].set_yticks([])
     pos = ax_mat[0].get_position()
     ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
@@ -862,7 +880,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 5.5),
                                    pos.width/12, pos.height/2])
     cbar = fig.colorbar(im, cax=pright_cbar_ax)
     cbar.ax.set_title('     p(rev.)', fontsize=10)
-    ax_mat[0].set_ylabel('Stimuluse evidence')
+    ax_mat[0].set_ylabel('Stimulus evidence')
     # COM PROB VERSUS REACTION TIME PANEL
     fig2.e(df, sv_folder=sv_folder, ax=ax[9])
     ax[9].set_ylim(0, 0.075)

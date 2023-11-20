@@ -17,6 +17,14 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.paperfigs import figure_2 as fig2
 from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
+# ---GLOBAL VARIABLES
+VAR_INC = 'inc.'
+VAR_CON = 'cong.'
+VAR_INC_SHORT = 'inc.'
+VAR_CON_SHORT = 'cong.'
+VAR_L = 'L'
+VAR_R = 'R'
+
 
 # ---FUNCTIONS
 def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
@@ -84,7 +92,8 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
     ax.set_xlim(-1.15, 1.4)
-    ax.set_title(r'$\;\;\;\;\;\;\; \longleftarrow \it{inc.} \;\;\;\; \it{congruent} \longrightarrow \;\;\;\;\;\;$', fontsize=8)
+    # ARROWS FOR INC/CONG
+    # ax.set_title(r'$\;\;\;\;\;\;\; \longleftarrow \it{inc.} \;\;\;\; \it{congruent} \longrightarrow \;\;\;\;\;\;$', fontsize=8)
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
     for i_tr, bin in enumerate(plot_bins):
         c = colormap[i_tr]  
@@ -100,6 +109,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                             color=c, marker='o')
 
         ax.set_ylabel('Movement time (ms)')
+    ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5)
 
 
@@ -199,7 +209,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
         ax.set_xlim(-0.5, 1.5)
         ax.set_xticklabels([labels[0], labels[1]], fontsize=9)
     if mt:
-        ax.set_ylabel('Impact on MT')
+        ax.set_ylabel('Impact on movement time')
     else:
         ax.set_ylabel('Impact on RT')
     ax.axhline(y=0, linestyle='--', color='k', alpha=.4)
@@ -283,14 +293,13 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
     ax.axhline(y=np.nanmean(sil), color='k', alpha=0.6)
-    ax.axvline(x=0, color='k', alpha=0.2, linestyle='--')
     coh_unq = np.unique(coh_cong)
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
         ax.errorbar(x, y, e, color=color)
     # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    ax.set_xticks([-1, 0, 1])
+    ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.text(0.65, np.nanmean(sil)+5, 'silent', color='k', fontsize=10.5, alpha=0.7)
     ax.set_xlabel('Stimulus evidence towards response')
     ax.set_ylabel('Movement time (ms)')
@@ -435,8 +444,8 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
                 ax0.set_title('Left, RT < ' + str(rt_bin) + ' ms')
         else:
             ax0.set_title('Left')
-        ax0.set_yticks([0, 3, 6], ['R', '0', 'L'])
-        ax0.set_xticks([0, 3, 6], ['L', '0', 'R'])
+        ax0.set_yticks([0, 3, 6], [VAR_R, '0', VAR_L])
+        ax0.set_xticks([0, 3, 6], [VAR_L, '0', VAR_R])
         # SIDE 1
         ax1.set_title('Right')
         im_1 = ax1.imshow(mat_1, cmap='RdGy', vmin=np.nanmin((mat_1, mat_0)),
@@ -450,7 +459,7 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         else:
             cbar_1.set_label(r'$MT \;(ms)$')
         ax1.set_yticks([0, 3, 6], [' ', ' ', ' '])
-        ax1.set_xticks([0, 3, 6], ['L', '0', 'R'])
+        ax1.set_xticks([0, 3, 6], [VAR_L, '0', VAR_R])
         ax0pos = ax0.get_position()
         ax1pos = ax1.get_position()
         ax0.set_position([ax0pos.x0, ax1pos.y0, ax1pos.width, ax1pos.height])
@@ -461,8 +470,8 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         plt.sca(ax)
         ax.set_yticks([0, 3, 6])
         ax.set_xticks([0, 3, 6])
-        ax.set_yticklabels(['1', '0', '-1'])
-        ax.set_xticklabels(['-1', '0', '1'])
+        ax.set_yticklabels([VAR_CON_SHORT, '0', VAR_INC_SHORT])
+        ax.set_xticklabels([VAR_INC_SHORT, '0', VAR_CON_SHORT])
         ax.set_ylim([-0.5, 6.5])
         ax.set_xlim([-0.5, 6.5])
         ax.set_xlabel('Prior evidence')
@@ -529,10 +538,10 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     # pright_cbar_ax.invert_yaxis()
     ax_pright.set_yticks([0, 3, 6])
     ax_pright.set_ylim([-0.5, 6.5])
-    ax_pright.set_yticklabels(['L', '', 'R'])
+    ax_pright.set_yticklabels([VAR_L, '0', VAR_R])
     ax_pright.set_xticks([0, 3, 6])
     ax_pright.set_xlim([-0.5, 6.5])
-    ax_pright.set_xticklabels(['L', '', 'R'])
+    ax_pright.set_xticklabels([VAR_L, '0', VAR_R])
     ax_pright.set_xlabel('Prior evidence')
     ax_pright.set_ylabel('Stimulus evidence')
     # pright_cbar_ax.set_title('p(Right)', fontsize=9)
