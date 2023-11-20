@@ -125,10 +125,10 @@ def check_distros(df, df_sim):
 plt.close('all')
 f1 = False
 f2 = False
-f3 = False
+f3 = True
 f4 = False
 f5 = False
-f6 = True
+f6 = False
 f7 = False
 f8 = False
 com_threshold = 8
@@ -223,7 +223,7 @@ if f5:
     zt = np.resize(zt[:int(num_tr)], num_tr + n_sil)
     sound_len = np.resize(sound_len[:int(num_tr)], num_tr + n_sil)
     coh = np.resize(coh[:int(num_tr)], num_tr + n_sil)
-    com = np.resize(com[:int(num_tr)], num_tr + n_sil)
+    # com = np.resize(com[:int(num_tr)], num_tr + n_sil)
     gt = np.resize(gt[:int(num_tr)], num_tr + n_sil)
     trial_index = np.resize(trial_index[:int(num_tr)], num_tr + n_sil)
     hit = np.resize(hit[:int(num_tr)], num_tr + n_sil)
