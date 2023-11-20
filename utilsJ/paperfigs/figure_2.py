@@ -78,17 +78,17 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[1].set_ylim([0.5, 0.8])
     # plt.show()
     if condition == 'choice_x_coh':
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=2, label='-1'),
-                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
-                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
-                          Line2D([0], [0], color=colormap[3], lw=2, label='0'),
-                          Line2D([0], [0], color=colormap[4], lw=2, label=''),
+        legendelements = [Line2D([0], [0], color=colormap[6], lw=2, label='cong.'),
                           Line2D([0], [0], color=colormap[5], lw=2, label=''),
-                          Line2D([0], [0], color=colormap[6], lw=2, label='1')]
+                          Line2D([0], [0], color=colormap[4], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[3], lw=2, label='0'),
+                          Line2D([0], [0], color=colormap[2], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[1], lw=2, label=''),
+                          Line2D([0], [0], color=colormap[0], lw=2, label='inc.')]
         title = 'Stimulus'
     if condition == 'choice_x_prior':
         legendelements = [Line2D([0], [0], color=colormap[4], lw=2,
-                                 label='con.'),
+                                 label='cong.'),
                           Line2D([0], [0], color=colormap[3], lw=2,
                                  label=''),
                           Line2D([0], [0], color=colormap[2], lw=2,
@@ -106,7 +106,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Trial index'
         ax[1].set_xlabel('Trial index')
     ax[0].legend(handles=legendelements, loc='upper left', title=title,
-                labelspacing=.1, bbox_to_anchor=(0., 1.3))
+                labelspacing=.1, bbox_to_anchor=(0., 1.7), handlelength=1.5)
     ax[1].set_xlabel(title)
     ax[0].set_xlim([-20, 450])
     ax[0].set_xticklabels('')
@@ -574,7 +574,7 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
 
 def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                                  subject='LE37', xlabel='', ylabel='', show_legend=False,
-                                 startfrom=700, fix_per_offset_subtr=150):
+                                 startfrom=700, fix_per_offset_subtr=50):
     """
     Plot trajectories depending on COH and the corresponding Splitting Time as arrow.
 
@@ -610,7 +610,9 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             get_splitting_mat_data(df=df[indx], side=0, rtbin=rtbin,
                                     rtbins=rtbins, coh1=ev, align='sound')
         median_plt = np.nanmedian(matatmp, axis=0) -\
-                np.nanmedian(matatmp[:,startfrom-fix_per_offset_subtr:startfrom])
+                np.nanmedian(matatmp[:,
+                                     startfrom-fix_per_offset_subtr:
+                                         startfrom+int(rtbins[rtbin])])
         ax.plot(np.arange(matatmp.shape[1]) - startfrom,
                 median_plt, color=colormap[iev], label=lbl)
         medians.append(median_plt)
@@ -631,21 +633,23 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     # plot horizontal line
     ax.axhline(0, color='k', lw=0.5, ls='--')
     # plot stimulus duration as line at y=3
-    mean_stim_dur = np.mean(df.loc[(df.special_trial == 0)&(df.subjid == subject)&
-                            (df.sound_len < rtbins[rtbin + 1])&
-                            (df.sound_len >= rtbins[rtbin])].sound_len)
+    # mean_stim_dur = np.mean(df.loc[(df.special_trial == 0)&(df.subjid == subject)&
+    #                         (df.sound_len < rtbins[rtbin + 1])&
+    #                         (df.sound_len >= rtbins[rtbin])].sound_len)
     # ax.plot([0, mean_stim_dur], [3.5, 3.5], color=(.7, .7, .7), lw=2)
     col_face = [0.7, 0.7, 0.7, 0.4]
     col_edge = [0.7, 0.7, 0.7, 0]
-    ax.fill_between([0, mean_stim_dur], [3.5, 3.5], [4, 4],
-                     facecolor=col_face, edgecolor=col_edge)
     if rtbins[1] == 300:
         ax.set_title('RT > 150 ms', fontsize=9.5)
+        mean_stim_dur = 150
     if rtbins[1] == 65:
         ax.set_title('RT = 50 ms', fontsize=9.5)
+        mean_stim_dur = 50
     if rtbins[1] == 15:
         ax.set_title('RT < 15 ms', fontsize=9.5)
-
+        mean_stim_dur = 15
+    ax.fill_between([0, mean_stim_dur], [3.5, 3.5], [4, 4],
+                     facecolor=col_face, edgecolor=col_edge)
     # plot arrow
     al = 0.5
     hl = 0.4

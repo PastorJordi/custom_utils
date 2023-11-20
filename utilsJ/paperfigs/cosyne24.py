@@ -32,18 +32,18 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
 
-matplotlib.rcParams['font.size'] = 8
-plt.rcParams['legend.title_fontsize'] = 7.5
-plt.rcParams['legend.fontsize'] = 7.5
-plt.rcParams['xtick.labelsize']= 8.5
-plt.rcParams['ytick.labelsize']= 8.5
+matplotlib.rcParams['font.size'] = 11
+plt.rcParams['legend.title_fontsize'] = 11
+plt.rcParams['legend.fontsize'] = 11
+plt.rcParams['xtick.labelsize']= 13
+plt.rcParams['ytick.labelsize']= 13
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -77,14 +77,14 @@ elif pc_name == 'alex_CRM':
 
 
 def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
-                 figsize=(6, 6), inset_sz=.1, marginx=-.04, marginy=0.1):
-    figure, ax = plt.subplots(nrows=3, ncols=3, figsize=figsize)  # figsize=(4, 3))
-    plt.subplots_adjust(top=0.85, bottom=0.05, left=0.08, right=0.98,
+                 figsize=(12, 5), inset_sz=.1, marginx=-.04, marginy=0.1):
+    figure, ax = plt.subplots(nrows=2, ncols=5, figsize=figsize)  # figsize=(4, 3))
+    plt.subplots_adjust(top=0.85, bottom=0.05, left=0.08, right=0.96,
                         hspace=0.6, wspace=0.6)
     ax = ax.flatten()
     # TUNE PANELS
     # all panels
-    letters = ['', '',  '', 'c', 'd', 'g', 'e', 'f', '']
+    letters = ['', '',  '', 'c', 'd', 'e', 'f', 'g', 'h', '']
     for n, ax_1 in enumerate(ax):
         fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
         if n not in [10, 11]:
@@ -99,15 +99,15 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     # task panel
     ax_task = ax[0]
     pos_task = ax_task.get_position()
-    factor = 2
-    ax_task.set_position([pos_task.x0-0.05, pos_task.y0-0.05,
+    factor = 2.2
+    ax_task.set_position([pos_task.x0-0.05, pos_task.y0-0.11,
                           pos_task.width*factor, pos_task.height*factor])
     fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.14)
     # rep-alt img
     ax_repalt = ax[1]
     pos_repalt = ax_repalt.get_position()
     factor = 1
-    ax_repalt.set_position([pos_repalt.x0+pos_repalt.width/3,
+    ax_repalt.set_position([pos_repalt.x0+pos_repalt.width/5,
                             pos_repalt.y0+0.04,
                             pos_repalt.width*factor, pos_repalt.height*factor])
     # TASK PANEL
@@ -120,7 +120,7 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     ax_pright = ax[2]
     pos_pright = ax_pright.get_position()
     factor = 0.9
-    ax_pright.set_position([pos_pright.x0-pos_pright.width/10,
+    ax_pright.set_position([pos_pright.x0-pos_pright.width/8,
                             pos_pright.y0 - 0.08,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
@@ -151,7 +151,7 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     # cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
     cbar = figure.colorbar(im_2, ax=ax_pright, location='top', label='p (right response)',
-                           shrink=0.5, aspect=5)
+                           shrink=0.7, aspect=15)
     im = ax_pright.images
     cb = im[-1].colorbar
     pos_cb = cb.ax.get_position()
@@ -161,19 +161,22 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
                             pos_pright.y0 + 0.01,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
-    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.075,
-                        pos_cb.y0+0.045, pos_cb.width, pos_cb.height])
+    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.05,
+                        pos_cb.y0+0.055, pos_cb.width, pos_cb.height])
     # pright_cbar_ax.set_title('p (right)')
     cbar.ax.tick_params(rotation=45)
     # change pos stim panels
     pos_ax4 = ax[4].get_position()
-    ax[4].set_position([pos_ax4.x0-pos_ax4.width/4.5, pos_ax4.y0,
+    ax[4].set_position([pos_ax4.x0+pos_ax4.width/4.5, pos_ax4.y0,
                         pos_ax4.width, pos_ax4.height])
-    pos_ax7 = ax[7].get_position()
-    ax[7].set_position([pos_ax7.x0-pos_ax7.width/4.5, pos_ax7.y0,
+    pos_ax4 = ax[3].get_position()
+    ax[3].set_position([pos_ax4.x0+pos_ax4.width/4.5, pos_ax4.y0,
+                        pos_ax4.width, pos_ax4.height])
+    pos_ax7 = ax[6].get_position()
+    ax[6].set_position([pos_ax7.x0-pos_ax7.width/4.5, pos_ax7.y0,
                         pos_ax7.width, pos_ax7.height])
     pos_ax5 = ax[5].get_position()
-    ax[5].set_position([pos_ax5.x0-pos_ax5.width/6, pos_ax5.y0,
+    ax[5].set_position([pos_ax5.x0-pos_ax5.width/6, pos_ax7.y0,
                         pos_ax5.width, pos_ax5.height])
     # VIGOR PANEL
     ax_mt_zt = ax[3]
@@ -196,8 +199,8 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     # add insets
     ax = figure.axes
     fig, ax2 = plt.subplots(1)
-    ax_zt = np.array([ax[6], ax2])
-    ax_cohs = np.array([ax[7], ax2])
+    ax_zt = np.array([ax[5], ax2])
+    ax_cohs = np.array([ax[6], ax2])
     ax_inset = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=figsize,
                             marginx=marginx, marginy=marginy, right=True)
     ax_inset.yaxis.set_ticks_position('none')
@@ -220,24 +223,31 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
                                    condition='choice_x_coh',
                                    prior_limit=0.1,  # 10% quantile
                                    cmap='coolwarm')
-    ax[7].set_yticks([0, 25, 50, 75], ['', '', '', ''])
-    ax[7].set_ylabel('')
+    ax[6].set_yticks([0, 25, 50, 75], ['', '', '', ''])
+    ax[6].set_ylabel('')
     ax[4].set_ylabel('')
+    ax[5].set_xlabel('Time from movement onset\n (ms)')
     ax[6].set_xlabel('Time from movement onset\n (ms)')
-    ax[7].set_xlabel('Time from movement onset\n (ms)')
     plt.close(fig)
-    ax_mat_r = ax[8]
-    pos_ax_mat = ax_mat_r.get_position()
-    factor = 1.5
-    ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/5,
-                           pos_ax_mat.y0+pos_ax_mat.height/12,
-                           pos_ax_mat.width/factor,
-                           pos_ax_mat.height/factor])
-    ax_mat_l = figure.add_axes([pos_ax_mat.x0-pos_ax_mat.width/2,
-                                pos_ax_mat.y0+pos_ax_mat.height/12,
-                                pos_ax_mat.width/factor,
-                                pos_ax_mat.height/factor])
+    ax_mat_r = ax[9]
+    ax_mat_l = ax[8]
+    # pos_ax_mat = ax_mat_r.get_position()
+    # factor = 1.5
+    # ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/5,
+    #                        pos_ax_mat.y0+pos_ax_mat.height/12,
+    #                        pos_ax_mat.width/factor,
+    #                        pos_ax_mat.height/factor])
+    # ax_mat_l = figure.add_axes([pos_ax_mat.x0-pos_ax_mat.width/2,
+    #                             pos_ax_mat.y0+pos_ax_mat.height/12,
+    #                             pos_ax_mat.width/factor,
+    #                             pos_ax_mat.height/factor])
     ax_mat = [ax_mat_l, ax_mat_r]
+    pos_ax4 = ax_mat_l.get_position()
+    ax_mat_l.set_position([pos_ax4.x0+pos_ax4.width/4.5, pos_ax4.y0,
+                        pos_ax4.width, pos_ax4.height])
+    pos_ax4 = ax_mat_r.get_position()
+    ax_mat_r.set_position([pos_ax4.x0+pos_ax4.width/4.5, pos_ax4.y0,
+                        pos_ax4.width, pos_ax4.height])
     # PCOM MATRICES
     n_subjs = len(df.subjid.unique())
     mat_side_0_all = np.zeros((7, 7, n_subjs))
@@ -256,10 +266,10 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
     pcomlabel_1 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[0].set_title(pcomlabel_0, fontsize=8)
+    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$x'
+    ax_mat[0].set_title(pcomlabel_0, fontsize=10)
     im = ax_mat[0].imshow(np.flipud(matrix_side_1), vmin=0, vmax=vmax, cmap='magma')
-    ax_mat[1].set_title(pcomlabel_1, fontsize=8)
+    ax_mat[1].set_title(pcomlabel_1, fontsize=10)
     im = ax_mat[1].imshow(np.flipud(matrix_side_0), vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     margin = 0.01
@@ -277,30 +287,210 @@ def fig_1_cosyne(df, sv_folder, data_folder, task_img, repalt_img,
     cbar = fig.colorbar(im, cax=pright_cbar_ax)
     cbar.ax.set_title('       p(rev.)', fontsize=8)
     ax_mat[0].set_ylabel('Stimuluse evidence')
+    pos_ax5 = ax[5].get_position()
+    pos_ax7 = ax[6].get_position()
+    ax[6].set_position([pos_ax7.x0, pos_ax5.y0,
+                        pos_ax7.width, pos_ax7.height])
     # ax_mean_com = ax[5]
-    fig_3.mean_com_traj(df=df, ax=ax[5], data_folder=data_folder,
+    fig_3.mean_com_traj(df=df, ax=ax[7], data_folder=data_folder,
                         condition='choice_x_prior',
                         prior_limit=1, after_correct_only=True, rt_lim=400,
                         trajectory='trajectory_y',
                         interpolatespace=np.linspace(-700000, 1000000, 1700))
     figure.savefig(sv_folder+'/fig1_cosyne24.png', dpi=400, bbox_inches='tight')
+    figure.savefig(sv_folder+'/fig1_cosyne24.svg', dpi=400, bbox_inches='tight')
 
 
-def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300'):
-    f, ax = plt.subplots(nrows=2, ncols=2, figsize=(3, 3))  # figsize=(3, 3))
+def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300',
+                 inset_sz=.09, marginx=-0.017, marginy=0.07):
+    f, ax = plt.subplots(nrows=1, ncols=4, figsize=(10, 2.5))  # figsize=(3, 3))
     plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9,
-                        hspace=0.7, wspace=0.7)
+                        hspace=0.55, wspace=0.55)
     ax = ax.flatten()
     fig, ax2 = plt.subplots(1)
     ax_tach = ax2
-    ax_pright = ax[0]
+    ax_pright = ax2
     ax_mat = [ax[2], ax[3]]
-    ax_traj = ax[1]
+    # ax_traj = ax2
+    plt.close(fig)
     letters = ['a', 'b', 'c']
     fp.add_text(ax=ax[0], letter=letters[0], x=-0.12, y=1.2)
-    fp.add_text(ax=ax[1], letter=letters[1], x=-0.12, y=1.12)
+    fp.add_text(ax=ax[1], letter=letters[1], x=-0.12, y=1.2)
     fp.add_text(ax=ax[2], letter=letters[2], x=-0.09, y=1.25)
+    # pos_ax_2 = ax[2].get_position()
+    shift = 0.1
+    # ax[2].set_position([pos_ax_2.x0+shift/2, pos_ax_2.y0,
+    #                     pos_ax_2.width,
+    #                     pos_ax_2.height/1.5])
+    # pos_ax_3 = ax[3].get_position()
+    # ax[3].set_position([pos_ax_3.x0+shift*0.9, pos_ax_3.y0,
+    #                     pos_ax_3.width,
+    #                     pos_ax_3.height/1.5])
+    pos_ax_0 = ax[0].get_position()
+    factor = 1.4
+    ax[0].set_position([pos_ax_0.x0-shift*0.2, pos_ax_0.y0, pos_ax_0.width*factor,
+                        pos_ax_0.height])
+    pos_ax_1 = ax[1].get_position()
+    ax[1].set_position([pos_ax_1.x0+shift*0.35, pos_ax_1.y0, pos_ax_1.width*factor,
+                        pos_ax_1.height])
+    for a in ax:
+        fp.rm_top_right_lines(a)
+    if user_id == 'alex':
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'alex_CRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
+    if user_id == 'idibaps':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    subj = ['general_traj']
+    steps = [None]
+    # prepare axis for trajs conditioned on stim and prior
+    ax_cohs = ax[1]
+    ax_zt = ax[0]
+    # trajs. conditioned on coh
+    ax_inset_coh = fp.add_inset(ax=ax_cohs, inset_sz=inset_sz, fgsz=(4, 1),
+                                marginx=marginx, marginy=marginy, right=True)
+    # trajs. conditioned on zt
+    ax_inset_zt = fp.add_inset(ax=ax_zt, inset_sz=inset_sz, fgsz=(4, 1),
+                               marginx=marginx, marginy=marginy, right=True)
+    df_data = ah.traj_analysis(data_folder=folder,
+                               subjects=subj, steps=steps, name=nm,
+                               sv_folder=sv_folder)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    # TRAJECTORIES
+    index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
+             (df_data.sound_len <= 300) &\
+             (df_data.sound_len >= 0)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    coh = df_data.avtrapz.values[index1]
+    decision = df_data.R_response.values[index1]
+    trajs = df_data.trajectory_y.values[index1]
+    times = df_data.times.values[index1]
+    prior_cong = df_data['norm_allpriors'][index1] * (decision*2 - 1)
+    prior_cong = prior_cong.values
+    ev_vals = np.unique(np.round(coh, 2))
+    ground_truth = (df_data.R_response.values*2-1) *\
+        (df_data.hithistory.values*2-1)
+    ground_truth = ground_truth[index1]
+    congruent_coh = np.round(coh, 2) * (decision*2 - 1)
+    # Trajs conditioned on stimulus congruency
+    fig_6.human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                           trajs=trajs, prior=prior_cong, bins=ev_vals,
+                           times=times, ax=[ax_cohs, ax_inset_coh],
+                           n_subjects=len(df_data.subjid.unique()),
+                           condition='stimulus', max_mt=400)
+    ax_cohs.get_legend().remove()
+    bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
+    # Trajs conditioned on prior congruency
+    fig_6.human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                           trajs=trajs, prior=prior_cong, bins=bins,
+                           times=times, ax=[ax_zt, ax_inset_zt],
+                           n_subjects=len(df_data.subjid.unique()),
+                           condition='prior', max_mt=400)
+    ax_zt.get_legend().remove()
+    fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
+                        ax_mat=ax_mat, humans=humans)
+    pcomlabel_1 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[0].set_title(pcomlabel_1)
+    pcomlabel_0 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
+    ax_mat[1].set_title(pcomlabel_0)
+    # fig_6.mean_com_traj_human(df=df_data, ax=ax_traj)
+    pos_ax_2 = ax[2].get_position()
+    shift = 0.1
+    pos_ax_3 = ax[3].get_position()
+    ax[2].set_position([pos_ax_2.x0+shift*0.8, pos_ax_3.y0,
+                        pos_ax_3.width,
+                        pos_ax_3.height])
+    ax[3].set_position([pos_ax_3.x0+shift*0.6, pos_ax_3.y0,
+                        pos_ax_3.width,
+                        pos_ax_3.height])
+    f.savefig(sv_folder+'/fig2_cosyne24.png', dpi=400, bbox_inches='tight')
+    f.savefig(sv_folder+'/fig2_cosyne24.svg', dpi=400, bbox_inches='tight')
 
+
+def fig_3_cosyne(df_sim, data_folder, sv_folder):
+    f, ax = plt.subplots(nrows=2, ncols=5, figsize=(12, 5))  # figsize=(4, 3))
+    plt.subplots_adjust(top=0.85, bottom=0.05, left=0.08, right=0.96,
+                        hspace=0.6, wspace=0.6)
+    ax = ax.flatten()
+    fig, ax2 = plt.subplots(1)
+    ax_cohs = np.array([ax[6], ax2, ax[3], ax2])
+    ax_zt = np.array([ax[5], ax2, ax[2], ax2])
+    for a in ax:
+        fp.rm_top_right_lines(a)
+    for i in [0, 4]:
+        ax[i].axis('off')
+    # pright matrix
+    fig_5.plot_pright_model(df_sim=df_sim,
+                            sound_len_model=df_sim.sound_len.values,
+                            decision_model=df_sim.R_response.values*2-1,
+                            subjid=df_sim.subjid.values, coh=df_sim.coh2.values,
+                            zt_model=df_sim.norm_allpriors.values,
+                            ax=ax[1])
+    if sum(df_sim.special_trial == 2) > 0:
+        fig_5.traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
+                                  new_data=False, data_folder=data_folder,
+                                  save_new_data=False,
+                                  median=True, prior=True, rt_lim=300)
+    else:
+        print('No silent trials')
+        fig_5.traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=False,
+                                  data_folder=data_folder,
+                                  save_new_data=False, median=True, prior=True)
+    fig_5.traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                              save_new_data=False,
+                              new_data=False, data_folder=data_folder,
+                              prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
+    ax[5].get_legend().remove()
+    ax[6].get_legend().remove()
+    plt.close(fig)
+    # PCoM matrices
+    pos_ax_0 = ax[2].get_position()
+    df_model = pd.DataFrame({'avtrapz': df_sim.coh2.values,
+                             'CoM_sugg': df_sim.com_detected,
+                             'norm_allpriors': df_sim.norm_allpriors,
+                             'R_response': df_sim.R_response.values,
+                             'subjid': df_sim.subjid,
+                             'sound_len': df_sim.sound_len.values})
+    df_model = df_model.loc[df_model.sound_len >= 0]
+    ax_mat_r = ax[9]
+    ax_mat_l = ax[8]
+    # pos_ax_mat = ax_mat_r.get_position()
+    # factor = 2
+    # ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/1.5,
+    #                        pos_ax_mat.y0+pos_ax_mat.height/12,
+    #                        pos_ax_mat.width/factor,
+    #                        pos_ax_mat.height/factor])
+    # ax_mat_l = f.add_axes([pos_ax_mat.x0-pos_ax_mat.width/6,
+    #                        pos_ax_mat.y0+pos_ax_mat.height/12,
+    #                        pos_ax_mat.width/factor,
+    #                        pos_ax_mat.height/factor])
+    fig_5.plot_pcom_matrices_model(df_model=df_model, n_subjs=len(df_sim.subjid.unique()),
+                                   ax_mat=[ax_mat_l, ax_mat_r],
+                                   pos_ax_0=pos_ax_0, nbins=7,
+                                   f=f)
+    ax_mean_com = ax[7]
+    fig_5.mean_com_traj_simul(df_sim, ax=ax_mean_com,
+                              data_folder=data_folder, new_data=False,
+                              save_new_data=False)
+    f.savefig(sv_folder+'/fig3_cosyne24.png', dpi=400, bbox_inches='tight')
+    f.savefig(sv_folder+'/fig3_cosyne24.svg', dpi=400, bbox_inches='tight')
+
+
+def plot_com_traj_rat_model_human(df, df_sim, user_id, sv_folder, data_folder,
+                                  nm='300'):
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(5, 9))
+    plt.subplots_adjust(top=0.9, bottom=0.1, left=0.15, right=0.85,
+                        hspace=0.5, wspace=0.5)
+    ax = ax.flatten()
+    for a in ax:
+        fp.rm_top_right_lines(a)
+    ax_rat = ax[0]
+    ax_human = ax[1]
+    ax_model = ax[2]
+    # GET HUMAN DF
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
     if user_id == 'alex_CRM':
@@ -316,73 +506,31 @@ def fig_2_cosyne(user_id, sv_folder, humans=True, nm='300'):
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
-    fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
-                        ax_mat=ax_mat, humans=humans)
-    fig_6.plot_coms(df=df_data, ax=ax_traj, human=humans)
-    plt.close(fig)
-    f.savefig(sv_folder+'/fig2_cosyne24.png', dpi=400, bbox_inches='tight')
-
-
-def fig_3_cosyne(df_sim, data_folder):
-    f, ax = plt.subplots(ncols=3, nrows=2, figsize=(7, 6))
-    plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.98,
-                        hspace=0.6, wspace=0.6)
-    ax = ax.flatten()
-    fig, ax2 = plt.subplots(1)
-    ax_cohs = np.array([ax[4], ax2, ax[1], ax2])
-    ax_zt = np.array([ax[3], ax2, ax[0], ax2])
-    for a in ax:
-        fp.rm_top_right_lines(a)
-    for i in [1, 4]:
-        pos_ax = ax[i].get_position()
-        ax[i].set_position([pos_ax.x0-0.03, pos_ax.y0,
-                            pos_ax.width, pos_ax.height])
-    if sum(df_sim.special_trial == 2) > 0:
-        fig_5.traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
-                                  new_data=False, data_folder=data_folder,
-                                  save_new_data=False,
-                                  median=True, prior=True, rt_lim=300)
-    else:
-        print('No silent trials')
-        fig_5.traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=False,
-                                  data_folder=data_folder,
-                                  save_new_data=False, median=True, prior=True)
-    fig_5.traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
-                              save_new_data=False,
-                              new_data=False, data_folder=data_folder,
-                              prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
-    ax[3].get_legend().remove()
-    ax[4].get_legend().remove()
-    plt.close(fig)
-    # PCoM matrices
-    pos_ax_0 = ax[2].get_position()
-    df_model = pd.DataFrame({'avtrapz': df_sim.coh2.values,
-                             'CoM_sugg': df_sim.com_detected,
-                             'norm_allpriors': df_sim.norm_allpriors,
-                             'R_response': df_sim.R_response.values,
-                             'subjid': df_sim.subjid,
-                             'sound_len': df_sim.sound_len.values})
-    df_model = df_model.loc[df_model.sound_len >= 0]
-    ax_mat_r = ax[5]
-    pos_ax_mat = ax_mat_r.get_position()
-    factor = 2
-    ax_mat_r.set_position([pos_ax_mat.x0+pos_ax_mat.width/1.5,
-                           pos_ax_mat.y0+pos_ax_mat.height/12,
-                           pos_ax_mat.width/factor,
-                           pos_ax_mat.height/factor])
-    ax_mat_l = f.add_axes([pos_ax_mat.x0-pos_ax_mat.width/6,
-                           pos_ax_mat.y0+pos_ax_mat.height/12,
-                           pos_ax_mat.width/factor,
-                           pos_ax_mat.height/factor])
-    fig_5.plot_pcom_matrices_model(df_model=df_model, n_subjs=len(df_sim.subjid.unique()),
-                                   ax_mat=[ax_mat_l, ax_mat_r],
-                                   pos_ax_0=pos_ax_0, nbins=7,
-                                   f=f)
-    ax_mean_com = ax[2]
-    fig_5.mean_com_traj_simul(df_sim, ax=ax_mean_com,
+    # plot human traj
+    fig_6.mean_com_traj_human(df_data=df_data, ax=ax_human)
+    # plot rat traj
+    fig_3.mean_com_traj(df=df, ax=ax_rat, data_folder=data_folder,
+                        condition='choice_x_prior',
+                        prior_limit=1, after_correct_only=True, rt_lim=400,
+                        trajectory='trajectory_y',
+                        interpolatespace=np.linspace(-700000, 1000000, 1700))
+    # plot model traj
+    fig_5.mean_com_traj_simul(df_sim, ax=ax_model,
                               data_folder=data_folder, new_data=False,
                               save_new_data=False)
-
+    for a in ax:
+        a.set_xticks([0, 200, 400])
+        a.set_ylabel('Position')
+        a.set_xlim(-2, 410)
+    ax_rat.set_yticks([-25, 0, 25, 50, 75])
+    ax_model.set_yticks([-25, 0, 25, 50, 75])
+    ax_human.set_xlabel('')
+    ax_rat.set_xlabel('')
+    ax_human.get_legend().remove()
+    ax_rat.get_legend().remove()
+    ax_model.set_xlabel('Time from movement onset (ms)')
+    
+    
 
 f1 = True  # rats
 f2 = False  # humans
@@ -397,7 +545,7 @@ if f1 or f3:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    subjects = ['LE42', 'LE37', 'LE46']
+    # subjects = ['LE42', 'LE37', 'LE46'
     # subjects = ['LE43']
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -529,4 +677,6 @@ if f3:
     fix_breaks = []
     resp_len = []
     time_trajs = []
-    fig_3_cosyne(df_sim, data_folder=DATA_FOLDER)
+    # fig_3_cosyne(df_sim, data_folder=DATA_FOLDER, sv_folder=SV_FOLDER)
+    plot_com_traj_rat_model_human(df, df_sim, user_id='alex',
+                                  sv_folder=SV_FOLDER, data_folder=DATA_FOLDER)

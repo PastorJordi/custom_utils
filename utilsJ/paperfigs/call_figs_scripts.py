@@ -29,11 +29,11 @@ from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
-matplotlib.rcParams['font.size'] = 10.5
-plt.rcParams['legend.title_fontsize'] = 12
-plt.rcParams['legend.fontsize'] = 10.5
-plt.rcParams['xtick.labelsize']= 10.5
-plt.rcParams['ytick.labelsize']= 10.5
+matplotlib.rcParams['font.size'] = 11
+plt.rcParams['legend.title_fontsize'] = 10.5
+plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['xtick.labelsize']= 10
+plt.rcParams['ytick.labelsize']= 10
 matplotlib.rcParams['font.family'] = 'Arial'
 # plt.rcParams['font.family'] = 'sans-serif'
 # plt.rcParams['font.sans-serif'] = 'Helvetica'
@@ -128,9 +128,9 @@ f2 = False
 f3 = False
 f4 = False
 f5 = False
-f6 = False
+f6 = True
 f7 = False
-f8 = True
+f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
     # with silent: 42, 43, 44, 45, 46, 47
@@ -287,43 +287,42 @@ if f5:
     df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
     df_sim['normallpriors'] = df_sim['norm_allpriors']
     df_sim['framerate']=200
-    # fp.plot_model_trajs(df_sim, df, model_alone=True, align_y_onset=False,
-    #                     offset=0)
     # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
-    #                       n_trajs_plot=50, pixel_precision=1, cmap='Reds')
-    # fp.plot_data_trajs_density(df=df)
+    #                       n_trajs_plot=150, pixel_precision=1, cmap='Reds')
+    # fp.supp_plot_rt_distros_data_model(df, df_sim)
     # simulation plots
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
     # fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
-    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
     if not with_fb:
         df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # memory save:
-    stim = []
-    traj_y = []
-    trial_index = []
-    special_trial = []
-    # df = []
-    gt = []
-    subjid = []
-    traj_stamps = []
-    fix_onset = []
-    fix_breaks = []
-    resp_len = []
-    time_trajs = []
-    # fp.supp_plot_rt_distros_data_model(df, df_sim)
+    fp.supp_mt_per_rat(df, df_sim, title='')
+    # # memory save:
+    # stim = []
+    # traj_y = []
+    # trial_index = []
+    # special_trial = []
+    # # df = []
+    # gt = []
+    # subjid = []
+    # traj_stamps = []
+    # fix_onset = []
+    # fix_breaks = []
+    # resp_len = []
+    # time_trajs = []
+    # # fp.supp_plot_rt_distros_data_model(df, df_sim)
     
-    # actual plot
-    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate, save_new_data=save_new_data,
-                      coh=coh, sound_len=sound_len, zt=zt,
-                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                      decision_model=resp_fin, com=com, com_model=com_model,
-                      com_model_detected=com_model_detected,
-                      means=means, errors=errors, means_model=means_model,
-                      errors_model=errors_model, df_sim=df_sim)
+    # # actual plot
+    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+    #                   new_data=simulate, save_new_data=save_new_data,
+    #                   coh=coh, sound_len=sound_len, zt=zt,
+    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+    #                   decision_model=resp_fin, com=com, com_model=com_model,
+    #                   com_model_detected=com_model_detected,
+    #                   means=means, errors=errors, means_model=means_model,
+    #                   errors_model=errors_model, df_sim=df_sim)
     # fig, ax = plt.subplots(ncols=2, nrows=1)
     # ax = ax.flatten()
     # ax[0].set_title('Data')
