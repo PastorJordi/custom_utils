@@ -197,15 +197,6 @@ if f1:
 # fig 2
 if f2:
     print('Plotting Figure 2')
-    # fig_2.splitting_time_frames_ttest_across(
-    #     df, frame_len=50, rtbins=np.linspace(0, 300, 13),
-    #     trajectory="trajectory_y", pval=0.01,
-    #     max_MT=400)
-    # fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 7))
-    # fig_2.splitting_time_frames(df, data_folder=DATA_FOLDER,
-    #                             frame_len=50, new_data=False,
-    #                             rtbins=np.linspace(0, 300, 4),
-    #                             trajectory="trajectory_y", pval=0.05)
     fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
                       sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
                       st_cartoon_img=ST_CARTOON_IMG)
@@ -215,18 +206,6 @@ if f3:
     print('Plotting Figure 3')
     fig_3.fig_3_CoMs(df=df, sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
                      rat_com_img=RAT_COM_IMG)
-    # fig, ax = plt.subplots(1)
-    # fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
-    #                    condition='choice_x_prior', prior_limit=1,
-    #                    after_correct_only=True, rt_lim=300,
-    #                    trajectory=("traj_d1", 1),
-    #                    interpolatespace=np.linspace(-700000, 1000000, 1700))
-    # fig_3.mean_com_vel(df, ax, data_folder=DATA_FOLDER,
-    #                    condition='choice_x_prior', prior_limit=1,
-    #                    after_correct_only=True, rt_lim=300,
-    #                    trajectory=("traj_d1", 1),
-    #                    interpolatespace=np.linspace(-700000, 1000000, 1700),
-    #                    cong=True)
     # fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
@@ -294,50 +273,33 @@ if f5:
     # fp.plot_rt_sim(df_sim)
     # fp.plot_fb_per_subj_from_df(df)
     # fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
-    # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
     if not with_fb:
         df_sim = df_sim[df_sim.sound_len.values >= 0]
-    fp.supp_mt_per_rat(df, df_sim, title='')
-    # # memory save:
-    # stim = []
-    # traj_y = []
-    # trial_index = []
-    # special_trial = []
-    # # df = []
-    # gt = []
-    # subjid = []
-    # traj_stamps = []
-    # fix_onset = []
-    # fix_breaks = []
-    # resp_len = []
-    # time_trajs = []
-    # # fp.supp_plot_rt_distros_data_model(df, df_sim)
+    # memory save:
+    stim = []
+    traj_y = []
+    trial_index = []
+    special_trial = []
+    # df = []
+    gt = []
+    subjid = []
+    traj_stamps = []
+    fix_onset = []
+    fix_breaks = []
+    resp_len = []
+    time_trajs = []
     
-    # # actual plot
-    # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-    #                   new_data=simulate, save_new_data=save_new_data,
-    #                   coh=coh, sound_len=sound_len, zt=zt,
-    #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-    #                   decision_model=resp_fin, com=com, com_model=com_model,
-    #                   com_model_detected=com_model_detected,
-    #                   means=means, errors=errors, means_model=means_model,
-    #                   errors_model=errors_model, df_sim=df_sim)
-    # fig, ax = plt.subplots(ncols=2, nrows=1)
-    # ax = ax.flatten()
-    # ax[0].set_title('Data')
-    # fig_1.mt_matrix_ev_vs_zt(df, ax[0], f=fig,
-    #                          silent_comparison=False, collapse_sides=True)
-    # ax[1].set_title('Model')
-    # fig_1.mt_matrix_ev_vs_zt(df_sim, ax[1], f=fig, silent_comparison=False,
-    #                     collapse_sides=True)
-    # # fig.suptitle('DATA (top) vs MODEL (bottom)')
-    # fp.mt_vs_stim_cong(df_sim, rtbins=np.linspace(0, 80, 9), matrix=False)
-    # # supp_trajs_prior_cong(df_sim, ax=None)
-    # # model_vs_data_traj(trajs_model=trajs, df_data=df)
-    # if f4:
-    #     fp.fig_trajs_model_4(trajs_model=trajs, df=df,
-    #                         reaction_time=reaction_time)
+    # actual plot
+    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                      new_data=simulate, save_new_data=save_new_data,
+                      coh=coh, sound_len=sound_len, zt=zt,
+                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                      decision_model=resp_fin, com=com, com_model=com_model,
+                      com_model_detected=com_model_detected,
+                      means=means, errors=errors, means_model=means_model,
+                      errors_model=errors_model, df_sim=df_sim)
 if f6:
     print('Plotting Figure 6')
     # human traj plots
