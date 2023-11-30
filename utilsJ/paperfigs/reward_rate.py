@@ -25,13 +25,7 @@ sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/'
                 'Documentos/GitHub/custom_utils/'
                 'utilsJ/Models')
 
-from utilsJ.Models import extended_ddm_v2 as edd2
-from utilsJ.paperfigs import figure_1 as fig_1
-from utilsJ.paperfigs import figure_2 as fig_2
-from utilsJ.paperfigs import figure_3 as fig_3
-from utilsJ.paperfigs import figure_5 as fig_5
-from utilsJ.paperfigs import fig_5_humans as fig_5h
-from utilsJ.paperfigs import figure_6 as fig_6
+
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
@@ -96,6 +90,7 @@ elif pc_name == 'sara':
     DATA_FOLDER = 'C:/Users/Sara Fuentes/OneDrive - Universitat de ' +\
                   'Barcelona/Documentos/EBM/4t/IDIBAPS/'
 
+PUNISHMENT = 2000
 
 
 
@@ -124,8 +119,7 @@ def RR_core(df_data, stim, param_to_explore, value_to_explore, punishment):
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt, frst_traj_motor_time =\
         fp.simulate_model_humans(df_data, stim=stim, load_params=True,
-                                  params_to_explore=
-                                  [[param_idx], [value_to_explore]])
+                                  params_to_explore=[[param_idx], [value_to_explore]])
     rw_rate = np.sum(hit_model)/(np.sum(reaction_time) +
               np.sum(fp.get_human_mt(df_data)) +
               punishment*(np.sum(hit_model == 0)))
@@ -204,7 +198,6 @@ if __name__ == '__main__':
     load_params = True
     params_to_explore = ['p_a_bound', 'p_1st_readout']
     values_to_explore = [[2, 3.61, 5], [100, 181.43, 260]]
-    punishment = 3000
 
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
@@ -222,7 +215,7 @@ if __name__ == '__main__':
         trial_index = np.concatenate((trial_index,
                                         np.arange(len_task[j])+1))
     df_data['origidx'] = trial_index
-    rr = RR_mat(df_data, stim, params_to_explore, values_to_explore, 3000)
+    rr = RR_mat(df_data, stim, params_to_explore, values_to_explore, PUNISHMENT)
     print('params_to_explore: ', params_to_explore)
     print('values_to_explore: ', values_to_explore)
     print('reward rate: ', rr)
