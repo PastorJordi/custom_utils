@@ -63,7 +63,7 @@ def plot_coms(df, ax, human=False):
                              label='Detected reversal'),
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
                              label='No-reversal')]
-    ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
+    ax.legend(handles=legendelements, loc='upper left', borderpad=0.15,
               labelspacing=0.15, bbox_to_anchor=(0, 1.25), handlelength=1.5)
 
 
@@ -144,7 +144,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     yvals = mean_traj
     ax.plot(xvals, yvals, color=fig_3.COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time from movement \n onset (ms)')
-    ax.set_ylabel('Position')
+    ax.set_ylabel('Position (pixels)')
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
                              label='Detected reversal'),
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
@@ -152,7 +152,7 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=10.5)
-    ax.legend(handles=legendelements, loc='upper left', borderpad=0.1,
+    ax.legend(handles=legendelements, loc='upper left', borderpad=0.15,
               labelspacing=0.15, bbox_to_anchor=(0, 1.2), handlelength=1.5)
 
 
@@ -222,45 +222,27 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         else:
             ax[0].plot(xvals[yvals <= max_px], mean_traj[yvals <= max_px],
                        color=colormap[i_ev], label='{}'.format(labels_stim[i_ev]))
-        ax[0].fill_between(x=xvals[yvals <= max_px],
-                           y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
-                           y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
-                           color=colormap[i_ev])
+        # ax[0].fill_between(x=xvals[yvals <= max_px],
+        #                    y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
+        #                    y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
+        #                    color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
     ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5)
     ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 470)
     ax[0].set_ylim(-1, 620)
-    ax[0].set_ylabel('Position')
+    ax[0].set_ylabel('Position (pixels)')
     ax[0].set_xlabel('Time from movement \n onset (ms)')
     ax[1].set_xticks([])
     ax[1].set_title('MT (ms)', fontsize=10)
     if condition == 'prior':
         ax[1].set_xlabel('Prior')
-        legendelements = [Line2D([0], [0], color=colormap[4], lw=1.3, label='cong.'),
-                          Line2D([0], [0], color=colormap[3], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[2], lw=1.3, label='0'),
-                          Line2D([0], [0], color=colormap[1], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[0], lw=1.3, label='inc.')]
         ax[1].set_ylim(180, 315)
         ax[1].set_xlim(-0.4, 4.4)
-        ax[0].legend(handles=legendelements, title='Prior', loc='center left',
-                     labelspacing=0.01, bbox_to_anchor=(0., 1.2), fontsize=9,
-                     handlelength=1.5)
     else:
-        legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3, label='cong.'),
-                          Line2D([0], [0], color=colormap[1], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[2], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[3], lw=1.3, label='0'),
-                          Line2D([0], [0], color=colormap[4], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[5], lw=1.3, label=''),
-                          Line2D([0], [0], color=colormap[6], lw=1.3, label='inc.')]
         ax[1].set_xlabel('Stimulus')
         ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
-        ax[0].legend(handles=legendelements, title='Stimulus', loc='center left',
-                     labelspacing=0.01, bbox_to_anchor=(0.8, 1.2), fontsize=9,
-                     handlelength=1.5)
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -295,6 +277,19 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                      times=times, ax=ax[0:2],
                      n_subjects=len(df_data.subjid.unique()),
                      condition='stimulus', max_mt=400)
+    colormap = pl.cm.coolwarm(np.linspace(0., 1, 7))[::-1]
+    legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3),
+                      Line2D([0], [0], color=colormap[1], lw=1.3),
+                      Line2D([0], [0], color=colormap[2], lw=1.3),
+                      Line2D([0], [0], color=colormap[3], lw=1.3),
+                      Line2D([0], [0], color=colormap[4], lw=1.3),
+                      Line2D([0], [0], color=colormap[5], lw=1.3),
+                      Line2D([0], [0], color=colormap[6], lw=1.3)]
+    labs = ['cong', ' ', ' ', '0', ' ', ' ', 'inc']
+    ax[0].legend(handles=legendelements, labels=labs, title='Stimulus', loc='center left',
+                 labelspacing=0.001, bbox_to_anchor=(0.8, 1.2), fontsize=9,
+                 handlelength=1.5, borderpad=0.15, handleheight=1.2,
+                 handletextpad=0.2)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     # Trajs conditioned on prior congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
@@ -302,6 +297,18 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                      times=times, ax=ax[2:4],
                      n_subjects=len(df_data.subjid.unique()),
                      condition='prior', max_mt=400)
+    colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
+    legendelements = [Line2D([0], [0], color=colormap[4], lw=1.3),
+                      Line2D([0], [0], color=colormap[3], lw=1.3),
+                      Line2D([0], [0], color=colormap[2], lw=1.3),
+                      Line2D([0], [0], color=colormap[1], lw=1.3),
+                      Line2D([0], [0], color=colormap[0], lw=1.3)]
+    labs = ['cong', ' ', '0', ' ', 'inc']
+    ax[2].legend(handles=legendelements, labels=labs,
+                 title='Prior', loc='center left',
+                 labelspacing=0.001, bbox_to_anchor=(0., 1.2), fontsize=9,
+                 handlelength=1.5, borderpad=0.15, handleheight=1.2,
+                 handletextpad=0.2)
     # extract splitting time
     out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
                                              trajs=trajs, times=times, subjects=subjects,
@@ -319,14 +326,25 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                                  times=times, max_mt=max_mt,
                                  interpolatespace=interpolatespace,
                                  colormap=colormap)
+    # # extract splitting time
+    # out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
+    #                                          trajs=trajs, times=times,
+    #                                          subjects=np.repeat(1, len(coh)),
+    #                                          ground_truth=ground_truth,
+    #                                          interpolatespace=interpolatespace,
+    #                                          max_mt=max_mt)
+    # # plot splitting time vs RT
+    # splitting_time_plot(sound_len=sound_len, out_data=out_data,
+    #                     ax=ax[-1], subjects=np.repeat(1, len(coh)),
+    #                     color='b')
 
 
-def plot_xy(df_data, ax):
+def plot_xy(df_data, ax, subj=1):
     """
     Plots raw trajectories in x-y
     """
     cont = 0
-    subj_xy = 1
+    subj_xy = subj
     index_sub = df_data.subjid == subj_xy
     ax.scatter(-500, 400, s=1100, color='grey', alpha=0.2)
     ax.scatter(500, 400, s=1100, color='grey', alpha=0.2)
@@ -351,7 +369,7 @@ def plot_xy(df_data, ax):
     ax.set_ylabel('Position along y-axis')
 
 
-def splitting_time_plot(sound_len, out_data, ax, subjects):
+def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick'):
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
@@ -373,12 +391,19 @@ def splitting_time_plot(sound_len, out_data, ax, subjects):
                      out_data[:, i, j],
                      marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
                      mew=1, color=(.6, .6, .6, .3))
-    error_kws = dict(ecolor='firebrick', capsize=2, mfc=(1, 1, 1, 0), mec='k',
-                     color='firebrick', marker='o', label='mean & SEM')
-    ax2.errorbar(xvals,
-                 np.nanmedian(out_data.reshape(rtbins.size-1, -1), axis=1),
-                 yerr=sem(out_data.reshape(rtbins.size-1, -1),
-                          axis=1, nan_policy='omit'), **error_kws)
+    error_kws = dict(ecolor=color, capsize=2, mfc=(1, 1, 1, 0), mec='k',
+                     color=color, marker='o', label='mean & SEM')
+    
+    if color == 'firebrick':
+        ax2.errorbar(xvals,
+                     np.nanmedian(out_data.reshape(rtbins.size-1, -1),
+                                  axis=1),
+                     yerr=sem(out_data.reshape(rtbins.size-1, -1),
+                     axis=1, nan_policy='omit'), **error_kws)
+    else:
+        ax2.plot(xvals, np.nanmedian(out_data.reshape(rtbins.size-1, -1),
+                                     axis=1),
+                 color=color, marker='o', mfc=(1, 1, 1, 0), mec='k')
     ax2.set_xlabel('Reaction time (ms)')
     # ax2.set_title('Impact of stimulus', fontsize=11.5)
     # ax2.set_xticks([107, 128], labels=['Early RT', 'Late RT'], fontsize=9)
@@ -439,7 +464,7 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
         ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                                        max_MT=max_mt+300, pval=0.01)
         ax1.set_xlabel('Time from stimulus \n onset (ms)')
-        ax1.set_ylabel('Position')
+        ax1.set_ylabel('Position (pixels)')
         if i == 0:
             ax1.arrow(ind, 35, 0, 25, color='k', width=1.5, head_width=15,
                       head_length=15)
@@ -450,7 +475,8 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                 legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                       label=lab))
             ax1.legend(handles=legendelements, fontsize=9, loc='upper left',
-                       title='Stimulus', labelspacing=0.01, handlelength=1.5)
+                       title='Stimulus strength',
+                       labelspacing=0.01, handlelength=1.5)
         else:
             if np.isnan(ind):
                 ind = rtbins[i]
@@ -536,8 +562,9 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
-    idx = (df_data.subjid != 5) & (df_data.subjid != 6)
-    df_data = df_data.loc[idx]
+    print(len(df_data.subjid.unique()))
+    # idx = (df_data.subjid != 5) & (df_data.subjid != 6)
+    # df_data = df_data.loc[idx]
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     # create figure
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
@@ -584,13 +611,18 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     ax[3].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
     # plotting x-y trajectories
-    plot_xy(df_data=df_data, ax=ax[3])
+    plot_xy(df_data=df_data, ax=ax[3], subj=2)
     # tachs and pright
     ax_tach = ax[5]
+    pos = ax_tach.get_position()
+    ax_inset = plt.axes([pos.x0+pos.width/4,
+                         pos.y0+pos.height*1.15, pos.width/2,
+                         pos.height/3])
+    inset_express(df_data, ax_inset=ax_inset, rtlim=50)
     ax_pright = ax[4]
     ax_mat = [ax[14], ax[15]]
     pos_com_0 = ax_mat[0].get_position()
-    ax_mat[0].set_position([pos_com_0.x0 + pos_com_0.width*0.3, pos_com_0.y0,
+    ax_mat[0].set_position([pos_com_0.x0 + pos_com_0.width*0.2, pos_com_0.y0,
                             pos_com_0.width, pos_com_0.height])
     ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
                             pos_com_0.width, pos_com_0.height])
@@ -637,6 +669,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     fig.savefig(sv_folder+'fig6.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig6.png', dpi=400, bbox_inches='tight')
 
+
 def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
@@ -669,6 +702,27 @@ def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
     ax.set_ylabel('p(reversal)')
     ax.set_ylim(0, 0.12)
     ax.get_legend().remove()
+
+
+def inset_express(df_data, ax_inset=None, rtlim=50):
+    if ax_inset is None:
+        fig, ax_inset = plt.subplots(1)
+    fp.rm_top_right_lines(ax_inset)
+    df_filt = df_data.loc[df_data.sound_len <= rtlim]
+    ev_vals = np.array([0, 0.05, 0.1, 0.2])*5
+    subjects = df_data.subjid.unique()
+    acc_mat = np.empty((len(ev_vals), len(subjects)))
+    for i_s, subj in enumerate(subjects):
+        df_sub = df_filt.loc[df_filt.subjid == subj]
+        for i_ev, ev in enumerate(ev_vals):
+            hits = df_sub.loc[np.round(df_sub.avtrapz.abs(), 2) == ev]
+            acc_mat[i_ev, i_s] = np.nanmean(hits['hithistory'])
+    vals_acc = np.nanmean(acc_mat, axis=1)
+    err_acc = np.nanstd(acc_mat, axis=1) / np.sqrt(len(subjects))
+    ev_vals = np.array([0, 0.05, 0.1, 0.2])*5
+    ax_inset.errorbar(ev_vals, vals_acc, err_acc, color='k', marker='o')
+    ax_inset.set_xlabel('Stimulus strength')
+    ax_inset.set_ylabel('Accuracy')
 
 
 def get_opts_krnls(plot_opts, tag):
