@@ -7,6 +7,7 @@ from scipy.optimize import curve_fit
 from matplotlib.lines import Line2D
 import pandas as pd
 import sys
+
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
