@@ -311,7 +311,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
     # backwards in time
     # mat: trajectories (n trials x time)
     plist = []
-    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
+    for i in range(max_MT):  # reversed so it goes backwards in time
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = evl[nan_idx]
@@ -322,10 +322,10 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
         except Exception:  # TODO: really??
             continue
             # return np.nan
-        if p2 > pval:
-            return i + 1
-        if sim and np.isnan(p2):
-            return i + 1
+        if p2 < pval:
+            return i
+        # if sim and np.isnan(p2):
+        #     return i + 1
     return np.nan
 
 
@@ -791,7 +791,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
         if not sim:
             split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_005.npz'
         if sim:
-            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005.npz'
+            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005_forward.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):
