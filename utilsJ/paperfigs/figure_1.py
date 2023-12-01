@@ -41,19 +41,24 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
                                       np.concatenate(df_1.fb.values)-0.3]))
         fix_breaks = fix_breaks[index]
         counts_coh, bins = np.histogram(fix_breaks*1000,
-                                        bins=20, range=(-100, 200))
+                                        bins=30, range=(-100, 300))
         norm_counts = counts_coh/sum(counts_coh)
         ax.plot(bins[:-1]+(bins[1]-bins[0])/2, norm_counts,
                 color=colormap[iev], label=ev)
-    ax.set_ylabel('Reaction time density')
+    ax.set_ylabel('Density')
     ax.set_xlabel('Reaction time (ms)')
     
     ax.fill_between([0, 50], [-0.01, -0.01], [0.15, 0.15], color='gray',
                     alpha=0.2, linewidth=0)
+    rec1 = plt.Rectangle((-101, 0), 101, 0.15, facecolor="none", 
+                         edgecolor="grey", hatch=r"\\", alpha=0.4)
+    ax.add_patch(rec1)
+    ax.text(-80, 0.09, 'fixation\nbreaks', rotation='vertical',
+            fontsize=9.5, style='italic')
     ax.text(12, 0.09, 'express', rotation='vertical',
             fontsize=9.5, style='italic')
-    legend = ax.legend(title='Stimulus', borderpad=0.3, fontsize=8,
-                       loc='center left', bbox_to_anchor=(0.7, 1.1),
+    legend = ax.legend(title='Stimulus strength', borderpad=0.3, fontsize=8,
+                       loc='center left', bbox_to_anchor=(0.51, 0.95),
                        labelspacing=0.1)
     legend.get_title().set_fontsize('8') #legend 'Title' fontsize
 
@@ -91,7 +96,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # ax.text(200, -1,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
-    ax.set_xlim(-1.15, 1.4)
+    ax.set_xlim(-1.1, 1.1)
     # ARROWS FOR INC/CONG
     # ax.set_title(r'$\;\;\;\;\;\;\; \longleftarrow \it{inc.} \;\;\;\; \it{congruent} \longrightarrow \;\;\;\;\;\;$', fontsize=8)
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
@@ -294,6 +299,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
     ax.axhline(y=np.nanmean(sil), color='k', alpha=0.6)
     coh_unq = np.unique(coh_cong)
+    ax.plot(coh_unq, mean_mt_vs_coh, color='k', ls='-', lw=0.5)
     colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
@@ -478,13 +484,13 @@ def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
         ax.set_ylabel('Stimulus evidence')
         pos = ax.get_position()
         cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
-                          pos.width/12, pos.height/3])
+                              pos.width/12, pos.height/1.4])
         plt.colorbar(im_s, cax=cbar_ax)
         cbar_ax.set_title(r'  $MT \;(ms)$', fontsize=8)
 
 
 def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
-                     figsize=(10, 8), margin=.06):
+                     figsize=(10, 8), margin=.06, max_rt=300):
     f, ax = plt.subplots(nrows=3, ncols=4, figsize=figsize)  # figsize=(4, 3))
     plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.98,
                         hspace=0.45, wspace=0.6)
@@ -502,7 +508,7 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     # task panel
     ax_task = ax[0]
     pos_task = ax_task.get_position()
-    factor = 2.5
+    factor = 2.3
     ax_task.set_position([pos_task.x0, pos_task.y0-0.08,
                           pos_task.width*factor, pos_task.height*factor])
     fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.12)
@@ -510,7 +516,7 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     ax_repalt = ax[2]
     pos_repalt = ax_repalt.get_position()
     factor = 1.3
-    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/2,
+    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/1.8,
                             pos_repalt.y0+0.02,
                             pos_repalt.width*factor, pos_repalt.height*factor])
     # rt panel
@@ -518,8 +524,9 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     fp.rm_top_right_lines(ax=ax_rts)
     ax_rts.set_xlabel('Reaction Time (ms)')
     ax_rts.set_ylabel('Density')
-    ax_rts.set_xlim(-101, 201)
+    ax_rts.set_xlim(-101, max_rt+1)
     ax_rts.set_ylim(0, 0.1495)
+    ax_rts.set_xticks(np.arange(0, max_rt+1, 100))
     pos_rt = ax_rts.get_position()
     # ax_rts.set_position([pos_rt.x0, pos_rt.y0, pos_rt.width, pos_rt.height])
     fp.add_text(ax=ax_rts, letter='rat LE46', x=0.35, y=1.08, fontsize=8)
@@ -545,18 +552,22 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     ax_pright.set_xlabel('Prior evidence')
     ax_pright.set_ylabel('Stimulus evidence')
     # pright_cbar_ax.set_title('p(Right)', fontsize=9)
-    fp.add_text(ax=ax_pright, letter='b', x=-0.17, y=1.3)
+    fp.add_text(ax=ax_pright, letter='b', x=-0.17, y=1.12)
     # tachometric panel
     ax_tach = ax[5]
     ax_tach.set_xlabel('Reaction time (ms)')
     ax_tach.set_ylabel('Accuracy')
     ax_tach.set_ylim(0.5, 1.02)
-    ax_tach.set_xlim(-101, 201)
+    ax_tach.set_xlim(-101, max_rt+1)
+    ax_tach.set_xticks(np.arange(0, max_rt+1, 100))
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
     ax_tach.set_yticks([0.5, 0.75, 1])
     ax_tach.set_yticklabels(['0.5', '0.75', '1'])
     ax_tach.fill_between([0, 50], [0, 0], [1.04, 1.04], color='gray', alpha=0.2,
                          linewidth=0)
+    rec1 = plt.Rectangle((-101, 0), 101, 1.04, facecolor="none", 
+                         edgecolor="grey", hatch=r"\\", alpha=0.4)
+    ax_tach.add_patch(rec1)
     fp.rm_top_right_lines(ax_tach)
     pos = ax_tach.get_position()
     ax_tach.set_position([pos.x0, pos.y0, pos.width, pos.height])
@@ -620,28 +631,29 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
 
     im_2 = ax_pright.imshow(mat_pright, cmap='PRGn_r')
     # cbar = plt.colorbar(im_2, cax=pright_cbar_ax, orientation='horizontal')
-    cbar = f.colorbar(im_2, ax=ax_pright, location='top', label='p (right response)',
-                      shrink=0.55, aspect=5)
+    cbar = f.colorbar(im_2, ax=ax_pright, location='right',
+                      label='p (right response)', shrink=0.7, aspect=10)
     im = ax_pright.images
     cb = im[-1].colorbar
     pos_cb = cb.ax.get_position()
     pos_pright = ax_pright.get_position()
     factor = 1.3
-    ax_pright.set_position([pos_pright.x0-pos_pright.width/3,
+    ax_pright.set_position([pos_pright.x0-pos_pright.width/1.8,
                             pos_pright.y0 + 0.07,
                             pos_pright.width*factor,
                             pos_pright.height*factor])
-    cb.ax.set_position([pos_cb.x0-pos_pright.width/3+0.02,
-                        pos_cb.y0+0.115, pos_cb.width, pos_cb.height])
+    cb.ax.set_position([pos_cb.x0-pos_pright.width/1.8+0.045,
+                        pos_cb.y0+0.1, pos_cb.width, pos_cb.height])
     # pright_cbar_ax.set_title('p (right)')
-    cbar.ax.tick_params(rotation=45)
+    # cbar.ax.tick_params(rotation=45)
     df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
     bin_size = 10
     labels = ['0', '0.25', '0.5', '1']
     df_tachos = df_data.copy()
     tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
-                labels=labels, rtbins=np.arange(0, 201, bin_size), evidence='coh2')
+                labels=labels, rtbins=np.arange(0, max_rt+1, bin_size),
+                evidence='coh2')
     del df_tachos
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
 
