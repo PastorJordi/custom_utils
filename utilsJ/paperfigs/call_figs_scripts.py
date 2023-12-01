@@ -42,7 +42,7 @@ matplotlib.rcParams['lines.markersize'] = 3
 # ---GLOBAL VARIABLES
 pc_name = 'alex'
 if pc_name == 'alex':
-    RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/001965.png'
+    RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/image_com.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
@@ -125,11 +125,11 @@ def check_distros(df, df_sim):
 plt.close('all')
 f1 = False
 f2 = False
-f3 = True
+f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -235,78 +235,91 @@ if f5:
         stim = stim.T
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     stim[:, int(num_tr):] = 0  # for silent simulation
-    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt =\
-        fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
-                                          trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid, simulate=simulate)
-    # fp.basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-    # fp.basic_statistics(com, com_model_detected)  # com
-    # fp.basic_statistics(hit, hit_model)  # hit
-    MT = [len(t) for t in trajs]
-    df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
-                            'sound_len': reaction_time,
-                            'rewside': (gt + 1)/2,
-                            'R_response': (resp_fin+1)/2,
-                            'resp_len': np.array(MT)*1e-3})
-    df_sim['CoM_sugg'] = com_model.astype(bool)
-    df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-    df_sim['aftererror'] =\
-        np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
-    df_sim['subjid'] = subjid
-    df_sim['origidx'] = trial_index
-    df_sim['special_trial'] = special_trial
-    df_sim['traj'] = df_sim['trajectory_y']
-    df_sim['com_detected'] = com_model_detected.astype(bool)
-    df_sim['peak_com'] = np.array(x_val_at_updt)
-    df_sim['hithistory'] = np.array(resp_fin == gt)
-    df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
-                                     num_tr + n_sil)
-    df_sim['allpriors'] = zt
-    df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
-    df_sim['normallpriors'] = df_sim['norm_allpriors']
-    df_sim['framerate']=200
-    # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
-    #                       n_trajs_plot=150, pixel_precision=1, cmap='Reds')
-    # fp.supp_plot_rt_distros_data_model(df, df_sim)
-    # simulation plots
-    # fp.plot_rt_sim(df_sim)
-    # fp.plot_fb_per_subj_from_df(df)
-    # fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
-    means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-    means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-    if not with_fb:
-        df_sim = df_sim[df_sim.sound_len.values >= 0]
-    # memory save:
-    stim = []
-    traj_y = []
-    trial_index = []
-    special_trial = []
-    # df = []
-    gt = []
-    subjid = []
-    traj_stamps = []
-    fix_onset = []
-    fix_breaks = []
-    resp_len = []
-    time_trajs = []
+    if f7:
+        # params_to_explore = [[4]] + [np.arange(7)]
+        # fig, ax = plt.subplots(ncols=2, nrows=2)
+        # ax = ax.flatten()
+        # fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+        #                             subjid, params_to_explore, ax=ax[0:2])
+        # params_to_explore = [[5]] + [np.arange(7)]
+        # fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+        #                             subjid, params_to_explore, ax=ax[2:4])
+        fig, ax = plt.subplots(1)
+        params_to_explore = [[9]] + [np.round(np.linspace(1, 4, 21), 2)]
+        fp.plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
+                                                subjid, params_to_explore, ax)
+    else:
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+            _, trajs, x_val_at_updt =\
+            fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                              trial_index=trial_index, num_tr=num_tr,
+                                              subject_list=subjects, subjid=subjid, simulate=simulate)
+        # fp.basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
+        # fp.basic_statistics(com, com_model_detected)  # com
+        # fp.basic_statistics(hit, hit_model)  # hit
+        MT = [len(t) for t in trajs]
+        df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
+                                'sound_len': reaction_time,
+                                'rewside': (gt + 1)/2,
+                                'R_response': (resp_fin+1)/2,
+                                'resp_len': np.array(MT)*1e-3})
+        df_sim['CoM_sugg'] = com_model.astype(bool)
+        df_sim['traj_d1'] = [np.diff(t) for t in trajs]
+        df_sim['aftererror'] =\
+            np.resize(np.array(df.aftererror)[:int(num_tr)], num_tr + n_sil)
+        df_sim['subjid'] = subjid
+        df_sim['origidx'] = trial_index
+        df_sim['special_trial'] = special_trial
+        df_sim['traj'] = df_sim['trajectory_y']
+        df_sim['com_detected'] = com_model_detected.astype(bool)
+        df_sim['peak_com'] = np.array(x_val_at_updt)
+        df_sim['hithistory'] = np.array(resp_fin == gt)
+        df_sim['soundrfail'] = np.resize(df.soundrfail.values[:int(num_tr)],
+                                         num_tr + n_sil)
+        df_sim['allpriors'] = zt
+        df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
+        df_sim['normallpriors'] = df_sim['norm_allpriors']
+        df_sim['framerate']=200
+        # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
+        #                       n_trajs_plot=150, pixel_precision=1, cmap='Reds')
+        # fp.supp_plot_rt_distros_data_model(df, df_sim)
+        # simulation plots
+        # fp.plot_rt_sim(df_sim)
+        # fp.plot_fb_per_subj_from_df(df)
+        # fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
+        means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+        means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+        if not with_fb:
+            df_sim = df_sim[df_sim.sound_len.values >= 0]
+        # memory save:
+        stim = []
+        traj_y = []
+        trial_index = []
+        special_trial = []
+        # df = []
+        gt = []
+        subjid = []
+        traj_stamps = []
+        fix_onset = []
+        fix_breaks = []
+        resp_len = []
+        time_trajs = []
     
-    # actual plot
-    fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                      new_data=simulate, save_new_data=save_new_data,
-                      coh=coh, sound_len=sound_len, zt=zt,
-                      hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                      decision_model=resp_fin, com=com, com_model=com_model,
-                      com_model_detected=com_model_detected,
-                      means=means, errors=errors, means_model=means_model,
-                      errors_model=errors_model, df_sim=df_sim)
+        # fig_5.supp_com_analysis(df_sim)
+        # actual plot
+        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                          new_data=simulate, save_new_data=save_new_data,
+                          coh=coh, sound_len=sound_len, zt=zt,
+                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                          decision_model=resp_fin, com=com, com_model=com_model,
+                          com_model_detected=com_model_detected,
+                          means=means, errors=errors, means_model=means_model,
+                          errors_model=errors_model, df_sim=df_sim)
 if f6:
     print('Plotting Figure 6')
     # human traj plots
     fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
                        human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
-if f7:
-    fp.fig_7(df, df_sim)
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1

@@ -259,9 +259,9 @@ def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
             'performance': perf}
     if rgrss_folder is None:
         df_regressors = get_GLM_regressors(data, tau=2)
-        df_regressors.to_csv(sv_folder + 'df_regressors.csv')
+        df_regressors.to_csv(sv_folder + 'df_regressors_all.csv')
     else:
-        df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
+        df_regressors = pd.read_csv(rgrss_folder+'df_regressors_all.csv')
     ind_af_er = df_regressors['aftererror'] == 0
     subjid = subjid[ind_af_er]
     ev = ev[ind_af_er]
@@ -493,7 +493,7 @@ def get_data_traj(folder, plot=False):
         # read file
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        if np.mean(df1['correct']) < 0.7:
+        if np.mean(df1['correct']) < 0.55:
             continue
         else:
             for k in data_tls.keys():
@@ -515,7 +515,7 @@ def get_data_traj(folder, plot=False):
         df1 = pd.read_csv(folder+'/'+f, sep=',')  # Manuel
         df2 = pd.read_csv(folder+'/'+sorted_list_tls[i_f], sep=',')
         # df1 = pd.read_csv(folder+'\\'+f, sep=',')  # Alex
-        if np.mean(df2['correct']) < 0.7:
+        if np.mean(df2['correct']) < 0.55:
             print('subject discarded: ' + str(i_f+1))
             print('acc: ' + str(np.mean(df2['correct'])))
             continue
