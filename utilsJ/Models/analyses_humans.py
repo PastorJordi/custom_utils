@@ -17,6 +17,8 @@ from numpy import concatenate as conc
 from numpy import logical_and as and_
 import sys
 sys.path.append("C:/Users/Alexandre/Documents/GitHub/")
+sys.path.append("C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/" +\
+                "Documentos/GitHub/custom_utils")
 from utilsJ.Behavior.plotting import binned_curve,\
     com_heatmap_paper_marginal_pcom_side
 from utilsJ.Models import extended_ddm_v2 as edd2
@@ -259,9 +261,9 @@ def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
             'performance': perf}
     if rgrss_folder is None:
         df_regressors = get_GLM_regressors(data, tau=2)
-        df_regressors.to_csv(sv_folder + 'df_regressors_all.csv')
+        df_regressors.to_csv(sv_folder + 'df_regressors.csv')
     else:
-        df_regressors = pd.read_csv(rgrss_folder+'df_regressors_all.csv')
+        df_regressors = pd.read_csv(rgrss_folder+'df_regressors.csv')
     ind_af_er = df_regressors['aftererror'] == 0
     subjid = subjid[ind_af_er]
     ev = ev[ind_af_er]

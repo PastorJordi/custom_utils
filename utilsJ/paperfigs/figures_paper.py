@@ -50,7 +50,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'sara'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -84,8 +84,10 @@ elif pc_name == 'alex_CRM':
     HUMAN_TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/rat_image/g41085.png'
     TASK_IMG = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/panel_a.png'
 elif pc_name == 'sara':
-    SV_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
-    DATA_FOLDER = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS'
+    SV_FOLDER = 'C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/' +\
+        'Documentos/EBM/4t/IDIBAPS'
+    DATA_FOLDER = 'C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/'+\
+        'Documentos/EBM/4t/IDIBAPS'
 
 FRAME_RATE = 14
 BINS_RT = np.linspace(1, 301, 11)
@@ -545,7 +547,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
-        pro_vs_re, total_traj, x_val_at_updt
+        pro_vs_re, total_traj, x_val_at_updt, frst_traj_motor_time
 
 
 def check_mean_std_time_com(df, com, time_com):
@@ -791,9 +793,10 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             pro_vs_re_tmp = data_simulation['pro_vs_re_tmp']
             total_traj_tmp = data_simulation['total_traj_tmp']
             x_val_at_updt_tmp = data_simulation['x_val_at_updt_tmp']
+            frst_traj_motor_time = data_simulation['frst_traj_motor_time']
         else:
             hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
-                com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp =\
+                com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp, frst_traj_motor_time_tmp=\
                 run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
                           gt=gt[index], trial_index=trial_index[index],
                           subject=subject, load_params=load_params, human=human,
@@ -801,7 +804,8 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             data_simulation = {'hit_model_tmp': hit_model_tmp, 'reaction_time_tmp': reaction_time_tmp,
                                'detected_com_tmp': detected_com_tmp, 'resp_fin_tmp': resp_fin_tmp,
                                'com_model_tmp': com_model_tmp, 'pro_vs_re_tmp': pro_vs_re_tmp,
-                               'total_traj_tmp': total_traj_tmp, 'x_val_at_updt_tmp': x_val_at_updt_tmp}
+                               'total_traj_tmp': total_traj_tmp, 'x_val_at_updt_tmp': x_val_at_updt_tmp,
+                               'frst_traj_motor_time_tmp':frst_traj_motor_time_tmp}
             pd.to_pickle(data_simulation, sim_data)
         hit_model = np.concatenate((hit_model, hit_model_tmp))
         reaction_time = np.concatenate((reaction_time, reaction_time_tmp))
@@ -811,8 +815,9 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         pro_vs_re = np.concatenate((pro_vs_re, pro_vs_re_tmp))
         total_traj = total_traj + total_traj_tmp
         x_val_at_updt = np.concatenate((x_val_at_updt, x_val_at_updt_tmp))
+        frst_traj_motor_time = np.concatenate((frst_traj_motor_time, frst_traj_motor_time_tmp))
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
-        pro_vs_re, total_traj, x_val_at_updt
+        pro_vs_re, total_traj, x_val_at_updt, frst_traj_motor_time
 
 
 def fig_7(df, df_sim):
@@ -1919,7 +1924,7 @@ def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
     return df
 
 
-def simulate_model_humans(df_data, stim, load_params):
+def simulate_model_humans(df_data, stim, load_params, params_to_explore=[]):
     choice = df_data.R_response.values*2-1
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
@@ -1930,15 +1935,15 @@ def simulate_model_humans(df_data, stim, load_params):
     trial_index = df_data.origidx.values
     num_tr = len(trial_index)
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt =\
+        _, trajs, x_val_at_updt, frst_traj_motor_time =\
         run_simulation_different_subjs(
             stim=stim, zt=zt, coh=coh, gt=gt,
             trial_index=trial_index, num_tr=num_tr, human=True,
             subject_list=subjects, subjid=subjid, simulate=True,
-            load_params=load_params)
+            load_params=load_params, params_to_explore=params_to_explore)
     
     return hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt
+        _, trajs, x_val_at_updt, frst_traj_motor_time
 
 
 
