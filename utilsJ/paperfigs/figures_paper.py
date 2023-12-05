@@ -585,7 +585,7 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
                     evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
             max_mt = 800
             current_split_index =\
-                fig_2.get_split_ind_corr(mat, evl, pval=0.05, max_MT=max_mt,
+                fig_2.get_split_ind_corr(mat, evl, pval=0.0001, max_MT=max_mt,
                                          startfrom=0)+1
             if current_split_index >= rtbins[i]:
                 out_data_sbj += [current_split_index]
@@ -627,7 +627,11 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
     min_st = np.nanmin(np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1))
     rt_min_split = xvals[np.where(np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1) == min_st)[0]]
     # ax.arrow(rt_min_split+28, min_st, -12, 0, color=color, width=1, head_width=5)
-    ax.plot(rt_min_split, min_st, marker='o', color=color, markersize=12)
+    if rt_min_split.shape[0] > 1:
+        rt_min_split = rt_min_split=[0]
+    if sum(min_st.shape) > 1:
+        min_st = min_st[0]
+    ax.plot(rt_min_split, min_st, marker='o', color=color, markersize=6)
     return min_st
 
 
@@ -654,6 +658,38 @@ def plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
     ax[0].legend(title=labels[params_to_explore[0][0]], loc='upper center')
 
 
+
+def plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
+                       subjid, params_to_explore, ax=None,
+                       param_title=r'$\theta_{AI}$'):
+    for a in ax:
+        rm_top_right_lines(a)
+    ax[0].set_xlabel(param_title)
+    ax[0].set_ylabel('P(CoM)')
+    ax[1].set_xlabel(param_title)
+    ax[1].set_ylabel('P(reversal)')
+    num_tr = int(len(coh))
+    param_ind = params_to_explore[0][0]
+    com_all = []
+    reversals = []
+    for ind in range(len(params_to_explore[1])):
+        param_value = params_to_explore[1][ind]        
+        param_iter = str(param_ind)+'_'+str(param_value)
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+            _, trajs, x_val_at_updt =\
+                run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                       trial_index=trial_index, num_tr=num_tr,
+                                       subject_list=subjects, subjid=subjid,
+                                       simulate=False,
+                                       params_to_explore=[[param_ind], [param_value]],
+                                       change_param=True,
+                                       param_iter=param_iter)
+        com_all.append(np.nanmean(com_model))
+        reversals.append(np.nanmean(com_model_detected))
+    ax[0].plot(params_to_explore[1], com_all, color='k', marker='o')
+    ax[1].plot(params_to_explore[1], reversals, color='k', marker='o')
+
+
 def plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
                                          subjid, params_to_explore, ax):
     rm_top_right_lines(ax)
@@ -662,11 +698,13 @@ def plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subject
     action_bound_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                       subjid, params_to_explore, ax)
 
+
 def action_bound_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                       subjid, params_to_explore, ax):
     num_tr = int(len(coh))
-    colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(params_to_explore[1])))
+    colormap = pl.cm.magma(np.linspace(0., 1, len(params_to_explore[1])))
     param_ind = params_to_explore[0][0]
+    ind_stim = np.sum(stim, axis=0) != 0
     for ind in range(len(params_to_explore[1])):
         param_value = params_to_explore[1][ind]        
         param_iter = str(param_ind)+'_'+str(param_value)
@@ -688,24 +726,26 @@ def action_bound_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                 'subjid': subjid, 'allpriors': zt})
         df_sim['choice_x_coh'] = np.round(coh * resp_fin, 2)
         df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
+        df_sim = df_sim.loc[ind_stim]
         mt_all = np.empty((len(subjects), 7))
         mt_all[:] = np.nan
         prior_lim = np.quantile(df_sim.norm_allpriors.abs(), 0.2)
-        ev_vals = np.unique(df_sim.choice_x_coh)
+        ev_vals = np.sort(np.unique(df_sim.choice_x_coh))
         for i_sub, subj in enumerate(subjects):
             for i_ev, ev in enumerate(ev_vals):
                 index = (df_sim.choice_x_coh.values == ev) &\
-                        (df_sim.sound_len.values >= 0) & (subjid == subj) &\
+                        (df_sim.sound_len.values >= 0) & (df_sim.subjid == subj) &\
                         (df_sim.norm_allpriors <= prior_lim)
                 mt_all[i_sub, i_ev] = np.nanmean(df_sim.loc[index, 'resp_len'])
         mt_mean = np.nanmean(mt_all, axis=0)
         mt_err = np.nanstd(mt_all, axis=0) / np.sqrt(len(subjects))
         ax.errorbar(ev_vals, mt_mean, mt_err, color=colormap[ind], linewidth=1.4)
     fig2, ax2 = plt.subplots(1)
-    img = ax2.imshow(np.array([[1,4]]), cmap="BrBG")
+    img = ax2.imshow(np.array([[min(params_to_explore[1]),
+                                max(params_to_explore[1])]]), cmap="magma", norm=LogNorm())
     img.set_visible(False)
     plt.close(fig2)
-    cbar = plt.colorbar(img, orientation="vertical", ax=ax, cmap='BrBG', fraction=0.02)
+    cbar = plt.colorbar(img, orientation="vertical", ax=ax, cmap='magma', fraction=0.02)
     cbar.ax.set_title(r'$\theta_{AI}$')
 
 
@@ -717,6 +757,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
     param_ind = params_to_explore[0][0]
     ta_plus_te = []
     min_st_list = []
+    ind_stim = np.sum(stim, axis=0) != 0
     for ind in range(len(params_to_explore[1])):
         param_value = params_to_explore[1][ind]        
         param_iter = str(param_ind)+'_'+str(param_value)
@@ -744,6 +785,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                 'R_response': (resp_fin+1)/2,
                                 'resp_len': np.array(MT)*1e-3,
                                 'subjid': subjid})
+        df_sim = df_sim.loc[ind_stim]
         min_st = trajs_splitting_stim_all(df=df_sim, ax=ax[0], color=colormap[ind], threshold=300,
                                           rtbins=np.linspace(0, 150, 16),
                                           trajectory="trajectory_y", par_value=param_value)

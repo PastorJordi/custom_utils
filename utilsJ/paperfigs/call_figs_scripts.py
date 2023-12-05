@@ -124,12 +124,12 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
-f7 = True
+f7 = False
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -141,8 +141,8 @@ if f1 or f2 or f3 or f5:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    # subjects = ['LE42', 'LE37', 'LE46']
-    # subjects = ['LE43']
+    subjects = ['LE42', 'LE37', 'LE46']
+    # subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -236,18 +236,33 @@ if f5:
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     stim[:, int(num_tr):] = 0  # for silent simulation
     if f7:
-        # params_to_explore = [[4]] + [np.arange(7)]
-        # fig, ax = plt.subplots(ncols=2, nrows=2)
-        # ax = ax.flatten()
-        # fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-        #                             subjid, params_to_explore, ax=ax[0:2])
-        # params_to_explore = [[5]] + [np.arange(7)]
-        # fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-        #                             subjid, params_to_explore, ax=ax[2:4])
+        params_to_explore = [[4]] + [np.arange(7)]
+        fig, ax = plt.subplots(ncols=2, nrows=2)
+        ax = ax.flatten()
+        fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+                                    subjid, params_to_explore, ax=ax[0:2])
+        params_to_explore = [[5]] + [np.arange(7)]
+        fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+                                    subjid, params_to_explore, ax=ax[2:4])
+        fig, ax = plt.subplots(ncols=2)
+        params_to_explore = [[4]] + [np.arange(7)]
+        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
+                               subjid, params_to_explore, ax=ax,
+                               param_title=r'$t_{aff}$')
+        fig, ax = plt.subplots(ncols=2)
+        params_to_explore = [[5]] + [np.arange(7)]
+        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
+                               subjid, params_to_explore, ax=ax,
+                               param_title=r'$t_{eff}$')
         fig, ax = plt.subplots(1)
-        params_to_explore = [[9]] + [np.round(np.linspace(1, 4, 21), 2)]
+        params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 31), 2)]
         fp.plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
                                                 subjid, params_to_explore, ax)
+        fig, ax = plt.subplots(ncols=2)
+        params_to_explore = [[9]] + [np.round(np.linspace(1, 25, 25), 2)]
+        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
+                               subjid, params_to_explore, ax=ax,
+                               param_title=r'$\theta_{AI}$')
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
