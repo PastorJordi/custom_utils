@@ -169,24 +169,32 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
 
 
 def supp_com_analysis(df_sim):
-    fig, ax = plt.subplots(nrows=2, ncols=4)
+    fig, ax = plt.subplots(nrows=2, ncols=4, figsize=(14, 6))
+    plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
+                        hspace=0.4, wspace=0.35)
     ax = ax.flatten()
     for a in ax:
         fp.rm_top_right_lines(a)
+    for ind in [1, 3, 5]:
+        a = ax[ind]
+        pos_a = a.get_position()
+        a.set_position([pos_a.x0-pos_a.width/2.8,
+                        pos_a.y0, pos_a.width, pos_a.height])
     ax[-2].axis('off')
     pos_last_ax = ax[-1].get_position()
     ax[-1].set_position([pos_last_ax.x0-pos_last_ax.width/1.2, pos_last_ax.y0,
                          pos_last_ax.width*1.8, pos_last_ax.height])
-    supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[-1])
+    supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[-1],
+                           bins_rt=np.linspace(1, 301, 10))
     ax[-1].set_ylabel(r'$p(reversal \;| \; CoM)$')
     supp_prob_vs_prior(df_sim, ax=ax[0:2], fig=fig, column='CoM_sugg', com=False,
                        title_col=r'$p(CoM)$')
     # ax[0].set_ylabel(r'$p(CoM)$')
     supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=False,
-                       title_col=r'$p(reversal)$')
+                       title_col=r'$\;\;\;\;p(reversal)$')
     # ax[1].set_ylabel(r'$p(reversal)$')
     supp_prob_vs_prior(df_sim, ax=ax[4:6], fig=fig, column='com_detected', com=True,
-                       title_col=r'$p(reversal \;| \; CoM)$')
+                       title_col=r'$\;\;\;\;\;\;\;\;\;\;\;\;\;\;p(reversal \;| \; CoM)$')
     # ax[2].set_ylabel(r'$p(reversal \;| \; CoM)$')
 
 
@@ -212,7 +220,7 @@ def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
 
 
 def supp_prob_vs_prior(df_sim, ax, title_col, fig, column='com_detected', com=False,
-                       margin=.03):
+                       margin=.05):
     ax_mat = ax
     if com:
         df_prob = df_sim.loc[df_sim.CoM_sugg]
@@ -254,7 +262,7 @@ def supp_prob_vs_prior(df_sim, ax, title_col, fig, column='com_detected', com=Fa
     ax_mat[1].set_yticks([0, 3, 6], ['']*3)
     ax_mat[0].set_ylabel('Stimulus evidence')
     pos = ax_mat[1].get_position()
-    cbar_ax = fig.add_axes([pos.x0+pos.width*0.9, pos.y0+margin/6,
+    cbar_ax = fig.add_axes([pos.x0+pos.width*1.2, pos.y0+margin/6,
                             pos.width/15, pos.height/1.5])
     cbar = plt.colorbar(im, cax=cbar_ax)
     cbar.ax.set_title(title_col)
@@ -721,7 +729,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                       zt_model=zt_model, ax=ax[0])
     df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
                              'CoM_sugg': com_model_detected,
-                             'norm_allpriors': zt_model/max(abs(zt_model)),
+                             'norm_allpriors': df_sim.norm_allpriors.values,
                              'R_response': (decision_model+1)/2, 'subjid': subjid})
     df_model = df_model.loc[~df_model.norm_allpriors.isna()]
     nbins = 7
@@ -747,7 +755,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
                                threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
-                               connect_points=True, trajectory="trajectory_y")
+                               connect_points=True, trajectory="trajectory_y",
+                               p_val=0.05)
     ax[7].set_ylim(0, 205)
     # plot mean com traj
     
