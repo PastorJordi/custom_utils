@@ -71,11 +71,11 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         col_face[-1] = 0.2
         col_edge = [0, 0, 0, 0]
         traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
-        ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[0].plot(interpolatespace/1000, traj, color=colormap[i_tr], linewidth=1.2)
         ax[0].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr], facecolor=col_face,
                            edgecolor=col_edge)
-    ax[1].set_ylim([0.5, 0.8])
+    # ax[1].set_ylim([0.5, 0.8])
     # plt.show()
     if condition == 'choice_x_coh':
         legendelements = [Line2D([0], [0], color=colormap[6], lw=2, label='cong.'),
@@ -106,16 +106,20 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         title = 'Trial index'
         ax[1].set_xlabel('Trial index')
     ax[0].legend(handles=legendelements, loc='upper left', title=title,
-                labelspacing=.1, bbox_to_anchor=(0., 1.7), handlelength=1.5)
+                labelspacing=.1, bbox_to_anchor=(0., 1.1), handlelength=1.5,
+                frameon=False)
     ax[1].set_xlabel(title)
     ax[0].set_xlim([-20, 450])
     ax[0].set_xticklabels('')
     ax[0].axhline(0, c='gray')
-    ax[0].set_ylabel('Position')
+    ax[0].set_ylabel('y-position (cm)')
     ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_ylim([-10, 85])
-    ax[0].set_yticks([0, 25, 50, 75])
-    ax[0].axhline(78, color='gray', linestyle=':')
+    # ax[0].axhline(78, color='gray', linestyle=':')
+    ticks = np.array([0, 25, 50, 75])
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax[0].set_yticks(ticks, labs)
     # VELOCITIES
     mat_all = np.empty((n_iters, 1700, len(subjects)))
     mt_all = np.empty((n_iters, len(subjects)))
@@ -151,7 +155,7 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         col_face[-1] = 0.2
         col_edge = [0, 0, 0, 0]
         traj -= np.nanmean(traj[(interpolatespace > -100000) * (interpolatespace < 0)])
-        ax[2].plot(interpolatespace/1000, traj, color=colormap[i_tr])
+        ax[2].plot(interpolatespace/1000, traj, color=colormap[i_tr], linewidth=1.2)
         ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr],
                            facecolor=col_face, edgecolor=col_edge)
@@ -170,8 +174,12 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[1].set_ylabel('Peak')
     ax[2].set_ylim([-0.05, 0.5])
     ax[2].axhline(0, c='gray')
-    ax[2].set_ylabel('Velocity')
+    ax[2].set_ylabel('y-velocity (cm/s)')
     ax[2].set_xlabel('Time from movement onset (ms)')
+    ticks = np.arange(0, 0.6, 0.1)
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax[2].set_yticks(ticks, labs)
     ax[1].set_xticks([])
     ax[1].set_yticks([])
     ax[1].plot(xpoints, mt_time, color='k', ls='-', lw=0.5)
@@ -402,11 +410,11 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     pos = ax.get_position()
     ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
     # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
-    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.25,
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width,
                                    pos.y0 + pos.height/10,
                                    pos.width/20, pos.height/1.3])
     cbar = plt.colorbar(im, cax=pright_cbar_ax)
-    cbar.set_label('Corr. coeff.')
+    cbar.ax.set_title('Corr.\ncoef.')
 
 
 def corr_rt_time_stim(df, ax, split_data_all_s, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
@@ -626,10 +634,10 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     ind = get_split_ind_corr(mat, evl, pval=0.05, max_MT=400, startfrom=startfrom)
     ind_y = np.max([m[ind+startfrom] for m in medians])
     ax.set_xlim(-10, 255)
-    ax.set_ylim(-0.6, 5.2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_ylim([-0.5, 4])
+    
     # plot horizontal line
     ax.axhline(0, color='k', lw=0.5, ls='--')
     # plot stimulus duration as line at y=3
@@ -663,7 +671,10 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=8, loc='lower right',
                   labelspacing=0.1)
-    
+    ticks = np.array([0, 2, 4])
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax.set_yticks(ticks, labs)
     # if xlab:
         
     # if rtbins[-1] > 25:
@@ -777,7 +788,7 @@ def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
 def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300,
                          sim=False,
                          rtbins=np.linspace(0, 150, 16), connect_points=False,
-                         trajectory="trajectory_y"):
+                         trajectory="trajectory_y", p_val=0.05):
 
     # split time/subject by coherence
     if sim:
@@ -824,12 +835,12 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                             evl = np.concatenate((evl, np.repeat(ev, matatmp.shape[0])))
                     if not sim:
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.05, max_MT=400,
+                            get_split_ind_corr(mat, evl, pval=p_val, max_MT=400,
                                             startfrom=700)
                     if sim:
                         max_mt = 800
                         current_split_index =\
-                            get_split_ind_corr(mat, evl, pval=0.05, max_MT=max_mt,
+                            get_split_ind_corr(mat, evl, pval=p_val, max_MT=max_mt,
                                             startfrom=0)+1
                     if current_split_index >= rtbins[i]:
                         out_data_sbj += [current_split_index]
@@ -1182,14 +1193,19 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     margin = 0.05
     # tune screenshot panel
     ax_scrnsht = ax[0]
-    ax_scrnsht.set_xticks([])
+    ticks = np.array([0, 200])
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax_scrnsht.set_xticks(ticks, labs)
     right_port_y = 70
     center_port_y = 250
     left_port_y = 440
-    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y])
-    ax_scrnsht.set_yticklabels([-75, 0, 75])
-    ax_scrnsht.set_xlabel('x dimension (pixels)')
-    ax_scrnsht.set_ylabel('y dimension (pixels)')
+    ticks = np.array([-75, 0, 75])
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y], labs)
+    ax_scrnsht.set_xlabel('x dimension (cm)')
+    ax_scrnsht.set_ylabel('y dimension (cm)')
     # add colorbar for screenshot
     n_stps = 100
     pos = ax_scrnsht.get_position()
@@ -1211,16 +1227,23 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     y_lim = [-100, 100]
     ax_rawtr.set_xlim(x_lim)
     ax_rawtr.set_ylim(y_lim)
-    ax_rawtr.set_xticklabels([])
-    ax_rawtr.set_yticklabels([])
-    ax_rawtr.set_xticks([])
-    ax_rawtr.set_yticks([])
-    ax_rawtr.set_xlabel('x dimension (pixels)')
+    ticks = np.array([-80, -20])
+    conv_factor = 0.07
+    labs = [0, 14]
+    ax_rawtr.set_xticks(ticks, labs)
+    ticks = np.array([-75, 0, 75])
+    conv_factor = 0.07
+    labs = np.round(ticks*conv_factor, 2)
+    ax_rawtr.set_yticks(ticks, labs)
+    ax_rawtr.set_xlabel('x dimension (cm)')
+    ax_rawtr.set_ylabel('y dimension (cm)')
     pos_coh = ax_cohs[2].get_position()
     pos_rawtr = ax_rawtr.get_position()
     ax_rawtr.set_position([pos_coh.x0, pos_rawtr.y0,
                            pos_rawtr.width/2, pos_rawtr.height])
-    fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=10)
+    # fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=10)
+    ax_rawtr.text(x=0.7, y=1., s='rat LE46', transform=ax_rawtr.transAxes,
+                  fontsize=10, va='top', ha='right')
     x_lim = [-100, 800]
     y_lim = [-100, 100]
     ax_ydim.set_xlim(x_lim)
@@ -1230,7 +1253,9 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     pos_ydim = ax_ydim.get_position()
     ax_ydim.set_position([pos_ydim.x0-1.5*margin, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
-    fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=10)
+    ax_ydim.text(x=0.32, y=1., s='rat LE46', transform=ax_ydim.transAxes,
+                 fontsize=10, va='top', ha='right')
+    # fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=10)
     # tune splitting time panels
     factor_y = 0.5
     factor_x = 0.8
@@ -1298,7 +1323,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
     plot_trajs_splitting_example(df, ax=ax_middle, rtbins=np.linspace(45, 65, 2),
-                                  ylabel='Position')
+                                  ylabel='y-position (cm)')
     # TRAJECTORY SPLITTING STIMULUS
     split_data_all_s = trajs_splitting_stim(df=df, data_folder=data_folder, ax=ax[9],
                                             connect_points=True)
@@ -1307,7 +1332,10 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
                       ax=ax[10], data_folder=data_folder)
     corr_rt_time_prior(df=df, fig=f, ax=ax[11], data_folder=data_folder)
     pos = ax[11].get_position()
-    ax[11].set_position([pos.x0-pos.width/5, pos.y0+pos.height/12,
+    ax[11].set_position([pos.x0, pos.y0+pos.height/12,
                          pos.width*0.9, pos.height*0.9])
+    pos = ax[10].get_position()
+    pos9 = ax[9].get_position()
+    ax[9].set_position([pos9.x0, pos.y0, pos9.width, pos9.height])
     f.savefig(sv_folder+'/Fig2.png', dpi=400, bbox_inches='tight')
     f.savefig(sv_folder+'/Fig2.svg', dpi=400, bbox_inches='tight')

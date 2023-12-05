@@ -141,7 +141,7 @@ if f1 or f2 or f3 or f5:
     # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
     #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
     #             'LE44']
-    subjects = ['LE42', 'LE37', 'LE46']
+    # subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE42']
     df_all = pd.DataFrame()
     for sbj in subjects:
