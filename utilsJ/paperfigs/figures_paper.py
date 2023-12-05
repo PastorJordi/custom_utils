@@ -23,7 +23,7 @@ import scipy
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
-sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils')
+# sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils')
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 # sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 
@@ -50,7 +50,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'sara'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -835,7 +835,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             pro_vs_re_tmp = data_simulation['pro_vs_re_tmp']
             total_traj_tmp = data_simulation['total_traj_tmp']
             x_val_at_updt_tmp = data_simulation['x_val_at_updt_tmp']
-            frst_traj_motor_time = data_simulation['frst_traj_motor_time']
+            # frst_traj_motor_time = data_simulation['frst_traj_motor_time']
         else:
             hit_model_tmp, reaction_time_tmp, detected_com_tmp, resp_fin_tmp,\
                 com_model_tmp, pro_vs_re_tmp, total_traj_tmp, x_val_at_updt_tmp, frst_traj_motor_time_tmp=\
@@ -857,9 +857,9 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
         pro_vs_re = np.concatenate((pro_vs_re, pro_vs_re_tmp))
         total_traj = total_traj + total_traj_tmp
         x_val_at_updt = np.concatenate((x_val_at_updt, x_val_at_updt_tmp))
-        frst_traj_motor_time = np.concatenate((frst_traj_motor_time, frst_traj_motor_time_tmp))
+        # frst_traj_motor_time = np.concatenate((frst_traj_motor_time, frst_traj_motor_time_tmp))
     return hit_model, reaction_time, detected_com, resp_fin, com_model,\
-        pro_vs_re, total_traj, x_val_at_updt, frst_traj_motor_time
+        pro_vs_re, total_traj, x_val_at_updt  # , frst_traj_motor_time
 
 
 def fig_7(df, df_sim):
