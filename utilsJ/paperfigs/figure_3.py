@@ -91,6 +91,7 @@ def com_detection(df, data_folder, com_threshold=5, rerun=False, save_dat=False,
         comlist_all += comlist
     return time_com_all, peak_com_all, comlist_all
 
+
 def plot_proportion_corr_com_vs_stim(df, ax=None):
     if ax is None:
         _, ax = plt.subplots(1)
@@ -128,9 +129,9 @@ def plot_proportion_corr_com_vs_stim(df, ax=None):
     # ax.errorbar(np.unique(coh), m_corr_norm, std_corr_norm, color='r',
     #             marker='o', label='No-Reversal')
     ax.set_xlabel('Stimulus strength')
-    ax.set_ylabel('Reversal accuracy')
-    ax.set_xticks([0, 0.25, 0.5, 1])
-    ax.set_xticklabels(['0', '0.25', '0.5', '1'])
+    ax.set_ylabel('Accuracy reversals')
+    ax.set_xticks([0, 0.5, 1])
+    # ax.set_xticklabels(['0', '0.25', '0.5', '1'])
     # ax.legend()
 
 
@@ -146,7 +147,7 @@ def plot_coms_single_session(df, ax):
         if time[-1] > 600:
             continue
         if not coms[index][itr] and decision[index][itr] == 1:
-            ax.plot(time, traj, color=COLOR_NO_COM)
+            ax.plot(time, traj, color=COLOR_NO_COM, linewidth=1)
     for itr, traj in enumerate(sess.trajectory_y.values[index]):
         time = sess.time_trajs.values[index][itr]
         if coms[index][itr] and decision[index][itr] == 0:
@@ -155,18 +156,19 @@ def plot_coms_single_session(df, ax):
             ax.plot(time[deflection], traj[deflection], marker='o',
                     color='k')
     ax.set_xlim(-100, 650)
-    ax.set_ylabel('Position ' + r'$y$' + ' (pixels)')
+    ax.set_ylabel(r'$y$' + ' position ' + ' (cm)')
     ax.set_xlabel('Time from movement onset (ms)')
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
                               label='reversal'),
                       Line2D([0], [0], color=COLOR_NO_COM, lw=2,
                               label='No-reversal')]
     ax.legend(handles=legendelements, loc='upper right', labelspacing=0.1,
-              bbox_to_anchor=(1.1, 0.75))
+              bbox_to_anchor=(1.2, 0.75), frameon=False)
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
-    ax.set_yticks([-75, -50, -25, 0, 25, 50, 75])
+    ticks = np.array([-75, -50, -25, 0, 25, 50, 75])
+    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
 
 
 def tracking_image(ax, rat_com_img, margin=.01):
@@ -183,6 +185,7 @@ def tracking_image(ax, rat_com_img, margin=.01):
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     ax_clbr.set_xticks([0, n_stps-1])
     ax_clbr.set_xticklabels(['0', '400ms'])
+    ax_clbr.set_title('Time', fontsize=9.5)
     ax_clbr.tick_params(labelsize=9)
     # ax_clbr.set_title('$N_{max}$', fontsize=6)
     ax_clbr.set_yticks([])
@@ -273,7 +276,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
         tachometric(df_data, ax=ax_tach, fill_error=True, cmap='gist_yarg')
     ax_tach.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax_tach.set_xlabel('Reaction time (ms)')
-    ax_tach.set_ylabel('Accuracy')
+    ax_tach.set_ylabel('Choice accuracy')
     ax_tach.set_ylim(0.3, 1.04)
     ax_tach.spines['right'].set_visible(False)
     ax_tach.spines['top'].set_visible(False)
@@ -347,7 +350,7 @@ def com_statistics(peak_com, time_com, ax, mean_mt):
     ax1.set_yscale('log')
     ax1.axvline(-8/75*100, linestyle=':', color='r')
     ax1.set_xlim(-100, 5)
-    ax1.set_xlabel('Deflection point (%)')
+    ax1.set_xlabel('Reversal point (%)')
     ax1.set_ylabel('# Trials')
     ax1.set_yticks([1e2, 1e4])
     ax1.axhline(y=1e2, color='k', linestyle='--', alpha=0.5)
@@ -445,7 +448,8 @@ def mean_com_traj_aligned_deflection(
     # ax.text(-150, 45, 'deflection', fontsize=9.5)
     ax.set_xlim(-100, 200)
     ax.text(80, -12, "Detection\nthreshold", color='r')
-
+    ticks = np.array([-20, 0, 20, 40])
+    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
 
 
 def mean_com_vel(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
@@ -636,10 +640,9 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
                                                    (interpolatespace < 0)])
     ax.plot((interpolatespace)/1000, mean_traj, color=COLOR_COM, linewidth=2)
     ax.plot((interpolatespace)/1000, mean_traj_nocom, color=COLOR_NO_COM, linewidth=2)
-    ax.set_ylabel('Position ' + r'$y$' + ' (pixels)')
+    ax.set_ylabel(r'$y$' + ' position ' + ' (cm)')
     ax.set_ylim(-50, 95)
     ax.set_xlim(-100, 500)
-    ax.set_yticks([-25, 0, 25, 50, 75])
     ax.set_xticks([])
     legendelements = [Line2D([0], [0], color=COLOR_COM, lw=2,
                              label='Detected reversal'),
@@ -647,12 +650,15 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
                              label='No-reversal')]
     # ax.legend(handles=legendelements, loc='upper left')
     ax.axhline(-8, color='r', linestyle=':')
-    deflection = np.where(mean_traj == np.nanmin(mean_traj[700:1100]))[0]
+    deflection = np.where(mean_traj == np.nanmin(mean_traj[700:1100]))[0][0]
     def_val = mean_traj[deflection]
     time_def = (interpolatespace[deflection])/1000
     ax.plot(time_def, def_val, marker='o', color='k')
-    ax.plot([time_def, time_def], [def_val, def_val-12], color='k', linewidth=1)
+    # ax.plot([time_def, time_def], [def_val, def_val-12], color='k', linewidth=1)
+    ax.arrow(time_def, def_val, 0, -9, head_width=20, color='k', head_length=10)
     # ax.text(20, -20, "Detection threshold", color='r')
+    ticks = np.array([-25, 0, 25, 50, 75])
+    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
 
 
 def com_heatmap_marginal_pcom_side_mat(
@@ -728,9 +734,10 @@ def fig_COMs_per_rat_inset_3(df, ax_inset):
         comlist_rats.append(mean_coms)
     ax_inset.boxplot(comlist_rats)
     ax_inset.plot(1+np.random.randn(len(comlist_rats))*0.06, comlist_rats, 'o',
-                  color='grey', alpha=0.5)
+                  color='k')
     ax_inset.set_xlim(0.7, 1.3)
     ax_inset.set_ylim(0, 0.05)
+    ax_inset.set_yticks([0, 0.02, 0.04])
     ax_inset.set_xticks([])
     ax_inset.set_ylabel('p(reversal)', fontsize=10.5)
     # ax_inset.set_ylabel('# Rats')
@@ -775,6 +782,7 @@ def mt_distros(df, ax, median_lines=False, mtbins=np.linspace(50, 800, 26),
         ax.legend(loc='center left', bbox_to_anchor=(0.1, 1.1))
     ax.set_xlabel('Movement time (ms)')
     ax.set_ylabel('Density')
+    ax.set_yticks([0.0, 0.1, 0.2])
 
 
 def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
@@ -826,20 +834,19 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
                           pos_ax_trck.width*factor, pos_ax_trck.height*factor])
     tracking_image(ax_trck, rat_com_img=rat_com_img)
     # TRAJECTORIES PANEL
+    pos_ax_1 = ax[1].get_position()
+    margin = 0.02
+    ax[1].set_position([pos_ax_1.x0 - margin, pos_ax_1.y0,
+                        pos_ax_1.width, pos_ax_1.height])
     plot_coms_single_session(df=df, ax=ax[1])
     # REVERSAL PERCENTAGES PANEL
     fp.rm_top_right_lines(ax=ax[2])
     fig_COMs_per_rat_inset_3(df=df, ax_inset=ax[2])
     pos_ax4 = ax[2].get_position()
-    factor = 1.5
-    ax[2].set_position([pos_ax4.x0, pos_ax4.y0, pos_ax4.width/factor,
+    factor = 1.2
+    ax[2].set_position([pos_ax4.x0-margin/2, pos_ax4.y0, pos_ax4.width/factor,
                         pos_ax4.height])
-    margin = (factor-1)*pos_ax4.width
-    for i in [3]:
-        pos_axi = ax[i].get_position()
-        ax[i].set_position([pos_axi.x0-margin, pos_axi.y0, pos_axi.width,
-                            pos_axi.height])
-    margin = margin/2
+    margin = (factor-1)*pos_ax4.width / 2
     for i in [5, 6, 7]:
         pos_axi = ax[i].get_position()
         if i == 7:
@@ -850,9 +857,12 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     ax_com_stat = ax[3]
     pos = ax_com_stat.get_position()
     pos_ax_2 = ax[4].get_position()
+    pos_ax_0 = ax[0].get_position()
+    ax[4].set_position([pos_ax_0.x0, pos_ax_2.y0, pos_ax_2.width, pos_ax_2.height])
+    pos_ax_2 = ax[4].get_position()
     ax[4].spines['bottom'].set_visible(False)
     ax_inset = plt.axes([pos_ax_2.x1-pos_ax_2.width,
-                         pos_ax_2.y0-pos_ax_2.height/45,
+                         pos_ax_2.y0-pos_ax_2.height/60,
                          pos_ax_2.width, pos_ax_2.height/4])
     ax_coms = [ax_com_stat, ax_inset]
     pos_ax_9 = ax[11].get_position()
@@ -862,6 +872,8 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     com_statistics(peak_com=peak_com, time_com=time_com, ax=[ax_coms[1],
                                                               ax_coms[0]],
                     mean_mt=mean_mt)
+    pos_ax_3 = ax[3].get_position()
+    ax[3].set_position([pos_ax_3.x0-margin/1.2, pos_ax_3.y0, pos_ax_3.width, pos_ax_3.height])
     # MEAN REVERSAL TRAJECTORY PANEL
     mean_com_traj(df=df, ax=ax[4], data_folder=data_folder, condition='choice_x_prior',
                   prior_limit=1, after_correct_only=True, rt_lim=400,
@@ -870,14 +882,18 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     # ax_inset = fp.add_inset(ax=ax[3], inset_sz=0.05, fgsz=(1, 3),
     #                         marginx=0.105, marginy=0.25, right=True)
     fp.rm_top_right_lines(ax_inset)
+    pos_ax_1 = ax[1].get_position()
+    pos_ax_5 = ax[5].get_position()
+    ax[5].set_position([pos_ax_1.x0, pos_ax_5.y0, pos_ax_5.width, pos_ax_5.height])
     mean_com_traj_aligned_deflection(df=df, ax=ax[5], data_folder=data_folder,
                                      time_align=True, spat_align=False)
     # PROPORTION CORRECT COM VS STIM PANEL
     fp.rm_top_right_lines(ax=ax[7])
     plot_proportion_corr_com_vs_stim(df, ax[7])
     pos_ax7 = ax[7].get_position()
-    factor = 1.2
-    ax[7].set_position([pos_ax7.x0, pos_ax7.y0, pos_ax7.width/factor,
+    factor = 1.
+    pos_ax_3 = ax[3].get_position()
+    ax[7].set_position([pos_ax_3.x0, pos_ax7.y0, pos_ax7.width/factor,
                         pos_ax7.height])
     # PCOM MATRICES
     n_subjs = len(df.subjid.unique())
@@ -914,12 +930,12 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     ax_mat[0].set_yticklabels([VAR_L, '0', VAR_R])
     ax_mat[1].set_yticks([])
     pos = ax_mat[0].get_position()
-    ax_mat[0].set_position([pos.x0-margin, pos.y0, pos.width,
-                                pos.height])
+    ax_mat[0].set_position([pos.x0-2*margin, pos.y0, pos.width,
+                            pos.height])
     pos = ax_mat[1].get_position()
-    ax_mat[1].set_position([pos.x0-6*margin, pos.y0, pos.width,
-                                pos.height])
-    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.3, pos.y0,
+    ax_mat[1].set_position([pos.x0-7*margin, pos.y0, pos.width,
+                            pos.height])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width/1.4, pos.y0,
                                    pos.width/12, pos.height/2])
     cbar = fig.colorbar(im, cax=pright_cbar_ax)
     cbar.ax.set_title('      p(reversal)', fontsize=10)
@@ -930,8 +946,13 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     ax[10].set_ylabel('p(reversal)')
     ax[11].axis('off')
     # MT DISTRIBUTIONS PANEL
+    pos_ax_2 = ax[2].get_position()
+    pos_ax_6 = ax[6].get_position()
+    ax[6].set_position([pos_ax_2.x0, pos_ax_6.y0, pos_ax_6.width, pos_ax_6.height])
     fp.rm_top_right_lines(ax=ax[6])
     mt_distros(df=df, ax=ax[6])
+    pos_ax_10 = ax[10].get_position()
+    ax[10].set_position([pos_ax_2.x0, pos_ax_10.y0, pos_ax_10.width, pos_ax_10.height])
     fig.savefig(sv_folder+'fig3.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'fig3.png', dpi=400, bbox_inches='tight')
 

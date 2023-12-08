@@ -656,13 +656,20 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
     if rtbins[1] == 15:
         ax.set_title('RT < 15 ms', fontsize=9.5)
         mean_stim_dur = 15
-    ax.fill_between([0, mean_stim_dur], [3.5, 3.5], [4, 4],
+    ax.fill_between([0, mean_stim_dur], [3.3, 3.3], [4, 4],
                      facecolor=col_face, edgecolor=col_edge)
     # plot arrow
     al = 0.5
     hl = 0.4
     ax.arrow(ind, ind_y+al+3*hl, 0, -al-hl,  color='k', width=1, head_width=8,
              head_length=hl)
+    ax.axvline(mean_stim_dur, color='k', linestyle='--', linewidth=0.8,
+               alpha=0.6)
+    if rtbins[1] == 300:
+        ax.text(ind-20, ind_y+al+3.7*hl, 'Splitting\ntime', fontsize=8.5)
+        ax.text(35, 3.5, 'Stimulus', fontsize=8.5)
+        ax.text(mean_stim_dur-30, 1.22, 'mvmt.', fontsize=8.5,
+                rotation='vertical', style='italic')
     if show_legend:
         labels = ['0', '0.25', '0.5', '1']
         legendelements = []
@@ -670,7 +677,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=8, loc='lower right',
-                  labelspacing=0.1)
+                  labelspacing=0.1, frameon=False, bbox_to_anchor=(1.1, 0.2))
     ticks = np.array([0, 2, 4])
     conv_factor = 0.07
     labs = np.round(ticks*conv_factor, 2)
@@ -1144,10 +1151,12 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     letters = 'abcdehfgXij'
     ax = ax.flatten()
     for lett, a in zip(letters, ax):
-        if lett != 'X' and lett != 'h':
+        if lett != 'X' and lett != 'h' and lett != 'j':
             fp.add_text(ax=a, letter=lett, x=-0.1, y=1.2)
         if lett == 'h':
-            fp.add_text(ax=a, letter=lett, x=-0.1, y=1.)
+            fp.add_text(ax=a, letter=lett, x=-0.1, y=.7)
+        if lett == 'j':
+            fp.add_text(ax=a, letter=lett, x=-0.1, y=1.34)
     ax[8].axis('off')
     # ax[11].axis('off')
     # adjust panels positions
@@ -1257,20 +1266,20 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
                  fontsize=10, va='top', ha='right')
     # fp.add_text(ax=ax_ydim, letter='rat LE46', x=0.32, y=1., fontsize=10)
     # tune splitting time panels
-    factor_y = 0.5
+    factor_y = 0.622
     factor_x = 0.8
-    plt.axes
+    # plt.axes
     ax_cartoon = ax[5]
     ax_cartoon.axis('off')
     pos = ax_cartoon.get_position()
     ax_cartoon.set_position([pos.x0+pos.width/8, pos.y0+pos.height*factor_y*0.9,
-                             pos.width*0.9, pos.height*0.9])
+                              pos.width*0.9, pos.height*0.9])
     ax_top = plt.axes([.1, .1, .1, .1])
     ax_middle = plt.axes([.2, .2, .1, .1])
     ax_bottom = plt.axes([.3, .3, .1, .1])
     for i_a, a in enumerate([ax_top, ax_middle, ax_bottom]):
-        a.set_position([pos.x0+pos.width/4, pos.y0-(i_a)*pos.height*factor_y*1.5, pos.width*factor_x,
-                        pos.height*factor_y])
+        a.set_position([pos.x0+pos.width/4, 0.06+pos.y0-(i_a)*pos.height*factor_y*1.5,
+                        pos.width*factor_x, pos.height*factor_y])
         fp.rm_top_right_lines(a)
     # move ax[10] (spllting time coherence) to the right
     pos = ax[10].get_position()
@@ -1317,8 +1326,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
                             prior_limit=0.1,  # 10% quantile
                             cmap='coolwarm')
     # SPLITTING TIME EXAMPLE
-    img = plt.imread(st_cartoon_img)
-    ax_cartoon.imshow(img)
+    # img = plt.imread(st_cartoon_img)
+    # ax_cartoon.imshow(img)
     plot_trajs_splitting_example(df, ax=ax_top, rtbins=np.linspace(150, 300, 2))
     plot_trajs_splitting_example(df, ax=ax_bottom, rtbins=np.linspace(0, 15, 2),
                                  xlabel='Time from stimulus onset (ms)', show_legend=True)
