@@ -586,7 +586,7 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
             max_mt = 800
             current_split_index =\
                 fig_2.get_split_ind_corr(mat, evl, pval=0.0001, max_MT=max_mt,
-                                         startfrom=0)+1
+                                         startfrom=0)+5
             if current_split_index >= rtbins[i]:
                 out_data_sbj += [current_split_index]
             else:
@@ -610,7 +610,7 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
     # because we might want to plot each subject connecting lines, lets iterate
     # draw  datapoints
 
-    error_kws = dict(ecolor=color, capsize=2, mfc=(1, 1, 1, 0), mec='k',
+    error_kws = dict(ecolor=color, capsize=2,
                      color=color, marker='o', label=str(par_value*5) + ' ms')
     xvals = binsize/2 + binsize * np.arange(rtbins.size-1)
     ax.errorbar(
@@ -631,8 +631,36 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
         rt_min_split = rt_min_split=[0]
     if sum(min_st.shape) > 1:
         min_st = min_st[0]
-    ax.plot(rt_min_split, min_st, marker='o', color=color, markersize=6)
-    return min_st
+    return min_st, rt_min_split
+
+
+def supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
+                            subjid, sv_folder):
+    fig, ax = plt.subplots(ncols=3, nrows=2, figsize=(11, 8))
+    plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
+                        hspace=0.4, wspace=0.35)
+    ax = ax.flatten()
+    labs = ['a', 'b', 'c', '', '', '']
+    for i_a, a in enumerate(ax):
+        rm_top_right_lines(a)
+        a.text(-0.1, 1.2, labs[i_a], transform=a.transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    ax[5].axis('off')
+    # changing t_aff
+    params_to_explore = [[4]] + [np.arange(7)]
+    plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+                             subjid, params_to_explore, ax=[ax[0], ax[3]])
+    # changing t_eff
+    params_to_explore = [[5]] + [np.arange(7)]
+    plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+                             subjid, params_to_explore, ax=[ax[1], ax[4]])
+    # changing bound action
+    params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 11), 2)]
+    plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
+                                         subjid, params_to_explore, ax=ax[2])
+    fig.savefig(sv_folder+'/supp_model_params.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_model_params.png', dpi=400, bbox_inches='tight')
+
 
 
 def plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
@@ -649,13 +677,14 @@ def plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
     ax[0].set_ylabel('Splitting time (ms)')
     change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                        subjid, params_to_explore, ax)
-    ax[0].set_ylim(-1, 215)
+    ax[0].set_ylim(-1, 275)
     labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
-              't aff', 't eff', 'tAction', 'intercept AI',
+              r'$t_{aff}$', r'$t_{eff}$', 'tAction', 'intercept AI',
               'slope AI', 'AI bound', 'DV weight 1st readout',
               'DV weight 2nd readout', 'leak', 'MT noise std',
               'MT offset', 'MT slope T.I.']
-    ax[0].legend(title=labels[params_to_explore[0][0]], loc='upper center')
+    ax[0].legend(title=labels[params_to_explore[0][0]], loc='upper center',
+                 bbox_to_anchor=(0.5, 1.2))
 
 
 
@@ -694,7 +723,7 @@ def plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subject
                                          subjid, params_to_explore, ax):
     rm_top_right_lines(ax)
     ax.set_xlabel('Stimulus evidence towards response')
-    ax.set_ylabel('MT')
+    ax.set_ylabel('Movement time (ms)')
     action_bound_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                       subjid, params_to_explore, ax)
 
@@ -757,6 +786,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
     param_ind = params_to_explore[0][0]
     ta_plus_te = []
     min_st_list = []
+    rt_min_sp = []
     ind_stim = np.sum(stim, axis=0) != 0
     for ind in range(len(params_to_explore[1])):
         param_value = params_to_explore[1][ind]        
@@ -786,12 +816,25 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                                 'resp_len': np.array(MT)*1e-3,
                                 'subjid': subjid})
         df_sim = df_sim.loc[ind_stim]
-        min_st = trajs_splitting_stim_all(df=df_sim, ax=ax[0], color=colormap[ind], threshold=300,
-                                          rtbins=np.linspace(0, 150, 16),
-                                          trajectory="trajectory_y", par_value=param_value)
+        min_st, rt_min_split = trajs_splitting_stim_all(df=df_sim, ax=ax[0], color=colormap[ind], threshold=300,
+                                                        rtbins=np.linspace(0, 150, 16),
+                                                        trajectory="trajectory_y", par_value=param_value)
         min_st_list.append(min_st)
-    ax[1].plot(ta_plus_te, min_st_list, marker='o', color='k')
+        rt_min_sp.append(rt_min_split)
+    i = 0
+    ax[1].plot(ta_plus_te, min_st_list, color='k', linewidth=0.7, alpha=0.5)
+    for min_st, rt_min_split in zip(min_st_list, rt_min_sp):
+        ax[0].plot(rt_min_split, min_st, marker='o', color=colormap[i],
+                   markersize=8)
+        ax[1].plot(ta_plus_te[i], min_st_list[i], marker='o', color=colormap[i],
+                   markersize=8)
+        i += 1
     ax[1].set_ylabel('Minimum splitting time (ms)')
+    ax[1].set_yticks([20, 30, 40, 50, 60])
+    ax[1].set_xticks([20, 30, 40])
+    ax[1].plot([12, 65], [12, 65], color='gray', linewidth=0.8)
+    ax[1].set_xlim([13, 47])
+    ax[1].set_ylim([14, 61])
     ax[1].set_xlabel(r'$t_{aff}+t_{eff} \;\; (ms)$')
 
 
@@ -1957,7 +2000,7 @@ def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
         folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
     if user_id == 'sara':
         folder = 'C:\\Users\\Sara Fuentes\\OneDrive - Universitat de Barcelona\\Documentos\\EBM\\4t\\IDIBAPS\\80_20\\'+nm+'ms\\'
-    subj = ['general_traj']
+    subj = ['general_traj_all']
     steps = [None]
     # retrieve data
     df = ah.traj_analysis(data_folder=folder,
