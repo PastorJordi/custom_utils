@@ -168,34 +168,46 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
     ax2.set_xlabel('Reaction time (ms)')
 
 
-def supp_com_analysis(df_sim):
-    fig, ax = plt.subplots(nrows=2, ncols=4, figsize=(14, 6))
+def supp_com_analysis(df_sim, sv_folder):
+    fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(9, 12))
     plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
                         hspace=0.4, wspace=0.35)
     ax = ax.flatten()
-    for a in ax:
+    labs = ['a', '', 'b', '', 'c', '']
+    for i_a, a in enumerate(ax):
         fp.rm_top_right_lines(a)
-    for ind in [1, 3, 5]:
+        if i_a == 5:
+            a.text(0.7, 1.1, labs[i_a], transform=a.transAxes, fontsize=16,
+                   fontweight='bold', va='top', ha='right')
+        else:
+            a.text(-0.1, 1.2, labs[i_a], transform=a.transAxes, fontsize=16,
+                   fontweight='bold', va='top', ha='right')
+        
+    for ind in [1, 3]:
         a = ax[ind]
         pos_a = a.get_position()
         a.set_position([pos_a.x0-pos_a.width/2.8,
                         pos_a.y0, pos_a.width, pos_a.height])
-    ax[-2].axis('off')
-    pos_last_ax = ax[-1].get_position()
-    ax[-1].set_position([pos_last_ax.x0-pos_last_ax.width/1.2, pos_last_ax.y0,
-                         pos_last_ax.width*1.8, pos_last_ax.height])
-    supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[-1],
+    pos_ax_4 = ax[4].get_position()
+    ax[4].axis('off')
+    pos_last_ax = ax[5].get_position()
+    ax[5].set_position([pos_ax_4.x0+pos_ax_4.width*0.1, pos_last_ax.y0-0.04,
+                         pos_last_ax.width*1.8, pos_last_ax.height*1.3])
+    supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[5],
                            bins_rt=np.linspace(1, 301, 10))
-    ax[-1].set_ylabel(r'$p(reversal \;| \; CoM)$')
+    ax[5].set_ylabel(r'$p(detection)$')
     supp_prob_vs_prior(df_sim, ax=ax[0:2], fig=fig, column='CoM_sugg', com=False,
                        title_col=r'$p(CoM)$')
     # ax[0].set_ylabel(r'$p(CoM)$')
-    supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=False,
-                       title_col=r'$\;\;\;\;p(reversal)$')
+    # supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=False,
+    #                    title_col=r'$\;\;\;\;p(reversal)$')
     # ax[1].set_ylabel(r'$p(reversal)$')
-    supp_prob_vs_prior(df_sim, ax=ax[4:6], fig=fig, column='com_detected', com=True,
-                       title_col=r'$\;\;\;\;\;\;\;\;\;\;\;\;\;\;p(reversal \;| \; CoM)$')
+    supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=True,
+                       title_col=r'$\;\;\;\;\;\;\;\;\;\;\;\;\;\;p(detection)$')
     # ax[2].set_ylabel(r'$p(reversal \;| \; CoM)$')
+    fig.savefig(sv_folder+'/supp_model_com.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_model_com.png', dpi=400, bbox_inches='tight')
+    
 
 
 def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
