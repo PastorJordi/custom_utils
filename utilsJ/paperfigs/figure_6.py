@@ -4,6 +4,7 @@ import pandas as pd
 from matplotlib.lines import Line2D
 import matplotlib.pylab as pl
 import sys
+import seaborn as sns
 from scipy import interpolate
 from scipy.stats import sem
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
@@ -54,17 +55,22 @@ def plot_coms(df, ax, human=False):
         var = 'x'
     if not human:
         var = 'y'
-    ax.set_ylabel('{}-coord (pixels)'.format(var))
+    ax.set_ylabel('{} position (cm)'.format(var))
     ax.set_xlabel('Time from movement \n onset (ms)')
     ax.axhline(y=max_val, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-max_val, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
-                             label='Detected reversal'),
+                             label='reversal'),
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
                              label='No-reversal')]
     ax.legend(handles=legendelements, loc='upper left', borderpad=0.15,
-              labelspacing=0.15, bbox_to_anchor=(0, 1.25), handlelength=1.5)
+              labelspacing=0.15, bbox_to_anchor=(0, 1.18), handlelength=1.5,
+              frameon=False)
+    if human:
+        factor = 0.0096  # cm/px
+        yticks = np.array([-500, -250, 0, 250, 500])
+        ax.set_yticks(yticks, np.round(yticks*factor, 2))
 
 
 def com_statistics_humans(peak_com, time_com, ax, mean_mt):
@@ -78,12 +84,12 @@ def com_statistics_humans(peak_com, time_com, ax, mean_mt):
     ax1.set_yscale('log')
     ax1.axvline(-100/6, linestyle=':', color='r')
     ax1.set_xlim(-100, 1)
-    ax1.set_xlabel('Deflection point (%)')
+    ax1.set_xlabel('Reversal point (%)')
     ax1.set_ylabel('# Trials')
     ax2.set_ylabel('# Trials')
     ax2.hist(time_com[time_com != -1]*1e3, bins=30, range=(0, 510),
              color=fig_3.COLOR_COM)
-    ax2.set_xlabel('Deflection time (ms)')
+    ax2.set_xlabel('Reversal time (ms)')
     # ax3 = ax2.twiny()
     # ax3.set_xlim(ax2.get_xlim())
     # ax3.set_xticks([0, mean_mt*0.5, mean_mt, mean_mt*1.5],
@@ -95,7 +101,8 @@ def com_statistics_humans(peak_com, time_com, ax, mean_mt):
 def mean_com_traj_human(df_data, ax, max_mt=400):
     # TRAJECTORIES
     fp.rm_top_right_lines(ax=ax)
-    index1 = (df_data.subjid != 5) & (df_data.subjid != 6)
+    # index1 = (df_data.subjid != 5) & (df_data.subjid != 6)
+    index1 = df_data.subjid > -1  # all subs
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     decision = df_data.R_response.values[index1]
     trajs = df_data.trajectory_y.values[index1]
@@ -144,20 +151,24 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
     yvals = mean_traj
     ax.plot(xvals, yvals, color=fig_3.COLOR_NO_COM, linewidth=2)
     ax.set_xlabel('Time from movement \n onset (ms)')
-    ax.set_ylabel('Position (pixels)')
+    ax.set_ylabel('x position (cm)')
     legendelements = [Line2D([0], [0], color=fig_3.COLOR_COM, lw=2,
-                             label='Detected reversal'),
+                             label='reversal'),
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
                              label='No-reversal')]
     ax.axhline(-100, color='r', linestyle=':')
     ax.set_xlim(-5, 415)
     ax.text(150, -200, 'Detection threshold', color='r', fontsize=10.5)
     ax.legend(handles=legendelements, loc='upper left', borderpad=0.15,
-              labelspacing=0.15, bbox_to_anchor=(0, 1.2), handlelength=1.5)
+              labelspacing=0.15, bbox_to_anchor=(0, 1.2), handlelength=1.5,
+              frameon=False)
+    factor = 0.0096  # cm/px
+    yticks = np.arange(-200, 800, 200)
+    ax.set_yticks(yticks, np.round(yticks*factor, 2))
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
-                     n_subjects, max_mt=400, max_px=800,
+                     n_subjects, sound_len, max_mt=400, max_px=800, rtlim=300,
                      condition='prior', interpolatespace=np.arange(500)):
     """
     Plots trajectories conditioned on stimulus and prior congruency.
@@ -169,7 +180,8 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
        colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
        # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
     else:
-        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))[::-1]
+        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
         # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
         labels_stim = ['inc.', ' ', ' ', '0', ' ', ' ', 'cong.']
@@ -182,7 +194,8 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
 
         else:
             index = (congruent_coh == ev) &\
-                (np.abs(prior) <= np.quantile(np.abs(prior), 0.25))
+                (np.abs(prior) <= np.quantile(np.abs(prior), 0.25)) &\
+                (sound_len <= rtlim)
         all_trajs = np.empty((sum(index), max_mt))
         all_trajs[:] = np.nan
         for tr in range(sum(index)):
@@ -209,7 +222,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         mov_time_list.append(mov_time)
         x_val = i_ev if condition == 'prior' else ev
         if condition != 'prior':
-            ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[::-1][i_ev],
+            ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
                            marker='o')
         if condition == 'prior':
             ax[1].errorbar(x_val, mov_time, err_traj, color=colormap[i_ev],
@@ -228,21 +241,24 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         #                    color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
     ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5)
-    ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
-    ax[0].set_xlim(-0.1, 470)
+    # ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
+    ax[0].set_xlim(-0.1, 490)
     ax[0].set_ylim(-1, 620)
-    ax[0].set_ylabel('Position (pixels)')
+    ax[0].set_ylabel('x position (cm)')
     ax[0].set_xlabel('Time from movement \n onset (ms)')
     ax[1].set_xticks([])
     ax[1].set_title('MT (ms)', fontsize=10)
     if condition == 'prior':
         ax[1].set_xlabel('Prior')
-        ax[1].set_ylim(180, 315)
+        # ax[1].set_ylim(180, 315)
         ax[1].set_xlim(-0.4, 4.4)
     else:
         ax[1].set_xlabel('Stimulus')
-        ax[1].set_ylim(170, 285)
+        # ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
+    factor = 0.0096  # cm/px
+    yticks = np.arange(0, 800, 200)
+    ax[0].set_yticks(yticks, np.round(yticks*factor, 2))
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -254,9 +270,9 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
         - Splitting time vs RT
     """
     # TRAJECTORIES
-    index1 = (df_data.subjid != 5) & (df_data.subjid != 6) &\
-             (df_data.sound_len <= 300) &\
+    index1 = (df_data.sound_len <= 300) &\
              (df_data.sound_len >= 0)
+             # (df_data.subjid != 5) & (df_data.subjid != 6)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     coh = df_data.avtrapz.values[index1]
     decision = df_data.R_response.values[index1]
@@ -271,12 +287,17 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
         (df_data.hithistory.values*2-1)
     ground_truth = ground_truth[index1]
     congruent_coh = np.round(coh, 2) * (decision*2 - 1)
+    # congruent_coh[congruent_coh == -0.5] = -1
+    # congruent_coh[congruent_coh == -0.25] = -1
+    # print(np.unique(congruent_coh))
+    # ev_vals = [-1, 0, 0.25, 0.5, 1]
     # Trajs conditioned on stimulus congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                     sound_len=sound_len,
                      trajs=trajs, prior=prior_cong, bins=ev_vals,
                      times=times, ax=ax[0:2],
                      n_subjects=len(df_data.subjid.unique()),
-                     condition='stimulus', max_mt=400)
+                     condition='stimulus', max_mt=max_mt)
     colormap = pl.cm.coolwarm(np.linspace(0., 1, 7))[::-1]
     legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3),
                       Line2D([0], [0], color=colormap[1], lw=1.3),
@@ -287,16 +308,27 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                       Line2D([0], [0], color=colormap[6], lw=1.3)]
     labs = ['cong', ' ', ' ', '0', ' ', ' ', 'inc']
     ax[0].legend(handles=legendelements, labels=labs, title='Stimulus', loc='center left',
-                 labelspacing=0.001, bbox_to_anchor=(0.8, 1.2), fontsize=9,
-                 handlelength=1.5, borderpad=0.15, handleheight=1.2,
-                 handletextpad=0.2)
+                  labelspacing=0.001, bbox_to_anchor=(0.9, 1.22), fontsize=9,
+                  handlelength=1.5, borderpad=0.15, handleheight=1.2,
+                  handletextpad=0.2, frameon=False)
+    # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))[::-1]
+    # legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3),
+    #                   Line2D([0], [0], color=colormap[1], lw=1.3),
+    #                   Line2D([0], [0], color=colormap[2], lw=1.3),
+    #                   Line2D([0], [0], color=colormap[3], lw=1.3)]
+    # labs = ['1', '0.5', '0.25', '0']
+    # ax[0].legend(handles=legendelements, labels=labs, title='Stimulus', loc='center left',
+    #              labelspacing=0.001, bbox_to_anchor=(0.9, 1.22), fontsize=9,
+    #              handlelength=1.5, borderpad=0.15, handleheight=1.2,
+    #              handletextpad=0.2, frameon=False)
     bins = [-1, -0.5, -0.1, 0.1, 0.5, 1]
     # Trajs conditioned on prior congruency
     human_trajs_cond(congruent_coh=congruent_coh, decision=decision,
+                     sound_len=sound_len,
                      trajs=trajs, prior=prior_cong, bins=bins,
                      times=times, ax=ax[2:4],
                      n_subjects=len(df_data.subjid.unique()),
-                     condition='prior', max_mt=400)
+                     condition='prior', max_mt=max_mt)
     colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
     legendelements = [Line2D([0], [0], color=colormap[4], lw=1.3),
                       Line2D([0], [0], color=colormap[3], lw=1.3),
@@ -306,9 +338,9 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
     labs = ['cong', ' ', '0', ' ', 'inc']
     ax[2].legend(handles=legendelements, labels=labs,
                  title='Prior', loc='center left',
-                 labelspacing=0.001, bbox_to_anchor=(0., 1.2), fontsize=9,
+                 labelspacing=0.001, bbox_to_anchor=(0., 1.22), fontsize=9,
                  handlelength=1.5, borderpad=0.15, handleheight=1.2,
-                 handletextpad=0.2)
+                 handletextpad=0.2, frameon=False)
     # extract splitting time
     out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
                                              trajs=trajs, times=times, subjects=subjects,
@@ -339,12 +371,12 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
     #                     color='b')
 
 
-def plot_xy(df_data, ax, subj=1):
+def plot_xy(df_data, ax):
     """
     Plots raw trajectories in x-y
     """
     cont = 0
-    subj_xy = subj
+    subj_xy = 10
     index_sub = df_data.subjid == subj_xy
     ax.scatter(-500, 400, s=1100, color='grey', alpha=0.2)
     ax.scatter(500, 400, s=1100, color='grey', alpha=0.2)
@@ -365,8 +397,13 @@ def plot_xy(df_data, ax, subj=1):
                 cont += 1
         if cont == 50:
             break
-    ax.set_xlabel('Position along x-axis')
-    ax.set_ylabel('Position along y-axis')
+    ax.set_xlabel('Position along x-axis (cm)')
+    ax.set_ylabel('Position along y-axis (cm)')
+    factor = 0.0096  # cm/px
+    xticks = np.array([-500, 0, 500])
+    yticks = np.array([-200, 0, 200, 400])
+    ax.set_xticks(xticks, np.round(xticks*factor, 2))
+    ax.set_yticks(yticks, np.round(yticks*factor, 2))
 
 
 def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick'):
@@ -413,6 +450,15 @@ def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick'):
                      color='grey', alpha=0.6)
     ax2.set_ylabel('Splitting time (ms)')
     fp.rm_top_right_lines(ax2)
+    ax3 = ax2.twinx()
+    sns.kdeplot(sound_len, color='k', ax=ax3, bw_adjust=5, shade=True)
+    ax3.set_ylim([0, 0.02])
+    ax3.set_xlim([0, 300])
+    ax3.set_ylabel('')
+    ax3.set_yticks([])
+    ax3.spines['right'].set_visible(False)
+    ax3.spines['top'].set_visible(False)
+    ax2.set_ylim([0, 401])
 
 
 def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs,
@@ -464,11 +510,11 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
         ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                                        max_MT=max_mt+300, pval=0.01)
         ax1.set_xlabel('Time from stimulus \n onset (ms)')
-        ax1.set_ylabel('Position (pixels)')
+        ax1.set_ylabel('x position (cm)')
         if i == 0:
-            ax1.arrow(ind, 35, 0, 25, color='k', width=1.5, head_width=15,
+            ax1.arrow(ind, 130, 0, -30, color='k', width=1.5, head_width=15,
                       head_length=15)
-            ax1.text(ind-30, 10, 'Splitting Time', fontsize=10)
+            ax1.text(ind-170, 140, 'Splitting Time', fontsize=10)
             labels = ['0', '0.25', '0.5', '1']
             legendelements = []
             for i_l, lab in enumerate(reversed(labels)):
@@ -476,13 +522,16 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                                       label=lab))
             ax1.legend(handles=legendelements, fontsize=9, loc='upper left',
                        title='Stimulus strength',
-                       labelspacing=0.01, handlelength=1.5)
+                       labelspacing=0.01, handlelength=1.5, frameon=False)
         else:
             if np.isnan(ind):
                 ind = rtbins[i]
             ax1.arrow(ind, 110, 0, -65, color='k', width=1.5, head_width=15,
                       head_length=15)
             ax1.text(ind-150, 140, 'Splitting Time', fontsize=10)
+        factor = 0.0096  # cm/px
+        yticks = np.arange(0, 500, 100)
+        ax1.set_yticks(yticks, np.round(yticks*factor, 2))
 
 
 def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
@@ -530,8 +579,8 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
                 # ax1.set_xlim(0, 650)
                 # ax1.set_title('{} < RT < {}'.format(rtbins[i], rtbins[i+1]))
             ind = fig_2.get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
-                                           max_MT=max_mt+300, pval=0.01)
-            if ind < 410:
+                                           max_MT=max_mt+300, pval=0.01)+5
+            if ind < 410 and ind > rtbins[i]:
                 split_ind.append(ind)
             else:
                 # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
@@ -543,8 +592,23 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
     return out_data, rtbins
 
 
+def acc_filt(df_data, acc_min=0.5, mt_min=300):
+    subjects = df_data.subjid.unique()
+    subs = subjects[(df_data.groupby('subjid').mean('hithistory')['hithistory']
+                     > acc_min)]
+    df_data = df_data.loc[df_data.subjid.isin(subs)]
+    mvmt_time = np.array(fp.get_human_mt(df_data))
+    df_data_mt = df_data.copy()
+    df_data_mt['resp_len'] = mvmt_time
+    subjects = df_data.subjid.unique()
+    subs = subjects[(df_data_mt.groupby('subjid').median('resp_len')['resp_len']
+                     < mt_min)]
+    df_data = df_data.loc[df_data.subjid.isin(subs)]
+    return df_data
+
+
 def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
-                 max_mt=600, inset_sz=.06, marginx=0.004, marginy=0.025,
+                 max_mt=400, inset_sz=.06, marginx=0.004, marginy=0.025,
                  fgsz=(11, 13.5)):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
@@ -555,17 +619,27 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     if user_id == 'idibaps_alex':
         folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
-    subj = ['general_traj']
+    subj = ['general_traj_all']
     steps = [None]
     humans = True
     # retrieve data
     df_data = ah.traj_analysis(data_folder=folder,
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
-    print(len(df_data.subjid.unique()))
-    # idx = (df_data.subjid != 5) & (df_data.subjid != 6)
+    subs = df_data.subjid.unique()
+    norm_allpriors = np.empty((0,))
+    for subj in subs:
+        df_1 = df_data.loc[df_data.subjid == subj]
+        zt_tmp = df_1.norm_allpriors.values
+        norm_allpriors = np.concatenate((norm_allpriors,
+                                         zt_tmp/np.nanmax(abs(zt_tmp))))
+    df_data['norm_allpriors'] = norm_allpriors
+    # idx = (df_data.subjid != 5) & (df_data.subjid != 6)  # & (df_data.subjid != 12)
     # df_data = df_data.loc[idx]
+    df_data = acc_filt(df_data, acc_min=0.7, mt_min=400)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
+    print(len(df_data.subjid.unique()))
+    print(df_data.subjid.unique())
     # create figure
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
     ax = ax.flatten()
@@ -596,14 +670,14 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     ax_task = ax[0]
     pos_ax_0 = ax_task.get_position()
     # setting ax0 a bit bigger
-    ax_task.set_position([pos_ax_0.x0-0.04, pos_ax_0.y0-0.02,
-                          pos_ax_0.width*4, pos_ax_0.height+0.024])
+    ax_task.set_position([pos_ax_0.x0-0.015, pos_ax_0.y0-0.02,
+                          pos_ax_0.width*3.5, pos_ax_0.height+0.024])
     
     pos = ax_task.get_position()
     ax_task.set_position([pos.x0, pos.y0, pos.width, pos.height])
     task = plt.imread(human_task_img)
     ax_task.imshow(task)
-    ax_task.text(0.08, 1.3, 'a', transform=ax_task.transAxes, fontsize=16,
+    ax_task.text(0.01, 1.3, 'a', transform=ax_task.transAxes, fontsize=16,
                  fontweight='bold', va='top', ha='right')
 
     # changing ax x-y plot width
@@ -611,14 +685,16 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     ax[3].set_position([pos_ax_1.x0 + pos_ax_1.width, pos_ax_1.y0,
                         pos_ax_1.width+pos_ax_1.width/3, pos_ax_1.height])
     # plotting x-y trajectories
-    plot_xy(df_data=df_data, ax=ax[3], subj=2)
+    plot_xy(df_data=df_data, ax=ax[3])
     # tachs and pright
+    mvmt_time = np.array(fp.get_human_mt(df_data))
+    df_data = df_data.loc[mvmt_time <= max_mt]
     ax_tach = ax[5]
     pos = ax_tach.get_position()
-    ax_inset = plt.axes([pos.x0+pos.width/4,
-                         pos.y0+pos.height*1.15, pos.width/2,
-                         pos.height/3])
-    inset_express(df_data, ax_inset=ax_inset, rtlim=50)
+    # ax_inset = plt.axes([pos.x0+pos.width/4,
+    #                      pos.y0+pos.height*1.15, pos.width/2,
+    #                      pos.height/3])
+    # inset_express(df_data, ax_inset=ax_inset, rtlim=50)
     ax_pright = ax[4]
     ax_mat = [ax[14], ax[15]]
     pos_com_0 = ax_mat[0].get_position()
@@ -627,7 +703,8 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
                             pos_com_0.width, pos_com_0.height])
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
-                  ax_mat=ax_mat, humans=humans)
+                        ax_mat=ax_mat, humans=humans)
+    ax_tach.set_xticks([0, 100, 200])
     pos_com_0 = ax_mat[0].get_position()
     pos_com_1 = ax_mat[1].get_position()
     ax_mat[0].set_position([pos_com_0.x0, pos_com_1.y0,
