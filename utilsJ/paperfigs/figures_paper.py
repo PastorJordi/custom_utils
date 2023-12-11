@@ -1988,6 +1988,43 @@ def get_human_mt(df_data):
     return motor_time
 
 
+def plot_mt_humans_all(df_data):
+    fig, ax = plt.subplots(ncols=5, nrows=4)
+    ax = ax.flatten()
+    subjects = df_data.subjid.unique()
+    mt = get_human_mt(df_data)
+    median_mt = np.median(mt)
+    for i_s, sub in enumerate(subjects[:-1]):
+        color = 'k'
+        label='MT'
+        rm_top_right_lines(ax[i_s])
+        mt = get_human_mt(df_data.loc[df_data.subjid == sub])
+        mean_acc = np.round(np.nanmean(df_data.loc[
+                df_data.subjid == sub, 'hithistory']), 2)
+        median_mt_sub = np.round(np.nanmedian(mt), 1)
+        mean_mt_sub = np.round(np.nanmean(mt), 1)
+        if mean_acc < 0.7:
+            color = 'b'
+            label = 'Acc. < 0.7'
+        if median_mt_sub > 300:
+            color = 'g'
+            label = 'Median > 300'
+        sns.kdeplot(mt, ax=ax[i_s], color=color, shade=True,
+                    label=label)
+        ax[i_s].set_xlim(50, 600)
+        ax[i_s].set_title('Median = ' + str(median_mt_sub) +
+                          ' ms\nMean = ' + str(mean_mt_sub) + ' ms\nAccuracy = ' +
+                          str(mean_acc))
+        ax[i_s].axvline(median_mt, color='r', label='Median all')
+        if i_s >= 15:
+            ax[i_s].set_xlabel('MT (ms)')
+        if mean_acc < 0.7:
+            ax[i_s].legend()
+        if median_mt_sub > 300:
+            ax[i_s].legend(loc='upper left')
+    ax[0].legend()
+
+
 def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
     if user_id == 'alex':
         folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
