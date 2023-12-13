@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib
 from matplotlib.lines import Line2D
 import matplotlib.pylab as pl
 import sys
@@ -180,7 +181,9 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
        colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))[::-1]
        # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
     else:
-        colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        # colormap = pl.cm.coolwarm(np.linspace(0., 1, len(bins)))
+        colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+        colormap = colormap(np.linspace(0, 1, len(bins)))
         # colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
         # colormap_2 = pl.cm.copper_r(np.linspace(0., 1, len(bins)-1))
         ev_vals = bins
@@ -298,7 +301,9 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                      times=times, ax=ax[0:2],
                      n_subjects=len(df_data.subjid.unique()),
                      condition='stimulus', max_mt=max_mt)
-    colormap = pl.cm.coolwarm(np.linspace(0., 1, 7))[::-1]
+    # colormap = pl.cm.coolwarm(np.linspace(0., 1, 7))[::-1]
+    colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+    colormap = colormap(np.linspace(0, 1, 7))[::-1]
     legendelements = [Line2D([0], [0], color=colormap[0], lw=1.3),
                       Line2D([0], [0], color=colormap[1], lw=1.3),
                       Line2D([0], [0], color=colormap[2], lw=1.3),
@@ -359,16 +364,23 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                                  interpolatespace=interpolatespace,
                                  colormap=colormap)
     # # extract splitting time
-    # out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
-    #                                          trajs=trajs, times=times,
-    #                                          subjects=np.repeat(1, len(coh)),
-    #                                          ground_truth=ground_truth,
-    #                                          interpolatespace=interpolatespace,
-    #                                          max_mt=max_mt)
-    # # plot splitting time vs RT
-    # splitting_time_plot(sound_len=sound_len, out_data=out_data,
-    #                     ax=ax[-1], subjects=np.repeat(1, len(coh)),
-    #                     color='b')
+    out_data, rtbins = splitting_time_humans(sound_len=sound_len, coh=coh,
+                                              trajs=trajs, times=times,
+                                              subjects=np.repeat(1, len(coh)),
+                                              ground_truth=ground_truth,
+                                              interpolatespace=interpolatespace,
+                                              max_mt=max_mt)
+    # plot splitting time vs RT
+    splitting_time_plot(sound_len=sound_len, out_data=out_data,
+                        ax=ax[-1], subjects=np.repeat(1, len(coh)),
+                        color='b')
+    legendelements = [Line2D([0], [0], color='firebrick', lw=2,
+                             label='Across subj.'),
+                      Line2D([0], [0], color='b', lw=2,
+                             label='Meta-subj.')]
+    ax[-1].legend(handles=legendelements, loc='upper left', borderpad=0.15,
+                  labelspacing=0.15, handlelength=1.5,
+                  frameon=False)
 
 
 def plot_xy(df_data, ax):
@@ -406,7 +418,8 @@ def plot_xy(df_data, ax):
     ax.set_yticks(yticks, np.round(yticks*factor, 2))
 
 
-def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick'):
+def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick',
+                        plot_sng=True):
     rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
@@ -422,12 +435,13 @@ def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick'):
     # binsize = np.diff(rtbins)
     ax2 = ax
     # fig2, ax2 = plt.subplots(1)
-    for i in range(len(np.unique(subjects))):
-        for j in range(out_data.shape[2]):
-            ax2.plot(xvals,
-                     out_data[:, i, j],
-                     marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
-                     mew=1, color=(.6, .6, .6, .3))
+    if plot_sng:
+        for i in range(len(np.unique(subjects))):
+            for j in range(out_data.shape[2]):
+                ax2.plot(xvals,
+                         out_data[:, i, j],
+                         marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                         mew=1, color=(.6, .6, .6, .3))
     error_kws = dict(ecolor=color, capsize=2, mfc=(1, 1, 1, 0), mec='k',
                      color=color, marker='o', label='mean & SEM')
     
@@ -582,6 +596,8 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
                                            max_MT=max_mt+300, pval=0.01)+5
             if ind < 410 and ind > rtbins[i]:
                 split_ind.append(ind)
+            elif ind < rtbins[i] + np.diff(rtbins)[0]/2:
+                split_ind.append(rtbins[i])
             else:
                 # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                 #                          max_MT=500, pval=0.001)
