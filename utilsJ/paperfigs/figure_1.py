@@ -6,6 +6,7 @@ from scipy.stats import zscore
 from scipy.optimize import curve_fit
 from matplotlib.lines import Line2D
 import pandas as pd
+import matplotlib
 import sys
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -18,8 +19,8 @@ from utilsJ.paperfigs import figure_2 as fig2
 from utilsJ.Behavior.plotting import tachometric, com_heatmap
 
 # ---GLOBAL VARIABLES
-VAR_INC = 'inc.'
-VAR_CON = 'cong.'
+VAR_INC = '-1'
+VAR_CON = '+1'
 VAR_INC_SHORT = 'inc.'
 VAR_CON_SHORT = 'cong.'
 VAR_L = 'L'
@@ -59,7 +60,7 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
             fontsize=9.5, style='italic')
     legend = ax.legend(title='Stimulus strength', borderpad=0.3, fontsize=8,
                        loc='center left', bbox_to_anchor=(0.51, 0.95),
-                       labelspacing=0.1)
+                       labelspacing=0.1, frameon=False)
     legend.get_title().set_fontsize('8') #legend 'Title' fontsize
 
 
@@ -89,6 +90,11 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # ax.text(200, -1,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
+        ax.text(-0.45, 294.5, r'$\longleftarrow $', fontsize=10)
+        ax.text(-1.05, 300, r'$\it{incongruent}$', fontsize=7.5)
+        ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
+        ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
+        ax.set_ylim(238, 303)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
@@ -96,7 +102,13 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # ax.text(200, -1,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
-    ax.set_xlim(-1.1, 1.1)
+        ax.text(-0.45, 299, r'$\longleftarrow $', fontsize=10)
+        ax.text(-1.05, 306, r'$\it{incongruent}$', fontsize=7.5)
+        ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
+        ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
+        ax.set_ylim(219, 312)
+        # \;\;\; \rightarrow \;\; \it{Supports \; response}
+    ax.set_xlim(-1.2, 1.2)
     # ARROWS FOR INC/CONG
     # ax.set_title(r'$\;\;\;\;\;\;\; \longleftarrow \it{inc.} \;\;\;\; \it{congruent} \longrightarrow \;\;\;\;\;\;$', fontsize=8)
     mt_time_err = np.nanstd(mt_time, axis=0) / np.sqrt(len(subjects))
@@ -300,7 +312,9 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
     ax.axhline(y=np.nanmean(sil), color='k', alpha=0.6)
     coh_unq = np.unique(coh_cong)
     ax.plot(coh_unq, mean_mt_vs_coh, color='k', ls='-', lw=0.5)
-    colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
+    # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
+    colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+    colormap = colormap(np.linspace(0, 1, len(coh_unq)))
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
         ax.errorbar(x, y, e, color=color)
@@ -309,6 +323,12 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
     ax.text(0.65, np.nanmean(sil)+5, 'silent', color='k', fontsize=10.5, alpha=0.7)
     ax.set_xlabel('Stimulus evidence towards response')
     ax.set_ylabel('Movement time (ms)')
+    ax.text(-0.35, 293, r'$\longleftarrow $', fontsize=10)
+    ax.text(-0.85, 300, r'$\it{incongruent}$', fontsize=8)
+    ax.text(0.07, 293, r'$\longrightarrow $', fontsize=10)
+    ax.text(0.07, 300, r'$\it{congruent}$', fontsize=8)
+    ax.set_ylim(218, 302)
+    ax.set_xlim(-1.1, 1.1)
 
 
 def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
