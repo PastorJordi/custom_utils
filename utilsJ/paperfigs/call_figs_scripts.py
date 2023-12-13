@@ -124,25 +124,22 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = True
+f2 = False
 f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
     # with silent: 42, 43, 44, 45, 46, 47
-    # good ones for fitting: 42, 43, 38
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE45',
-    #             'LE40', 'LE46', 'LE47', 'LE37', 'LE41', 'LE36',
-    #             'LE44']
     # subjects = ['LE42', 'LE37', 'LE46']
-    # subjects = ['LE42']
+    subjects = ['LE42']  # for params analysis
+    # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -152,7 +149,11 @@ if f1 or f2 or f3 or f5:
         df_all = pd.concat((df_all, df), ignore_index=True)
     df = df_all
     del df_all
-    # XXX: can we remove the code below or move it to the fig5 part?
+    if f7:
+        # index to filter by stim/silent for p(com) vs p(proac) supp figure
+        idx = df.special_trial.values >= 0
+        # & (df.coh2.abs() != 0)).values
+        # & (df.coh2.abs() != 0.25)
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     df['allpriors'] = zt
     hit = np.array(df['hithistory'])
@@ -213,9 +214,12 @@ if f5:
     simulate = False
     with_fb = False
     save_new_data = False
+    silent_sim = False
+    if silent_sim:
+        stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = 0
+    n_sil = int(200000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -236,42 +240,15 @@ if f5:
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     stim[:, int(num_tr):] = 0  # for silent simulation
     if f7:
-        params_to_explore = [[4]] + [np.arange(7)]
-        fig, ax = plt.subplots(ncols=2, nrows=2)
-        ax = ax.flatten()
-        fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-                                    subjid, params_to_explore, ax=ax[0:2])
-        params_to_explore = [[5]] + [np.arange(7)]
-        fp.plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-                                    subjid, params_to_explore, ax=ax[2:4])
-        fig, ax = plt.subplots(ncols=2)
-        params_to_explore = [[4]] + [np.arange(7)]
-        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
-                               subjid, params_to_explore, ax=ax,
-                               param_title=r'$t_{aff}$')
-        fig, ax = plt.subplots(ncols=2)
-        params_to_explore = [[5]] + [np.arange(7)]
-        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
-                               subjid, params_to_explore, ax=ax,
-                               param_title=r'$t_{eff}$')
-        fig, ax = plt.subplots(1)
-        params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 31), 2)]
-        fp.plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
-                                                subjid, params_to_explore, ax)
-        fig, ax = plt.subplots(ncols=2)
-        params_to_explore = [[9]] + [np.round(np.linspace(1, 25, 25), 2)]
-        fp.plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
-                               subjid, params_to_explore, ax=ax,
-                               param_title=r'$\theta_{AI}$')
+        fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
+                                   subjid, sv_folder=SV_FOLDER, idx=idx)
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                               trial_index=trial_index, num_tr=num_tr,
                                               subject_list=subjects, subjid=subjid, simulate=simulate)
-        # fp.basic_statistics(decision=decision, resp_fin=resp_fin)  # dec
-        # fp.basic_statistics(com, com_model_detected)  # com
-        # fp.basic_statistics(hit, hit_model)  # hit
+        
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
                                 'sound_len': reaction_time,
@@ -319,22 +296,29 @@ if f5:
         fix_breaks = []
         resp_len = []
         time_trajs = []
+        # fig, ax = plt.subplots(1)
+        # fig_2.trajs_splitting_stim(df_sim, ax, DATA_FOLDER, collapse_sides=True, threshold=300,
+        #                          sim=True,
+        #                          rtbins=np.linspace(0, 150, 25), connect_points=False,
+        #                          trajectory="trajectory_y", p_val=0.05)
     
-        # fig_5.supp_com_analysis(df_sim)
+        # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER)
+        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+                                     sv_folder=SV_FOLDER)
         # actual plot
-        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                          new_data=simulate, save_new_data=save_new_data,
-                          coh=coh, sound_len=sound_len, zt=zt,
-                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                          decision_model=resp_fin, com=com, com_model=com_model,
-                          com_model_detected=com_model_detected,
-                          means=means, errors=errors, means_model=means_model,
-                          errors_model=errors_model, df_sim=df_sim)
+        # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+        #                   new_data=simulate, save_new_data=save_new_data,
+        #                   coh=coh, sound_len=sound_len, zt=zt,
+        #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+        #                   decision_model=resp_fin, com=com, com_model=com_model,
+        #                   com_model_detected=com_model_detected,
+        #                   means=means, errors=errors, means_model=means_model,
+        #                   errors_model=errors_model, df_sim=df_sim)
 if f6:
     print('Plotting Figure 6')
     # human traj plots
     fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
-                       human_task_img=HUMAN_TASK_IMG, max_mt=600, nm='300')
+                       human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
