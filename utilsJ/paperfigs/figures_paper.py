@@ -217,6 +217,8 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
         indx_trajs = common_cond & (df.special_trial == 0) 
         n_iters = len(bins)
         colormap = pl.cm.coolwarm(np.linspace(0., 1, n_iters))
+        colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+        colormap = colormap(np.linspace(0, 1, n_iters))
     elif condition == 'choice_x_prior':
         indx_trajs = common_cond & (df.special_trial == 2)
         bins_zt = [-1.01]
@@ -246,7 +248,7 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
     tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg',
                 rtbins=rtbins)
     ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('Accuracy')
     ax.set_title(label)
     ax.set_ylim(0.24, 1.04)
@@ -561,7 +563,7 @@ def check_mean_std_time_com(df, com, time_com):
 
 def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
                              rtbins=np.linspace(0, 150, 16),
-                             trajectory="trajectory_y"):
+                             trajectory="trajectory_y", plot=True):
 
     # split time/subject by coherence
     splitfun = fig_2.get_splitting_mat_simul
@@ -613,15 +615,15 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
     error_kws = dict(ecolor=color, capsize=2,
                      color=color, marker='o', label=str(par_value*5) + ' ms')
     xvals = binsize/2 + binsize * np.arange(rtbins.size-1)
-    ax.errorbar(
-        xvals,
-        # we do the mean across rtbin axis
-        np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
-        # other axes we dont care
-        yerr=fig_2.sem(out_data.reshape(rtbins.size-1, -1),
-                       axis=1, nan_policy='omit'),
-        **error_kws
-    )
+    if plot:
+        ax.errorbar(
+            xvals,
+            # we do the mean across rtbin axis
+            np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1),
+            # other axes we dont care
+            yerr=fig_2.sem(out_data.reshape(rtbins.size-1, -1),
+                           axis=1, nan_policy='omit'),
+            **error_kws)
     # if draw_line is not None:
     #     ax.plot(*draw_line, c='r', ls='--', zorder=0, label='slope -1')
     min_st = np.nanmin(np.nanmean(out_data.reshape(rtbins.size-1, -1), axis=1))
@@ -635,8 +637,8 @@ def trajs_splitting_stim_all(df, ax, color, threshold=300, par_value=None,
 
 
 def supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
-                            subjid, sv_folder):
-    fig, ax = plt.subplots(ncols=3, nrows=2, figsize=(11, 8))
+                            subjid, sv_folder, idx=None):
+    fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(8, 8))
     plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
                         hspace=0.4, wspace=0.35)
     ax = ax.flatten()
@@ -645,22 +647,40 @@ def supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
         rm_top_right_lines(a)
         a.text(-0.1, 1.2, labs[i_a], transform=a.transAxes, fontsize=16,
                fontweight='bold', va='top', ha='right')
-    ax[5].axis('off')
-    # changing t_aff
-    params_to_explore = [[4]] + [np.arange(7)]
+    # ax[5].axis('off')
+    # changing t_aff and t_eff
+    params_to_explore_aff = [[4]] + [np.arange(7)]
+    params_to_explore_eff = [[5]] + [np.arange(7)]
+    params_to_explore = [params_to_explore_aff, params_to_explore_eff]
     plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-                             subjid, params_to_explore, ax=[ax[0], ax[3]])
-    # changing t_eff
-    params_to_explore = [[5]] + [np.arange(7)]
-    plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
-                             subjid, params_to_explore, ax=[ax[1], ax[4]])
+                             subjid, params_to_explore, ax=[ax[0], ax[2]])
+    plot_min_st_vs_t_eff_cartoon(ax[1], offset=10)
+    # # changing t_eff
+    # plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
+    #                          subjid, params_to_explore, ax=[ax[1], ax[4]])
     # changing bound action
-    params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 11), 2)]
-    plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
-                                         subjid, params_to_explore, ax=ax[2])
+    # params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 11), 2)]
+    # plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
+    #                                      subjid, params_to_explore, ax=ax[2])
+    params_to_explore = [[9]] + [np.round(np.linspace(1, 14, 14), 2)]
+    plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
+                       subjid, params_to_explore, ax=ax[3],
+                       param_title=r'$\theta_{AI}$', idx=idx)
     fig.savefig(sv_folder+'/supp_model_params.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/supp_model_params.png', dpi=400, bbox_inches='tight')
 
+
+def plot_min_st_vs_t_eff_cartoon(ax, offset=10):
+    t_aff = np.arange(7)*5
+    t_eff = np.copy(t_aff)
+    colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(t_eff)))[::-1]
+    for i_taff, t_aff_val in enumerate(t_aff[::-1]):
+        min_st = t_aff_val + t_eff + offset
+        ax.plot(t_eff, min_st, color=colormap[i_taff], label=str(t_aff_val))
+    ax.set_ylabel('Minimum splitting time (ms)')
+    ax.legend(title=r'$t_{aff} \;\; (ms)$')
+    ax.plot([0, 30], [0, 30], color='gray', linewidth=0.8)
+    ax.set_xlabel(r'$t_{eff} \;\; (ms)$')
 
 
 def plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
@@ -676,15 +696,15 @@ def plot_splitting_for_param(stim, zt, coh, gt, trial_index, subjects,
     ax[0].set_xlabel('Reaction time (ms)')
     ax[0].set_ylabel('Splitting time (ms)')
     change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
-                                       subjid, params_to_explore, ax)
+                                       subjid, params_to_explore, [ax[0], ax[1]])
     ax[0].set_ylim(-1, 275)
     labels = ['prior weight', 'stim weight', 'EA bound', 'CoM bound',
               r'$t_{aff}$', r'$t_{eff}$', 'tAction', 'intercept AI',
               'slope AI', 'AI bound', 'DV weight 1st readout',
               'DV weight 2nd readout', 'leak', 'MT noise std',
               'MT offset', 'MT slope T.I.']
-    ax[0].legend(title=labels[params_to_explore[0][0]], loc='upper center',
-                 bbox_to_anchor=(0.5, 1.2))
+    # ax[0].legend(title=labels[params_to_explore[0][0]], loc='upper center',
+    #              bbox_to_anchor=(0.5, 1.2))
 
 
 
@@ -693,19 +713,20 @@ def plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
                        param_title=r'$\theta_{AI}$'):
     for a in ax:
         rm_top_right_lines(a)
-    ax[0].set_xlabel(param_title)
-    ax[0].set_ylabel('P(CoM)')
     ax[1].set_xlabel(param_title)
-    ax[1].set_ylabel('P(reversal)')
+    ax[1].set_ylabel('P(CoM)')
+    ax[0].set_xlabel(param_title)
+    ax[0].set_ylabel('P(proactive)')
     num_tr = int(len(coh))
     param_ind = params_to_explore[0][0]
     com_all = []
     reversals = []
+    proac = []
     for ind in range(len(params_to_explore[1])):
         param_value = params_to_explore[1][ind]        
         param_iter = str(param_ind)+'_'+str(param_value)
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            _, trajs, x_val_at_updt =\
+            pro_vs_re, trajs, x_val_at_updt =\
                 run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                        trial_index=trial_index, num_tr=num_tr,
                                        subject_list=subjects, subjid=subjid,
@@ -713,10 +734,61 @@ def plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
                                        params_to_explore=[[param_ind], [param_value]],
                                        change_param=True,
                                        param_iter=param_iter)
-        com_all.append(np.nanmean(com_model))
-        reversals.append(np.nanmean(com_model_detected))
-    ax[0].plot(params_to_explore[1], com_all, color='k', marker='o')
-    ax[1].plot(params_to_explore[1], reversals, color='k', marker='o')
+        com_all.append(np.nanmean(com_model[reaction_time >= 0]))
+        reversals.append(np.nanmean(com_model_detected[reaction_time >= 0]))
+        proac.append(1-np.nanmean(pro_vs_re[reaction_time >= 0]))
+    ax[1].plot(params_to_explore[1], com_all, color='k', marker='o')
+    # ax[1].plot(params_to_explore[1], reversals, color='k', marker='o')
+    ax[0].plot(params_to_explore[1], proac, color='k', marker='o')
+
+
+def plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
+                       subjid, params_to_explore, ax=None,
+                       param_title=r'$\theta_{AI}$', idx=None):
+    rm_top_right_lines(ax)
+    ax.set_ylabel('P(CoM)')
+    ax.set_xlabel('P(proactive)')
+    num_tr = int(len(coh))
+    param_ind = params_to_explore[0][0]
+    com_all = []
+    reversals = []
+    proac = []
+    colormap = pl.cm.magma(np.linspace(0., 0.9, len(params_to_explore[1])))
+    for ind in range(len(params_to_explore[1])):
+        param_value = params_to_explore[1][ind]        
+        param_iter = str(param_ind)+'_'+str(param_value)
+        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+            pro_vs_re, trajs, x_val_at_updt =\
+                run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                       trial_index=trial_index, num_tr=num_tr,
+                                       subject_list=subjects, subjid=subjid,
+                                       simulate=False,
+                                       params_to_explore=[[param_ind], [param_value]],
+                                       change_param=True,
+                                       param_iter=param_iter)
+        if idx is None:
+            com_all.append(np.nanmean(com_model[(reaction_time >= 0)]))
+            reversals.append(np.nanmean(com_model_detected[(reaction_time >= 0)]))
+            proac.append(1-np.nanmean(pro_vs_re[(reaction_time >= 0)]))
+        else:
+            com_all.append(np.nanmean(com_model[(reaction_time >= 0) & idx &
+                                                (reaction_time < 1000)]))
+            reversals.append(np.nanmean(com_model_detected[(reaction_time >= 0) &
+                                                           idx & (reaction_time < 1000)]))
+            proac.append(1-np.nanmean(pro_vs_re[(reaction_time >= 0) &
+                                                idx & (reaction_time < 1000)]))
+    ax.plot(proac, com_all, color='k', linewidth=0.9)
+    for i_val, pcom in enumerate(com_all):
+        ax.plot(proac[i_val], pcom, color=colormap[i_val], marker='o', markersize=7)
+    fig2, ax2 = plt.subplots(1)
+    img = ax2.imshow(np.array([[min(params_to_explore[1]),
+                                max(params_to_explore[1])]]), cmap="magma")
+    img.set_visible(False)
+    plt.close(fig2)
+    cbar = plt.colorbar(img, orientation="vertical", ax=ax, cmap='magma', fraction=0.08,
+                        aspect=12)
+    cbar.ax.set_title(r'$\theta_{AI}$')
+    ax.set_xticks([0, 0.4, 0.8])
 
 
 def plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
@@ -780,62 +852,79 @@ def action_bound_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
 
 
 def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
-                                       subjid, params_to_explore, ax):
+                                       subjid, params_to_explore, ax, matrix=False):
     num_tr = int(len(coh))
-    colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(params_to_explore[1])))
-    param_ind = params_to_explore[0][0]
-    ta_plus_te = []
-    min_st_list = []
-    rt_min_sp = []
     ind_stim = np.sum(stim, axis=0) != 0
-    for ind in range(len(params_to_explore[1])):
-        param_value = params_to_explore[1][ind]        
-        param_iter = str(param_ind)+'_'+str(param_value)
-        hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-            _, trajs, x_val_at_updt =\
-                run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
-                                       trial_index=trial_index, num_tr=num_tr,
-                                       subject_list=subjects, subjid=subjid,
-                                       simulate=False,
-                                       params_to_explore=[[param_ind], [param_value]],
-                                       change_param=True,
-                                       param_iter=param_iter)
-        ta_plus_te_sub = []
-        for subject in subjects:
-            conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
-            conf[param_ind] = param_value
-            t_aff = conf[4]
-            t_eff = conf[5]
-            ta_plus_te_sub.append((t_aff+t_eff)*5)
-        ta_plus_te.append(np.nanmean(ta_plus_te_sub))
-        MT = [len(t) for t in trajs]
-        df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
-                                'sound_len': reaction_time,
-                                'rewside': (gt + 1)/2,
-                                'R_response': (resp_fin+1)/2,
-                                'resp_len': np.array(MT)*1e-3,
-                                'subjid': subjid})
-        df_sim = df_sim.loc[ind_stim]
-        min_st, rt_min_split = trajs_splitting_stim_all(df=df_sim, ax=ax[0], color=colormap[ind], threshold=300,
-                                                        rtbins=np.linspace(0, 150, 16),
-                                                        trajectory="trajectory_y", par_value=param_value)
-        min_st_list.append(min_st)
-        rt_min_sp.append(rt_min_split)
-    i = 0
-    ax[1].plot(ta_plus_te, min_st_list, color='k', linewidth=0.7, alpha=0.5)
-    for min_st, rt_min_split in zip(min_st_list, rt_min_sp):
-        ax[0].plot(rt_min_split, min_st, marker='o', color=colormap[i],
-                   markersize=8)
-        ax[1].plot(ta_plus_te[i], min_st_list[i], marker='o', color=colormap[i],
-                   markersize=8)
-        i += 1
+    params_to_explore_aff, params_to_explore_eff = params_to_explore
+    param_aff = params_to_explore_aff[0][0]
+    param_eff = params_to_explore_eff[0][0]
+    colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(params_to_explore_eff[1])))
+    subject = str(np.unique(subjid)[0])
+    sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_splitting_matrix_params_5m_bin.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(sim_data), exist_ok=True)
+    if os.path.exists(sim_data):
+        mat_min_st = np.load(sim_data)
+    else:
+        mat_min_st = np.empty((7, 7))
+        mat_min_st[:] = np.nan
+        for ind_aff in range(len(params_to_explore_aff[1])):
+            min_st_list = []
+            rt_min_sp = []
+            aff_value = params_to_explore_aff[1][ind_aff]
+            for ind_eff in range(len(params_to_explore_eff[1])):
+                eff_value = params_to_explore_aff[1][ind_eff]
+                param_iter = str(param_aff)+'_'+str(aff_value)+'_'+str(param_eff)+'_'+str(eff_value)
+                hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+                    _, trajs, x_val_at_updt =\
+                        run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                               trial_index=trial_index, num_tr=num_tr,
+                                               subject_list=subjects, subjid=subjid,
+                                               simulate=False,
+                                               params_to_explore=[[param_aff, param_eff], [aff_value, eff_value]],
+                                               change_param=True,
+                                               param_iter=param_iter)
+                MT = [len(t) for t in trajs]
+                df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
+                                        'sound_len': reaction_time,
+                                        'rewside': (gt + 1)/2,
+                                        'R_response': (resp_fin+1)/2,
+                                        'resp_len': np.array(MT)*1e-3,
+                                        'subjid': subjid})
+                df_sim = df_sim.loc[ind_stim]
+                min_st, rt_min_split = trajs_splitting_stim_all(df=df_sim, ax=ax[0], color=colormap[ind_eff], threshold=300,
+                                                                rtbins=np.linspace(0, 150, 31),
+                                                                trajectory="trajectory_y", par_value=param_eff, plot=False)
+                min_st_list.append(min_st)
+                rt_min_sp.append(rt_min_split)
+                mat_min_st[ind_aff, ind_eff] = min_st
+            i = 0
+            for min_st, rt_min_split in zip(min_st_list, rt_min_sp):
+                ax[0].plot(rt_min_split, min_st, marker='o', color=colormap[i],
+                           markersize=8)
+                i += 1
+        np.save(sim_data, mat_min_st)
+            # i = 0
+    if matrix:
+        im = ax[1].imshow(np.flipud(mat_min_st))
+        cbar = plt.colorbar(im, ax=ax[1], fraction=0.04)
+        cbar.ax.set_title('   Min. ST (ms)')
+        ax[1].set_yticks([6, 3, 0], [0, 15, 30])
+        ax[1].set_xticks([0, 3, 6], [0, 15, 30])
+        ax[1].set_ylabel(r'$t_{aff}$ (ms)')
+        ax[1].set_xlabel(r'$t_{eff}$ (ms)')
+    else:
+        for i_aff, min_st_list in enumerate(mat_min_st[::-1]):
+            ax[1].plot(params_to_explore_eff[1]*5, min_st_list, color=colormap[::-1][i_aff],
+                       label=str(params_to_explore_aff[1][::-1][i_aff]*5) + ' ms')
     ax[1].set_ylabel('Minimum splitting time (ms)')
-    ax[1].set_yticks([20, 30, 40, 50, 60])
-    ax[1].set_xticks([20, 30, 40])
-    ax[1].plot([12, 65], [12, 65], color='gray', linewidth=0.8)
-    ax[1].set_xlim([13, 47])
-    ax[1].set_ylim([14, 61])
-    ax[1].set_xlabel(r'$t_{aff}+t_{eff} \;\; (ms)$')
+    ax[1].legend(title=r'$t_{aff} \;\; (ms)$')
+    # ax[1].set_yticks([20, 30, 40, 50, 60])
+    # ax[1].set_xticks([20, 30, 40])
+    ax[1].plot([0, 30], [0, 30], color='gray', linewidth=0.8)
+    # ax[1].set_xlim([13, 47])
+    # ax[1].set_ylim([14, 61])
+    ax[1].set_xlabel(r'$t_{eff} \;\; (ms)$')
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
@@ -859,7 +948,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             if change_param:
                 sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation_' + str(param_iter) + '.pkl'
             else:
-                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
+                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation_silent.pkl'
         if human:
             if change_param:
                 sim_data = DATA_FOLDER + '/Human/' + str(subject) + '/sim_data/' + str(subject) + '_simulation_' + str(param_iter) + '.pkl'
