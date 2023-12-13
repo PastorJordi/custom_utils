@@ -20,6 +20,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
+from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply,\
     binned_curve, com_heatmap
@@ -114,7 +115,7 @@ def create_figure_5_model(fgsz):
     return fig, ax, ax[13], pos_ax_0
 
 
-def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
+def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2, eps=6):
     subjid = df_plot_pcom.subjid
     subjects = np.unique(subjid)
     com_data = np.empty((len(subjects), len(BINS_RT)-1))
@@ -145,27 +146,27 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2):
         com_model_all[i_s, :len(median_pcom_mod_all)] = median_pcom_mod_all
         com_model_det[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
     xpos_plot = (BINS_RT[:-1] + BINS_RT[1:]) / 2
-    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
-                yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k')
+    ax.errorbar(xpos_plot-eps, np.nanmedian(com_data, axis=0),
+                yerr=np.nanstd(com_data, axis=0)/len(subjects), color='k',
+                linestyle='--')
     ax.errorbar(xpos_plot, np.nanmedian(com_model_det, axis=0),
-                yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='r')
-    ax2.errorbar(xpos_plot, np.nanmedian(com_model_all, axis=0),
-                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='saddlebrown',
-                 linestyle='--')
+                yerr=np.nanstd(com_model_det, axis=0)/len(subjects), color='k')
+    ax2.errorbar(xpos_plot+eps, np.nanmedian(com_model_all, axis=0),
+                 yerr=np.nanstd(com_model_all, axis=0)/len(subjects), color='r')
     ax.xaxis.tick_top()
     ax.xaxis.tick_bottom()
-    legendelements = [Line2D([0], [0], color='k', lw=2,
-                             label='Rats'),
+    legendelements = [Line2D([0], [0], color='k', lw=2, linestyle='--',
+                             label='Rats reversals'),
+                      Line2D([0], [0], color='k', lw=2,
+                             label='Model reversals'),
                       Line2D([0], [0], color='r', lw=2,
-                             label='Model'),
-                      Line2D([0], [0], color='saddlebrown', lw=2, linestyle='--',
-                             label='Model (All CoMs)')]
+                             label='Model CoMs')]
     ax.legend(handles=legendelements, loc='upper left',
-              bbox_to_anchor=(0.4, 1.2))
+              bbox_to_anchor=(0.12, 1.3), frameon=False)
     ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('p(reversal)')
-    ax2.set_ylabel('p(reversal)')
-    ax2.set_xlabel('Reaction time (ms)')
+    ax2.set_ylabel('p(CoM)')
+    # ax2.set_xlabel('Reaction time (ms)')
 
 
 def supp_com_analysis(df_sim, sv_folder):
@@ -207,7 +208,31 @@ def supp_com_analysis(df_sim, sv_folder):
     # ax[2].set_ylabel(r'$p(reversal \;| \; CoM)$')
     fig.savefig(sv_folder+'/supp_model_com.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/supp_model_com.png', dpi=400, bbox_inches='tight')
-    
+
+
+def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
+    fig, ax = plt.subplots(1)
+    df_sim['special_trial'] = 2
+    fp.rm_top_right_lines(ax)
+    supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='data',
+                            color='k')
+    # ax2 = ax.twinx()
+    # ax2.spines['right'].set_color('red')
+    # ax2.set_ylabel('p(reversal) ')
+    # ax2.tick_params(axis='y', colors='red')
+    # ax2.spines['top'].set_visible(False)
+    # ax2.yaxis.label.set_color('red')
+    supp_p_com_vs_rt_silent(df_sim, ax=ax, bins_rt=BINS_RT, label='model',
+                            column='com_detected', color='r')
+    # ax2.set_ylabel('p(reversal) - model - silent')
+    # ax.set_ylabel('p(reversal) - data - silent')
+    ax.set_ylabel('p(reversal) - silent')
+    legendelements = [Line2D([0], [0], color='k', lw=2,
+                             label='data'),
+                      Line2D([0], [0], color='r', lw=2,
+                             label='model')]
+    ax.legend(handles=legendelements, loc='upper right',
+              handlelength=1.2, frameon=False)
 
 
 def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
@@ -215,20 +240,43 @@ def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
     subjects = np.unique(subjid)
     com_data = np.empty((len(subjects), len(bins_rt)-1))
     com_data[:] = np.nan
-    for i_s, subject in enumerate(subjects):
-        df_plot = df_sim.loc[(subjid == subject) & df_sim.CoM_sugg]
-        xpos_plot, median_pcom_mod_det, _ =\
-            binned_curve(df_plot, 'com_detected', 'sound_len', bins=bins_rt,
-                         xpos=xpos_RT, errorbar_kw={'label': 'Model detected',
-                                                    'color': 'red'}, ax=ax,
-                         legend=False, return_data=True)
-      
-        com_data[i_s, :len(median_pcom_mod_det)] = median_pcom_mod_det
     xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
+    for i_s, subject in enumerate(subjects):
+        df_plot = df_sim.loc[(subjid == subject)]
+        # & (df_sim.norm_allpriors.abs() >= 0.5)]
+        mean_pcom_mod_det = []
+        for i_rt, rt in enumerate(bins_rt[:-1]):
+            df_filt = df_plot.loc[(df_plot.sound_len >= rt) &
+                                  (df_plot.sound_len < bins_rt[i_rt+1])]
+            mean_pcom_mod_det.append(np.nanmean(df_filt.com_detected))
+        com_data[i_s, :len(mean_pcom_mod_det)] = mean_pcom_mod_det
     ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
                 yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
                 color='k')
-    ax.set_xlabel('RT (ms)')
+    ax.set_xlabel('Reaction time (ms)')
+
+
+def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg',
+                            color='k'):
+    subjid = df.subjid
+    subjects = np.unique(subjid)
+    com_data = np.empty((len(subjects), len(bins_rt)-1))
+    com_data[:] = np.nan
+    xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
+    for i_s, subject in enumerate(subjects):
+        df_plot = df.loc[(subjid == subject) & (df.special_trial == 2)]
+        # & (df_sim.norm_allpriors.abs() >= 0.5)]
+        mean_pcom_mod_det = []
+        for i_rt, rt in enumerate(bins_rt[:-1]):
+            df_filt = df_plot.loc[(df_plot.sound_len >= rt) &
+                                  (df_plot.sound_len < bins_rt[i_rt+1])]
+            mean_pcom_mod_det.append(np.nanmean((df_filt[column])))
+        com_data[i_s, :len(mean_pcom_mod_det)] = mean_pcom_mod_det
+    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+                yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
+                color=color, label=label)
+    ax.set_ylabel('p(reversal) - silent')
+    ax.set_xlabel('Reaction time (ms)')
 
 
 def supp_prob_vs_prior(df_sim, ax, title_col, fig, column='com_detected', com=False,
@@ -257,8 +305,8 @@ def supp_prob_vs_prior(df_sim, ax, title_col, fig, column='com_detected', com=Fa
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Right to left reversal'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to right reversal'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0, fontsize=11.5)
     ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     # plt.sca(ax_mat[0])
@@ -345,8 +393,8 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
     vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to left'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to right'   # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_1 = 'Right to left reversal'  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = 'Left to right reversal'   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0, fontsize=11.5)
     ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     # plt.sca(ax_mat[0])
@@ -370,7 +418,7 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
     cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
                       pos.width/15, pos.height/1.5])
     cbar = plt.colorbar(im, cax=cbar_ax)
-    cbar.set_label('p(detected CoM)', labelpad=12)
+    cbar.ax.set_title('         p(reversal)', fontsize=8.5)
 
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
@@ -473,13 +521,15 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
                       Line2D([0], [0], color=fig_3.COLOR_NO_COM, lw=2,
                              label='No-reversal')]
     ax.legend(handles=legendelements, loc='upper left',
-              bbox_to_anchor=(0.05, 1.32), handlelength=1.2)
-    ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('Position')
+              bbox_to_anchor=(0.05, 1.32), handlelength=1.2, frameon=False)
+    ax.set_xlabel('Time from movement onset (ms)')
+    ax.set_ylabel('x position (cm)')
     ax.set_xlim(-25, 400)
     ax.set_ylim(-25, 80)
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(200, -19, "Detection threshold", color='r')
+    ticks = np.array([-25, 0, 25, 50, 75])
+    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
@@ -524,7 +574,9 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         colormap = pl.cm.copper(np.linspace(0, 1, len(bins_zt)-1))
     else:
         bins_ref = bins_coh
-        colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
+        # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
+        colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+        colormap = colormap(np.linspace(0, 1, len(bins_coh)))
     subjects = df_sim.subjid
     max_mt = 1200
     mat_trajs_subs = np.empty((len(bins_ref), max_mt,
@@ -652,7 +704,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         ax[1].fill_between(x=np.arange(len(mean_vel)),
                            y1=mean_vel - std_vel, y2=mean_vel + std_vel,
                            color=colormap[i_ev], alpha=0.1)
-    ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
+    # ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 335)
     ax[0].set_yticks([0, 25, 50, 75])
     ax[0].set_ylim(-10, 85)
@@ -664,7 +716,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color='k', ls='-', lw=0.5)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
-        ax[2].set_xlabel('Prior evidence towards response')
+        ax[2].set_xlabel('Prior evidence \ntowards response')
         ax[3].set_xlabel('Prior')
     if not prior:
         leg_title = 'Stimulus'
@@ -672,25 +724,31 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color='k', ls='-', lw=0.5)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
-        ax[2].set_xlabel('Stimulus evidence towards response')
+        ax[2].set_xlabel('Stimulus evidence \ntowards response')
         ax[3].set_xlabel('Stimulus')
     ax[2].set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax[0].legend(title=leg_title, labelspacing=0.15,
-                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5)
+                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5,
+                 frameon=False)
     handles, labels = ax[0].get_legend_handles_labels()
     ax[0].legend(handles[::-1], labels[::-1], title=leg_title, labelspacing=0.15,
-                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5)
-    ax[0].set_ylabel('Position')
+                 loc='center left', bbox_to_anchor=(0.7, 0.45), handlelength=1.5,
+                 frameon=False)
+    ax[0].set_ylabel('y position (cm)')
     ax[0].set_xlabel('Time from movement onset (ms)')
     # ax[0].set_title('Mean trajectory', fontsize=10)
     # ax[1].legend(title=leg_title)
-    ax[1].set_ylabel('Velocity')
+    ax[1].set_ylabel('y velocity (cm/s)')
     ax[1].set_xlabel('Time from movement onset (ms)')
     # ax[1].set_title('Mean velocity', fontsize=8)
     ax[2].set_ylabel('Movement time (ms)')
     ax[3].set_xticks([])
     ax[3].set_yticks([])
     ax[3].set_ylabel('Peak')
+    ticks = np.array([0, 25, 50, 75])
+    ax[0].set_yticks(ticks, np.round(ticks*0.07, 2))
+    ticks = np.array([0., 0.2, 0.4, 0.6])
+    ax[1].set_yticks(ticks, np.round(ticks*0.07, 2))
 
 
 
@@ -721,7 +779,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                              label='0')]
     ax[1].legend(handles=legendelements, fontsize=8, loc='center left',
                  bbox_to_anchor=(0.92, 1.2), title='Stimulus',
-                 handlelength=1.3)
+                 handlelength=1.3, frameon=False)
     ax[1].set_ylim(0.4, 1)
     # ax2 = fp.add_inset(ax=ax[13], inset_sz=inset_sz, fgsz=fgsz, marginx=marginx,
     #                    marginy=0.07, right=True)
@@ -732,9 +790,18 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                  'com_model_detected': com_model_detected})
     zt_model = df_sim.norm_allpriors.values
     # PCoM vs RT
-    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
+    ax2 = ax[-1].twinx()
+    ax2.spines['right'].set_color('red')
+    ax2.tick_params(axis='y', colors='red')
+    ax2.spines['top'].set_visible(False)
+    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax2)
+    ax2.yaxis.label.set_color('red')
+    ax2.set_ylim(0, 0.27)
+    ax[-1].set_ylim(-0.005, 0.14)
+    ax[-1].set_yticks([0, 0.04, 0.08, 0.12])
     # slowing in MT
     fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=50)
+    ax[3].set_yticks([200, 240, 280])
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
