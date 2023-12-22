@@ -263,7 +263,7 @@ def com_heatmap_paper_marginal_pcom_side(
     return mat
 
 
-def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
+def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat, fig=None):
     # plot tachometrics
     if humans:
         num = 8
@@ -307,10 +307,17 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat):
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     # plt.sca(ax_mat[1])
-    divider = make_axes_locatable(ax_mat[1])
-    cax = divider.append_axes('right', size='5%', pad=0.1)
-    cbar = plt.colorbar(im, fraction=0.04, cax=cax)
-    cbar.set_label('p (reversal)', rotation=270, labelpad=14)
+    if fig is not None:
+        margin = 0.05
+        pos = ax_mat[1].get_position()        
+        cbar_ax = fig.add_axes([pos.x0+pos.width*1.09, pos.y0+margin/6,
+                                pos.width/15, pos.height/1.5])
+        cbar = plt.colorbar(im, cax=cbar_ax)
+        cbar.set_label('p (reversal)', rotation=270, labelpad=14)    
+    # divider = make_axes_locatable(ax_mat[1])
+    # cax = divider.append_axes('right', size='5%', pad=0.1)
+    # cbar = plt.colorbar(im, fraction=0.04, cax=cax)
+    # cbar.set_label('p (reversal)', rotation=270, labelpad=14)
     # pright matrix
     if humans:
         coh = df_data['avtrapz'].values

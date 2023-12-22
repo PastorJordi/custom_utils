@@ -351,10 +351,10 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                                              trajs=trajs, times=times, subjects=subjects,
                                              ground_truth=ground_truth,
                                              interpolatespace=interpolatespace,
-                                             max_mt=max_mt)
+                                             max_mt=max_mt, n_rt_bins=5)
     # plot splitting time vs RT
     splitting_time_plot(sound_len=sound_len, out_data=out_data,
-                        ax=ax[-1], subjects=subjects)
+                        ax=ax[-1], subjects=subjects, n_rt_bins=5)
     rtbins = np.array((rtbins[0], rtbins[1], rtbins[2]))
     colormap = pl.cm.gist_gray_r(np.linspace(0.3, 1, 4))
     # plot splitting time examples
@@ -369,18 +369,18 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
                                               subjects=np.repeat(1, len(coh)),
                                               ground_truth=ground_truth,
                                               interpolatespace=interpolatespace,
-                                              max_mt=max_mt)
+                                              max_mt=max_mt, n_rt_bins=8)
     # plot splitting time vs RT
     splitting_time_plot(sound_len=sound_len, out_data=out_data,
                         ax=ax[-1], subjects=np.repeat(1, len(coh)),
-                        color='b')
+                        color='b', n_rt_bins=8)
     legendelements = [Line2D([0], [0], color='firebrick', lw=2,
-                             label='Across subj.'),
+                             label='Across subjects'),
                       Line2D([0], [0], color='b', lw=2,
-                             label='Meta-subj.')]
+                             label='Meta-subject')]
     ax[-1].legend(handles=legendelements, loc='upper left', borderpad=0.15,
                   labelspacing=0.15, handlelength=1.5,
-                  frameon=False)
+                  frameon=False, bbox_to_anchor=(0., 1.18))
 
 
 def plot_xy(df_data, ax):
@@ -419,8 +419,10 @@ def plot_xy(df_data, ax):
 
 
 def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick',
-                        plot_sng=True):
-    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
+                        plot_sng=True, n_rt_bins=5):
+    rtbins = np.concatenate(([0], np.quantile(sound_len,
+                                              [(i+1)/(n_rt_bins-1)
+                                               for i in range(n_rt_bins-1)])))
     xvals = []
     for irtb, rtb in enumerate(rtbins[:-1]):
         sound_len_bin = sound_len[(sound_len >= rtb) &
@@ -465,7 +467,7 @@ def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick',
     ax2.set_ylabel('Splitting time (ms)')
     fp.rm_top_right_lines(ax2)
     ax3 = ax2.twinx()
-    sns.kdeplot(sound_len, color='k', ax=ax3, bw_adjust=5, shade=True)
+    sns.kdeplot(sound_len, color='k', ax=ax3, bw_adjust=5, fill=True)
     ax3.set_ylim([0, 0.02])
     ax3.set_xlim([0, 300])
     ax3.set_ylabel('')
@@ -549,9 +551,11 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
 
 
 def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
-                          interpolatespace, max_mt):
+                          interpolatespace, max_mt, n_rt_bins=5):
     # splitting time computation
-    rtbins = np.concatenate(([0], np.quantile(sound_len, [.25, .50, .75, 1])))
+    rtbins = np.concatenate(([0], np.quantile(sound_len,
+                                              [(i+1)/(n_rt_bins-1)
+                                               for i in range(n_rt_bins-1)])))
     split_ind = []
     ev_vals = [0, 0.25, 0.5, 1]
     for subj in np.unique(subjects):
@@ -572,7 +576,7 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
                     f = interpolate.interp1d(time, vals, bounds_error=False)
                     vals_in = f(interpolatespace)
                     vals_in = vals_in[~np.isnan(vals_in)]
-                    vals_in -= vals_in[0]
+                    vals_in = vals_in - vals_in[0]
                     vals_in = np.concatenate((np.zeros((int(sound_len[index][tr]))),
                                               vals_in))
                     max_time = max(time)
@@ -596,8 +600,8 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
                                            max_MT=max_mt+300, pval=0.01)+5
             if ind < 410 and ind > rtbins[i]:
                 split_ind.append(ind)
-            elif ind < rtbins[i] + np.diff(rtbins)[0]/2:
-                split_ind.append(rtbins[i])
+            # elif ind < rtbins[i] + np.diff(rtbins)[0]/2:
+            #     split_ind.append(rtbins[i])
             else:
                 # ind = get_split_ind_corr(traj_mat, ev_mat, startfrom=0,
                 #                          max_MT=500, pval=0.001)
@@ -608,7 +612,7 @@ def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,
     return out_data, rtbins
 
 
-def acc_filt(df_data, acc_min=0.5, mt_min=300):
+def acc_filt(df_data, acc_min=0.5, mt_max=300):
     subjects = df_data.subjid.unique()
     subs = subjects[(df_data.groupby('subjid').mean('hithistory')['hithistory']
                      > acc_min)]
@@ -618,7 +622,7 @@ def acc_filt(df_data, acc_min=0.5, mt_min=300):
     df_data_mt['resp_len'] = mvmt_time
     subjects = df_data.subjid.unique()
     subs = subjects[(df_data_mt.groupby('subjid').median('resp_len')['resp_len']
-                     < mt_min)]
+                     < mt_max)]
     df_data = df_data.loc[df_data.subjid.isin(subs)]
     return df_data
 
@@ -652,7 +656,9 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     df_data['norm_allpriors'] = norm_allpriors
     # idx = (df_data.subjid != 5) & (df_data.subjid != 6)  # & (df_data.subjid != 12)
     # df_data = df_data.loc[idx]
-    df_data = acc_filt(df_data, acc_min=0.7, mt_min=400)
+    minimum_accuracy = 0.7  # 70%
+    max_median_mt = 400  # ms
+    df_data = acc_filt(df_data, acc_min=minimum_accuracy, mt_max=max_median_mt)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
     print(len(df_data.subjid.unique()))
     print(df_data.subjid.unique())
@@ -719,7 +725,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
                             pos_com_0.width, pos_com_0.height])
     fig_3.matrix_figure(df_data=df_data, ax_tach=ax_tach, ax_pright=ax_pright,
-                        ax_mat=ax_mat, humans=humans)
+                        ax_mat=ax_mat, humans=humans, fig=fig)
     ax_tach.set_xticks([0, 100, 200])
     pos_com_0 = ax_mat[0].get_position()
     pos_com_1 = ax_mat[1].get_position()
