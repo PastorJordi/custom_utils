@@ -115,7 +115,7 @@ def create_figure_5_model(fgsz):
     return fig, ax, ax[13], pos_ax_0
 
 
-def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2, eps=6):
+def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2, eps=0):
     subjid = df_plot_pcom.subjid
     subjects = np.unique(subjid)
     com_data = np.empty((len(subjects), len(BINS_RT)-1))
@@ -169,12 +169,12 @@ def plot_com_vs_rt_f5(df_plot_pcom, ax, ax2, eps=6):
     # ax2.set_xlabel('Reaction time (ms)')
 
 
-def supp_com_analysis(df_sim, sv_folder):
-    fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(9, 12))
+def supp_com_analysis(df_sim, sv_folder, pcom_rt):
+    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 9))
     plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
-                        hspace=0.4, wspace=0.35)
+                        hspace=0.4, wspace=0.45)
     ax = ax.flatten()
-    labs = ['a', '', 'b', '', 'c', '']
+    labs = ['a', 'b', '', '', 'c', '']
     for i_a, a in enumerate(ax):
         fp.rm_top_right_lines(a)
         if i_a == 5:
@@ -184,28 +184,40 @@ def supp_com_analysis(df_sim, sv_folder):
             a.text(-0.1, 1.2, labs[i_a], transform=a.transAxes, fontsize=16,
                    fontweight='bold', va='top', ha='right')
         
-    for ind in [1, 3]:
-        a = ax[ind]
-        pos_a = a.get_position()
-        a.set_position([pos_a.x0-pos_a.width/2.8,
-                        pos_a.y0, pos_a.width, pos_a.height])
-    pos_ax_4 = ax[4].get_position()
-    ax[4].axis('off')
-    pos_last_ax = ax[5].get_position()
-    ax[5].set_position([pos_ax_4.x0+pos_ax_4.width*0.1, pos_last_ax.y0-0.04,
-                         pos_last_ax.width*1.8, pos_last_ax.height*1.3])
-    supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[5],
-                           bins_rt=np.linspace(1, 301, 10))
-    ax[5].set_ylabel(r'$p(detection)$')
-    supp_prob_vs_prior(df_sim, ax=ax[0:2], fig=fig, column='CoM_sugg', com=False,
+    # for ind in [1, 3]:
+    #     a = ax[ind]
+    #     pos_a = a.get_position()
+    #     a.set_position([pos_a.x0-pos_a.width/2.8,
+    #                     pos_a.y0, pos_a.width, pos_a.height])
+    # pos_ax_4 = ax[4].get_position()
+    # ax[4].axis('off')
+    # pos_last_ax = ax[5].get_position()
+    # ax[5].set_position([pos_ax_4.x0+pos_ax_4.width*0.1, pos_last_ax.y0-0.04,
+    #                      pos_last_ax.width*1.8, pos_last_ax.height*1.3])
+    # supp_p_detection_vs_rt(df_sim=df_sim, ax=ax[5],
+    #                        bins_rt=np.linspace(1, 301, 10))
+    # ax[5].set_ylabel(r'$p(detection)$')
+    supp_prob_vs_prior(df_sim, ax=ax[0], fig=fig, column='CoM_sugg', com=False,
                        title_col=r'$p(CoM)$')
     # ax[0].set_ylabel(r'$p(CoM)$')
     # supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=False,
     #                    title_col=r'$\;\;\;\;p(reversal)$')
     # ax[1].set_ylabel(r'$p(reversal)$')
-    supp_prob_vs_prior(df_sim, ax=ax[2:4], fig=fig, column='com_detected', com=True,
+    supp_prob_vs_prior(df_sim, ax=ax[1], fig=fig, column='com_detected', com=True,
                        title_col=r'$\;\;\;\;\;\;\;\;\;\;\;\;\;\;p(detection)$')
     # ax[2].set_ylabel(r'$p(reversal \;| \; CoM)$')
+    pcom_img = plt.imread(pcom_rt)
+    ax[3].axis('off')
+    ax[2].text(0, 1., 'c', transform=ax[2].transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    pos_ax_2 = ax[2].get_position()
+    ax[2].set_position([pos_ax_2.x0-0.04, pos_ax_2.y0-0.1,
+                        pos_ax_2.width*3, pos_ax_2.height*1.4])
+    ax[2].imshow(pcom_img, aspect='equal')
+    ax[2].spines['bottom'].set_visible(False)
+    ax[2].spines['left'].set_visible(False)
+    ax[2].set_xticks([])
+    ax[2].set_yticks([])
     fig.savefig(sv_folder+'/supp_model_com.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/supp_model_com.png', dpi=400, bbox_inches='tight')
 
@@ -223,7 +235,7 @@ def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
     # ax2.spines['top'].set_visible(False)
     # ax2.yaxis.label.set_color('red')
     supp_p_com_vs_rt_silent(df_sim, ax=ax, bins_rt=BINS_RT, label='model',
-                            column='com_detected', color='r')
+                            column='CoM_sugg', color='r')
     # ax2.set_ylabel('p(reversal) - model - silent')
     # ax.set_ylabel('p(reversal) - data - silent')
     ax.set_ylabel('p(reversal) - silent')
@@ -242,8 +254,9 @@ def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
     com_data[:] = np.nan
     xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
     for i_s, subject in enumerate(subjects):
-        df_plot = df_sim.loc[(subjid == subject)]
-        # & (df_sim.norm_allpriors.abs() >= 0.5)]
+        df_plot = df_sim.loc[(subjid == subject) & df_sim.CoM_sugg &
+                             (df_sim.norm_allpriors.abs() >= 0.5)
+                             & (df_sim.coh2.abs() >= 0.5)]
         mean_pcom_mod_det = []
         for i_rt, rt in enumerate(bins_rt[:-1]):
             df_filt = df_plot.loc[(df_plot.sound_len >= rt) &
@@ -304,25 +317,26 @@ def supp_prob_vs_prior(df_sim, ax, title_col, fig, column='com_detected', com=Fa
     matrix_side_0 = np.nanmean(mat_side_0_all, axis=2)
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     # L-> R
-    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to left reversal'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to right reversal'   # r'$p(CoM_{L \rightarrow R})$'
-    ax_mat[0].set_title(pcomlabel_0, fontsize=11.5)
-    ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
+    # vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+    # pcomlabel_1 = 'Right to left reversal'  # r'$p(CoM_{L \rightarrow R})$'
+    # pcomlabel_0 = 'Left to right reversal'   # r'$p(CoM_{L \rightarrow R})$'
+    # ax_mat[0].set_title(pcomlabel_0, fontsize=11.5)
+    im = ax_mat.imshow(0.5*(matrix_side_1+np.flip(matrix_side_0)),
+                       vmin=0, cmap='magma')
     # plt.sca(ax_mat[0])
     # plt.colorbar(im, fraction=0.04)
     # plt.sca(ax_mat[1])
-    ax_mat[1].set_title(pcomlabel_1, fontsize=11.5)
-    im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
-    ax_mat[1].yaxis.set_ticks_position('none')
-    for ax_i in [ax_mat[0], ax_mat[1]]:
+    # ax_mat[1].set_title(pcomlabel_1, fontsize=11.5)
+    # im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
+    # ax_mat[1].yaxis.set_ticks_position('none')
+    for ax_i in [ax_mat]:
         ax_i.set_xlabel('Prior evidence')
         ax_i.set_xticks([0, 3, 6], [VAR_L, '0', VAR_R])
-    ax_mat[0].set_yticks([0, 3, 6], [VAR_R, '0', VAR_L])
-    ax_mat[1].set_yticks([0, 3, 6], ['']*3)
-    ax_mat[0].set_ylabel('Stimulus evidence')
-    pos = ax_mat[1].get_position()
-    cbar_ax = fig.add_axes([pos.x0+pos.width*1.2, pos.y0+margin/6,
+    ax_mat.set_yticks([0, 3, 6], [VAR_R, '0', VAR_L])
+    # ax_mat[1].set_yticks([0, 3, 6], ['']*3)
+    ax_mat.set_ylabel('Stimulus evidence')
+    pos = ax_mat.get_position()
+    cbar_ax = fig.add_axes([pos.x0+pos.width*1.09, pos.y0+margin/6,
                             pos.width/15, pos.height/1.5])
     cbar = plt.colorbar(im, cax=cbar_ax)
     cbar.ax.set_title(title_col)
@@ -533,8 +547,9 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
-                        ax=None, median=True, prior=True, prior_lim=1, rt_lim=200):
-    # TODO: save each matrix? or save the mean and std
+                        ax=None, median=True, prior=True, prior_lim=1, rt_lim=200,
+                        extra_label=''):
+    ax[2].axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     df_sim = df_sim[df_sim.sound_len >= 0]
     if median:
         func_final = np.nanmedian
@@ -545,22 +560,24 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     df_sim['choice_x_coh'] = (df_sim.R_response*2-1) * df_sim.coh2
     df_sim['choice_x_prior'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
-    bins_zt = [1.01]
-    # TODO: fix issue with equipopulated bins
-    for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
-        if i_p < 3:
-            bins_zt.append(df_sim.norm_allpriors.abs().quantile(perc))
-        else:
-            bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
-    bins_zt.append(-1.01)
-    bins_zt = bins_zt[::-1]
+    # bins_zt = [1.01]
+    # # TODO: fix issue with equipopulated bins
+    # for i_p, perc in enumerate([0.75, 0.5, 0.25, 0.25, 0.5, 0.75]):
+    #     if i_p < 3:
+    #         bins_zt.append(df_sim.norm_allpriors.abs().quantile(perc))
+    #     else:
+    #         bins_zt.append(-df_sim.norm_allpriors.abs().quantile(perc))
+    # bins_zt.append(-1.01)
+    # bins_zt = bins_zt[::-1]
     if prior:
         condition = 'choice_x_prior'
         bins_zt, _, _, _, _ =\
               fp.get_bin_info(df=df_sim, condition=condition, prior_limit=1,
                               after_correct_only=True)
-    # xvals_zt = [-1, -0.5, 0, 0.5, 1]
-    xvals_zt = np.linspace(-1, 1, 5)
+        xvals_zt = (bins_zt[:-1] + bins_zt[1:]) / 2
+    else:
+        xvals_zt = [-1, -0.5, 0, 0.5, 1]
+    # np.linspace(-1, 1, 5)
     signed_response = df_sim.R_response.values
     # df_sim['normallpriors'] = df_sim['allpriors'] /\
     #     np.nanmax(df_sim['allpriors'].abs())*(signed_response*2 - 1)
@@ -588,11 +605,11 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if prior:
         val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
-        label_save = 'prior'
+        label_save = 'prior'+extra_label
     else:
         val_traj_subs = np.empty((len(bins_ref), len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref), len(subjects.unique())))
-        label_save = 'stim'
+        label_save = 'stim'+extra_label
     for i_s, subject in enumerate(subjects.unique()):
         traj_data = data_folder+subject+'/sim_data/'+subject +\
             '_traj_sim_pos_'+label_save+'.npz'
@@ -710,12 +727,17 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     ax[0].set_ylim(-10, 85)
     ax[1].set_ylim(-0.08, 0.68)
     ax[1].set_xlim(-5, 335)
+    ax[2].set_xlim(-1.2, 1.2)
     if prior:
         leg_title = 'Prior'
         ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
                    color='k', ls='-', lw=0.5)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
+        ax[2].text(-0.4, 290, r'$\longleftarrow $', fontsize=10)
+        ax[2].text(-0.92, 292.3, r'$\it{incongruent}$', fontsize=7.5)
+        ax[2].text(0.09, 290, r'$\longrightarrow $', fontsize=10)
+        ax[2].text(0.09, 292.3, r'$\it{congruent}$', fontsize=7.5)
         ax[2].set_xlabel('Prior evidence \ntowards response')
         ax[3].set_xlabel('Prior')
     if not prior:
@@ -724,6 +746,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color='k', ls='-', lw=0.5)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
+        ax[2].text(-0.4, 310, r'$\longleftarrow $', fontsize=10)
+        ax[2].text(-0.92, 315, r'$\it{incongruent}$', fontsize=7.5)
+        ax[2].text(0.09, 310, r'$\longrightarrow $', fontsize=10)
+        ax[2].text(0.09, 315, r'$\it{congruent}$', fontsize=7.5)
         ax[2].set_xlabel('Stimulus evidence \ntowards response')
         ax[3].set_xlabel('Stimulus')
     ax[2].set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
@@ -797,10 +823,11 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax2)
     ax2.yaxis.label.set_color('red')
     ax2.set_ylim(0, 0.27)
-    ax[-1].set_ylim(-0.005, 0.14)
-    ax[-1].set_yticks([0, 0.04, 0.08, 0.12])
+    ax[-1].set_ylim(-0.005, 0.102)
+    ax[-1].set_yticks([0, 0.04, 0.08])
     # slowing in MT
-    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=50)
+    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=50,
+                          sim=True)
     ax[3].set_yticks([200, 240, 280])
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
