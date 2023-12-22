@@ -1177,7 +1177,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
                                    subjid, human=False, num_tr=None, load_params=True,
                                    simulate=True, change_param=False, param_iter=None,
-                                   params_to_explore=[]):
+                                   params_to_explore=[], extra_label=''):
     hit_model = np.empty((0))
     reaction_time = np.empty((0))
     detected_com = np.empty((0))
@@ -1195,7 +1195,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             if change_param:
                 sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation_' + str(param_iter) + '.pkl'
             else:
-                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation.pkl'
+                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation' + extra_label + '.pkl'
         if human:
             if change_param:
                 sim_data = DATA_FOLDER + '/Human/' + str(subject) + '/sim_data/' + str(subject) + '_simulation_' + str(param_iter) + '.pkl'
