@@ -283,7 +283,7 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
         return w_coh, w_t_i, w_zt
 
 
-def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
+def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     if not human:
         subjects = df.loc[df.special_trial == 2, 'subjid'].unique()
@@ -327,8 +327,12 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False):
     ax.text(-0.85, 300, r'$\it{incongruent}$', fontsize=8)
     ax.text(0.07, 293, r'$\longrightarrow $', fontsize=10)
     ax.text(0.07, 300, r'$\it{congruent}$', fontsize=8)
-    ax.set_ylim(218, 302)
     ax.set_xlim(-1.1, 1.1)
+    if not sim:
+        ax.set_ylim(218, 302)
+    else:
+        ax.set_ylim(195, 307)
+
 
 
 def mt_matrix_ev_vs_zt(df, ax, f, silent_comparison=False, rt_bin=None,
@@ -529,15 +533,15 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     ax_task = ax[0]
     pos_task = ax_task.get_position()
     factor = 2.3
-    ax_task.set_position([pos_task.x0, pos_task.y0-0.08,
+    ax_task.set_position([pos_task.x0, pos_task.y0-0.04,
                           pos_task.width*factor, pos_task.height*factor])
-    fp.add_text(ax=ax_task, letter='a', x=0.1, y=1.12)
+    fp.add_text(ax=ax_task, letter='a', x=-0.05, y=.95)
     # rep-alt img
     ax_repalt = ax[2]
     pos_repalt = ax_repalt.get_position()
     factor = 1.3
-    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/1.8,
-                            pos_repalt.y0+0.02,
+    ax_repalt.set_position([pos_repalt.x0-pos_repalt.width/1.5,
+                            pos_repalt.y0+0.035,
                             pos_repalt.width*factor, pos_repalt.height*factor])
     # rt panel
     ax_rts = ax[4]

@@ -47,6 +47,7 @@ if pc_name == 'alex':
     DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
     RAT_noCOM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/screenShot230120.png'
     TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/panel_a.png'
+    PCOM_RT_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/pcom_rt.png'
     HUMAN_TASK_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/Human/panel_a.png'
     REPALT_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/repalt.png'
     ST_CARTOON_IMG =\
@@ -129,7 +130,7 @@ f3 = False
 f4 = False
 f5 = True
 f6 = False
-f7 = True
+f7 = False
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -152,8 +153,6 @@ if f1 or f2 or f3 or f5:
     if f7:
         # index to filter by stim/silent for p(com) vs p(proac) supp figure
         idx = df.special_trial.values >= 0
-        # & (df.coh2.abs() != 0)).values
-        # & (df.coh2.abs() != 0.25)
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     df['allpriors'] = zt
     hit = np.array(df['hithistory'])
@@ -190,9 +189,8 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df,
-                            task_img=TASK_IMG, sv_folder=SV_FOLDER,
-                            repalt_img=REPALT_IMG)
+    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+                           repalt_img=REPALT_IMG)
     # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
@@ -219,7 +217,7 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = int(200000 - len(df))  # 0
+    n_sil = 0  # int(400000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -238,10 +236,12 @@ if f5:
     if stim.shape[0] != 20:
         stim = stim.T
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
-    stim[:, int(num_tr):] = 0  # for silent simulation
+    # stim[:, int(num_tr):] = 0  # for silent simulation
     if f7:
-        fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
-                                   subjid, sv_folder=SV_FOLDER, idx=idx)
+        # fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
+        #                            subjid, sv_folder=SV_FOLDER, idx=idx)
+        fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
+                               subjid, sv_folder=SV_FOLDER, idx=idx)
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
@@ -302,18 +302,18 @@ if f5:
         #                          rtbins=np.linspace(0, 150, 25), connect_points=False,
         #                          trajectory="trajectory_y", p_val=0.05)
     
-        # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER)
-        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-                                     sv_folder=SV_FOLDER)
+        fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
+        # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+        #                              sv_folder=SV_FOLDER)
         # actual plot
-        # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-        #                   new_data=simulate, save_new_data=save_new_data,
-        #                   coh=coh, sound_len=sound_len, zt=zt,
-        #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-        #                   decision_model=resp_fin, com=com, com_model=com_model,
-        #                   com_model_detected=com_model_detected,
-        #                   means=means, errors=errors, means_model=means_model,
-        #                   errors_model=errors_model, df_sim=df_sim)
+        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                          new_data=simulate, save_new_data=save_new_data,
+                          coh=coh, sound_len=sound_len, zt=zt,
+                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                          decision_model=resp_fin, com=com, com_model=com_model,
+                          com_model_detected=com_model_detected,
+                          means=means, errors=errors, means_model=means_model,
+                          errors_model=errors_model, df_sim=df_sim)
 if f6:
     print('Plotting Figure 6')
     # human traj plots
