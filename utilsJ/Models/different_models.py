@@ -246,9 +246,9 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
             # growing indefinitely
             MT = p_MT_slope*trial_index[i_t] + p_MT_intercept +\
                 p_mt_noise*np.random.gumbel()
-            first_resp_len = float(MT-0*np.abs(first_ev[i_t]))
-            # first_resp_len: evidence influence on MT. The larger the ev,
-            # the smaller the motor time
+            first_resp_len = float(MT-0*np.abs(first_ev[i_t]))  # 
+            # first_resp_len: evidence influence on MT. Since we don't have
+            # 1st read-out, the impact is null (0)
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = edd2.compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                        resp_len=first_resp_len)
@@ -275,7 +275,8 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
                 # second_response_len: motor time update influenced by difference
                 # between the evidence at second readout and the signed p_com_bound
                 com_bound_signed = (-sign_)*p_com_bound
-                difference = (updt_ev - 0)*sign_
+                difference = (updt_ev)*sign_
+                # the different in this case does not consider first_ev
                 # offset = 120
                 second_response_len =\
                     float(remaining_m_time -  # offset*com[i_t] -
@@ -490,6 +491,7 @@ def trial_ev_vectorized_without_2nd_readout(zt, stim, coh, trial_index, p_MT_slo
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
         indx_com = ()
+        # no coms
         indx_update_ch = indx_final_ch if len(indx_com) == 0\
             else indx_com[0] + hit_dec
         # get final decision
@@ -509,7 +511,7 @@ def trial_ev_vectorized_without_2nd_readout(zt, stim, coh, trial_index, p_MT_slo
         # start_traj = time.time()
         # Trajectories
         # print('Starting with trajectories')
-        RLresp = resp_first
+        RLresp = resp_first  # so that the second read-out does not affect choice
         prechoice = resp_first
         jerk_lock_ms = 0
         # initial positions, speed and acc; final position, speed and acc
@@ -563,6 +565,7 @@ def trial_ev_vectorized_without_2nd_readout(zt, stim, coh, trial_index, p_MT_slo
                 second_response_len =\
                     float(remaining_m_time -  # offset*com[i_t] -
                           0*(difference))
+                # impact of 2nd evidence in MT is null (0)
                 # SECOND readout
                 traj_fin = edd2.compute_traj(jerk_lock_ms, mu=mu_update,
                                              resp_len=second_response_len)
