@@ -26,6 +26,7 @@ from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_5 as fig_5
 from utilsJ.paperfigs import fig_5_humans as fig_5h
 from utilsJ.paperfigs import figure_6 as fig_6
+from utilsJ.paperfigs import figure_7 as fig_7
 from utilsJ.paperfigs import figures_paper as fp
 # reload(fig_5)
 
@@ -130,7 +131,7 @@ f3 = False
 f4 = False
 f5 = True
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -217,7 +218,7 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = 0  # int(400000 - len(df))  # 0
+    n_sil = 0 # int(100000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -240,14 +241,18 @@ if f5:
     if f7:
         # fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
         #                            subjid, sv_folder=SV_FOLDER, idx=idx)
-        fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
-                               subjid, sv_folder=SV_FOLDER, idx=idx)
+        # fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
+        #                        subjid, sv_folder=SV_FOLDER, idx=idx)
+        fig_7.plot_mt_ER_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                          special_trial,
+                                          data_folder=DATA_FOLDER, extra_labels=['_2_ro', '_1_ro',''])
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                               trial_index=trial_index, num_tr=num_tr,
-                                              subject_list=subjects, subjid=subjid, simulate=simulate)
+                                              subject_list=subjects, subjid=subjid, simulate=simulate,
+                                              extra_label='')
         
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
@@ -302,7 +307,7 @@ if f5:
         #                          rtbins=np.linspace(0, 150, 25), connect_points=False,
         #                          trajectory="trajectory_y", p_val=0.05)
     
-        fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
+        # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
         # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
         #                              sv_folder=SV_FOLDER)
         # actual plot
