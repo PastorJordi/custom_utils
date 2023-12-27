@@ -451,16 +451,17 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             new_data=new_data, data_folder=data_folder,
                             save_new_data=save_new_data,
-                            median=True, prior=True, rt_lim=300)
+                            median=True, prior=True, rt_lim=300, extra_label='')
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
                             save_new_data=save_new_data,
-                            data_folder=data_folder, median=True, prior=True)
+                            data_folder=data_folder, median=True, prior=True, extra_label='')
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         save_new_data=save_new_data,
                         new_data=new_data, data_folder=data_folder,
-                        prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.2))
+                        prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1),
+                        rt_lim=50, extra_label='')
 
 
 def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
@@ -862,7 +863,7 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
                                threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y",
-                               p_val=0.05)
+                               p_val=0.05, extra_label='')
     ax[7].set_ylim(0, 205)
     # plot mean com traj
     
