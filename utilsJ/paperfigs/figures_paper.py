@@ -29,6 +29,7 @@ sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 
 # from utilsJ.Models import simul
 from utilsJ.Models import extended_ddm_v2 as edd2
+from utilsJ.Models import different_models as model_variations
 from utilsJ.Behavior.plotting import binned_curve, tachometric
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 from utilsJ.paperfigs import figure_1 as fig_1
@@ -327,9 +328,9 @@ def plot_pcom_taff_teff(stim, zt, coh, gt, trial_index, subjects,
     # colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(params_to_explore_eff[1])))
     subject = str(np.unique(subjid))
     if com:
-        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_pcom_matrix_params_rt_under_teff.npy'
+        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_pcom_matrix_params_rt_under_20_v2.npy'
     else:
-        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_prev_matrix_params_rt_under_teff.npy'
+        sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_prev_matrix_params_rt_under_20_v2.npy'
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(sim_data), exist_ok=True)
     if os.path.exists(sim_data):
@@ -360,9 +361,11 @@ def plot_pcom_taff_teff(stim, zt, coh, gt, trial_index, subjects,
                                         'subjid': subjid})
                 df_sim = df_sim.loc[ind_stim]
                 if com:
-                    pcom_mean = np.nanmean(com_model[reaction_time <= (eff_value)])
+                    pcom_mean = np.nanmean(com_model[(reaction_time <= (20)) &
+                                                     (reaction_time >= (0))])
                 if not com:
-                    pcom_mean = np.nanmean(com_model_detected[reaction_time <= (eff_value)])
+                    pcom_mean = np.nanmean(com_model_detected[reaction_time <= (20) &
+                                                              (reaction_time >= (0))])
                 mat_pcom[ind_aff, ind_eff] = pcom_mean
         np.save(sim_data, mat_pcom)
     im = ax.imshow(np.flipud(mat_pcom), cmap='magma')
@@ -373,8 +376,26 @@ def plot_pcom_taff_teff(stim, zt, coh, gt, trial_index, subjects,
         cbar.ax.set_title('p(reversal)')
     ax.set_xticks(np.arange(7), np.arange(7)*5)
     ax.set_yticks(np.arange(7)[::-1], np.arange(7)*5)
-    ax.set_xlabel(r'$t_{aff}$ (ms)')
-    ax.set_ylabel(r'$t_{eff}$ (ms)')
+    ax.set_ylabel(r'$t_{aff}$ (ms)')
+    ax.set_xlabel(r'$t_{eff}$ (ms)')
+
+
+def plot_p_rev_vs_taff_teff(subject='LE42'):
+    sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_prev_matrix_params_rt_under_20_v2.npy'
+    mat_pcom = np.load(sim_data)
+    fig, ax = plt.subplots(1)
+    rm_top_right_lines(ax)
+    colormap = pl.cm.BrBG(np.linspace(0.1, 1,7))
+    for j in range(7):
+        ax.plot(5*np.arange(7), mat_pcom[j], color=colormap[j], label=j*5)
+        ax.plot(30-5*j, mat_pcom[j][6-j], color='k', marker='o', markersize=6)
+        # if j > 0:
+        #     ax.plot(35-5*j, mat_pcom[j][7-j], color='r', marker='o', markersize=6)
+        # if j > 1:
+        #     ax.plot(40-5*j, mat_pcom[j][8-j], color='b', marker='o', markersize=6)
+    ax.set_xlabel(r'$t_{aff}$')
+    ax.legend(title=r'$t_{eff}$ (ms)', frameon=False)
+    ax.set_ylabel('p(reversal)')
 
 
 # function to add letters to panel
@@ -619,7 +640,14 @@ def real_minst_vs_bound(df, sv_folder, data_folder, param=3,
 
 
 def run_model(stim, zt, coh, gt, trial_index, human=False,
-              subject=None, num_tr=None, load_params=True, params_to_explore=[]):
+              subject=None, num_tr=None, load_params=True, params_to_explore=[],
+              extra_label=''):
+    if extra_label == '':
+        model = edd2.trial_ev_vectorized
+    if extra_label == '_1_ro':  # only with 1st readout
+        model = model_variations.trial_ev_vectorized_without_2nd_readout
+    if extra_label == '_2_ro':  # only with 2nd readout
+        model = model_variations.trial_ev_vectorized_without_1st_readout
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
@@ -697,22 +725,22 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
         pro_vs_re, matrix, total_traj, init_trajs, final_trajs,\
         frst_traj_motor_time, x_val_at_updt, xpos_plot, median_pcom,\
         rt_vals, rt_bins, tr_index =\
-        edd2.trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
-                                 trial_index=trial_index,
-                                 p_MT_slope=p_MT_slope,
-                                 p_MT_intercept=p_MT_intercept,
-                                 p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                 p_e_bound=p_e_bound, p_com_bound=p_com_bound,
-                                 p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                 num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
-                                 p_w_a_slope=p_w_a_slope,
-                                 p_a_bound=p_a_bound,
-                                 p_1st_readout=p_1st_readout,
-                                 p_2nd_readout=p_2nd_readout, p_leak=p_leak,
-                                 p_mt_noise=p_mt_noise,
-                                 compute_trajectories=compute_trajectories,
-                                 stim_res=stim_res, all_trajs=all_trajs,
-                                 human=human)
+        model(zt=zt, stim=stim_temp, coh=coh,
+              trial_index=trial_index,
+              p_MT_slope=p_MT_slope,
+              p_MT_intercept=p_MT_intercept,
+              p_w_zt=p_w_zt, p_w_stim=p_w_stim,
+              p_e_bound=p_e_bound, p_com_bound=p_com_bound,
+              p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
+              num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+              p_w_a_slope=p_w_a_slope,
+              p_a_bound=p_a_bound,
+              p_1st_readout=p_1st_readout,
+              p_2nd_readout=p_2nd_readout, p_leak=p_leak,
+              p_mt_noise=p_mt_noise,
+              compute_trajectories=compute_trajectories,
+              stim_res=stim_res, all_trajs=all_trajs,
+              human=human)
     hit_model = resp_fin == gt
     reaction_time = (first_ind[tr_index]-int(300/stim_res) + p_t_eff)*stim_res
     detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
@@ -1221,7 +1249,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
                 run_model(stim=stim[:, index], zt=zt[index], coh=coh[index],
                           gt=gt[index], trial_index=trial_index[index],
                           subject=subject, load_params=load_params, human=human,
-                          params_to_explore=params_to_explore)
+                          params_to_explore=params_to_explore, extra_label=extra_label)
             data_simulation = {'hit_model_tmp': hit_model_tmp, 'reaction_time_tmp': reaction_time_tmp,
                                'detected_com_tmp': detected_com_tmp, 'resp_fin_tmp': resp_fin_tmp,
                                'com_model_tmp': com_model_tmp, 'pro_vs_re_tmp': pro_vs_re_tmp,
