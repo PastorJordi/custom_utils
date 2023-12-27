@@ -795,7 +795,7 @@ def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
 def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300,
                          sim=False,
                          rtbins=np.linspace(0, 150, 16), connect_points=False,
-                         trajectory="trajectory_y", p_val=0.05):
+                         trajectory="trajectory_y", p_val=0.05, extra_label=''):
 
     # split time/subject by coherence
     if sim:
@@ -809,7 +809,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
         if not sim:
             split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_005.npz'
         if sim:
-            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005_forward.npz'
+            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005_forward'+extra_label+'.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):
