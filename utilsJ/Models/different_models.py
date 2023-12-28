@@ -329,14 +329,14 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
             rt_vals, rt_bins, None
 
 
-def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
-                                            p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
-                                            p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
-                                            p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
-                                            num_tr, stim_res, human=False,
-                                            compute_trajectories=False, num_trials_per_session=600,
-                                            all_trajs=True, num_computed_traj=int(3e4),
-                                            fixation_ms=300, compute_mat_and_pcom=False):
+def trial_ev_vectorized_without_1st_readout_random_1st_choice(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
+                p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
+                p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
+                p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
+                num_tr, stim_res, human=False,
+                compute_trajectories=False, num_trials_per_session=600,
+                all_trajs=True, num_computed_traj=int(3e4),
+                fixation_ms=300, compute_mat_and_pcom=False):
     """
     Generate stim and time integration and trajectories
 
@@ -474,6 +474,7 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
         first_ev.append(E[hit_dec, i_t])
         # first categorical response
         resp_first[i_t] *= (-1)**(E[hit_dec, i_t] < 0)
+        resp_first[i_t] = np.random.choice([-1, 1])
         # CoM bound with sign depending on first response
         com_bound_signed = (-resp_first[i_t])*p_com_bound
         # second response
@@ -490,10 +491,12 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
         indx_com =\
             np.where(np.sign(E[hit_dec, i_t]) != np.sign(post_dec_integration))[0]
         # get CoM effective index
+        indx_com = ()
         indx_update_ch = indx_final_ch if len(indx_com) == 0\
             else indx_com[0] + hit_dec
         # get final decision
         resp_fin[i_t] = resp_first[i_t] if len(indx_com) == 0 else -resp_first[i_t]
+        resp_fin[i_t] = np.sign(post_dec_integration)
         second_ind.append(indx_update_ch)
         second_ev.append(E[indx_update_ch, i_t])
     com = resp_first != resp_fin
@@ -558,7 +561,7 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
                 # second_response_len: motor time update influenced by difference
                 # between the evidence at second readout and the signed p_com_bound
                 com_bound_signed = (-sign_)*p_com_bound
-                difference = (updt_ev-first_ev[i_t])*sign_
+                difference = np.abs(updt_ev)
                 # the different in this case does not consider first_ev
                 # offset = 120
                 second_response_len =\
