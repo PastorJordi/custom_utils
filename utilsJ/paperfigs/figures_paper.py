@@ -1742,11 +1742,54 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
                            0.1*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
                            markersize=2)
-            ax[i].set_xlabel(labels[i] + str(' ms'))
             ax[i].set_xlabel(labels[i])
         ax[i].set_yticks([])
         ax[i].spines['left'].set_visible(False)
     ax[-1].axis('off')
+
+
+
+def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER):
+    fig, ax = plt.subplots(4, 4)
+    plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
+                        hspace=0.5, wspace=0.4)
+    ax = ax.flatten()
+    for a in ax:
+        rm_top_right_lines(a)
+    labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
+              r'EA bound, $\theta_{DV}$',
+              r'CoM bound, $\theta_{COM}$',
+              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
+              r'AI time offset, $t_{AI}$',
+              r'AI drift offset, $v_{AI}$',
+              r'AI drift slope, $w_{AI}$',
+              r'AI bound, $\theta_{AI}$',
+              r'DV weight 1st readout, $\beta_{DV}$',
+              r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
+              # r'MT noise variance, $\sigma_{MT}$',
+              r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    conf_mat_rec = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
+        conf_mat[:, i_s] = np.delete(conf, -3)
+        conf_mat_rec[:, i_s] = np.delete(conf_rec, -3)
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            ax[i].plot(conf_mat[i, :]*5, conf_mat_rec[i, :]*5,
+                       marker='o', color='k', linestyle='')
+            ax[i].set_xlabel(labels[i] + str(' (ms)'))
+            ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT')
+            ax[i].plot([0, 5*max(conf_mat[i, :])*1.1],
+                       [0, 5*max(conf_mat[i, :])*1.1])
+        else:
+            ax[i].plot(conf_mat[i, :], conf_mat_rec[i, :],
+                       marker='o', color='k', linestyle='')
+            ax[i].set_xlabel(labels[i])
+            ax[i].set_ylabel(labels[i] + ' PRT')
+            ax[i].plot([0, max(conf_mat[i, :])*1.1],
+                       [0, max(conf_mat[i, :])*1.1])
 
 
 def mt_vs_ti_data_comparison(df, df_sim):

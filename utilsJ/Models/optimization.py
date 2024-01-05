@@ -40,6 +40,7 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
 from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
+from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 
 DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
@@ -1251,6 +1252,22 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
         return mnle_samples
     # at this point, we should re-simulate the model with all trials
     # and compare distros
+
+
+def parameter_recovery_test_data_frames(df, subjects):
+    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+        _, trajs, x_val_at_updt =\
+        fp.run_simulation_different_subjs(stim=None, zt=None, coh=None, gt=None,
+                                          trial_index=None, num_tr=len(df),
+                                          subject_list=subjects, subjid=None,
+                                          simulate=False,
+                                          extra_label='')
+    
+    MT = [len(t) for t in trajs]
+    df['sound_len'] = reaction_time
+    df['resp_len'] = np.array(MT)*1e-3
+    df['R_response'] = (resp_fin+1)/2
+    return df
 
 
 def matrix_probs_v0(x, bins_rt=np.arange(200, 600, 13),
@@ -2604,7 +2621,8 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE43']  # to run only once and train
-            training = True
+            training = False
+            param_recovery_test = True
             for i_s, subject in enumerate(subjects):
                 if i_s > 0:
                     training = False
@@ -2613,6 +2631,8 @@ if __name__ == '__main__':
                                          sv_folder=SV_FOLDER, after_correct=True,
                                          silent=True, all_trials=True,
                                          srfail=True)
+                if param_recovery_test:
+                    df = parameter_recovery_test_data_frames(df=df, subjects=[subject])
                 df = df.loc[df.special_trial == 0]
                 # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
                 #                         num_simulations=len(df),
@@ -2652,7 +2672,8 @@ if __name__ == '__main__':
                     print('p_mt_noise: '+str(parameters[13]))
                     print('p_MT_intercept: '+str(parameters[14]))
                     print('p_MT_slope: '+str(parameters[15]))
-                    np.save(SV_FOLDER + 'parameters_MNLE_BADS' +
+                    extra_label = 'prt' if param_recovery_test else ''
+                    np.save(SV_FOLDER + 'parameters_MNLE_BADS' + extra_label +
                             subject + '.npy', parameters)
                 except Exception:
                     continue
