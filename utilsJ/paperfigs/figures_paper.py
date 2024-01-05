@@ -204,13 +204,13 @@ def binning_mt_prior(df, bins):
 
 
 def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
-                 fpsmin=29, num_bins_prior=5):
+                 fpsmin=29, num_bins_prior=5, rtmin=0):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
     # common condition 
     # put together all common conditions: prior, reaction time and framerate
     common_cond = ac_cond & (df.norm_allpriors.abs() <= prior_limit) &\
-        (df.sound_len < rt_lim) & (df.framerate >= fpsmin)
+        (df.sound_len < rt_lim) & (df.framerate >= fpsmin) & (df.sound_len >= rtmin)
     # define bins, bin type, trajectory index and colormap depending on condition
     if condition == 'choice_x_coh':
         bins = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
@@ -644,10 +644,17 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
               extra_label=''):
     if extra_label == '':
         model = edd2.trial_ev_vectorized
-    if extra_label == '_1_ro':  # only with 1st readout
-        model = model_variations.trial_ev_vectorized_without_2nd_readout
-    if extra_label == '_2_ro':  # only with 2nd readout
-        model = model_variations.trial_ev_vectorized_without_1st_readout
+    if 'neg' in extra_label:
+        model = model_variations.trial_ev_vectorized_neg_starting_point
+    if type(extra_label) is not int:
+        if '_1_ro' in extra_label:  # only with 1st readout
+            model = model_variations.trial_ev_vectorized_without_2nd_readout
+        if '_2_ro' in extra_label and 'rand' not in extra_label:  # only with 2nd readout
+            model = model_variations.trial_ev_vectorized_without_1st_readout
+        if '_2_ro' in extra_label and 'rand' in extra_label:
+            model = model_variations.trial_ev_vectorized_without_1st_readout_random_1st_choice
+    if type(extra_label) is int:
+        model = edd2.trial_ev_vectorized
     # dt = 5e-3
     if num_tr is not None:
         num_tr = num_tr
@@ -1223,7 +1230,7 @@ def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
             if change_param:
                 sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation_' + str(param_iter) + '.pkl'
             else:
-                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation' + extra_label + '.pkl'
+                sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_simulation' + str(extra_label) + '.pkl'
         if human:
             if change_param:
                 sim_data = DATA_FOLDER + '/Human/' + str(subject) + '/sim_data/' + str(subject) + '_simulation_' + str(param_iter) + '.pkl'
