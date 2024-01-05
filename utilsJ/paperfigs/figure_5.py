@@ -13,7 +13,7 @@ from scipy.stats import pearsonr
 from matplotlib.lines import Line2D
 from scipy.stats import sem
 import sys
-import matplotlib
+import matplotlib as mtp
 
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 # sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
@@ -24,9 +24,11 @@ from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply,\
     binned_curve, com_heatmap
+from utilsJ.paperfigs import figure_7 as fig_7
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_1 as fig_1
+
 
 # ---GLOBAL VARIABLES
 VAR_INC = fig_1.VAR_INC
@@ -41,7 +43,7 @@ xpos_RT = int(np.diff(BINS_RT)[0])
 
 
 def create_figure_5_model(fgsz):
-    matplotlib.rcParams['font.size'] = 13
+    mtp.rcParams['font.size'] = 13
     plt.rcParams['legend.title_fontsize'] = 10.5
     plt.rcParams['xtick.labelsize'] = 10.5
     plt.rcParams['ytick.labelsize'] = 10.5
@@ -593,7 +595,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     else:
         bins_ref = bins_coh
         # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(bins_coh)))
-        colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+        colormap = mtp.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
         colormap = colormap(np.linspace(0, 1, len(bins_coh)))
     subjects = df_sim.subjid
     max_mt = 1200
@@ -747,10 +749,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                    color='k', ls='-', lw=0.5)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
-        ax[2].text(-0.4, 310, r'$\longleftarrow $', fontsize=10)
-        ax[2].text(-0.92, 315, r'$\it{incongruent}$', fontsize=7.5)
-        ax[2].text(0.09, 310, r'$\longrightarrow $', fontsize=10)
-        ax[2].text(0.09, 315, r'$\it{congruent}$', fontsize=7.5)
+        ax[2].text(-0.4, 302, r'$\longleftarrow $', fontsize=10)
+        ax[2].text(-0.92, 306, r'$\it{incongruent}$', fontsize=7.5)
+        ax[2].text(0.09, 302, r'$\longrightarrow $', fontsize=10)
+        ax[2].text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
         ax[2].set_xlabel('Stimulus evidence \ntowards response')
         ax[3].set_xlabel('Stimulus')
     ax[2].set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
@@ -792,9 +794,9 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     com_model = com_model[sound_len_model >= 0]
     subjid = df_sim.subjid.values
     # Tachometrics
-    _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
-                            sound_len=sound_len_model[sound_len_model >= 0],
-                            subjid=subjid, ax=ax[1], label='', legend=False)
+    # _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
+    #                         sound_len=sound_len_model[sound_len_model >= 0],
+    #                         subjid=subjid, ax=ax[1], label='', legend=False)
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
                              label='1'),
@@ -896,3 +898,191 @@ def supp_model_trial_index(df_sim):
     fig_1.plot_mt_weights_rt_bins(df=df_sim, ax=ax[3])
     fig_1.mt_weights(df=df_sim, ax=ax[1], plot=True, t_index_w=True,
                      means_errs=False)
+
+
+def shortpad2(row, upto=1000, align='sound', pad_value=np.nan,
+              pad_pre=0):
+    """pads nans to trajectories so it can be stacked in a matrix
+    align can be either 'movement' (0 is movement onset), or 'sound'
+    """
+    if align == 'movement':
+        missing = upto - row.traj.size
+        return np.pad(row.traj, ((0, missing)), "constant",
+                    constant_values=pad_value)
+    elif align == 'sound':
+        missing_pre = int(row.sound_len)
+        missing_after = upto - missing_pre - row.traj.size
+        return np.pad(row.traj, ((missing_pre, missing_after)), "constant",
+                    constant_values=(pad_pre, pad_value))
+
+
+def plot_corr_coeff_prior_simul(df, subjects, subjid, stim, zt, coh, gt, trial_index,
+                                special_trial, data_folder, extra_labels=['']):
+    fig, ax = plt.subplots(ncols=len(extra_labels)//2, nrows=len(extra_labels)//2,
+                           figsize=(11, 9))
+    ax = ax.flatten()
+    plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.85,
+                        hspace=0.4, wspace=0.45)
+    titles = ['data', 'w/o 1st r.o.', 'w/o 2nd r.o.', '2 r.o.']  # '2 r.o. neg_start', 
+    for i_a, a in enumerate(ax):
+        fp.rm_top_right_lines(a)
+        if i_a > 0:
+            df_sim = fig_7.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                        special_trial, extra_label=extra_labels[i_a])
+            correlation_coefficient_prior_simul(df_sim, fig, ax=a, data_folder=data_folder,
+                                                rtbins=np.linspace(1, 151, 31),
+                                                trajectory="traj_d1",
+                                                extra_lab=extra_labels[i_a], max_MT=300)
+        else:
+            corr_rt_time_prior_data(df, fig, ax[i_a], data_folder=data_folder,
+                                    rtbins=np.linspace(0, 150, 16, dtype=int),
+                                    trajectory='traj_d1', threshold=300, max_MT=400)
+        a.set_title(titles[i_a])
+
+
+def correlation_coefficient_prior_simul(df_sim, fig, ax, data_folder,
+                                        rtbins=np.linspace(0, 150, 16),
+                                        trajectory="trajectory_y", extra_lab='',
+                                        max_MT=400):
+    df_sim['traj'] = df_sim[trajectory]
+    cmap = mtp.colors.LinearSegmentedColormap.from_list("", ["chocolate", "white", "olivedrab"])
+    out_data = np.empty((max_MT, len(rtbins)-1, 1))
+    out_data[:] = np.nan
+    df_1 = df_sim.copy()
+    # .loc[df_sim.special_trial == 2]
+    zt = df_1.norm_allpriors.values
+    shortpad_kws = dict(upto=1400, align='sound')
+    split_data = data_folder + 'prior_matrix_velocity_simul_silent_300_5ms_' + extra_lab + '.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(split_data), exist_ok=True)
+    if os.path.exists(split_data):
+        out_data = np.load(split_data, allow_pickle=True)
+    else:
+        for i_s, subject in enumerate(df_1.subjid.unique()):
+            for i in range(rtbins.size-1):
+                dat = df_1.loc[(df_1.subjid == subject) &
+                            (df_1.sound_len < rtbins[i + 1]) &
+                            (df_1.sound_len >= rtbins[i]) &
+                            (~np.isnan(zt))]
+                ztl = zt[(df_1.subjid == subject) &
+                        (df_1.sound_len < rtbins[i + 1]) &
+                        (df_1.sound_len >= rtbins[i]) &
+                        (~np.isnan(zt))]
+                mat = np.vstack(
+                    dat.apply(lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+                ztl = ztl[~np.isnan(mat).all(axis=1)]
+                mat = mat[~np.isnan(mat).all(axis=1)]
+                current_split_index =\
+                    fig_2.get_corr_coef(mat, ztl, max_MT=max_MT, startfrom=0)
+                out_data[:, i, i_s] = current_split_index
+        np.save(split_data, out_data) 
+    r_coef_mean = np.nanmean(out_data, axis=2)
+    # timevals = np.arange(400)[::-1]
+    # xvalsrt = rtbins[:-1] + np.diff(rtbins)[0]
+    # rtgrid, timegrid = np.meshgrid(xvalsrt, timevals)
+    # ax.plot_surface(rtgrid, timegrid, r_coef_mean)
+    # ax.set_xlabel('RT (ms)')
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    # ax.set_zlabel('Corr. coef.')
+    # fig, ax = plt.subplots(1)
+    # ax.set_title('Prior-position \ncorrelation', fontsize=12)
+    ax.plot([0, 30], [max_MT, max_MT-140], color='k', linewidth=2)
+    ax.set_xlim(0, 30)
+    im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
+                   vmin=-1, vmax=1)
+    ax.set_xlabel('Reaction time (ms)')
+    ax.set_ylim(300, 0)
+    ax.set_yticks([])
+    # ax.set_yticks([0, 100, 200, 300], ['', '', '', ''])
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    pos = ax.get_position()
+    rtbins = rtbins-1
+    ax.set_xticks([0, 10, 20, 30], [rtbins[0], rtbins[10], rtbins[20], rtbins[30]])
+    # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width*1.05,
+                                   pos.y0 + pos.height/10,
+                                   pos.width/20, pos.height/1.3])
+    cbar = plt.colorbar(im, cax=pright_cbar_ax)
+    cbar.ax.set_title('Corr.\ncoef.')
+
+
+def corr_rt_time_prior_data(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, dtype=int),
+                            trajectory='traj_d1', threshold=300, max_MT=400):
+    # TODO: do analysis with equipopulated bins
+    # split time/subject by prior
+    cmap = mtp.colors.LinearSegmentedColormap.from_list("", ["chocolate", "white", "olivedrab"])
+    kw = {"trajectory": trajectory, "align": "sound"}
+    out_data = np.empty((max_MT, len(rtbins)-1, 15))
+    out_data[:] = np.nan
+    df_1 = df.loc[~df.traj_d1.isna()].copy()
+    df_1['traj_d1'] = [t[:,1] for t in df_1.traj_d1.values]
+    zt = df_1.norm_allpriors.values
+    split_data = data_folder + 'prior_velocity_matrix_LE42.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(split_data), exist_ok=True)
+    if os.path.exists(split_data):
+        out_data = np.load(split_data, allow_pickle=True)
+    else:
+        for i_s, subject in enumerate(df_1.subjid.unique()):
+            for i in range(rtbins.size-1):
+                dat = df_1.loc[(df_1.subjid == subject) &
+                            (df_1.sound_len < rtbins[i + 1]) &
+                            (df_1.sound_len >= rtbins[i]) &
+                            (~np.isnan(zt))]
+                ztl = zt[(df_1.subjid == subject) &
+                        (df_1.sound_len < rtbins[i + 1]) &
+                        (df_1.sound_len >= rtbins[i]) &
+                        (~np.isnan(zt))]
+                mat = np.vstack(
+                    dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
+                # mat = np.diff(mat)
+                ztl = ztl[~np.isnan(mat).all(axis=1)]
+                mat = mat[~np.isnan(mat).all(axis=1)]
+                current_split_index =\
+                    fig_2.get_corr_coef(mat, ztl, pval=0.01, max_MT=max_MT,
+                                        startfrom=700)
+                out_data[:, i, i_s] = current_split_index
+        np.save(split_data, out_data) 
+    # fig = plt.figure()
+    # ax = plt.axes(projection='3d')
+    r_coef_mean = np.nanmean(out_data, axis=2)
+    # timevals = np.arange(400)[::-1]
+    # xvalsrt = rtbins[:-1] + np.diff(rtbins)[0]
+    # rtgrid, timegrid = np.meshgrid(xvalsrt, timevals)
+    # ax.plot_surface(rtgrid, timegrid, r_coef_mean)
+    # ax.set_xlabel('RT (ms)')
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    # ax.set_zlabel('Corr. coef.')
+    # fig, ax = plt.subplots(1)
+    ax.plot([0, 14], [max_MT, max_MT-140], color='k', linewidth=2)
+    ax.set_xlim(0, 14)
+    im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
+                   vmin=-0.5, vmax=0.5)
+    ax.set_xlabel('Reaction time (ms)')
+    ax.set_ylim(400, 95)
+    ax.set_yticks([])
+    # ax.set_ylabel('Time from stimulus onset (ms)')
+    pos = ax.get_position()
+    ax.set_xticks([0, 5, 10, 15], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
+    # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
+    pright_cbar_ax = fig.add_axes([pos.x0+pos.width*1.05,
+                                   pos.y0 + pos.height/10,
+                                   pos.width/20, pos.height/1.3])
+    cbar = plt.colorbar(im, cax=pright_cbar_ax)
+    cbar.ax.set_title('Corr.\ncoef.')
+    ax.set_title('Prior-position \ncorrelation', fontsize=12)
+    # ax.plot([0, 14], [0, 150], color='k', linewidth=2)
+    # im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
+    #                vmin=-0.6, vmax=0.6, extent=[0, 14, 0, 304])
+    # ax.set_xlabel('Reaction time (ms)')
+    # ax.set_ylim(0, 304)
+    # ax.set_yticks([])
+    # # ax.set_ylabel('Time from stimulus onset (ms)')ç
+    # pos = ax.get_position()
+    # ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
+    # # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
+    # pright_cbar_ax = fig.add_axes([pos.x0+pos.width,
+    #                                pos.y0 + pos.height/10,
+    #                                pos.width/20, pos.height/1.3])
+    # cbar = plt.colorbar(im, cax=pright_cbar_ax)
+    # cbar.ax.set_title('Corr.\ncoef.')
