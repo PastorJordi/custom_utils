@@ -338,8 +338,7 @@ def get_split_ind_corr(mat, evl, pval=0.01, max_MT=400, startfrom=700, sim=True)
 
 
 def get_corr_coef(mat, evl, pval=0.05, max_MT=400, startfrom=700, sim=True):
-    # Returns index at which the trajectories and coh vector become uncorrelated
-    # backwards in time
+    # Returns correlation coefficient 
     # mat: trajectories (n trials x time)
     rlist = []
     for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
