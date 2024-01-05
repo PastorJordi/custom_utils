@@ -65,7 +65,7 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
 
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
-                        rt_lim=50, after_correct_only=True):
+                        rt_lim=50, after_correct_only=True, rtmin=0, alpha=1):
     subjects = df['subjid'].unique()
     ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
@@ -76,7 +76,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
     bins, _, indx_trajs, _, colormap =\
           fp.get_bin_info(df=df, condition=condition, prior_limit=prior_limit,
                           after_correct_only=after_correct_only,
-                            rt_lim=rt_lim)
+                          rt_lim=rt_lim, rtmin=rtmin)
     df = df.loc[indx_trajs]
     df.resp_len *= 1e3
     if condition == 'choice_x_coh':
@@ -123,11 +123,12 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         else:
             mean_mt = np.mean(mt_time[:, i_tr])
             ax.errorbar(bin,mean_mt, yerr=mt_time_err[i_tr],
-                            color=c, marker='o')
+                            color=c, marker='o', alpha=alpha)
 
         ax.set_ylabel('Movement time (ms)')
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
-    ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5)
+    ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5,
+            alpha=alpha)
 
 
 def linear_fun(x, a, b, c, d):
