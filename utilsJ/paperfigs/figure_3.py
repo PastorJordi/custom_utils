@@ -152,9 +152,9 @@ def plot_coms_single_session(df, ax):
         time = sess.time_trajs.values[index][itr]
         if coms[index][itr] and decision[index][itr] == 0:
             ax.plot(time, traj, color=COLOR_COM)
-            deflection = np.where(traj == np.max(traj))[0]
-            ax.plot(time[deflection], traj[deflection], marker='o',
-                    color='k')
+            # deflection = np.where(traj == np.max(traj))[0]
+            # ax.plot(time[deflection], traj[deflection], marker='o',
+            #         color='k')
     ax.set_xlim(-100, 650)
     ax.set_ylabel(r'$y$' + ' position ' + ' (cm)')
     ax.set_xlabel('Time from movement onset (ms)')
