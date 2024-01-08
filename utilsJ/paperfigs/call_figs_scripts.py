@@ -131,7 +131,7 @@ f3 = False
 f4 = False
 f5 = True
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -250,16 +250,17 @@ if f5:
         #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
         #                                                     '_1_ro_'+str(len(coh)),
         #                                                     len(coh)])
-        # fig_7.fig_7(df, subjects, subjid, stim, zt, coh, gt, trial_index,
-        #             special_trial,
-        #             data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
-        #             extra_labels=['_1_ro_'+str(len(coh)),
-        #                           len(coh)])
-        fig_7.plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                     special_trial, data_folder=DATA_FOLDER,
-                                     extra_labels=['_2_ro_rand_'+str(len(coh)),
-                                                   '_1_ro_'+str(len(coh)),
-                                                   str(len(coh))])
+        fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
+                    special_trial,
+                    data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
+                    extra_labels=['_1_ro_'+str(1282733),
+                                  '',
+                                  '_2_ro_rand_'+str(1282733)])
+        # fig_7.plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
+        #                              special_trial, data_folder=DATA_FOLDER,
+        #                              extra_labels=['_2_ro_rand_'+str(len(coh)),
+        #                                            '_1_ro_'+str(len(coh)),
+        #                                            str(len(coh))])
         # fig_5.plot_corr_coeff_prior_simul(df, subjects, subjid, stim, zt, coh, gt, trial_index,
         #                                   special_trial, data_folder=DATA_FOLDER,
         #                                   extra_labels=['data',
