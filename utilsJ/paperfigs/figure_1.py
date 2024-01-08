@@ -65,7 +65,8 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
 
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
-                        rt_lim=50, after_correct_only=True, rtmin=0, alpha=1):
+                        rt_lim=50, after_correct_only=True, rtmin=0, alpha=1,
+                        write_arrows=True):
     subjects = df['subjid'].unique()
     ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
@@ -90,10 +91,11 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # ax.text(200, -1,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
-        ax.text(-0.45, 294.5, r'$\longleftarrow $', fontsize=10)
-        ax.text(-1.05, 300, r'$\it{incongruent}$', fontsize=7.5)
-        ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
-        ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
+        if write_arrows:
+            ax.text(-0.45, 294.5, r'$\longleftarrow $', fontsize=10)
+            ax.text(-1.05, 300, r'$\it{incongruent}$', fontsize=7.5)
+            ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
+            ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(238, 303)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
@@ -102,10 +104,11 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
         # ax.text(200, -1,
         #     r'$\it{Confronts \; response} \;\; \leftarrow \;\;\; \rightarrow \;\; \it{Supports \; response}$',
         #     fontsize=8, transform=ax.transAxes)
-        ax.text(-0.45, 299, r'$\longleftarrow $', fontsize=10)
-        ax.text(-1.05, 306, r'$\it{incongruent}$', fontsize=7.5)
-        ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
-        ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
+        if write_arrows:
+            ax.text(-0.45, 299, r'$\longleftarrow $', fontsize=10)
+            ax.text(-1.05, 306, r'$\it{incongruent}$', fontsize=7.5)
+            ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
+            ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(219, 312)
         # \;\;\; \rightarrow \;\; \it{Supports \; response}
     ax.set_xlim(-1.2, 1.2)
