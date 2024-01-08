@@ -16,6 +16,7 @@ from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
 from matplotlib.colors import LogNorm
 from skimage import exposure
+from scipy.stats import pearsonr
 import scipy
 # from scipy import interpolate
 # import shutil
@@ -1748,14 +1749,15 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     ax[-1].axis('off')
 
 
-
-def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER):
-    fig, ax = plt.subplots(4, 4)
-    plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
-                        hspace=0.5, wspace=0.4)
+def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER, corr=True):
+    fig, ax = plt.subplots(4, 4, figsize=(14, 12))
+    plt.subplots_adjust(top=0.92, bottom=0.05, left=0.06, right=0.94,
+                        hspace=0.6, wspace=0.5)
     ax = ax.flatten()
     for a in ax:
         rm_top_right_lines(a)
+        pos = a.get_position()
+        a.set_position([pos.x0, pos.y0, pos.height, pos.height])
     labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
               r'EA bound, $\theta_{DV}$',
               r'CoM bound, $\theta_{COM}$',
@@ -1766,30 +1768,109 @@ def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER):
               r'AI bound, $\theta_{AI}$',
               r'DV weight 1st readout, $\beta_{DV}$',
               r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
-              # r'MT noise variance, $\sigma_{MT}$',
+              r'MT noise variance, $\sigma_{MT}$',
               r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
     conf_mat = np.empty((len(labels), len(subjects)))
     conf_mat_rec = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
-        conf_mat[:, i_s] = np.delete(conf, -3)
-        conf_mat_rec[:, i_s] = np.delete(conf_rec, -3)
+        conf_mat[:, i_s] = conf
+        conf_mat_rec[:, i_s] = conf_rec
+    mlist = []
+    rlist = []
     for i in range(len(labels)):
+        max_val = max(conf_mat_rec[i, :])
+        max_val_rec = max(conf_mat[i, :])
+        max_total = max(max_val, max_val_rec)
+        # min_val = min(conf_mat_rec[i, :])
+        # min_val_rec = min(conf_mat[i, :])
+        min_total = 0
         if i == 4 or i == 5 or i == 6:
             ax[i].plot(conf_mat[i, :]*5, conf_mat_rec[i, :]*5,
                        marker='o', color='k', linestyle='')
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
             ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT')
-            ax[i].plot([0, 5*max(conf_mat[i, :])*1.1],
-                       [0, 5*max(conf_mat[i, :])*1.1])
+            ax[i].plot([5*min_total*0.4,
+                        5*max_total*1.6],
+                       [5*min_total*0.4,
+                        5*max_total*1.6])
+            ax[i].set_xlim(5*min_total*0.4, 5*max_total*1.6)
+            ax[i].set_ylim(5*min_total*0.4, 5*max_total*1.6)
+            out = linregress(conf_mat[i, :]*5, 5*conf_mat_rec[i, :])
         else:
             ax[i].plot(conf_mat[i, :], conf_mat_rec[i, :],
                        marker='o', color='k', linestyle='')
             ax[i].set_xlabel(labels[i])
             ax[i].set_ylabel(labels[i] + ' PRT')
-            ax[i].plot([0, max(conf_mat[i, :])*1.1],
-                       [0, max(conf_mat[i, :])*1.1])
+            ax[i].plot([min_total*0.4, max_total*1.6],
+                       [min_total*0.4, max_total*1.6])
+            ax[i].set_xlim(min_total*0.4, max_total*1.6)
+            ax[i].set_ylim(min_total*0.4, max_total*1.6)
+            out = linregress(conf_mat[i, :], conf_mat_rec[i, :])
+        r = out.rvalue
+        m = out.slope
+        if i != 13:
+            mlist.append(m)
+            rlist.append(r)
+        p2 = out.pvalue
+        if corr:
+            ax[i].set_title(r'$\rho=$' + str(round(r, 3)) + ', p-value = ' + str(round(p2, 3)),
+                            pad=10)
+        else:
+            ax[i].set_title('m=' + str(round(m, 3)) + ', p-value = ' + str(round(p2, 3)),
+                            pad=10)
+        xtcks = ax[i].get_yticks()
+        if i == 8:
+            ax[i].set_xticks(xtcks[:-1], [f'{x:.0e}' for x in xtcks[:-1]])
+            ax[i].set_yticks(xtcks[:-1], [f'{x:.0e}' for x in xtcks[:-1]])
+        else:
+            ax[i].set_xticks(xtcks[:-1])    
+        #     ax[i].ticklabel_format(style='sci', axis='both',
+        #                            scilimits=(5, 1))
+    plt.figure()
+    plt.plot(mlist, rlist)
+    print(np.median(mlist))
+    print(np.mean(mlist))
+    plt.figure()
+    sns.violinplot(mlist, inner='point')
+
+
+def plot_param_recovery_test_boxplot_difference(subjects, sv_folder=SV_FOLDER):
+    fig, ax = plt.subplots(1)
+    plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
+                        hspace=0.5, wspace=0.4)
+    rm_top_right_lines(ax)
+    labels = [r'$\Delta z_P$', r'$\Delta a_P$',
+              r'$\Delta \theta_{DV}$',
+              r'$\Delta  \theta_{COM}$',
+              r'$\Delta t_{aff}$', r'$\Delta t_{eff}$',
+              r'$\Delta t_{AI}$',
+              r'$\Delta v_{AI}$',
+              r'$\Delta w_{AI}$',
+              r'$\Delta \theta_{AI}$',
+              r'$\Delta \beta_{DV}$',
+              r'$\Delta \beta_u$', r'$\Delta \lambda$',
+              r'$\Delta \sigma_{MT}$',
+              r'$\Delta \beta_0$', r'$\Delta \beta_{TI}$']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    conf_mat_rec = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
+        conf_mat[:, i_s] = conf
+        conf_mat_rec[:, i_s] = conf_rec
+    df = pd.DataFrame()
+    for i in range(len(labels)):
+        if i == 4 or i == 5 or i == 6:
+            conf_mat[i, :] *= 5
+            conf_mat_rec[i, :] *= 5
+        diffs = conf_mat_rec[i, :] - conf_mat[i, :]
+        df[labels[i]] = diffs / np.mean(conf_mat[i, :]) * 100
+    ax.axvline(x=0, color='r')
+    sns.boxplot(df, ax=ax, orient='horizontal')
+    ax.set_yticks(np.arange(len(labels)), labels)
+    ax.set_xlabel('Relative difference (%)')
 
 
 def mt_vs_ti_data_comparison(df, df_sim):
