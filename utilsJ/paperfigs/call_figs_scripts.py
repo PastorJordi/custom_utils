@@ -41,7 +41,7 @@ matplotlib.rcParams['font.family'] = 'Arial'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/alexg/Onedrive/Escritorio/CRM/figures/image_com.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -140,7 +140,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE37', 'LE46']
-    # subjects = ['LE42']  # for params analysis
+    subjects = ['LE42']  # for params analysis
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -210,7 +210,7 @@ if f3:
 
 # fig 5 (model)
 if f5:
-    simulate = True
+    simulate = False
     with_fb = False
     save_new_data = False
     silent_sim = False
@@ -250,12 +250,15 @@ if f5:
         #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
         #                                                     '_1_ro_'+str(len(coh)),
         #                                                     len(coh)])
-        fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
-                    special_trial,
-                    data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
-                    extra_labels=['_1_ro_'+str(1282733),
-                                  '',
-                                  '_2_ro_rand_'+str(1282733)])
+        # fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
+        #             special_trial,
+        #             data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
+        #             extra_labels=['_1_ro_'+str(1282733),
+        #                           '',
+        #                           '_2_ro_rand_'+str(1282733)])
+        fp.simulate_random_rat(n_samples=50, sv_folder=SV_FOLDER,
+                               stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
+                               num_tr=num_tr)
         # fig_7.plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
         #                              special_trial, data_folder=DATA_FOLDER,
         #                              extra_labels=['_2_ro_rand_'+str(len(coh)),

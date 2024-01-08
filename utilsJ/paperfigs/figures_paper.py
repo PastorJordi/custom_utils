@@ -52,7 +52,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -645,15 +645,17 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
               extra_label=''):
     if extra_label == '':
         model = edd2.trial_ev_vectorized
-    if 'neg' in extra_label:
-        model = model_variations.trial_ev_vectorized_neg_starting_point
     if type(extra_label) is not int:
+        if 'neg' in extra_label:
+            model = model_variations.trial_ev_vectorized_neg_starting_point
         if '_1_ro' in extra_label:  # only with 1st readout
             model = model_variations.trial_ev_vectorized_without_2nd_readout
         if '_2_ro' in extra_label and 'rand' not in extra_label:  # only with 2nd readout
             model = model_variations.trial_ev_vectorized_without_1st_readout
         if '_2_ro' in extra_label and 'rand' in extra_label:
             model = model_variations.trial_ev_vectorized_without_1st_readout_random_1st_choice
+        if 'virt' in extra_label:
+            model = edd2.trial_ev_vectorized
     if type(extra_label) is int:
         model = edd2.trial_ev_vectorized
     # dt = 5e-3
@@ -692,7 +694,11 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             conf = np.load(SV_FOLDER +
                            'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
         else:
-            conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+            if 'virt' not in extra_label:
+                conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+            if 'virt' in extra_label:
+                conf = np.load(SV_FOLDER + 'virt_params/' + 'parameters_MNLE_BADS_prt_n50_' +
+                               str(extra_label) + '.npy')
         jitters = len(conf)*[0]
         # check if there are params to explore
         if len(params_to_explore) != 0:
@@ -2598,3 +2604,45 @@ def plot_params_all_subs_humans(subjects, sv_folder=SV_FOLDER, diff_col=True):
                            markersize=1.2)
             ax[i].set_xlabel(labels[i] + str(' ms'))
             ax[i].set_xlabel(labels[i])
+
+
+def simulate_random_rat(n_samples, sv_folder, stim, zt, coh, gt, trial_index, num_tr):
+    subjid = np.array(['Virtual_rat_random_params' for _ in range(len(coh))])
+    subjects = ['Virtual_rat_random_params']
+    for n in range(n_samples):
+        extra_label = 'virt_sim_' + str(n)
+        parameter_string = sv_folder + 'virt_params/' + 'parameters_MNLE_BADS_prt_n50_' +\
+            extra_label + '.npy'
+        os.makedirs(os.path.dirname(parameter_string), exist_ok=True)
+        if os.path.exists(parameter_string):
+            pars = np.load(parameter_string)
+            simulate = False
+        else:
+            pars = np.array([np.random.uniform(1e-2, .5),
+                             np.random.uniform(1e-2, .15),
+                             np.random.uniform(1e-1, 4),
+                             np.random.uniform(1e-6, .3),
+                             np.random.uniform(3, 6),
+                             np.random.uniform(3, 6),
+                             np.random.uniform(5, 16),
+                             np.random.uniform(0.015, 0.06),
+                             np.random.uniform(1e-6, 2e-5),
+                             np.random.uniform(1.5, 3),
+                             np.random.uniform(50, 200),
+                             np.random.uniform(200, 400),
+                             np.random.uniform(0.05, 0.15),
+                             np.random.uniform(18, 22),
+                             np.random.uniform(200, 300),
+                             np.random.uniform(0.05, 0.2)])
+            np.save(sv_folder + 'virt_params/' + 'parameters_MNLE_BADS_prt_n50_' +
+                    extra_label + '.npy',
+                    pars)
+            simulate = True
+        _, _, _, _, _,\
+            _, _, _ =\
+            run_simulation_different_subjs(
+                stim=stim, zt=zt, coh=coh, gt=gt,
+                trial_index=trial_index, num_tr=num_tr, human=False,
+                subject_list=subjects, subjid=subjid, simulate=simulate,
+                load_params=True, extra_label=extra_label)
+    return
