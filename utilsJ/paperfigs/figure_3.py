@@ -167,8 +167,9 @@ def plot_coms_single_session(df, ax):
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
-    ticks = np.array([-75, -50, -25, 0, 25, 50, 75])
-    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07
+    ticks = np.array([-5, -2.5, 0, 2.5, 5])/conv_factor
+    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
 
 
 def tracking_image(ax, rat_com_img, margin=.01):
@@ -455,8 +456,9 @@ def mean_com_traj_aligned_deflection(
     # ax.text(-150, 45, 'deflection', fontsize=9.5)
     ax.set_xlim(-100, 200)
     ax.text(80, -12, "Detection\nthreshold", color='r')
-    ticks = np.array([-20, 0, 20, 40])
-    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07
+    ticks = np.array([-1.5, 0, 1.5, 3])/conv_factor
+    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
 
 
 def mean_com_vel(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
@@ -664,8 +666,9 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     # ax.plot([time_def, time_def], [def_val, def_val-12], color='k', linewidth=1)
     ax.arrow(time_def, def_val, 0, -9, head_width=20, color='k', head_length=10)
     # ax.text(20, -20, "Detection threshold", color='r')
-    ticks = np.array([-25, 0, 25, 50, 75])
-    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07
+    ticks = np.array([-5, -2.5, 0, 2.5, 5])/conv_factor
+    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
 
 
 def com_heatmap_marginal_pcom_side_mat(

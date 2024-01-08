@@ -116,8 +116,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[0].set_xlabel('Time from movement onset (ms)')
     ax[0].set_ylim([-10, 85])
     # ax[0].axhline(78, color='gray', linestyle=':')
-    ticks = np.array([0, 25, 50, 75])
     conv_factor = 0.07
+    ticks = np.array([0, 2.5, 5])/conv_factor
     labs = np.round(ticks*conv_factor, 2)
     ax[0].set_yticks(ticks, labs)
     # VELOCITIES
@@ -176,8 +176,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[2].axhline(0, c='gray')
     ax[2].set_ylabel('y-velocity (cm/s)')
     ax[2].set_xlabel('Time from movement onset (ms)')
-    ticks = np.arange(0, 0.6, 0.1)
     conv_factor = 0.07
+    ticks = np.arange(0, 0.8, 0.2)
     labs = np.round(ticks*conv_factor, 2)
     ax[2].set_yticks(ticks, labs)
     ax[1].set_xticks([])
@@ -677,8 +677,8 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=8, loc='lower right',
                   labelspacing=0.1, frameon=False, bbox_to_anchor=(1.1, 0.2))
-    ticks = np.array([0, 2, 4])
     conv_factor = 0.07
+    ticks = np.array([0, 0.1, 0.2]) / conv_factor
     labs = np.round(ticks*conv_factor, 2)
     ax.set_yticks(ticks, labs)
     # if xlab:

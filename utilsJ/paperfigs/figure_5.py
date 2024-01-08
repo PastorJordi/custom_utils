@@ -389,7 +389,7 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
     # ax[7].set_title('Pright Model')
 
 
-def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
+def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
                              margin=.03):
     pos_ax_0 = ax_mat[1].get_position()
     ax_mat[1].set_position([pos_ax_0.x0-pos_ax_0.width/3, pos_ax_0.y0, pos_ax_0.width,
@@ -545,8 +545,9 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     ax.set_ylim(-25, 80)
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(200, -19, "Detection threshold", color='r')
-    ticks = np.array([-25, 0, 25, 50, 75])
-    ax.set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07
+    ticks = np.array([-2.5, 0, 2.5, 5])/conv_factor
+    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
@@ -774,8 +775,9 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     ax[3].set_xticks([])
     ax[3].set_yticks([])
     ax[3].set_ylabel('Peak')
-    ticks = np.array([0, 25, 50, 75])
-    ax[0].set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07
+    ticks = np.array([0, 2.5, 5])/conv_factor
+    ax[0].set_yticks(ticks, np.round(ticks*conv_factor, 2))
     ticks = np.array([0., 0.2, 0.4, 0.6])
     ax[1].set_yticks(ticks, np.round(ticks*0.07, 2))
 
