@@ -1229,7 +1229,7 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
         n_trials = len(data)
         # define fun_target as function to optimize
         # returns -LLH( data | parameters )
-        fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
+        fun_target = lambda x: fun_theta(x, data, estimator, n_trials)  # f(theta | data, MNLE)
         # define optimizer (BADS)
         bads = BADS(fun_target, x0, lb, ub, plb, pub
                     )
