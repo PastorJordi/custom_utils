@@ -13,7 +13,7 @@ import seaborn as sns
 # from imp import reload
 import sys
 import matplotlib.pylab as pl
-
+from matplotlib.text import Text
 
 sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
@@ -153,47 +153,76 @@ def plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
         a.set_ylim(185, 315)
 
 
-def plot_mt_vs_stim_cong_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                          special_trial, data_folder, ax,
-                                          extra_labels=['_2_ro', '_1_ro',''], alpha_list=[1, 0.3]):
+def plot_mt_vs_stim_cong_and_prev_mats_different_models(subjects, subjid, stim,
+                                                        zt, coh, gt, trial_index,
+                                                        special_trial,
+                                                        data_folder, ax, fig,
+                                                        extra_labels=['_2_ro',
+                                                                      '_1_ro',''],
+                                                        alpha_list=[1, 0.3]):
     for i_l, lab in enumerate(extra_labels):
-        alpha = alpha_list[i_l]
         df_data = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                                special_trial, extra_label=lab)
-        df_mt = df_data.copy()
-        fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[i_l], prior_limit=0.1,  # 10% quantile
-                                  condition='choice_x_coh', rt_lim=50, alpha=alpha)
-        del df_mt
+        if i_l < 2:
+            alpha = alpha_list[i_l]
+            df_mt = df_data.copy()
+            fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[0], prior_limit=0.1,  # 10% quantile
+                                      condition='choice_x_coh', rt_lim=50, alpha=alpha,
+                                      write_arrows=False)
+            del df_mt
+        if i_l == 2:
+            df_data['CoM_sugg'] = df_data.com_detected
+            fig_5.plot_pcom_matrices_model(df_model=df_data,
+                                           n_subjs=len(df_data.subjid.unique()),
+                                           ax_mat=[ax[1], ax[2]],
+                                           pos_ax_0=[], nbins=7,
+                                           f=fig)
+        del df_data
 
 
-def fig_7(df, subjects, subjid, stim, zt, coh, gt, trial_index,
+def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
           special_trial, data_folder, sv_folder,
           extra_labels=['_2_ro', '_1_ro','']):
-    fig, ax = plt.subplots(ncols=1, figsize=(4, 3.5))
+    fig, ax = plt.subplots(ncols=3, figsize=(10, 3))
     plt.subplots_adjust(top=0.91, bottom=0.12, left=0.09, right=0.95,
                         hspace=0.4, wspace=0.45)
-    # ax = ax.flatten()
-    labs = ['a', 'b']
-    for i_ax, a in enumerate([ax]):
+    ax = ax.flatten()
+    labs = ['a', 'b', '']
+    for i_ax, a in enumerate(ax):
         fp.rm_top_right_lines(a)
         a.text(-0.11, 1.12, labs[i_ax], transform=a.transAxes, fontsize=16,
                fontweight='bold', va='top', ha='right')
-    plot_mt_vs_stim_cong_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                          special_trial, data_folder, [ax, ax],
-                                          extra_labels=extra_labels)
-    df_mt = df.copy()
-    fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax, prior_limit=0.1,  # 10% quantile
-                              condition='choice_x_coh', rt_lim=50)
-    del df_mt
-    for a in [ax]:
-        a.set_ylim(240, 285)
-        a.text(-0.3, 282, r'$\longleftarrow $', fontsize=10)
-        a.text(-0.75, 284.5, r'$\it{incongruent}$', fontsize=8)
-        a.text(0.07, 282, r'$\longrightarrow $', fontsize=10)
-        a.text(0.07, 284.5, r'$\it{congruent}$', fontsize=8)
+    plot_mt_vs_stim_cong_and_prev_mats_different_models(
+        subjects, subjid, stim, zt, coh, gt, trial_index,
+        special_trial, data_folder, ax=ax, fig=fig,
+        extra_labels=extra_labels)
+    # df_mt = df.copy()
+    # fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax, prior_limit=0.1,  # 10% quantile
+    #                           condition='choice_x_coh', rt_lim=50)
+    # del df_mt
+    # for a in [ax]:
+    #     a.set_ylim(240, 285)
+    #     a.text(-0.3, 282, r'$\longleftarrow $', fontsize=10)
+    #     a.text(-0.75, 284.5, r'$\it{incongruent}$', fontsize=8)
+    #     a.text(0.07, 282, r'$\longrightarrow $', fontsize=10)
+    #     a.text(0.07, 284.5, r'$\it{congruent}$', fontsize=8)
+    ax[0].set_ylim(240, 320)
+    ax[0].text(-0.35, 318, r'$\longleftarrow $', fontsize=10)
+    ax[0].text(-0.85, 313, r'$\it{incongruent}$', fontsize=8)
+    ax[0].text(0.07, 318, r'$\longrightarrow $', fontsize=10)
+    ax[0].text(0.07, 313, r'$\it{congruent}$', fontsize=8)
+    ax[0].text(-1.06, 255, 'w/o 2nd read-out', fontsize=12)
+    ax[0].text(0.1, 296, 'Full model', fontsize=12, alpha=0.4)
+    ax[0].set_yticks([250, 275, 300])
+    ax[0].set_title('Model without 2nd read-out', pad=20)
+    pos = ax[1].get_position()
+    ax_title = fig.add_axes([pos.x0+pos.width*2/3, pos.y0,
+                             pos.width*2/3, pos.height*1.12])
+    ax_title.axis('off')
+    ax_title.set_title('Model without 1st read-out')
     fig.savefig(sv_folder+'/fig7.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/fig7.png', dpi=400, bbox_inches='tight')
-        
+
 
 def plot_mt_vs_evidence_diff_rts(df, ax, condition='choice_x_coh', prior_limit=0.25,
                                  rt_lim=50, after_correct_only=True, rtmin=0, color='k'):
