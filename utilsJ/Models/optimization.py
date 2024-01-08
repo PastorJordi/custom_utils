@@ -43,15 +43,15 @@ from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 
-DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -1255,14 +1255,14 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
     # and compare distros
 
 
-def parameter_recovery_test_data_frames(df, subjects):
+def parameter_recovery_test_data_frames(df, subjects, extra_label=''):
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=None, zt=None, coh=None, gt=None,
                                           trial_index=None, num_tr=len(df),
                                           subject_list=subjects, subjid=None,
                                           simulate=False,
-                                          extra_label='')
+                                          extra_label=extra_label)
     
     MT = [len(t) for t in trajs]
     df['sound_len'] = reaction_time
@@ -2624,6 +2624,9 @@ if __name__ == '__main__':
             # subjects = ['LE43']  # to run only once and train
             training = False
             param_recovery_test = True
+            if param_recovery_test:
+                n_samples = 50
+                subjects = ['LE42' for _ in range(n_samples)]
             for i_s, subject in enumerate(subjects):
                 if i_s > 0:
                     training = False
@@ -2633,7 +2636,9 @@ if __name__ == '__main__':
                                          silent=True, all_trials=True,
                                          srfail=True)
                 if param_recovery_test:
-                    df = parameter_recovery_test_data_frames(df=df, subjects=[subject])
+                    df = parameter_recovery_test_data_frames(df=df,
+                                                             subjects=['Virtual_rat_random_params'],
+                                                             extra_label='virt_sim_' + str(i_s))
                 df = df.loc[df.special_trial == 0]
                 # mnle_sample_simulation(df, theta=theta_for_lh_plot(),
                 #                         num_simulations=len(df),
@@ -2673,9 +2678,12 @@ if __name__ == '__main__':
                     print('p_mt_noise: '+str(parameters[13]))
                     print('p_MT_intercept: '+str(parameters[14]))
                     print('p_MT_slope: '+str(parameters[15]))
-                    extra_label = 'prt' if param_recovery_test else ''
-                    np.save(SV_FOLDER + 'parameters_MNLE_BADS' + extra_label +
-                            subject + '.npy', parameters)
+                    if param_recovery_test:
+                        extra_label = 'virt_params/' +\
+                            'parameters_MNLE_BADS_prt_n50_prt_' + str(i_s)
+                    else:
+                        extra_label = 'parameters_MNLE_BADS' + subject
+                    np.save(SV_FOLDER + extra_label + '.npy', parameters)
                 except Exception:
                     continue
         else:
