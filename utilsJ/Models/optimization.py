@@ -1060,11 +1060,11 @@ def nonbox_constraints_bads(x):
     cond1 = x_1[:, 6] + x_1[:, 9]/x_1[:, 7] + np.int32(x_1[:, 5]) > 121
     # ~ min. action RT peak can't be < -150 ms
     cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.7
-    # ub for prior. i.e. prior*p_zt can't be > 50% of the bound
+    # ub for prior. i.e. prior*p_zt can't be > 70% of the bound
     cond5 = x_1[:, 1] < 1e-2  # lb for stim
     cond4 = x[:,0] < 1e-2 # lb for prior
     # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
-    return np.bool_(cond4 + cond5 + cond1)
+    return np.bool_(cond4 + cond5)  # cond1
 
 
 def gumbel_plotter():
@@ -1231,8 +1231,9 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
         # returns -LLH( data | parameters )
         fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
         # define optimizer (BADS)
-        bads = BADS(fun_target, x0, lb, ub, plb, pub,
-                    non_box_cons=nonbox_constraints_bads)
+        bads = BADS(fun_target, x0, lb, ub, plb, pub
+                    )
+        # , non_box_cons=nonbox_constraints_bads)
         # optimization
         optimize_result = bads.optimize()
         print(optimize_result.total_time)
@@ -2614,7 +2615,7 @@ if __name__ == '__main__':
             np.save(SV_FOLDER+'all_solutions.npy', all_solutions)
             np.save(SV_FOLDER+'all_rms.npy', rms_list)
     if optimization_mnle:
-        num_simulations = int(3e6)  # number of simulations to train the network
+        num_simulations = int(10e6)  # number of simulations to train the network
         if not human:
             # load real data
             subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
