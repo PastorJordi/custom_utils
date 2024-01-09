@@ -1755,7 +1755,9 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     ax[-1].axis('off')
 
 
-def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER, corr=True):
+def plot_param_recovery_test(
+        subjects=['Virtual_rat_random_params' for _ in range(50)],
+        sv_folder=SV_FOLDER, corr=True):
     fig, ax = plt.subplots(4, 4, figsize=(14, 12))
     plt.subplots_adjust(top=0.92, bottom=0.05, left=0.06, right=0.94,
                         hspace=0.6, wspace=0.5)
@@ -1779,8 +1781,12 @@ def plot_param_recovery_test(subjects, sv_folder=SV_FOLDER, corr=True):
     conf_mat = np.empty((len(labels), len(subjects)))
     conf_mat_rec = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
-        conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
-        conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
+        # conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        # conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
+        conf = np.load(SV_FOLDER + 'virt_params/' +
+                       'parameters_MNLE_BADS_prt_n50_' + 'virt_sim_' + str(i_s) + '.npy')
+        conf_rec =  np.load(SV_FOLDER + 'virt_params/' +
+                            'parameters_MNLE_BADS_prt_n50_prt_' + str(i_s) + '.npy')
         conf_mat[:, i_s] = conf
         conf_mat_rec[:, i_s] = conf_rec
     mlist = []
