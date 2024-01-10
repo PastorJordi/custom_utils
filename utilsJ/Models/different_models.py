@@ -1412,9 +1412,13 @@ def trial_ev_vectorized_CoM_without_update(
                 com_bound_signed = (-sign_)*p_com_bound
                 difference = (updt_ev - first_ev[i_t])*sign_
                 # offset = 120
-                second_response_len =\
-                    float(remaining_m_time -  # offset*com[i_t] -
-                          p_2nd_readout*(difference))
+                if com[i_t]:
+                    second_response_len =\
+                        float(remaining_m_time -  # offset*com[i_t] -
+                              p_2nd_readout*(difference))
+                else:
+                    second_response_len =\
+                        float(remaining_m_time)
                 # SECOND readout
                 traj_fin = edd2.compute_traj(jerk_lock_ms, mu=mu_update,
                                              resp_len=second_response_len)
