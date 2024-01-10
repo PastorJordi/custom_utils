@@ -22,7 +22,7 @@ import scipy
 # import shutil
 
 # sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
-# sys.path.append("C:/Users/Alexandre/Documents/GitHub/")  # Alex
+sys.path.append('C:/Users/alexg/Onedrive/Documentos/GitHub/custom_utils')  # Alex
 sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 # sys.path.append('C:/Users/Sara Fuentes/OneDrive - Universitat de Barcelona/Documentos/GitHub/custom_utils')
 # sys.path.append("/home/garciaduran/custom_utils")  # Cluster Alex
@@ -52,7 +52,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -1755,6 +1755,47 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     ax[-1].axis('off')
 
 
+def plot_corr_matrix_prt(
+        subjects=['Virtual_rat_random_params' for _ in range(50)],
+        sv_folder=SV_FOLDER):
+    labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
+              r'EA bound, $\theta_{DV}$',
+              r'CoM bound, $\theta_{COM}$',
+              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
+              r'AI time offset, $t_{AI}$',
+              r'AI drift offset, $v_{AI}$',
+              r'AI drift slope, $w_{AI}$',
+              r'AI bound, $\theta_{AI}$',
+              r'DV weight 1st readout, $\beta_{DV}$',
+              r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
+              r'MT noise variance, $\sigma_{MT}$',
+              r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
+    conf_mat = np.empty((len(labels), len(subjects)))
+    conf_mat_rec = np.empty((len(labels), len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        # conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        # conf_rec = np.load(SV_FOLDER + 'parameters_MNLE_BADSprt' + subject + '.npy')
+        conf = np.load(SV_FOLDER + 'virt_params/' +
+                       'parameters_MNLE_BADS_prt_n50_' + 'virt_sim_' + str(i_s) + '.npy')
+        conf_rec =  np.load(SV_FOLDER + 'virt_params/' +
+                            'parameters_MNLE_BADS_prt_n50_prt_' + str(i_s) + '.npy')
+        conf_mat[:, i_s] = conf
+        conf_mat_rec[:, i_s] = conf_rec
+    corr_mat = np.empty((len(labels), len(labels)))
+    corr_mat[:] = np.nan
+    for i in range(len(labels)):
+        for j in range(len(labels)):
+            corr_mat[i, j] = np.corrcoef(conf_mat[i, :], conf_mat_rec[j, :])[1][0]
+    plt.figure()
+    plt.imshow(corr_mat, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.xticks(np.arange(16), labels, rotation='270')
+    plt.yticks(np.arange(16), labels)
+    plt.ylabel('Original parameters')
+    plt.xlabel('Inferred parameters')
+
+
+
 def plot_param_recovery_test(
         subjects=['Virtual_rat_random_params' for _ in range(50)],
         sv_folder=SV_FOLDER, corr=True):
@@ -1878,7 +1919,7 @@ def plot_param_recovery_test_boxplot_difference(subjects, sv_folder=SV_FOLDER):
             conf_mat[i, :] *= 5
             conf_mat_rec[i, :] *= 5
         diffs = conf_mat_rec[i, :] - conf_mat[i, :]
-        df[labels[i]] = diffs / np.mean(conf_mat[i, :]) * 100
+        df[labels[i]] = diffs / np.mean(conf_mat_rec[i, :]) * 100
     ax.axvline(x=0, color='r')
     sns.boxplot(df, ax=ax, orient='horizontal')
     ax.set_yticks(np.arange(len(labels)), labels)
