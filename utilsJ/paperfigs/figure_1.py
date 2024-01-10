@@ -194,7 +194,7 @@ def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
         ax.set_xticklabels(labels)
         ax.legend(fontsize=8)
 
-def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
+def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False,):
     if t_index_w:
         labels = ['Prior', 'Stimulus', 'Trial index']  # ]
         arr_weights = np.concatenate((w_zt, w_coh, w_t_i))
@@ -222,7 +222,8 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False):
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=2)
-        ax.collections[0].set_edgecolor('k')
+        if len(w_coh) > 1:
+            ax.collections[0].set_edgecolor('k')
     if t_index_w:
         ax.set_xlim(-0.5, 2.5)
         ax.set_xticklabels([labels[0], labels[1], labels[2]], fontsize=9)
