@@ -796,9 +796,9 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     com_model = com_model[sound_len_model >= 0]
     subjid = df_sim.subjid.values
     # Tachometrics
-    # _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
-    #                         sound_len=sound_len_model[sound_len_model >= 0],
-    #                         subjid=subjid, ax=ax[1], label='', legend=False)
+    _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
+                            sound_len=sound_len_model[sound_len_model >= 0],
+                            subjid=subjid, ax=ax[1], label='', legend=False)
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
                              label='1'),
@@ -899,7 +899,7 @@ def supp_model_trial_index(df_sim):
     ax[2].set_ylim(-0.05, 0.455)
     fig_1.plot_mt_weights_rt_bins(df=df_sim, ax=ax[3])
     fig_1.mt_weights(df=df_sim, ax=ax[1], plot=True, t_index_w=True,
-                     means_errs=False)
+                     means_errs=False, sim=True)
 
 
 def shortpad2(row, upto=1000, align='sound', pad_value=np.nan,
