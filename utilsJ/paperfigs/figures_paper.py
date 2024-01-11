@@ -650,6 +650,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = model_variations.trial_ev_vectorized_neg_starting_point
         if '_1_ro' in extra_label:  # only with 1st readout
             model = model_variations.trial_ev_vectorized_without_2nd_readout
+        if '_1_ro' in extra_label and 'com_modulation_' in extra_label:  # only with 1st readout
+            model = model_variations.trial_ev_vectorized_CoM_without_update
         if '_2_ro' in extra_label and 'rand' not in extra_label:  # only with 2nd readout
             model = model_variations.trial_ev_vectorized_without_1st_readout
         if '_2_ro' in extra_label and 'rand' in extra_label:

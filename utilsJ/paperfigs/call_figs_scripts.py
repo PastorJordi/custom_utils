@@ -131,7 +131,7 @@ f3 = False
 f4 = False
 f5 = True
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -218,7 +218,7 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = 0  # int(400000 - len(df))  # 0
+    n_sil = int(400000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -250,32 +250,13 @@ if f5:
         #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
         #                                                     '_1_ro_'+str(len(coh)),
         #                                                     len(coh)])
-        # fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
-        #             special_trial,
-        #             data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
-        #             extra_labels=['_1_ro_'+str(1282733),
-        #                           '',
-        #                           '_2_ro_rand_'+str(1282733)])
-        fp.simulate_random_rat(n_samples=50, sv_folder=SV_FOLDER,
-                               stim=stim, zt=zt, coh=coh, gt=gt, trial_index=trial_index,
-                               num_tr=num_tr)
-        # fig_7.plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
-        #                              special_trial, data_folder=DATA_FOLDER,
-        #                              extra_labels=['_2_ro_rand_'+str(len(coh)),
-        #                                            '_1_ro_'+str(len(coh)),
-        #                                            str(len(coh))])
-        # fig_5.plot_corr_coeff_prior_simul(df, subjects, subjid, stim, zt, coh, gt, trial_index,
-        #                                   special_trial, data_folder=DATA_FOLDER,
-        #                                   extra_labels=['data',
-        #                                                 '_2_ro_rand_'+str(len(coh)),
-        #                                                 '_1_ro_'+str(len(coh)),
-        #                                                 str(len(coh))]) 
-        # 'neg_' + str(len(coh)),
-        # fig_7.plot_psycho_acc_reversals(df, subjects, subjid, stim, zt, coh, gt, trial_index,
-        #                                 special_trial, data_folder=DATA_FOLDER,
-        #                                 extra_labels=['data',
-        #                                               '_2_ro_rand_'+str(len(coh)),
-        #                                               str(len(coh))])
+        fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
+                    special_trial,
+                    data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
+                    extra_labels=[len(coh),
+                                  '_2_ro_rand_'+str(len(coh)),
+                                  '_1_ro_'+str(len(coh)),
+                                  '_1_ro__com_modulation_'+str(len(coh))])
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\

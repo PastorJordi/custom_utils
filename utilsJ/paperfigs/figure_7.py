@@ -153,36 +153,91 @@ def plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
         a.set_ylim(185, 315)
 
 
-def plot_mt_vs_stim_cong_and_prev_mats_different_models(subjects, subjid, stim,
-                                                        zt, coh, gt, trial_index,
-                                                        special_trial,
-                                                        data_folder, ax, fig,
-                                                        extra_labels=['_2_ro',
-                                                                      '_1_ro',''],
-                                                        alpha_list=[1, 0.3]):
+def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, stim,
+                                                             zt, coh, gt, trial_index,
+                                                             special_trial,
+                                                             data_folder, ax, fig,
+                                                             extra_labels=['_2_ro',
+                                                                           '_1_ro',''],
+                                                             alpha_list=[1, 0.3]):
+    mat_titles_rev = ['L to R reversal',
+                      'R to L reversal']
+    mat_titles_com = ['L to R CoM',
+                      'R to L CoM']
     for i_l, lab in enumerate(extra_labels):
         df_data = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                                special_trial, extra_label=lab)
-        if i_l < 2:
-            alpha = alpha_list[i_l]
-            df_mt = df_data.copy()
-            fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[0], prior_limit=0.1,  # 10% quantile
-                                      condition='choice_x_coh', rt_lim=50, alpha=alpha,
-                                      write_arrows=False)
-            del df_mt
-        if i_l == 2:
-            df_data['CoM_sugg'] = df_data.com_detected
-            fig_5.plot_pcom_matrices_model(df_model=df_data,
-                                           n_subjs=len(df_data.subjid.unique()),
-                                           ax_mat=[ax[1], ax[2]],
-                                           pos_ax_0=[], nbins=7,
-                                           f=fig)
+        df_mt = df_data.copy()
+        fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[1+i_l*6], prior_limit=0.1,  # 10% quantile
+                                  condition='choice_x_coh', rt_lim=50, alpha=1,
+                                  write_arrows=False)
+        del df_mt
+        if i_l >= 1:
+            mat_titles_rev = ['', '']
+            mat_titles_com = ['', '']
+        fig_5.plot_pcom_matrices_model(df_model=df_data,
+                                       n_subjs=len(df_data.subjid.unique()),
+                                       ax_mat=[ax[2+i_l*6], ax[3+i_l*6]],
+                                       pos_ax_0=[], nbins=7,
+                                       f=fig, title='p(CoM)', mat_titles=mat_titles_com)
+        df_data['CoM_sugg'] = df_data.com_detected
+        fig_5.plot_pcom_matrices_model(df_model=df_data,
+                                       n_subjs=len(df_data.subjid.unique()),
+                                       ax_mat=[ax[4+i_l*6], ax[5+i_l*6]],
+                                       pos_ax_0=[], nbins=7,
+                                       f=fig, title='p(reversal)',
+                                       mat_titles=mat_titles_rev)
         del df_data
+        ax[4+i_l*6].set_ylabel('')
+        ax[5+i_l*6].set_ylabel('')
+        ax[2+i_l*6].set_xlabel('       \
+                               Prior evidence')
+        ax[3+i_l*6].set_xlabel('')
+        ax[4+i_l*6].set_xlabel('       \
+                               Prior evidence')
+        ax[5+i_l*6].set_xlabel('')
 
 
-def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
-          special_trial, data_folder, sv_folder,
-          extra_labels=['_2_ro', '_1_ro','']):
+def fig_7_v1(subjects, subjid, stim, zt, coh, gt, trial_index,
+             special_trial, data_folder, sv_folder,
+             extra_labels=['_1_ro_'+str(1282733),
+                           '',
+                           '_2_ro_rand_'+str(1282733)]):
+    '''
+    Plots version 1 of figure 7. Panel a showing MT vs Stimulus for the 
+    full model and the model w/o 2nd read-out, panel b the p(reversal) 
+    matrices for the model w/o 1st read-out.
+
+    Parameters
+    ----------
+    subjects : TYPE
+        DESCRIPTION.
+    subjid : TYPE
+        DESCRIPTION.
+    stim : TYPE
+        DESCRIPTION.
+    zt : TYPE
+        DESCRIPTION.
+    coh : TYPE
+        DESCRIPTION.
+    gt : TYPE
+        DESCRIPTION.
+    trial_index : TYPE
+        DESCRIPTION.
+    special_trial : TYPE
+        DESCRIPTION.
+    data_folder : TYPE
+        DESCRIPTION.
+    sv_folder : TYPE
+        DESCRIPTION.
+    extra_labels : TYPE, optional
+        DESCRIPTION. The default is ['_1_ro_'+str(1282733),                        '',                        '_2_ro_rand_'+str(1282733)].
+
+    Returns
+    -------
+    None.
+
+    '''
     fig, ax = plt.subplots(ncols=3, figsize=(10, 3))
     plt.subplots_adjust(top=0.91, bottom=0.12, left=0.09, right=0.95,
                         hspace=0.4, wspace=0.45)
@@ -192,7 +247,7 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
         fp.rm_top_right_lines(a)
         a.text(-0.11, 1.12, labs[i_ax], transform=a.transAxes, fontsize=16,
                fontweight='bold', va='top', ha='right')
-    plot_mt_vs_stim_cong_and_prev_mats_different_models(
+    plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
         subjects, subjid, stim, zt, coh, gt, trial_index,
         special_trial, data_folder, ax=ax, fig=fig,
         extra_labels=extra_labels)
@@ -220,6 +275,64 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
                              pos.width*2/3, pos.height*1.12])
     ax_title.axis('off')
     ax_title.set_title('Model without 1st read-out')
+    fig.savefig(sv_folder+'/fig7_v1.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/fig7_v1.png', dpi=400, bbox_inches='tight')
+
+
+def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
+          special_trial, data_folder, sv_folder,
+          extra_labels=['_1_ro_',
+                        '_1_ro__com_modulation_',
+                        '_2_ro_rand_']):
+    '''
+    Plots figure 7.
+
+    '''
+    fig, ax = plt.subplots(ncols=6, nrows=4, figsize=(12.5, 11))
+    plt.subplots_adjust(top=0.91, bottom=0.12, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.5)
+    ax = ax.flatten()
+    labs = ['a', '', '', '', '', '',
+            'b', '', '', '', '', '',
+            'c', '', '', '', '', '',
+            'd', '', '', '', '', '']
+    for i_ax, a in enumerate(ax):
+        fp.rm_top_right_lines(a)
+        a.text(-0.31, 1.12, labs[i_ax], transform=a.transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    titles = ['Full model',
+              'Without 1st read-out',
+              'Without 2nd read-out',
+              'Without 2nd read-out with CoMs']
+    plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
+        subjects, subjid, stim, zt, coh, gt, trial_index,
+        special_trial, data_folder, ax=ax, fig=fig,
+        extra_labels=extra_labels)
+    for i in range(4):
+        ax[i*6].set_title(titles[i])
+        ax[i*6].axis('off')
+        pos = ax[i*6+1].get_position()
+        ax[i*6+1].set_position([pos.x0, pos.y0+(pos.height-pos.width)/2,
+                                pos.width, pos.width])
+        ax[i*6+1].set_xlabel('Stimulus evidence\ntowards response')
+    # df_mt = df.copy()
+    # fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax, prior_limit=0.1,  # 10% quantile
+    #                           condition='choice_x_coh', rt_lim=50)
+    # del df_mt
+    # for a in [ax]:
+    #     a.set_ylim(240, 285)
+    #     a.text(-0.3, 282, r'$\longleftarrow $', fontsize=10)
+    #     a.text(-0.75, 284.5, r'$\it{incongruent}$', fontsize=8)
+    #     a.text(0.07, 282, r'$\longrightarrow $', fontsize=10)
+    #     a.text(0.07, 284.5, r'$\it{congruent}$', fontsize=8)
+    ax[13].set_ylim(235, 275)
+    # ax[1].text(-0.5, 318, r'$\longleftarrow $', fontsize=10)
+    # ax[1].text(-0.98, 313, r'$\it{incongruent}$', fontsize=8)
+    # ax[1].text(0.07, 318, r'$\longrightarrow $', fontsize=10)
+    # ax[1].text(0.07, 313, r'$\it{congruent}$', fontsize=8)
+    ax[19].set_ylim(250, 290)
+    ax[7].set_ylim(190, 240)
+
     fig.savefig(sv_folder+'/fig7.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/fig7.png', dpi=400, bbox_inches='tight')
 

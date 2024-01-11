@@ -390,7 +390,9 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
 
 
 def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
-                             margin=.03):
+                             margin=.03, title='p(reversal)',
+                             mat_titles=['Left to right reversal',
+                                         'Right to left reversal']):
     pos_ax_0 = ax_mat[1].get_position()
     ax_mat[1].set_position([pos_ax_0.x0-pos_ax_0.width/3, pos_ax_0.y0, pos_ax_0.width,
                            pos_ax_0.height])
@@ -406,17 +408,21 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
         mat_side_0_all[:, :, i_s] = matrix_side_0
         mat_side_1_all[:, :, i_s] = matrix_side_1
     matrix_side_0 = np.nanmean(mat_side_0_all, axis=2)
+    matrix_side_0[np.isnan(matrix_side_0)] = 0
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
+    matrix_side_1[np.isnan(matrix_side_1)] = 0
     # L-> R
-    vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
-    pcomlabel_1 = 'Right to left reversal'  # r'$p(CoM_{L \rightarrow R})$'
-    pcomlabel_0 = 'Left to right reversal'   # r'$p(CoM_{L \rightarrow R})$'
+    vmax = max(np.nanmax(matrix_side_0), np.nanmax(matrix_side_1))
+    if vmax == 0:
+        vmax = 1.1e-2
+    pcomlabel_1 = mat_titles[1]  # r'$p(CoM_{L \rightarrow R})$'
+    pcomlabel_0 = mat_titles[0]   # r'$p(CoM_{L \rightarrow R})$'
     ax_mat[0].set_title(pcomlabel_0, fontsize=11.5)
+    ax_mat[1].set_title(pcomlabel_1, fontsize=11.5)
     ax_mat[0].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
     # plt.sca(ax_mat[0])
     # plt.colorbar(im, fraction=0.04)
     # plt.sca(ax_mat[1])
-    ax_mat[1].set_title(pcomlabel_1, fontsize=11.5)
     im = ax_mat[1].imshow(matrix_side_0, vmin=0, vmax=vmax, cmap='magma')
     ax_mat[1].yaxis.set_ticks_position('none')
     for ax_i in [ax_mat[0], ax_mat[1]]:
@@ -434,7 +440,7 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
     cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
                       pos.width/15, pos.height/1.5])
     cbar = plt.colorbar(im, cax=cbar_ax)
-    cbar.ax.set_title('         p(reversal)', fontsize=8.5)
+    cbar.ax.set_title('         '+title, fontsize=8.5)
 
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
