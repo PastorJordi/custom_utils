@@ -176,9 +176,9 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[2].axhline(0, c='gray')
     ax[2].set_ylabel('y-velocity (cm/s)')
     ax[2].set_xlabel('Time from movement onset (ms)')
-    conv_factor = 0.07
-    ticks = np.arange(0, 0.8, 0.2)
-    labs = np.round(ticks*conv_factor, 2)
+    conv_factor = 0.07*1e3  # *1000 to have cm/s
+    ticks = np.array([0, 0.28571429, 0.57142857])
+    labs = np.int64(np.round(ticks*conv_factor))
     ax[2].set_yticks(ticks, labs)
     ax[1].set_xticks([])
     ax[1].set_yticks([])
@@ -361,7 +361,6 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     out_data = np.empty((400, len(rtbins)-1, 15))
     out_data[:] = np.nan
     df_1 = df.copy()
-    out_data_sbj = []
     split_data = data_folder + 'prior_matrix.npy'
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(split_data), exist_ok=True)
@@ -403,8 +402,8 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     im = ax.imshow(r_coef_mean, aspect='auto', cmap=cmap,
                    vmin=-0.5, vmax=0.5, extent=[0, 14, 0, 304])
     ax.set_xlabel('Reaction time (ms)')
-    ax.set_ylim(0, 304)
-    ax.set_yticks([])
+    # ax.set_ylim(0, 304)
+    # ax.set_yticks([])
     # ax.set_ylabel('Time from stimulus onset (ms)')ç
     pos = ax.get_position()
     ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])

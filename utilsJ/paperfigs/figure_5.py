@@ -392,10 +392,8 @@ def plot_pright_model(df_sim, sound_len_model, decision_model, subjid, coh,
 def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
                              margin=.03, title='p(reversal)',
                              mat_titles=['Left to right reversal',
-                                         'Right to left reversal']):
-    pos_ax_0 = ax_mat[1].get_position()
-    ax_mat[1].set_position([pos_ax_0.x0-pos_ax_0.width/3, pos_ax_0.y0, pos_ax_0.width,
-                           pos_ax_0.height])
+                                         'Right to left reversal'],
+                             return_matrix=False):
     mat_side_0_all = np.zeros((7, 7, n_subjs))
     mat_side_1_all = np.zeros((7, 7, n_subjs))
     for i_s, subj in enumerate(df_model.subjid.unique()):
@@ -411,6 +409,12 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
     matrix_side_0[np.isnan(matrix_side_0)] = 0
     matrix_side_1 = np.nanmean(mat_side_1_all, axis=2)
     matrix_side_1[np.isnan(matrix_side_1)] = 0
+    if return_matrix:
+        return matrix_side_0, matrix_side_1
+    # get second matrix closer
+    pos_ax_0 = ax_mat[1].get_position()
+    ax_mat[1].set_position([pos_ax_0.x0-pos_ax_0.width/3, pos_ax_0.y0,
+                            pos_ax_0.width, pos_ax_0.height])
     # L-> R
     vmax = max(np.nanmax(matrix_side_0), np.nanmax(matrix_side_1))
     if vmax == 0:
@@ -784,8 +788,10 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     conv_factor = 0.07
     ticks = np.array([0, 2.5, 5])/conv_factor
     ax[0].set_yticks(ticks, np.round(ticks*conv_factor, 2))
-    ticks = np.array([0., 0.2, 0.4, 0.6])
-    ax[1].set_yticks(ticks, np.round(ticks*0.07, 2))
+    conv_factor = 0.07*1e3  # *1000 to have cm/s
+    ticks = np.array([0, 0.28571429, 0.57142857])
+    labs = np.int64(np.round(ticks*conv_factor))
+    ax[1].set_yticks(ticks, labs)
 
 
 
