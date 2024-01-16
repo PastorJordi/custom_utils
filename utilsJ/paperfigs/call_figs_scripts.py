@@ -126,12 +126,12 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = False
+f2 = True
 f3 = False
 f4 = False
 f5 = True
 f6 = False
-f7 = True
+f7 = False
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5:
@@ -140,7 +140,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE37', 'LE46']
-    subjects = ['LE42']  # for params analysis
+    # subjects = ['LE42']  # for params analysis
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -190,9 +190,9 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
-                           repalt_img=REPALT_IMG)
-    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    # fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+    #                        repalt_img=REPALT_IMG)
+    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
 if f2:
@@ -218,7 +218,7 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = int(400000 - len(df))  # 0
+    n_sil = 0  # int(400000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
