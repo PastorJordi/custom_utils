@@ -377,7 +377,7 @@ def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
     legendelements = [Line2D([0], [0], color='firebrick', lw=2,
                              label='Across subjects'),
                       Line2D([0], [0], color='b', lw=2,
-                             label='Meta-subject')]
+                             label='All subjects')]
     ax[-1].legend(handles=legendelements, loc='upper left', borderpad=0.15,
                   labelspacing=0.15, handlelength=1.5,
                   frameon=False, bbox_to_anchor=(0., 1.18))
