@@ -2220,7 +2220,8 @@ def supp_mt_per_rat(df, df_sim, title=''):
     fig.suptitle(title)
 
 
-def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs_plot=150,
+def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
+                       plot_data_trajs=False, n_trajs_plot=150,
                        pixel_precision=1, cmap='Reds', max_ms=400):
     """
     Plots density of the position of the model, it can plot rat trajectories on top.
@@ -2303,11 +2304,12 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
                 ax2[i].set_xticks([])
             if i % 3 == 0:
                 ax2[i].set_yticks(np.arange(0, len(values), int(80/pixel_precision)),
-                                  np.arange(80, -81, -80))
+                                  ['5.6', '0', '-5.6'])
+                # np.arange(80, -81, -80)
             else:
                 ax2[i].set_yticks([])
             if i % 3 == 0:
-                ax2[i].set_ylabel('Position, pixels')
+                ax2[i].set_ylabel('y position (cm)')
             if i >= 6:
                 ax2[i].set_xlabel('Time (ms)')
             if plot_data_trajs:
@@ -2344,6 +2346,8 @@ def plot_model_density(df_sim, df=None, offset=0, plot_data_trajs=False, n_trajs
     ax2[0].set_title('stimulus = -1')
     ax2[1].set_title('stimulus = 0')
     ax2[2].set_title('stimulus = 1')
+    fig2.savefig(sv_folder+'supp_fig_6.svg', dpi=400, bbox_inches='tight')
+    fig2.savefig(sv_folder+'supp_fig_6.png', dpi=400, bbox_inches='tight')
 
 
 def plot_data_trajs_density(df):
