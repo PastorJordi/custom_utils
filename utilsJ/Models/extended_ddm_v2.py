@@ -586,8 +586,8 @@ def compute_traj(jerk_lock_ms, mu, resp_len):
         DESCRIPTION.
 
     """
-    t_arr = np.arange(jerk_lock_ms, resp_len)
     resp_len = float(resp_len)
+    t_arr = np.arange(jerk_lock_ms, resp_len)
     # M = get_Mt0te(jerk_lock_ms, resp_len)
     # M_1 = np.linalg.inv(M)
     m_sup = np.concatenate((get_m1_inv(), np.zeros((3, 3))), axis=1)
