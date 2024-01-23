@@ -126,10 +126,10 @@ def check_distros(df, df_sim):
 
 plt.close('all')
 f1 = False
-f2 = True
-f3 = False
+f2 = False
+f3 = True
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 f8 = False
@@ -140,7 +140,7 @@ if f1 or f2 or f3 or f5:
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
     # subjects = ['LE42', 'LE37', 'LE46']
-    # subjects = ['LE42']  # for params analysis
+    # subjects = ['LE46']  # for params analysis
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -151,9 +151,6 @@ if f1 or f2 or f3 or f5:
         df_all = pd.concat((df_all, df), ignore_index=True)
     df = df_all
     del df_all
-    if f7:
-        # index to filter by stim/silent for p(com) vs p(proac) supp figure
-        idx = df.special_trial.values >= 0
     zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
     df['allpriors'] = zt
     hit = np.array(df['hithistory'])
@@ -218,7 +215,7 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = 0  # int(400000 - len(df))  # 0
+    n_sil = 0 #  int(400000 - len(df))  # 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -240,8 +237,10 @@ if f5:
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     # stim[:, int(num_tr):] = 0  # for silent simulation
     if f7:
+        # index to filter by stim/silent for p(com) vs p(proac) supp figure
+        # idx = df.special_trial.values >= 0
         # fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
-        #                            subjid, sv_folder=SV_FOLDER, idx=idx)
+        #                             subjid, sv_folder=SV_FOLDER, idx=idx)
         # fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
         #                        subjid, sv_folder=SV_FOLDER, idx=idx)
         # fig_7.plot_traj_cond_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
@@ -318,7 +317,7 @@ if f5:
         #                          rtbins=np.linspace(0, 150, 25), connect_points=False,
         #                          trajectory="trajectory_y", p_val=0.05)
     
-        fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
+        # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
         # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
         #                              sv_folder=SV_FOLDER)
         # actual plot
