@@ -70,8 +70,8 @@ def plot_coms(df, ax, human=False):
               frameon=False)
     if human:
         factor = 0.0096  # cm/px
-        yticks = np.array([-500, -250, 0, 250, 500])
-        ax.set_yticks(yticks, np.round(yticks*factor, 2))
+        yticks = np.array([-6, -4, -2, 0, 2, 4, 6])/factor
+        ax.set_yticks(yticks, np.int64(np.round(yticks*factor, 2)))
 
 
 def com_statistics_humans(peak_com, time_com, ax, mean_mt):
@@ -164,8 +164,8 @@ def mean_com_traj_human(df_data, ax, max_mt=400):
               labelspacing=0.15, bbox_to_anchor=(0, 1.2), handlelength=1.5,
               frameon=False)
     factor = 0.0096  # cm/px
-    yticks = np.arange(-200, 800, 200)
-    ax.set_yticks(yticks, np.round(yticks*factor, 2))
+    yticks = np.array((-2, 0, 2, 4, 6))/0.0096
+    ax.set_yticks(yticks, np.int64(np.round(yticks*factor, 2)))
 
 
 def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
@@ -260,8 +260,8 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         # ax[1].set_ylim(170, 285)
         ax[1].set_xlim(-1.2, 1.2)
     factor = 0.0096  # cm/px
-    yticks = np.arange(0, 800, 200)
-    ax[0].set_yticks(yticks, np.round(yticks*factor, 2))
+    yticks = np.array((0, 2, 4, 6))/0.0096
+    ax[0].set_yticks(yticks, np.int64(np.round(yticks*factor, 2)))
 
 
 def human_trajs(df_data, ax, sv_folder, max_mt=400, max_px=800,
@@ -412,10 +412,10 @@ def plot_xy(df_data, ax):
     ax.set_xlabel('Position along x-axis (cm)')
     ax.set_ylabel('Position along y-axis (cm)')
     factor = 0.0096  # cm/px
-    xticks = np.array([-500, 0, 500])
-    yticks = np.array([-200, 0, 200, 400])
-    ax.set_xticks(xticks, np.round(xticks*factor, 2))
-    ax.set_yticks(yticks, np.round(yticks*factor, 2))
+    xticks = np.array([-5, 0, 5])/factor
+    yticks = np.array([-2, 0, 2, 4])/factor
+    ax.set_xticks(xticks, np.int64(np.round(xticks*factor, 2)))
+    ax.set_yticks(yticks, np.int64(np.round(yticks*factor, 2)))
 
 
 def splitting_time_plot(sound_len, out_data, ax, subjects, color='firebrick',
@@ -546,8 +546,8 @@ def splitting_time_example_human(rtbins, ax, sound_len, ground_truth, coh, trajs
                       head_length=15)
             ax1.text(ind-150, 140, 'Splitting Time', fontsize=10)
         factor = 0.0096  # cm/px
-        yticks = np.arange(0, 500, 100)
-        ax1.set_yticks(yticks, np.round(yticks*factor, 2))
+        yticks = np.array((0, 1, 2, 3)) / factor
+        ax1.set_yticks(yticks, np.int64(np.round(yticks*factor, 2)))
 
 
 def splitting_time_humans(sound_len, coh, trajs, times, subjects, ground_truth,

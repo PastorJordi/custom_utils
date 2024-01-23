@@ -556,8 +556,8 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     ax.axhline(-8, color='r', linestyle=':')
     ax.text(200, -19, "Detection threshold", color='r')
     conv_factor = 0.07
-    ticks = np.array([-2.5, 0, 2.5, 5])/conv_factor
-    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
+    ticks = np.array([-2, 0, 2, 4, 6])/conv_factor
+    ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
 
 
 def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
@@ -786,8 +786,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     ax[3].set_yticks([])
     ax[3].set_ylabel('Peak')
     conv_factor = 0.07
-    ticks = np.array([0, 2.5, 5])/conv_factor
-    ax[0].set_yticks(ticks, np.round(ticks*conv_factor, 2))
+    ticks = np.array([0, 2, 4, 6])/conv_factor
+    ax[0].set_yticks(ticks,np.int64(np.round(ticks*conv_factor, 2)))
     conv_factor = 0.07*1e3  # *1000 to have cm/s
     ticks = np.array([0, 0.28571429, 0.57142857])
     labs = np.int64(np.round(ticks*conv_factor))
@@ -880,6 +880,17 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y",
                                p_val=0.05, extra_label='')
+    
+    subjects = np.unique(subjid)
+    ta_te = []
+    for subject in subjects:
+        conf = np.load(sv_folder + 'parameters_MNLE_BADS' + subject + '.npy')
+        ta_te.append(conf[4]+conf[5])
+    ax[7].axhline(np.nanmean(ta_te)*5, color='k', alpha=0.5, linestyle='--')
+    ax[7].text(90, np.nanmean(ta_te)*5-25, r'$t_{aff}+t_{eff}$', fontsize=9.5)
+    ax[7].annotate(text='', xy=(75, 0.5),
+                   xytext=(75, np.nanmean(ta_te)*5-0.5),
+                   arrowprops=dict(arrowstyle='<->'))
     ax[7].set_ylim(0, 205)
     # plot mean com traj
     

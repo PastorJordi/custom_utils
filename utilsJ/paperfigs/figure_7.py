@@ -354,9 +354,9 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
         a.text(-0.41, 1.22, general_labels[i_ax], transform=a.transAxes,
                fontsize=16, fontweight='bold', va='top', ha='right')
     titles = ['Full model',
-              'Without 1st read-out',
-              'Without 2nd read-out',
-              'Without 2nd read-out \n       (with CoMs)']
+              'Random initial choice',
+              'No trajectory update',
+              'No vigor update']
     plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
         subjects, subjid, stim, zt, coh, gt, trial_index,
         special_trial, data_folder, ax=ax, fig=fig,

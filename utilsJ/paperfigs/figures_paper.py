@@ -892,7 +892,7 @@ def plot_min_st_vs_t_eff_cartoon(ax, offset=15):
     for i_taff, t_aff_val in enumerate(t_aff[::-1]):
         min_st = t_aff_val + t_eff + offset
         ax.plot(t_eff, min_st, color=colormap[i_taff], label=str(t_aff_val))
-    ax.set_ylabel('Minimum splitting time (min(ST), ms)')
+    ax.set_ylabel('Minimum splitting time (ms)')
     # ax.legend(title=r'$t_{aff} \;\; (ms)$', loc='upper right',
     #           frameon=False, bbox_to_anchor=(1.23, 1.17),
     #           labelspacing=0.1)
@@ -900,11 +900,13 @@ def plot_min_st_vs_t_eff_cartoon(ax, offset=15):
               frameon=False, bbox_to_anchor=(1.21, 1.145),
               labelspacing=0.35)
     ax.plot([0, 30], [0, 30], color='gray', linewidth=0.8)
-    ax.set_xlabel(r'$t_{eff} \;\; (ms)$')
+    ax.set_xlabel(r'Efferent time $t_{eff} \;\; (ms)$')
     ax.annotate(text='', xy=(30, 31), xytext=(30, 39), arrowprops=dict(arrowstyle='<->'))
     ax.text(30.5, 31.5, 'offset')
     ax.text(15, 10, 'y=x', rotation=17, color='grey')
-    ax.text(0, 65, r'$min(ST) = t_{aff}+t_{eff}+offset$')
+    # ax.text(0, 65, r'$min(ST) = t_{aff}+t_{eff}+offset$')
+    ax.set_title(r'Prediction: $min(ST) = t_{aff}+t_{eff}+offset$',
+                 fontsize=10)
     ax.set_ylim(-2, 71)
 
 
@@ -973,7 +975,6 @@ def plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
     rm_top_right_lines(ax)
     ax.set_ylabel('P(CoM)')
     ax.set_xlabel('P(proactive)')
-    ax.set_zlabel('p(correct)')
     num_tr = int(len(coh))
     param_ind = params_to_explore[0][0]
     com_all = []
@@ -1211,7 +1212,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
     ax[1].plot([0, 30], [0, 30], color='gray', linewidth=0.8)
     # ax[1].set_xlim([13, 47])
     # ax[1].set_ylim([14, 61])
-    ax[1].set_xlabel(r'$t_{eff} \;\; (ms)$')
+    ax[1].set_xlabel(r'Efferent time $t_{eff} \;\; (ms)$')
     ax[1].legend(title=r'$t_{aff} \;\; (ms)$', loc='upper right',
                  frameon=False, bbox_to_anchor=(1.24, 1.175),
                  labelspacing=0.35)
@@ -1732,25 +1733,28 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     conf_mat = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
+        conf[1] = conf[1] / 5
+        conf[7] = conf[7] / 5
+        conf[8] = conf[8] / 5
         conf_mat[:, i_s] = np.delete(conf, -3)
     for i in range(len(labels)):
         if i == 4 or i == 5 or i == 6:
-            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h', color='royalblue',
+            sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h', color='lightskyblue',
                            fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s]*5,
-                           0.05*np.random.randn(),
+                           0.1*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=2)
+                           markersize=4)
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
         else:
-            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h', color='royalblue',
+            sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h', color='lightskyblue',
                            fmt='g', linewidth=0)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s],
                            0.1*np.random.randn(),
                            color=colors[i_s], marker='o', linestyle='',
-                           markersize=2)
+                           markersize=4)
             ax[i].set_xlabel(labels[i])
         ax[i].set_yticks([])
         ax[i].spines['left'].set_visible(False)

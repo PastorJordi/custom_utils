@@ -117,8 +117,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[0].set_ylim([-10, 85])
     # ax[0].axhline(78, color='gray', linestyle=':')
     conv_factor = 0.07
-    ticks = np.array([0, 2.5, 5])/conv_factor
-    labs = np.round(ticks*conv_factor, 2)
+    ticks = np.array([0, 2, 4, 6])/conv_factor
+    labs = np.int64(np.round(ticks*conv_factor, 2))
     ax[0].set_yticks(ticks, labs)
     # VELOCITIES
     mat_all = np.empty((n_iters, 1700, len(subjects)))
@@ -846,7 +846,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
                         max_mt = 800
                         current_split_index =\
                             get_split_ind_corr(mat, evl, pval=p_val, max_MT=max_mt,
-                                            startfrom=0)+1
+                                            startfrom=0)
                     if current_split_index >= rtbins[i]:
                         out_data_sbj += [current_split_index]
                     else:
@@ -886,7 +886,7 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
         ax.scatter(  # add some offset/shift on x axis based on binsize
             binsize/2 + binsize * (np.repeat(
                 np.arange(rtbins.size-1), nrepeats
-            ) + np.random.normal(loc=0, scale=0.2, size=out_data.size)),  # jitter
+            ) + np.random.normal(loc=0, scale=0.02, size=out_data.size)),  # jitter
             out_data.flatten(),
             **scatter_kws,
         )
@@ -1200,17 +1200,18 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     margin = 0.05
     # tune screenshot panel
     ax_scrnsht = ax[0]
-    ticks = np.array([0, 200])
-    conv_factor = 0.07
-    labs = np.round(ticks*conv_factor, 2)
+    ticks = np.array([0, 206])
+    conv_factor = 5.25/180
+    labs = np.int64(np.round(ticks*conv_factor, 2))
     ax_scrnsht.set_xticks(ticks, labs)
     right_port_y = 70
     center_port_y = 250
     left_port_y = 440
-    ticks = np.array([-75, 0, 75])
     conv_factor = 0.07
-    labs = np.round(ticks*conv_factor, 2)
-    ax_scrnsht.set_yticks([right_port_y, center_port_y, left_port_y], labs)
+    ticks = np.array([-5, 0, 5])/conv_factor
+    labs = np.int64(np.round(ticks*conv_factor, 2))
+    ticks_scrn = [78, center_port_y, 432]
+    ax_scrnsht.set_yticks(ticks_scrn, labs)
     ax_scrnsht.set_xlabel('x dimension (cm)')
     ax_scrnsht.set_ylabel('y dimension (cm)')
     # add colorbar for screenshot
@@ -1236,20 +1237,20 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     ax_rawtr.set_ylim(y_lim)
     ticks = np.array([-80, -20])
     conv_factor = 0.07
-    labs = [0, 14]
+    labs = [0, 6]
     ax_rawtr.set_xticks(ticks, labs)
-    ticks = np.array([-75, 0, 75])
     conv_factor = 0.07
-    labs = np.round(ticks*conv_factor, 2)
+    ticks = np.array([-5, 0, 5])/conv_factor
+    labs = np.int64(np.round(ticks*conv_factor, 2))
     ax_rawtr.set_yticks(ticks, labs)
     ax_rawtr.set_xlabel('x dimension (cm)')
     ax_rawtr.set_ylabel('y dimension (cm)')
     pos_coh = ax_cohs[2].get_position()
     pos_rawtr = ax_rawtr.get_position()
     ax_rawtr.set_position([pos_coh.x0, pos_rawtr.y0,
-                           pos_rawtr.width/2, pos_rawtr.height])
+                           pos_rawtr.width/1.3, pos_rawtr.height])
     # fp.add_text(ax=ax_rawtr, letter='rat LE46', x=0.7, y=1., fontsize=10)
-    ax_rawtr.text(x=0.7, y=1., s='rat LE46', transform=ax_rawtr.transAxes,
+    ax_rawtr.text(x=0.4, y=1., s='rat LE46', transform=ax_rawtr.transAxes,
                   fontsize=10, va='top', ha='right')
     x_lim = [-100, 800]
     y_lim = [-100, 100]
@@ -1258,7 +1259,7 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
     ax_ydim.set_yticks([])
     ax_ydim.set_xlabel('Time from movement onset (ms)')
     pos_ydim = ax_ydim.get_position()
-    ax_ydim.set_position([pos_ydim.x0-1.5*margin, pos_rawtr.y0,
+    ax_ydim.set_position([pos_ydim.x0, pos_rawtr.y0,
                           pos_ydim.width, pos_rawtr.height])
     ax_ydim.text(x=0.32, y=1., s='rat LE46', transform=ax_ydim.transAxes,
                  fontsize=10, va='top', ha='right')
@@ -1307,8 +1308,8 @@ def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=
             ax_ydim.plot(time, traj_y, color='grey', lw=.5, alpha=0.6)
     # plot dashed lines
     for i_a in [1, 2]:
-        ax[i_a].axhline(y=85, linestyle='--', color='k', lw=.5)
-        ax[i_a].axhline(y=-80, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(y=75, linestyle='--', color='k', lw=.5)
+        ax[i_a].axhline(y=-75, linestyle='--', color='k', lw=.5)
         ax[i_a].axhline(0, color='k', lw=.5)
 
     df_trajs = df.copy()

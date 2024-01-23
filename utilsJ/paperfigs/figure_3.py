@@ -168,8 +168,8 @@ def plot_coms_single_session(df, ax):
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
     conv_factor = 0.07
-    ticks = np.array([-5, -2.5, 0, 2.5, 5])/conv_factor
-    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
+    ticks = np.array([-6, -3, 0, 3, 6])/conv_factor
+    ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
 
 
 def tracking_image(ax, rat_com_img, margin=.01):
@@ -186,7 +186,7 @@ def tracking_image(ax, rat_com_img, margin=.01):
     ax_clbr.imshow(np.linspace(0, 1, n_stps)[None, :], aspect='auto')
     ax_clbr.set_xticks([0, n_stps-1])
     ax_clbr.set_xticklabels(['0', '400ms'])
-    ax_clbr.set_title('Time', fontsize=9.5)
+    ax_clbr.set_title('Time from movement onset', fontsize=9.5)
     ax_clbr.tick_params(labelsize=9)
     # ax_clbr.set_title('$N_{max}$', fontsize=6)
     ax_clbr.set_yticks([])
@@ -268,6 +268,7 @@ def matrix_figure(df_data, humans, ax_tach, ax_pright, ax_mat, fig=None):
     # plot tachometrics
     if humans:
         num = 8
+        # rtbins = np.arange(0, 301, 50)
         rtbins = np.linspace(0, 300, num=num)
         avtrapz_mod = np.round(df_data.avtrapz.values, 2)*5
         df_data['avtrapz_mod'] = avtrapz_mod 
@@ -366,7 +367,7 @@ def com_statistics(peak_com, time_com, ax, mean_mt):
     # ax2.set_ylabel('# Trials')
     ax2.set_yticks([])
     ax2.hist(time_com, bins=80, range=(2, 500), color=COLOR_COM)
-    ax2.text(-80, 120, 'Reversal\npoint')
+    ax2.text(-80, 120, 'Reversal\ntime')
     ax2.spines['left'].set_visible(False)
     ax2.set_xlabel('Time from movement onset (ms)')
     ax2.set_xlim(-100, 500)
@@ -457,8 +458,8 @@ def mean_com_traj_aligned_deflection(
     ax.set_xlim(-100, 200)
     ax.text(80, -12, "Detection\nthreshold", color='r')
     conv_factor = 0.07
-    ticks = np.array([-1.5, 0, 1.5, 3])/conv_factor
-    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
+    ticks = np.array([-2, 0, 2])/conv_factor
+    ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
 
 
 def mean_com_vel(df, ax, data_folder, condition='choice_x_prior', prior_limit=1,
@@ -667,8 +668,8 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     ax.arrow(time_def, def_val, 0, -9, head_width=20, color='k', head_length=10)
     # ax.text(20, -20, "Detection threshold", color='r')
     conv_factor = 0.07
-    ticks = np.array([-5, -2.5, 0, 2.5, 5])/conv_factor
-    ax.set_yticks(ticks, np.round(ticks*conv_factor, 2))
+    ticks = np.array([-3, 0, 3, 6])/conv_factor
+    ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
 
 
 def com_heatmap_marginal_pcom_side_mat(
