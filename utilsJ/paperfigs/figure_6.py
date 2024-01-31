@@ -243,7 +243,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         #                    y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
         #                    color=colormap[i_ev])
     x_vals = np.arange(5) if condition == 'prior' else ev_vals
-    ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5)
+    ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5, color='k')
     # ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 490)
     ax[0].set_ylim(-1, 620)

@@ -127,10 +127,10 @@ def check_distros(df, df_sim):
 plt.close('all')
 f1 = False
 f2 = False
-f3 = True
+f3 = False
 f4 = False
 f5 = False
-f6 = False
+f6 = True
 f7 = False
 f8 = False
 com_threshold = 8
