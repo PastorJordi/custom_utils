@@ -1955,15 +1955,13 @@ def tachometric(
                     facecolor=cmp_face, edgecolor=cmp_edge, alpha=0.6)
             else:
                 ax.fill_between(
-                    tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
-                    tmp['mean'].values +
-                    tmp.groupby_binom_ci.apply(lambda x: x[1]),
-                    y2=tmp['mean'].values -
-                    tmp.groupby_binom_ci.apply(lambda x: x[0]),
+                    rtbins[:-1] + rtbinsize*0.5,
+                    vals_total + error_total,
+                    y2=vals_total - error_total,
                     facecolor=cmp_face, edgecolor=cmp_edge)
         if not fill_error and plot:
             ax.errorbar(
-                tmp.rtbin.values * rtbinsize + 0.5 * rtbinsize,
+                tmp_df.rtbin.values * rtbinsize + 0.5 * rtbinsize,
                 tmp['mean'].values,
                 yerr=[
                     tmp.groupby_binom_ci.apply(lambda x: x[0]),
