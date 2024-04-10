@@ -137,6 +137,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
 def linear_fun(x, a, b, c, d):
     return a + b*x[0] + c*x[1] + d*x[2]
 
+
 def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
     """
 
@@ -174,7 +175,12 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
         plt.ylabel('MT (ms)')
         plt.xlabel('normalized variables')
         plt.legend()
+    from scipy.stats import pearsonr
+    y_pred = linear_fun(xdata, *popt)
+    # print(np.corrcoef(ydata, y_pred)[0, 1])
+    print(pearsonr(ydata, y_pred).statistic)
     return popt
+
 
 def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
                          errors_model=None, width=0.35):
@@ -677,9 +683,9 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     # cbar.ax.tick_params(rotation=45)
     df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
-    bin_size = 10
+    bin_size = 5
     labels = ['0', '0.25', '0.5', '1']
-    df_tachos = df_data.copy()
+    df_tachos = df_data.copy().loc[df_data.subjid == 'LE46']
     tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
                 labels=labels, rtbins=np.arange(0, max_rt+1, bin_size),
                 evidence='coh2')
