@@ -252,13 +252,13 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             new_data=new_data, data_folder=data_folder,
                             save_new_data=save_new_data,
-                            median=True, prior=True, rt_lim=300)
+                            median=False, prior=True, rt_lim=300)
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
                             save_new_data=save_new_data,
-                            data_folder=data_folder, median=True, prior=True)
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                            data_folder=data_folder, median=False, prior=True)
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=False, prior=False,
                         save_new_data=save_new_data,
                         new_data=new_data, data_folder=data_folder, prior_lim=1)
 
@@ -356,7 +356,6 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     # df_sim.loc[nanidx, 'allpriors'] = np.nan
     df_sim['choice_x_coh'] = np.round((df_sim.R_response*2-1) * df_sim.coh2, 2)
     df_sim['choice_x_prior'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
-    df_sim['choice_x_zt'] = (df_sim.R_response*2-1) * df_sim.norm_allpriors
     bins_coh = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     bins_zt = [1.01]
     # TODO: fix issue with equipopulated bins
@@ -371,7 +370,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         condition = 'choice_x_prior'
         bins_zt, _, _, _, _ =\
               fp.get_bin_info(df=df_sim, condition=condition, prior_limit=1,
-                              after_correct_only=True)
+                              after_correct_only=True, rt_lim=300, silent=False)
     # xvals_zt = [-1, -0.5, 0, 0.5, 1]
     xvals_zt = np.linspace(-1, 1, 5)
     signed_response = df_sim.R_response.values
@@ -399,13 +398,13 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if prior:
         val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
-        label_save = 'prior'
+        label_save = 'human_prior'
     else:
         val_traj_subs = np.empty((len(bins_ref), len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref), len(subjects.unique())))
-        label_save = 'stim'
+        label_save = 'human_stim'
     for i_s, subject in enumerate(subjects.unique()):
-        traj_data = data_folder+subject+'/sim_data/'+subject +\
+        traj_data = data_folder+str(subject)+'/sim_data/'+str(subject) +\
             '_traj_sim_pos_'+label_save+'.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(traj_data), exist_ok=True)
