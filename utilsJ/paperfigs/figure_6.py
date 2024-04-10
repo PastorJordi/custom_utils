@@ -205,6 +205,7 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
             vals = np.array(trajs[index][tr])*(decision[index][tr]*2-1)
             ind_time = [True if t != '' else False for t in times[index][tr]]
             time = np.array(times[index][tr])[np.array(ind_time)].astype(float)*1e3
+            # vals = np.diff(vals)
             f = interpolate.interp1d(time, vals, bounds_error=False)
             vals_in = f(interpolatespace)
             vals_in = vals_in[~np.isnan(vals_in)]
