@@ -237,7 +237,7 @@ def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
     # ax2.spines['top'].set_visible(False)
     # ax2.yaxis.label.set_color('red')
     supp_p_com_vs_rt_silent(df_sim, ax=ax, bins_rt=BINS_RT, label='model',
-                            column='CoM_sugg', color='r')
+                            column='com_detected', color='r')
     # ax2.set_ylabel('p(reversal) - model - silent')
     # ax.set_ylabel('p(reversal) - data - silent')
     ax.set_ylabel('p(reversal) - silent')
@@ -738,8 +738,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     # ax[0].axhline(y=75, linestyle='--', color='k', alpha=0.4)
     ax[0].set_xlim(-5, 335)
     ax[0].set_yticks([0, 25, 50, 75])
-    ax[0].set_ylim(-10, 85)
-    ax[1].set_ylim(-0.08, 0.68)
+    ax[0].set_ylim(-8, 85)
+    ax[1].set_ylim(-0.06, 0.6)
     ax[1].set_xlim(-5, 335)
     ax[2].set_xlim(-1.2, 1.2)
     if prior:
@@ -810,7 +810,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # Tachometrics
     _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
                             sound_len=sound_len_model[sound_len_model >= 0],
-                            subjid=subjid, ax=ax[1], label='', legend=False)
+                            subjid=subjid, ax=ax[1], label='', legend=False,
+                            rtbins=np.arange(0, 201, 10))
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
                              label='1'),
@@ -922,7 +923,7 @@ def supp_model_trial_index(df_sim):
     ax[2].set_ylim(-0.05, 0.455)
     fig_1.plot_mt_weights_rt_bins(df=df_sim, ax=ax[3])
     fig_1.mt_weights(df=df_sim, ax=ax[1], plot=True, t_index_w=True,
-                     means_errs=False, sim=True)
+                     means_errs=False, mt=True)
 
 
 def shortpad2(row, upto=1000, align='sound', pad_value=np.nan,
