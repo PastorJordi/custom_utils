@@ -43,15 +43,15 @@ from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 
-# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -2458,7 +2458,7 @@ def get_human_data(user_id, sv_folder=SV_FOLDER, nm='300'):
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     if user_id == 'idibaps_alex':
         folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
-    subj = ['general_traj']
+    subj = ['general_traj_all']
     steps = [None]
     # retrieve data
     df = ah.traj_analysis(data_folder=folder,
@@ -2527,7 +2527,7 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
-    human = False
+    human = True
     if not optimization_mnle:
         stim, zt, coh, gt, com, pright, trial_index =\
             get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
@@ -2689,7 +2689,7 @@ if __name__ == '__main__':
         else:
             df = get_human_data(user_id='alex')
             subjects = df.subjid.values
-            # df['subjid'] = np.repeat('all', len(subjects))
+            df['subjid'] = np.repeat('all', len(subjects))
             for subject in np.unique(df.subjid.unique()):
                 parameters = human_fitting(df=df, subject=subject,
                                            num_simulations=num_simulations)
@@ -2710,7 +2710,7 @@ if __name__ == '__main__':
                 print('p_mt_noise: '+str(parameters[13]))
                 print('p_MT_intercept: '+str(parameters[14]))
                 print('p_MT_slope: '+str(parameters[15]))
-                np.save(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_hlim_eff' +
+                np.save(SV_FOLDER + 'parameters_MNLE_BADS_human_subj_' +
                         str(subject) + '.npy', parameters)
     if rms_comparison and plotting:
         plt.figure()
