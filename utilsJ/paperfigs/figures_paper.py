@@ -205,7 +205,7 @@ def binning_mt_prior(df, bins):
 
 
 def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_lim=50,
-                 fpsmin=29, num_bins_prior=5, rtmin=0):
+                 fpsmin=29, num_bins_prior=5, rtmin=0, silent=True):
     # after correct condition
     ac_cond = df.aftererror == False if after_correct_only else (df.aftererror*1) >= 0
     # common condition 
@@ -222,7 +222,10 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
         colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
         colormap = colormap(np.linspace(0, 1, n_iters))
     elif condition == 'choice_x_prior':
-        indx_trajs = common_cond & (df.special_trial == 2)
+        if silent:
+            indx_trajs = common_cond & (df.special_trial == 2)
+        if not silent:
+            indx_trajs = common_cond & (df.special_trial == 0)
         bins_zt = [-1.01]
         percentiles = [1/num_bins_prior*i for i in range(1, num_bins_prior)]
         for perc in percentiles:
@@ -2614,16 +2617,16 @@ def simulate_model_humans(df_data, stim, load_params, params_to_explore=[]):
     zt = df_data.norm_allpriors.values*3
     trial_index = df_data.origidx.values
     num_tr = len(trial_index)
-    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt, frst_traj_motor_time =\
+    hit_model, reaction_time, detected_com, resp_fin, com_model,\
+        pro_vs_re, total_traj, x_val_at_updt =\
         run_simulation_different_subjs(
             stim=stim, zt=zt, coh=coh, gt=gt,
             trial_index=trial_index, num_tr=num_tr, human=True,
             subject_list=subjects, subjid=subjid, simulate=True,
             load_params=load_params, params_to_explore=params_to_explore)
     
-    return hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt, frst_traj_motor_time
+    return hit_model, reaction_time, detected_com, resp_fin, com_model,\
+        pro_vs_re, total_traj, x_val_at_updt
 
 
 
