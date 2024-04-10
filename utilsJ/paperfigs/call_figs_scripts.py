@@ -125,12 +125,12 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = False
+f1 = True
 f2 = False
 f3 = False
 f4 = False
 f5 = False
-f6 = True
+f6 = False
 f7 = False
 f8 = False
 com_threshold = 8
@@ -187,9 +187,9 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    # fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
-    #                        repalt_img=REPALT_IMG)
-    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+                            repalt_img=REPALT_IMG)
+    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
 if f2:
@@ -318,8 +318,9 @@ if f5:
         #                          trajectory="trajectory_y", p_val=0.05)
     
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
-        # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-        #                              sv_folder=SV_FOLDER)
+        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+                                     sv_folder=SV_FOLDER)
+        # fig_5.supp_model_trial_index(df_sim)
         # actual plot
         fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
                           new_data=simulate, save_new_data=save_new_data,
@@ -337,7 +338,7 @@ if f6:
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
-    # df_data['subjid'] = np.repeat('all', len(choice))
+    df_data['subjid'] = np.repeat('all', len(choice))
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
     subjid = df_data.subjid.values
@@ -351,7 +352,7 @@ if f8:
         trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
     df_data['origidx'] = trial_index
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt =\
+        pro_vs_re, trajs, x_val_at_updt =\
         fp.simulate_model_humans(df_data, stim=stim, load_params=True)
     MT = np.array([len(t) for t in trajs])
     mt_human = np.array(fp.get_human_mt(df_data))
@@ -362,7 +363,7 @@ if f8:
     #     mt_human[mt_human < 800], MT[MT < 800])
     # plot_psyc(df_data.R_response.values*2-1, resp_fin, coh=df_data.avtrapz.values*5)
     # plot_RT_density_comparison(df_data.sound_len.values,
-    #                            reaction_time)
+    #                             reaction_time)
     df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
                             'sound_len': reaction_time,
                             'rewside': (gt + 1)/2,
