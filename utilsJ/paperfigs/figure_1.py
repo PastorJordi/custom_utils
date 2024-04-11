@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 import seaborn as sns
-from scipy.stats import zscore
+from scipy.stats import zscore, ttest_1samp
 from scipy.optimize import curve_fit
 from matplotlib.lines import Line2D
+from scipy.stats import pearsonr
 import pandas as pd
 import matplotlib
 import sys
@@ -175,10 +176,9 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
         plt.ylabel('MT (ms)')
         plt.xlabel('normalized variables')
         plt.legend()
-    from scipy.stats import pearsonr
-    y_pred = linear_fun(xdata, *popt)
+    # y_pred = linear_fun(xdata, *popt)
     # print(np.corrcoef(ydata, y_pred)[0, 1])
-    print(pearsonr(ydata, y_pred).statistic)
+    # print(pearsonr(ydata, y_pred).statistic)
     return popt
 
 
@@ -200,7 +200,8 @@ def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
         ax.set_xticklabels(labels)
         ax.legend(fontsize=8)
 
-def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False,):
+def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
+                            t_index_w=False, ttest=True):
     if t_index_w:
         labels = ['Prior', 'Stimulus', 'Trial index']  # ]
         arr_weights = np.concatenate((w_zt, w_coh, w_t_i))
@@ -220,14 +221,27 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True, t_index_w=False,):
     for plot in violin.collections[::2]:
         plot.set_alpha(0.7)
     if t_index_w:
+        if ttest:
+            pval_zt = ttest_1samp(w_zt, popmean=0).pvalue
+            pval_coh = ttest_1samp(w_coh, popmean=0).pvalue
+            pval_t_i = ttest_1samp(w_t_i, popmean=0).pvalue
+            pval_array = np.array((pval_zt, pval_coh, pval_t_i))
+            formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
+        if ttest:
+            pval_zt = ttest_1samp(w_zt, popmean=0).pvalue
+            pval_coh = ttest_1samp(w_coh, popmean=0).pvalue
+            pval_array = np.array((pval_zt, pval_coh))
+            formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
         arr_weights = np.array((w_zt, w_coh))
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=2)
+        if ttest:
+            ax.text(i-0.25, 0.2, formatted_pvalues[i])
         if len(w_coh) > 1:
             ax.collections[0].set_edgecolor('k')
     if t_index_w:
@@ -684,10 +698,16 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     df_data = df_data.loc[df_data.soundrfail == 0]
     # TACHOMETRICS
     bin_size = 5
+    num_bins = 100
+    rtbins_1 = np.arange(0, 10, bin_size)
+    rtbins_2 = np.arange(10, 301, bin_size*3)
+    rtbins = np.concatenate((rtbins_1, rtbins_2))
+    # quants = [i/num_bins for i in range(num_bins+1)]
     labels = ['0', '0.25', '0.5', '1']
     df_tachos = df_data.copy().loc[df_data.subjid == 'LE46']
+    # rtbins = np.quantile(df_tachos.sound_len.values, quants)
     tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
-                labels=labels, rtbins=np.arange(0, max_rt+1, bin_size),
+                labels=labels, rtbins=rtbins,
                 evidence='coh2')
     del df_tachos
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
