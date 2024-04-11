@@ -2257,9 +2257,9 @@ def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
 
     """
     n_steps = int(max_ms/5)
-    fig2, ax2 = plt.subplots(nrows=3, ncols=3)
+    fig2, ax2 = plt.subplots(nrows=3, ncols=3, figsize=(10, 7))
     np.random.seed(seed=5)  # set seed
-    # fig2.tight_layout()
+    fig2.tight_layout()
     ax2 = ax2.flatten()
     coh = df_sim.coh2.values
     zt = np.round(df_sim.norm_allpriors.values, 1)
@@ -2303,7 +2303,7 @@ def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
             if i == 2 or i == 5 or i == 8:
                 ax1 = ax2[i].twinx()
                 ax1.set_yticks([])
-                ax1.set_ylabel('prior = {}'.format(ztlabs[int((i-2) // 3)]),
+                ax1.set_ylabel('stimulus = {}'.format(ztlabs[int((i-2) // 3)]),
                                rotation=90, labelpad=5, fontsize=12)
             if i >= 6:
                 ax2[i].set_xticks(np.arange(0, n_steps+1, 20), np.arange(0, n_steps+1, 20)*5)
@@ -2350,9 +2350,9 @@ def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
                     ax2[i].plot(np.arange(0, n_steps, 0.2), (-traj[700:700+int(max_ms)]+80)/160*len(values),
                                 color='blue', linewidth=0.3)
             i += 1
-    ax2[0].set_title('stimulus = -1')
-    ax2[1].set_title('stimulus = 0')
-    ax2[2].set_title('stimulus = 1')
+    ax2[0].set_title('prior = -1')
+    ax2[1].set_title('prior = 0')
+    ax2[2].set_title('prior = 1')
     fig2.savefig(sv_folder+'supp_fig_6.svg', dpi=400, bbox_inches='tight')
     fig2.savefig(sv_folder+'supp_fig_6.png', dpi=400, bbox_inches='tight')
 
@@ -2706,3 +2706,16 @@ def simulate_random_rat(n_samples, sv_folder, stim, zt, coh, gt, trial_index, nu
                 subject_list=subjects, subjid=subjid, simulate=simulate,
                 load_params=True, extra_label=extra_label)
     return
+
+
+def plot_acc_express(df):
+    df_filt = df.copy().loc[(df.sound_len >= 0) & (df.sound_len <= 50)]
+    # cohs = df_filt.coh2.abs().unique().values
+    hit = df_filt.groupby(df_filt.coh2.abs()).hithistory.mean()
+    fig, ax = plt.subplots(1, figsize=(6, 5))
+    rm_top_right_lines(ax)
+    ax.plot(hit.index, hit, color='k', marker='o', markersize=8)
+    ax.set_xlabel('Stimulus strength')
+    ax.set_ylabel('Accuracy')
+    ax.set_yticks([0.5, 0.75, 1])
+    ax.set_xticks([0, 0.25, 0.5, 1])
