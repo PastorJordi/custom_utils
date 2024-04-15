@@ -36,6 +36,8 @@ from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
 from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
+from utilsJ.paperfigs import figure_5 as fig_5
+from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.Models import analyses_humans as ah
 import matplotlib
 import matplotlib.pylab as pl
@@ -2719,3 +2721,98 @@ def plot_acc_express(df):
     ax.set_ylabel('Accuracy')
     ax.set_yticks([0.5, 0.75, 1])
     ax.set_xticks([0, 0.25, 0.5, 1])
+
+
+def plot_rats_humans_model_mt(df, df_sim, pc_name, mt=True):
+    df_humans = get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
+    minimum_accuracy = 0.7  # 70%
+    max_median_mt = 400  # ms
+    df_humans = fig_6.acc_filt(df_humans, acc_min=minimum_accuracy, mt_max=max_median_mt)
+    mt_human = np.array(get_human_mt(df_humans))
+    df_humans['coh2'] = df_humans.avtrapz.values*5
+    df_humans['resp_len'] = mt_human
+    df_humans['choice_x_coh'] = np.round((df_humans.R_response*2-1) * df_humans.coh2, 2)
+    df_humans['choice_x_prior'] = (df_humans.R_response*2-1) * df_humans.norm_allpriors
+    df_humans['aftererror'] = False
+    df_humans['framerate'] = 200
+    df_humans['special_trial'] = 0
+    prior = df_humans.choice_x_prior.values
+    if mt:
+        fig, ax = plt.subplots(ncols=6, nrows=1, figsize=(16, 3))
+        ax[0].axvline(x=0, color='k', linestyle='--', linewidth=0.6)
+        ax[1].axvline(x=0, color='k', linestyle='--', linewidth=0.6)
+        fig.subplots_adjust(wspace=0.6, hspace=0.5, left=0.05, right=0.95, bottom=0.1)
+        ax = ax.flatten()
+        cohvals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
+        # humans
+        times = df_humans.times.values
+        mov_time_list = []
+        colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
+        colormap = colormap(np.linspace(0, 1, len(cohvals)))
+        for i_ev, coh in enumerate(cohvals):
+            # humans
+            index = (df_humans.choice_x_coh == coh) &\
+                (np.abs(prior) <= np.quantile(np.abs(prior), 0.25)) &\
+                    (df_humans.sound_len <= 300) & (df_humans.sound_len >= 0)
+            mts = np.array([float(t[-1]) for t in
+                                            times[index]
+                                            if t[-1] != ''])
+            mov_time = np.nanmean(mts)*1e3
+            err_traj = np.nanstd(mts) / np.sqrt(sum(index))*1e3
+            mov_time_list.append(mov_time)
+            ax[1].errorbar(coh, mov_time, err_traj, color=colormap[i_ev],
+                            marker='o')
+        ax[1].plot(cohvals, mov_time_list, ls='-', lw=0.5, color='k')
+        # prior
+        condition = 'choice_x_prior'
+        
+        bins_zt, _, _, _, _ =\
+              get_bin_info(df=df_humans, condition=condition, prior_limit=1,
+                            after_correct_only=True, rt_lim=300, silent=False)
+        xvals_zt = (bins_zt[:-1] + bins_zt[1:]) / 2
+        colormap = pl.cm.copper_r(np.linspace(0., 1, len(bins_zt)-1))[::-1]
+        mov_time_list = []
+        for i_ev, zt in enumerate(bins_zt[:-1]):
+            index = (prior >= bins_zt[i_ev])*(prior < bins_zt[i_ev+1])
+            mov_time = np.nanmean(np.array(mt_human[index]))
+            err_traj = np.nanstd(np.array(mt_human[index])) / np.sqrt(sum(index))
+            ax[0].errorbar(xvals_zt[i_ev], mov_time, err_traj, color=colormap[i_ev],
+                            marker='o')
+            mov_time_list.append(mov_time)
+        ax[0].plot(xvals_zt, mov_time_list, ls='-', lw=0.5, color='k')
+        ax[0].set_xticks([-1, 0, 1])
+        # RATS
+        # MT VS PRIOR
+        df_mt = df.copy()
+        fig_1.plot_mt_vs_evidence(df=df_mt.loc[df_mt.special_trial == 2], ax=ax[2],
+                                  condition='choice_x_prior', prior_limit=1,
+                                  rt_lim=200)
+        del df_mt
+        # MT VS COH
+        df_mt = df.copy()
+        fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[3], prior_limit=0.1,  # 10% quantile
+                                  condition='choice_x_coh', rt_lim=50)
+        fig2, ax2 = plt.subplots(1)
+        ax_zts = np.array((ax2, ax2, ax[-2], ax2))
+        # MODEL
+        fig_5.traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zts,
+                                  new_data=False, data_folder=DATA_FOLDER,
+                                  save_new_data=False,
+                                  median=True, prior=True, rt_lim=300, extra_label='')
+        ax_cohs = np.array((ax2, ax2, ax[-1], ax2))
+        fig_5.traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                                  save_new_data=False,
+                                  new_data=False, data_folder=DATA_FOLDER,
+                                  prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1),
+                                  rt_lim=50, extra_label='')
+        for i_a, a in enumerate(ax):
+            rm_top_right_lines(a)
+            if i_a % 2 == 0:
+                a.set_xlabel('Prior evidence\ntowards response')
+                a.set_ylabel('Movement time (ms)')
+            else:
+                a.set_xlabel('Stimulus evidence\ntowards response')
+                a.set_ylabel('')
+            # a.set_ylim(180, 310)
+            # a.set_yticks([200, 250, 300])
+        
