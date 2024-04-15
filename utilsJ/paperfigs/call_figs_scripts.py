@@ -7,6 +7,7 @@ Created on Wed May 17 2023
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pl
 import matplotlib
 import seaborn as sns
 # from imp import reload
@@ -139,7 +140,7 @@ if f1 or f2 or f3 or f5:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE37', 'LE46']
+    subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE46']  # for params analysis
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
@@ -313,13 +314,13 @@ if f5:
         time_trajs = []
         # fig, ax = plt.subplots(1)
         # fig_2.trajs_splitting_stim(df_sim, ax, DATA_FOLDER, collapse_sides=True, threshold=300,
-        #                          sim=True,
-        #                          rtbins=np.linspace(0, 150, 25), connect_points=False,
-        #                          trajectory="trajectory_y", p_val=0.05)
+        #                           sim=True,
+        #                           rtbins=np.linspace(0, 150, 25), connect_points=False,
+        #                           trajectory="trajectory_y", p_val=0.05)
     
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
-        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-                                     sv_folder=SV_FOLDER)
+        # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+        #                               sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
         fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
