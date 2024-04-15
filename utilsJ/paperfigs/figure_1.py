@@ -331,18 +331,28 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
         for iev, ev in enumerate(np.unique(coh_cong)):
             index = (subjid == subject) & (zt_cong >= prior_min_quan) &\
                 (rt <= rt_max) & (spec_trial == 0) & (coh_cong == ev)
-            mt_mat[i_s, iev] = np.nanmean(mt[index])*1e3
+            mt_ind = np.nanmean(mt[index])*1e3
+            mt_mat[i_s, iev] = mt_ind
+    pv = []
+    mean_silent = np.nanmean(sil)
+    for iev, ev in enumerate(np.unique(coh_cong)):
+        mt_all_subs = mt_mat[:, iev]
+        pv.append(ttest_1samp(mt_all_subs, popmean=mean_silent).pvalue)
+    formatted_pvalues = [f'p={pvalue:.1e}' for pvalue in pv]
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
-    ax.axhline(y=np.nanmean(sil), color='k', alpha=0.6)
+    ax.axhline(y=mean_silent, color='k', alpha=0.6)
     coh_unq = np.unique(coh_cong)
     ax.plot(coh_unq, mean_mt_vs_coh, color='k', ls='-', lw=0.5)
     # colormap = pl.cm.coolwarm(np.linspace(0, 1, len(coh_unq)))
     colormap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["mediumblue","plum","firebrick"])
     colormap = colormap(np.linspace(0, 1, len(coh_unq)))
+    i = 0
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
         ax.errorbar(x, y, e, color=color)
+        ax.text(x, y*(1.05), formatted_pvalues[i])
+        i += 1
     # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.text(0.65, np.nanmean(sil)+5, 'silent', color='k', fontsize=10.5, alpha=0.7)
