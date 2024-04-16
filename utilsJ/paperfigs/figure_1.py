@@ -128,8 +128,19 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             mean_mt = np.mean(mt_time[:, i_tr])
             ax.errorbar(bin,mean_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o', alpha=alpha)
-
-        ax.set_ylabel('Movement time (ms)')
+    y_vals = mt_time.flatten()
+    x_vals = np.empty((0))
+    for i in range(mt_time.shape[0]):
+        x_vals = np.concatenate((x_vals, plot_bins))
+    plt.figure()
+    plt.plot(x_vals, y_vals, marker='o', linestyle='')
+    pval = pearsonr(x_vals, y_vals).pvalue
+    lab = f'p={pval:.2e}'
+    if condition == 'choice_x_prior':
+        ax.text(-1, 235, lab)
+    if condition == 'choice_x_coh':
+        ax.text(-1, 250, lab)
+    ax.set_ylabel('Movement time (ms)')
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5,
             alpha=alpha)
