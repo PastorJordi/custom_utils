@@ -167,6 +167,7 @@ def plot_coms_single_session(df, ax):
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
+    ax.set_title('Example session')
     conv_factor = 0.07
     ticks = np.array([-6, -3, 0, 3, 6])/conv_factor
     ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
@@ -670,6 +671,7 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     conv_factor = 0.07
     ticks = np.array([-3, 0, 3, 6])/conv_factor
     ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
+    ax.set_title('Avg. accross rats')
 
 
 def com_heatmap_marginal_pcom_side_mat(
