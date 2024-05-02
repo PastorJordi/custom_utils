@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 import seaborn as sns
-from scipy.stats import zscore, ttest_1samp
+from scipy.stats import zscore, ttest_1samp, ttest_rel
 from scipy.optimize import curve_fit
 from matplotlib.lines import Line2D
 from scipy.stats import pearsonr
@@ -67,7 +67,7 @@ def plot_rt_cohs_with_fb(df, ax, subj='LE46'):
 
 def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
                         rt_lim=50, after_correct_only=True, rtmin=0, alpha=1,
-                        write_arrows=True):
+                        write_arrows=True, num_bins_prior=5, correlation=False):
     subjects = df['subjid'].unique()
     ax.axvline(x=0, color='k', linestyle='--', linewidth=0.6)
     nanidx = df.loc[df[['dW_trans', 'dW_lat']].isna().sum(axis=1) == 2].index
@@ -78,7 +78,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
     bins, _, indx_trajs, _, colormap =\
           fp.get_bin_info(df=df, condition=condition, prior_limit=prior_limit,
                           after_correct_only=after_correct_only,
-                          rt_lim=rt_lim, rtmin=rtmin)
+                          rt_lim=rt_lim, rtmin=rtmin, num_bins_prior=num_bins_prior)
     df = df.loc[indx_trajs]
     df.resp_len *= 1e3
     if condition == 'choice_x_coh':
@@ -98,6 +98,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(238, 303)
+        # ax.set_title('Small prior', fontsize=10, pad=5)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
@@ -111,6 +112,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(219, 312)
+        # ax.set_title('Silent trials', fontsize=10, pad=5)
         # \;\;\; \rightarrow \;\; \it{Supports \; response}
     ax.set_xlim(-1.2, 1.2)
     # ARROWS FOR INC/CONG
@@ -128,18 +130,17 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             mean_mt = np.mean(mt_time[:, i_tr])
             ax.errorbar(bin,mean_mt, yerr=mt_time_err[i_tr],
                             color=c, marker='o', alpha=alpha)
-    y_vals = mt_time.flatten()
-    x_vals = np.empty((0))
-    for i in range(mt_time.shape[0]):
-        x_vals = np.concatenate((x_vals, plot_bins))
-    plt.figure()
-    plt.plot(x_vals, y_vals, marker='o', linestyle='')
-    pval = pearsonr(x_vals, y_vals).pvalue
-    lab = f'p={pval:.2e}'
-    if condition == 'choice_x_prior':
-        ax.text(-1, 235, lab)
-    if condition == 'choice_x_coh':
-        ax.text(-1, 250, lab)
+    if correlation:
+        y_vals = mt_time.flatten()
+        x_vals = np.empty((0))
+        for i in range(mt_time.shape[0]):
+            x_vals = np.concatenate((x_vals, plot_bins))
+        pval = pearsonr(x_vals, y_vals).pvalue
+        lab = f'p={pval:.2e}'
+        if condition == 'choice_x_prior':
+            ax.text(-1, 235, lab)
+        if condition == 'choice_x_coh':
+            ax.text(-1, 250, lab)
     ax.set_ylabel('Movement time (ms)')
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5,
@@ -190,7 +191,7 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
     # y_pred = linear_fun(xdata, *popt)
     # print(np.corrcoef(ydata, y_pred)[0, 1])
     # print(pearsonr(ydata, y_pred).statistic)
-    return popt
+    return popt, pcov
 
 
 def plot_mt_weights_bars(means, errors, ax, f5=False, means_model=None,
@@ -238,6 +239,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
             pval_t_i = ttest_1samp(w_t_i, popmean=0).pvalue
             pval_array = np.array((pval_zt, pval_coh, pval_t_i))
             formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
+            formatted_pvalues = ['***']*3
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
         if ttest:
@@ -245,6 +247,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
             pval_coh = ttest_1samp(w_coh, popmean=0).pvalue
             pval_array = np.array((pval_zt, pval_coh))
             formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
+            formatted_pvalues = ['***']*2
         arr_weights = np.array((w_zt, w_coh))
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
@@ -252,7 +255,7 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=2)
         if ttest:
-            ax.text(i-0.25, 0.2, formatted_pvalues[i])
+            ax.text(i-0.08, 0.2, formatted_pvalues[i])
         if len(w_coh) > 1:
             ax.collections[0].set_edgecolor('k')
     if t_index_w:
@@ -285,15 +288,15 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
         trial_index = np.array(df_1.origidx)
         com = df_1.CoM_sugg.values
         zt = df_1.allpriors.values
-        params = mt_linear_reg(mt=var[~np.isnan(zt)],
-                               coh=zscore(coh[~np.isnan(zt)] *
-                                          decision[~np.isnan(zt)]),
-                               trial_index=zscore(trial_index[~np.isnan(zt)].
-                                                  astype(float)),
-                               prior=zscore(zt[~np.isnan(zt)] *
-                                            decision[~np.isnan(zt)]),
-                               plot=False,
-                               com=com[~np.isnan(zt)])
+        params, pcov = mt_linear_reg(mt=var[~np.isnan(zt)],
+                                     coh=zscore(coh[~np.isnan(zt)] *
+                                                decision[~np.isnan(zt)]),
+                                     trial_index=zscore(trial_index[~np.isnan(zt)].
+                                                        astype(float)),
+                                     prior=zscore(zt[~np.isnan(zt)] *
+                                                  decision[~np.isnan(zt)]),
+                                     plot=False,
+                                     com=com[~np.isnan(zt)])
         w_coh.append(params[1])
         w_t_i.append(params[2])
         w_zt.append(params[3])
@@ -317,6 +320,19 @@ def mt_weights(df, ax, plot=False, means_errs=True, mt=True, t_index_w=False):
         return means, errors
     else:
         return w_coh, w_t_i, w_zt
+
+
+def num_ast(decimal):
+    if decimal >= 0.05:
+        return 0
+    if decimal < 0.05 and decimal >= 0.01:
+        return 1
+    if decimal < 0.01 and decimal >= 0.001:
+        return 2
+    if decimal < 0.001 and decimal >= 0.0001:
+        return 3
+    if decimal < 0.0001:
+        return 4
 
 
 def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
@@ -348,8 +364,10 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     mean_silent = np.nanmean(sil)
     for iev, ev in enumerate(np.unique(coh_cong)):
         mt_all_subs = mt_mat[:, iev]
-        pv.append(ttest_1samp(mt_all_subs, popmean=mean_silent).pvalue)
-    formatted_pvalues = [f'p={pvalue:.1e}' for pvalue in pv]
+        pv.append(ttest_rel(mt_all_subs, sil).pvalue)
+        # pv.append(ttest_1samp(mt_all_subs-np.array(sil), popmean=0).pvalue)
+    # formatted_pvalues = [f'p={pvalue:.1e}' for pvalue in pv]
+    formatted_pvalues = [num_ast(pvalue)*'*' for pvalue in pv]
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
     ax.axhline(y=mean_silent, color='k', alpha=0.6)
@@ -362,7 +380,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     for x, y, e, color in zip(coh_unq, mean_mt_vs_coh, sd_mt_vs_coh, colormap):
         ax.plot(x, y, 'o', color=color)
         ax.errorbar(x, y, e, color=color)
-        ax.text(x, y*(1.05), formatted_pvalues[i])
+        ax.text(x-len(formatted_pvalues[i])*0.03, y*(1.03), formatted_pvalues[i])
         i += 1
     # coh_vals = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
@@ -373,6 +391,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     ax.text(-0.85, 300, r'$\it{incongruent}$', fontsize=8)
     ax.text(0.07, 293, r'$\longrightarrow $', fontsize=10)
     ax.text(0.07, 300, r'$\it{congruent}$', fontsize=8)
+    # ax.set_title('Large cong. prior', fontsize=10, pad=10)
     ax.set_xlim(-1.1, 1.1)
     if not sim:
         ax.set_ylim(218, 302)
@@ -720,8 +739,8 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     # TACHOMETRICS
     bin_size = 5
     num_bins = 100
-    rtbins_1 = np.arange(0, 10, bin_size)
-    rtbins_2 = np.arange(10, 301, bin_size*3)
+    rtbins_1 = np.arange(0, 100, bin_size)
+    rtbins_2 = np.arange(100, 301, bin_size*3)
     rtbins = np.concatenate((rtbins_1, rtbins_2))
     # quants = [i/num_bins for i in range(num_bins+1)]
     labels = ['0', '0.25', '0.5', '1']
