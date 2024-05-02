@@ -9,7 +9,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib.pylab as pl
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ttest_rel
 from matplotlib.lines import Line2D
 from scipy.stats import sem
 import sys
@@ -227,9 +227,9 @@ def supp_com_analysis(df_sim, sv_folder, pcom_rt):
 
 def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
     fig, ax = plt.subplots(1)
-    df_sim['special_trial'] = 2
     fp.rm_top_right_lines(ax)
-    supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='data',
+    supp_p_com_vs_rt_silent(df.loc[df.special_trial == 2],
+                            ax, bins_rt=BINS_RT, label='data',
                             color='k')
     # ax2 = ax.twinx()
     # ax2.spines['right'].set_color('red')
@@ -237,17 +237,25 @@ def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
     # ax2.tick_params(axis='y', colors='red')
     # ax2.spines['top'].set_visible(False)
     # ax2.yaxis.label.set_color('red')
-    supp_p_com_vs_rt_silent(df_sim, ax=ax, bins_rt=BINS_RT, label='model',
+    supp_p_com_vs_rt_silent(df_sim.loc[df_sim.special_trial == 2], ax=ax,
+                            bins_rt=BINS_RT, label='model',
                             column='com_detected', color='r')
+    # df with coh=0
+    df_coh0 = df.copy().loc[df.coh2 == 0]
+    df_sim_coh0 = df_sim.copy().loc[df_sim.coh2 == 0]
+    supp_p_com_vs_rt_silent(df_coh0, ax=ax, bins_rt=BINS_RT, label='data, stim=0',
+                            color='b')
+    supp_p_com_vs_rt_silent(df_sim_coh0, ax=ax, bins_rt=BINS_RT, label='model, stim=0',
+                            column='com_detected', color='g')
     # ax2.set_ylabel('p(reversal) - model - silent')
     # ax.set_ylabel('p(reversal) - data - silent')
     ax.set_ylabel('p(reversal) - silent')
-    legendelements = [Line2D([0], [0], color='k', lw=2,
-                             label='data'),
-                      Line2D([0], [0], color='r', lw=2,
-                             label='model')]
-    ax.legend(handles=legendelements, loc='upper right',
-              handlelength=1.2, frameon=False)
+    # legendelements = [Line2D([0], [0], color='k', lw=2,
+    #                          label='data'),
+    #                   Line2D([0], [0], color='r', lw=2,
+    #                          label='model')]
+    # ax.legend(handles=legendelements, loc='upper right',
+    #           handlelength=1.2, frameon=False)
 
 
 def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
@@ -280,7 +288,7 @@ def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg'
     com_data[:] = np.nan
     xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
     for i_s, subject in enumerate(subjects):
-        df_plot = df.loc[(subjid == subject) & (df.special_trial == 2)]
+        df_plot = df.loc[subjid == subject]
         # & (df_sim.norm_allpriors.abs() >= 0.5)]
         mean_pcom_mod_det = []
         for i_rt, rt in enumerate(bins_rt[:-1]):
@@ -288,7 +296,11 @@ def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg'
                                   (df_plot.sound_len < bins_rt[i_rt+1])]
             mean_pcom_mod_det.append(np.nanmean((df_filt[column])))
         com_data[i_s, :len(mean_pcom_mod_det)] = mean_pcom_mod_det
-    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+        # ax.plot(xpos_plot, mean_pcom_mod_det, color=color, alpha=0.3)
+    first_vals = com_data[:, 0]
+    last_vals = com_data[:, -1]
+    print(ttest_rel(first_vals, last_vals).pvalue)
+    ax.errorbar(xpos_plot, np.nanmean(com_data, axis=0),
                 yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
                 color=color, label=label)
     ax.set_ylabel('p(reversal) - silent')
@@ -591,7 +603,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                               after_correct_only=True)
         xvals_zt = (bins_zt[:-1] + bins_zt[1:]) / 2
     else:
-        xvals_zt = [-1, -0.5, 0, 0.5, 1]
+        xvals_zt = bins_coh
     # np.linspace(-1, 1, 5)
     signed_response = df_sim.R_response.values
     # df_sim['normallpriors'] = df_sim['allpriors'] /\
@@ -618,11 +630,11 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     mat_trajs_indsub = np.empty((len(bins_ref), max_mt))
     mat_vel_indsub = np.empty((len(bins_ref), max_mt))
     if prior:
-        val_traj_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
+        val_mt_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref)-1, len(subjects.unique())))
         label_save = 'prior'+extra_label
     else:
-        val_traj_subs = np.empty((len(bins_ref), len(subjects.unique())))
+        val_mt_subs = np.empty((len(bins_ref), len(subjects.unique())))
         val_vel_subs = np.empty((len(bins_ref), len(subjects.unique())))
         label_save = 'stim'+extra_label
     for i_s, subject in enumerate(subjects.unique()):
@@ -683,8 +695,8 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                     mean_traj = func_final(traj_all, axis=0)
                     std_traj = np.nanstd(traj_all, axis=0) /\
                         np.sqrt(len(subjects.unique()))
-                val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
-                vals_thr_traj.append(val_traj)
+                val_mt = np.mean(df_sim['resp_len'].values[index])*1e3
+                vals_thr_traj.append(val_mt)
                 mean_vel = func_final(vel_all, axis=0)
                 std_vel = np.nanstd(vel_all, axis=0) / np.sqrt(len(subjects.unique()))
                 val_vel = np.nanmax(mean_vel)  # func_final(np.nanmax(vel_all, axis=1))
@@ -698,13 +710,18 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                 np.savez(traj_data, **data)
         mat_trajs_subs[:, :, i_s] = mat_trajs_indsub
         mat_vel_subs[:, :, i_s] = mat_vel_indsub
-        val_traj_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
+        val_mt_subs[:len(vals_thr_traj), i_s] = vals_thr_traj
         val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
+    y_vals = val_mt_subs.flatten()
+    x_vals = np.repeat(xvals_zt, len(subjects.unique()))
+    pval = pearsonr(x_vals, y_vals).pvalue
+    lab = f'p={pval:.2e}'
+    ax[2].text(-1, 265, lab)
     for i_ev, ev in enumerate(bins_ref):
         if prior and ev == 1.01:
             break
-        val_traj = np.nanmean(val_traj_subs[i_ev, :])
-        std_mt = np.nanstd(val_traj_subs[i_ev, :]) /\
+        val_mt = np.nanmean(val_mt_subs[i_ev, :])
+        std_mt = np.nanstd(val_mt_subs[i_ev, :]) /\
             np.sqrt(len(subjects.unique()))
         val_vel = np.nanmean(val_vel_subs[i_ev, :])
         std_vel_points = np.nanstd(val_vel_subs[i_ev, :]) /\
@@ -719,7 +736,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
             xval = xvals_zt[i_ev]
         else:
             xval = ev
-        ax[2].errorbar(xval, val_traj, std_mt, color=colormap[i_ev], marker='o')
+        ax[2].errorbar(xval, val_mt, std_mt, color=colormap[i_ev], marker='o')
         ax[3].errorbar(xval, val_vel, std_vel_points, color=colormap[i_ev],
                        marker='o')
         if not prior:
@@ -745,7 +762,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     ax[2].set_xlim(-1.2, 1.2)
     if prior:
         leg_title = 'Prior'
-        ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
+        ax[2].plot(xvals_zt, np.nanmean(val_mt_subs, axis=1),
                    color='k', ls='-', lw=0.5)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
@@ -757,7 +774,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         ax[3].set_xlabel('Prior')
     if not prior:
         leg_title = 'Stimulus'
-        ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
+        ax[2].plot(bins_coh, np.nanmean(val_mt_subs, axis=1),
                    color='k', ls='-', lw=0.5)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', ls='-', lw=0.5)
