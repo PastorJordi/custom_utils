@@ -126,7 +126,7 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = True
+f1 = False
 f2 = False
 f3 = False
 f4 = False
@@ -135,13 +135,14 @@ f6 = False
 f7 = False
 f8 = False
 com_threshold = 8
-if f1 or f2 or f3 or f5:
+if f1 or f2 or f3 or f5 or f7:
     # with silent: 42, 43, 44, 45, 46, 47
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE42', 'LE37', 'LE46']
+    # subjects = ['LE42', 'LE37', 'LE46']
     # subjects = ['LE46']  # for params analysis
+    # subjects = ['LE42']  # for fig7
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -188,9 +189,9 @@ if f1 or f2 or f3 or f5:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
-                            repalt_img=REPALT_IMG)
-    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    # fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+    #                         repalt_img=REPALT_IMG)
+    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
 if f2:
@@ -207,7 +208,7 @@ if f3:
     # fig_3.supp_com_marginal(df=df, sv_folder=SV_FOLDER)
 
 # fig 5 (model)
-if f5:
+if f5 or f7:
     simulate = False
     with_fb = False
     save_new_data = False
@@ -216,7 +217,10 @@ if f5:
         stim[:] = 0  # silent simulation
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
-    n_sil = 0 #  int(400000 - len(df))  # 0
+    if f7:
+        n_sil = int(400000 - len(df))  # 0
+    else:
+        n_sil = 0
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -255,8 +259,9 @@ if f5:
                     data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
                     extra_labels=[len(coh),
                                   '_2_ro_rand_'+str(len(coh)),
-                                  '_1_ro_'+str(len(coh)),
-                                  '_1_ro__com_modulation_'+str(len(coh))])
+                                  # '_1_ro_'+str(len(coh)),
+                                  '_1_ro__com_modulation_'+str(len(coh)),
+                                  '_prior_sign_1_ro_'+str(len(coh))])
     else:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
@@ -320,7 +325,7 @@ if f5:
     
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
         # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-        #                               sv_folder=SV_FOLDER)
+        #                              sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
         fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
