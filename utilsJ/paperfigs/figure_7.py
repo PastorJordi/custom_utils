@@ -172,6 +172,19 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[1+i_l*4], prior_limit=0.1,  # 10% quantile
                                   condition='choice_x_coh', rt_lim=50, alpha=1,
                                   write_arrows=False)
+        fig2, ax2 = plt.subplots(1)
+        # fig_1.plot_mt_vs_evidence(df_data, ax2, condition='choice_x_prior', prior_limit=1,
+        #                           rt_lim=300, rtmin=150, alpha=1,
+        #                           write_arrows=False, num_bins_prior=8)
+        # num_bins = 11
+        # quants = [i/num_bins for i in range(num_bins+1)]
+        # reac_time = df_data.sound_len.values
+        # reac_time = reac_time[(reac_time >= 0) & (reac_time <= 300)]
+        # rtbins = np.quantile(reac_time, quants)
+        rtbins = np.linspace(0, 280, 11)
+        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2, column='com_detected',
+                                      bins_rt=rtbins)
+        ax2.set_title(lab)
         del df_mt
         if i_l >= 1:
             mat_titles_rev = ['', '']
@@ -239,6 +252,7 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # ax[4+i_l*6].set_xlabel('       \
         #                        Prior evidence')
         # ax[5+i_l*6].set_xlabel('')
+    ax2.legend()
 
 
 def fig_7_v1(subjects, subjid, stim, zt, coh, gt, trial_index,
@@ -326,7 +340,8 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
           special_trial, data_folder, sv_folder,
           extra_labels=['_1_ro_',
                         '_1_ro__com_modulation_',
-                        '_2_ro_rand_']):
+                        '_2_ro_rand_',
+                        '_prior_sign_1_ro_']):
     '''
     Plots figure 7.
 
@@ -342,7 +357,7 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
     general_labels = ['a', '', '', '',
                       'b', '', '', '',
                       'c', '', '', '',
-                      'd', '', '', '',]
+                      'd', '', '', '']
     for i_ax, a in enumerate(ax):
         if (i_ax-1) % 4 == 0 or (i_ax) % 4 == 0:
             fp.rm_top_right_lines(a)
