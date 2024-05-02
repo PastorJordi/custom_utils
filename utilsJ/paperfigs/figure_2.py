@@ -17,6 +17,8 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply
+from scipy.stats import pearsonr
+
 
 def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap='viridis',
                             prior_limit=0.25, rt_lim=50,
@@ -146,10 +148,14 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
             np.savez(traj_data, **data)
         mat_all[:, :, i_subj] = mean_traj
         mt_all[:, i_subj] = ypoints
+    # x_vals = np.repeat(xpoints, mt_all.shape[1])
+    # y_vals = mt_all.flatten()
+    # pval = pearsonr(x_vals, y_vals).statistic
+    # lab = f'r={pval:.2e}'
     all_trajs = np.nanmean(mat_all, axis=2)
     all_trajs_err = np.nanstd(mat_all, axis=2) / np.sqrt(len(subjects))
-    mt_time = np.nanmedian(mt_all, axis=1)
-    mt_time_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
+    peak = np.nanmedian(mt_all, axis=1)
+    peak_err = np.nanstd(mt_all, axis=1) / np.sqrt(len(subjects))
     for i_tr, traj in enumerate(all_trajs):
         col_face = colormap[i_tr].copy()
         col_face[-1] = 0.2
@@ -159,17 +165,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
         ax[2].fill_between(interpolatespace/1000, traj-all_trajs_err[i_tr],
                            traj+all_trajs_err[i_tr],
                            facecolor=col_face, edgecolor=col_edge)
-        if False:  # len(subjects) > 1:
-            xp = [xpoints[i_tr]]
-            c = colormap[i_tr]
-            ax[1].boxplot(mt_all[i_tr, :], positions=xp,
-                          boxprops=dict(markerfacecolor=c, markeredgecolor=c))
-            ax[1].plot(xpoints[i_tr] + 0.1*np.random.randn(len(subjects)),
-                       mt_all[i_tr, :], color=colormap[i_tr], marker='o',
-                       linestyle='None')
-        else:
-            ax[1].errorbar(xpoints[i_tr], mt_time[i_tr], yerr=mt_time_err[i_tr],
-                           color=colormap[i_tr], marker='o')
+        ax[1].errorbar(xpoints[i_tr], peak[i_tr], yerr=peak_err[i_tr],
+                       color=colormap[i_tr], marker='o')
     ax[2].set_xlim([-20, 450])
     ax[1].set_ylabel('Peak')
     ax[2].set_ylim([-0.05, 0.5])
@@ -182,7 +179,8 @@ def plots_trajs_conditioned(df, ax, data_folder, condition='choice_x_coh', cmap=
     ax[2].set_yticks(ticks, labs)
     ax[1].set_xticks([])
     ax[1].set_yticks([])
-    ax[1].plot(xpoints, mt_time, color='k', ls='-', lw=0.5)
+    ax[1].plot(xpoints, peak, color='k', ls='-', lw=0.5)
+    # ax[1].set_title(lab)
 
 
 def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
