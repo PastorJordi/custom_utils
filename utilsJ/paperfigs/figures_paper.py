@@ -655,7 +655,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = model_variations.trial_ev_vectorized_neg_starting_point
         if '_1_ro' in extra_label:  # only with 1st readout
             model = model_variations.trial_ev_vectorized_without_2nd_readout
-        if '_1_ro' in extra_label and 'com_modulation_' in extra_label:  # only with 1st readout
+        if '_1_ro' in extra_label and 'com_modulation_' in extra_label:  # only with 1st readout (RESULAJ)
             model = model_variations.trial_ev_vectorized_CoM_without_update
         if '_2_ro' in extra_label and 'rand' not in extra_label:  # only with 2nd readout
             model = model_variations.trial_ev_vectorized_without_1st_readout
@@ -663,6 +663,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = model_variations.trial_ev_vectorized_without_1st_readout_random_1st_choice
         if 'virt' in extra_label:
             model = edd2.trial_ev_vectorized
+        if '_prior_sign_1_ro_' in extra_label:
+            model = model_variations.trial_ev_vectorized_only_prior_1st_choice
     if type(extra_label) is int:
         model = edd2.trial_ev_vectorized
     # dt = 5e-3
@@ -701,9 +703,9 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             conf = np.load(SV_FOLDER +
                            'parameters_MNLE_BADS_human_subj_' + str(subject) + '.npy')
         else:
-            if 'virt' not in extra_label:
+            if 'virt' not in str(extra_label):
                 conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
-            if 'virt' in extra_label:
+            if 'virt' in str(extra_label):
                 conf = np.load(SV_FOLDER + 'virt_params/' + 'parameters_MNLE_BADS_prt_n50_' +
                                str(extra_label) + '.npy')
         jitters = len(conf)*[0]
@@ -1509,6 +1511,19 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
     ax.set_title(title)
 
 
+def supp_parameter_recovery_test(margin=1):
+    fig, ax = plt.subplots(4, 4, figsize=(14, 12))
+    ax = ax.flatten()
+    plot_param_recovery_test(fig, ax,
+            subjects=['Virtual_rat_random_params' for _ in range(50)],
+            sv_folder=SV_FOLDER, corr=True)
+    pos = ax[12].get_position()
+    cbar_ax = fig.add_axes([pos.x0+pos.width/2, pos.y0-pos.height-margin,
+                            pos.width*5, pos.height*4])
+    plot_corr_matrix_prt(cbar_ax,
+            subjects=['Virtual_rat_random_params' for _ in range(50)],
+            sv_folder=SV_FOLDER)
+    fig.savefig(SV_FOLDER + 'supp_prt.png', dpi=500, bbox_inches='tight')
 
 
 def supp_com_threshold_matrices(df):
@@ -1766,7 +1781,7 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     ax[-1].axis('off')
 
 
-def plot_corr_matrix_prt(
+def plot_corr_matrix_prt(ax,
         subjects=['Virtual_rat_random_params' for _ in range(50)],
         sv_folder=SV_FOLDER):
     labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
@@ -1797,23 +1812,21 @@ def plot_corr_matrix_prt(
     for i in range(len(labels)):
         for j in range(len(labels)):
             corr_mat[i, j] = np.corrcoef(conf_mat[i, :], conf_mat_rec[j, :])[1][0]
-    plt.figure()
-    plt.imshow(corr_mat, cmap='coolwarm', vmin=-1, vmax=1)
-    plt.colorbar()
-    plt.xticks(np.arange(16), labels, rotation='270')
-    plt.yticks(np.arange(16), labels)
-    plt.ylabel('Original parameters')
-    plt.xlabel('Inferred parameters')
+    im = ax.imshow(corr_mat, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.colorbar(im, ax=ax, label='Correlation')
+    ax.set_xticks(np.arange(16), labels, rotation='270', fontsize=12)
+    ax.set_yticks(np.arange(16), labels, fontsize=12)
+    ax.set_ylabel('Original parameters', fontsize=14)
+    ax.set_xlabel('Inferred parameters', fontsize=14)
 
 
 
-def plot_param_recovery_test(
+def plot_param_recovery_test(fig, ax,
         subjects=['Virtual_rat_random_params' for _ in range(50)],
         sv_folder=SV_FOLDER, corr=True):
-    fig, ax = plt.subplots(4, 4, figsize=(14, 12))
+    # fig, ax = plt.subplots(4, 4, figsize=(14, 12))
     plt.subplots_adjust(top=0.92, bottom=0.05, left=0.06, right=0.94,
                         hspace=0.6, wspace=0.5)
-    ax = ax.flatten()
     for a in ax:
         rm_top_right_lines(a)
         pos = a.get_position()
@@ -1853,8 +1866,8 @@ def plot_param_recovery_test(
         if i == 4 or i == 5 or i == 6:
             ax[i].plot(conf_mat[i, :]*5, conf_mat_rec[i, :]*5,
                        marker='o', color='k', linestyle='')
-            ax[i].set_xlabel(labels[i] + str(' (ms)'))
-            ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT')
+            ax[i].set_xlabel(labels[i] + str(' (ms)'), fontsize=12)
+            ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT', fontsize=12)
             ax[i].plot([5*min_total*0.4,
                         5*max_total*1.6],
                        [5*min_total*0.4,
@@ -1865,8 +1878,8 @@ def plot_param_recovery_test(
         else:
             ax[i].plot(conf_mat[i, :], conf_mat_rec[i, :],
                        marker='o', color='k', linestyle='')
-            ax[i].set_xlabel(labels[i])
-            ax[i].set_ylabel(labels[i] + ' PRT')
+            ax[i].set_xlabel(labels[i], fontsize=12)
+            ax[i].set_ylabel(labels[i] + ' PRT', fontsize=12)
             ax[i].plot([min_total*0.4, max_total*1.6],
                        [min_total*0.4, max_total*1.6])
             ax[i].set_xlim(min_total*0.4, max_total*1.6)
@@ -1877,13 +1890,13 @@ def plot_param_recovery_test(
         if i != 13:
             mlist.append(m)
             rlist.append(r)
-        p2 = out.pvalue
-        if corr:
-            ax[i].set_title(r'$\rho=$' + str(round(r, 3)) + ', p-value = ' + str(round(p2, 3)),
-                            pad=10)
-        else:
-            ax[i].set_title('m=' + str(round(m, 3)) + ', p-value = ' + str(round(p2, 3)),
-                            pad=10)
+        # p2 = out.pvalue
+        # if corr:
+        #     ax[i].set_title(r'$\rho=$' + str(round(r, 3)) + ', p-value = ' + str(round(p2, 3)),
+        #                     pad=10)
+        # else:
+        #     ax[i].set_title('m=' + str(round(m, 3)) + ', p-value = ' + str(round(p2, 3)),
+        #                     pad=10)
         xtcks = ax[i].get_yticks()
         if i == 8:
             ax[i].set_xticks(xtcks[:-1], [f'{x:.0e}' for x in xtcks[:-1]])
@@ -1892,12 +1905,12 @@ def plot_param_recovery_test(
             ax[i].set_xticks(xtcks[:-1])    
         #     ax[i].ticklabel_format(style='sci', axis='both',
         #                            scilimits=(5, 1))
-    plt.figure()
-    plt.plot(mlist, rlist)
-    print(np.median(mlist))
-    print(np.mean(mlist))
-    plt.figure()
-    sns.violinplot(mlist, inner='point')
+    # plt.figure()
+    # plt.plot(mlist, rlist)
+    # print(np.median(mlist))
+    # print(np.mean(mlist))
+    # plt.figure()
+    # sns.violinplot(mlist, inner='point')
 
 
 def plot_param_recovery_test_boxplot_difference(subjects, sv_folder=SV_FOLDER):
