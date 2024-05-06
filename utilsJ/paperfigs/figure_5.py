@@ -256,6 +256,7 @@ def supp_p_reversal_silent(df, df_sim, data_folder, sv_folder):
     #                          label='model')]
     # ax.legend(handles=legendelements, loc='upper right',
     #           handlelength=1.2, frameon=False)
+    ax.legend()
 
 
 def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):

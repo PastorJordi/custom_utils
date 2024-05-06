@@ -673,7 +673,8 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
             legendelements.append(Line2D([0], [0], color=colormap[::-1][i_l], lw=2,
                                   label=lab))
         ax.legend(handles=legendelements, fontsize=8, loc='lower right',
-                  labelspacing=0.1, frameon=False, bbox_to_anchor=(1.1, 0.2))
+                  labelspacing=0.1, frameon=False, bbox_to_anchor=(1.2, 0.12),
+                  title='Stimulus\nstrength')
     conv_factor = 0.07
     ticks = np.array([0, 0.1, 0.2]) / conv_factor
     labs = np.round(ticks*conv_factor, 2)
