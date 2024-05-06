@@ -1555,7 +1555,7 @@ def trial_ev_vectorized_only_prior_1st_choice(
     p_e_noise = np.sqrt(dt)
     p_a_noise = np.sqrt(dt)
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
-    prior = zt*p_w_zt + np.random.randn(len(zt))*1e-5
+    prior = zt*p_w_zt + np.random.randn(len(zt))*1e-7
     # instantaneous evidence
     Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1

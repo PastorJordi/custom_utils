@@ -132,7 +132,7 @@ f3 = False
 f4 = False
 f5 = False
 f6 = False
-f7 = False
+f7 = True
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5 or f7:
@@ -140,7 +140,7 @@ if f1 or f2 or f3 or f5 or f7:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE37', 'LE46']
+    subjects = ['LE42', 'LE37', 'LE38']
     # subjects = ['LE46']  # for params analysis
     # subjects = ['LE42']  # for fig7
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
@@ -173,6 +173,7 @@ if f1 or f2 or f3 or f5 or f7:
                                      traj_stamps=traj_stamps,
                                      fix_onset=fix_onset, com=com,
                                      sound_len=sound_len)
+    special_trial = df.special_trial
     df['time_trajs'] = time_trajs
     if (f5 or f3) and not f7:
         subjid = df.subjid.values
@@ -185,6 +186,8 @@ if f1 or f2 or f3 or f5 or f7:
         df['CoM_sugg'] = com
     df['norm_allpriors'] = fp.norm_allpriors_per_subj(df)
     df['time_trajs'] = time_trajs
+    if f7:
+        df['subjid'] = 'LE42'
 
 # fig 1
 if f1:
@@ -215,10 +218,14 @@ if f5 or f7:
     silent_sim = False
     if silent_sim:
         stim[:] = 0  # silent simulation
+        special_trial[:] = 2
+        extra_label = 'silent'
+    else:
+        extra_label = ''
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     if f7:
-        n_sil = int(400000 - len(df))  # 0
+        n_sil = 0  # int(400000 - len(df))
     else:
         n_sil = 0
     # trials where there was no sound... i.e. silent for simul
@@ -233,42 +240,20 @@ if f5 or f7:
     gt = np.resize(gt[:int(num_tr)], num_tr + n_sil)
     trial_index = np.resize(trial_index[:int(num_tr)], num_tr + n_sil)
     hit = np.resize(hit[:int(num_tr)], num_tr + n_sil)
-    special_trial = np.resize(df.special_trial[:int(num_tr)], num_tr + n_sil)
+    special_trial = np.resize(special_trial[:int(num_tr)], num_tr + n_sil)
     subjid = np.resize(np.array(df.subjid)[:int(num_tr)], num_tr + n_sil)
-    # special_trial[int(num_tr):] = 2
     # special_trial[df.soundrfail.values] = 2
     if stim.shape[0] != 20:
         stim = stim.T
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     # stim[:, int(num_tr):] = 0  # for silent simulation
-    if f7:
-        # index to filter by stim/silent for p(com) vs p(proac) supp figure
-        # idx = df.special_trial.values >= 0
-        # fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
-        #                             subjid, sv_folder=SV_FOLDER, idx=idx)
-        # fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
-        #                        subjid, sv_folder=SV_FOLDER, idx=idx)
-        # fig_7.plot_traj_cond_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
-        #                                       special_trial,
-        #                                       data_folder=DATA_FOLDER,
-        #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
-        #                                                     '_1_ro_'+str(len(coh)),
-        #                                                     len(coh)])
-        fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
-                    special_trial,
-                    data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
-                    extra_labels=[len(coh),
-                                  '_2_ro_rand_'+str(len(coh)),
-                                  # '_1_ro_'+str(len(coh)),
-                                  '_1_ro__com_modulation_'+str(len(coh)),
-                                  '_prior_sign_1_ro_'+str(len(coh))])
-    else:
+    if f5:
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
                                               trial_index=trial_index, num_tr=num_tr,
                                               subject_list=subjects, subjid=subjid, simulate=simulate,
-                                              extra_label='')
+                                              extra_label=extra_label)
         
         MT = [len(t) for t in trajs]
         df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
@@ -324,18 +309,39 @@ if f5 or f7:
         #                           trajectory="trajectory_y", p_val=0.05)
     
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
-        # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-        #                              sv_folder=SV_FOLDER)
+        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+                                      sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
-        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                          new_data=simulate, save_new_data=save_new_data,
-                          coh=coh, sound_len=sound_len, zt=zt,
-                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                          decision_model=resp_fin, com=com, com_model=com_model,
-                          com_model_detected=com_model_detected,
-                          means=means, errors=errors, means_model=means_model,
-                          errors_model=errors_model, df_sim=df_sim)
+        # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+        #                   new_data=simulate, save_new_data=save_new_data,
+        #                   coh=coh, sound_len=sound_len, zt=zt,
+        #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+        #                   decision_model=resp_fin, com=com, com_model=com_model,
+        #                   com_model_detected=com_model_detected,
+        #                   means=means, errors=errors, means_model=means_model,
+        #                   errors_model=errors_model, df_sim=df_sim)
+    if f7:
+        # index to filter by stim/silent for p(com) vs p(proac) supp figure
+        # idx = df.special_trial.values >= 0
+        # fp.supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
+        #                             subjid, sv_folder=SV_FOLDER, idx=idx)
+        # fp.supp_pcom_teff_taff(stim, zt, coh, gt, trial_index, subjects,
+        #                        subjid, sv_folder=SV_FOLDER, idx=idx)
+        # fig_7.plot_traj_cond_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
+        #                                       special_trial,
+        #                                       data_folder=DATA_FOLDER,
+        #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
+        #                                                     '_1_ro_'+str(len(coh)),
+        #                                                     len(coh)])
+        fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
+                    special_trial,
+                    data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
+                    extra_labels=[len(coh),
+                                  '_2_ro_rand_'+str(len(coh)),
+                                  # '_1_ro_'+str(len(coh)),
+                                  '_1_ro__com_modulation_'+str(len(coh)),
+                                  '_prior_sign_1_ro_'+str(len(coh))])
 if f6:
     print('Plotting Figure 6')
     # human traj plots
