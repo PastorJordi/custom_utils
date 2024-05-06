@@ -34,7 +34,6 @@ from utilsJ.paperfigs import figures_paper as fp
 def get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                  special_trial, extra_label='_1_ro'):
     num_tr = len(gt)
-    print(stim.shape[1])
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,

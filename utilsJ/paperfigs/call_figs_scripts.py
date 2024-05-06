@@ -188,7 +188,7 @@ if f1 or f2 or f3 or f5 or f7:
     df['time_trajs'] = time_trajs
     if f7:
         df['subjid'] = 'LE42'
-
+        subjects = ['LE42']  # to simulate trials from selected subjects with LE42 parameters
 # fig 1
 if f1:
     print('Plotting Figure 1')
