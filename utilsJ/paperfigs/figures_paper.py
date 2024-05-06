@@ -665,6 +665,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = edd2.trial_ev_vectorized
         if '_prior_sign_1_ro_' in extra_label:
             model = model_variations.trial_ev_vectorized_only_prior_1st_choice
+        if 'silent' in extra_label:
+            model = edd2.trial_ev_vectorized
     if type(extra_label) is int:
         model = edd2.trial_ev_vectorized
     # dt = 5e-3
@@ -1511,7 +1513,7 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
     ax.set_title(title)
 
 
-def supp_parameter_recovery_test(margin=1):
+def supp_parameter_recovery_test(margin=.6):
     fig, ax = plt.subplots(4, 4, figsize=(14, 12))
     ax = ax.flatten()
     plot_param_recovery_test(fig, ax,
@@ -1812,12 +1814,12 @@ def plot_corr_matrix_prt(ax,
     for i in range(len(labels)):
         for j in range(len(labels)):
             corr_mat[i, j] = np.corrcoef(conf_mat[i, :], conf_mat_rec[j, :])[1][0]
-    im = ax.imshow(corr_mat, cmap='coolwarm', vmin=-1, vmax=1)
+    im = ax.imshow(corr_mat.T, cmap='coolwarm', vmin=-1, vmax=1)
     plt.colorbar(im, ax=ax, label='Correlation')
     ax.set_xticks(np.arange(16), labels, rotation='270', fontsize=12)
     ax.set_yticks(np.arange(16), labels, fontsize=12)
-    ax.set_ylabel('Original parameters', fontsize=14)
-    ax.set_xlabel('Inferred parameters', fontsize=14)
+    ax.set_ylabel('Inferred parameters', fontsize=14)
+    ax.set_xlabel('Original parameters', fontsize=14)
 
 
 
@@ -1834,8 +1836,8 @@ def plot_param_recovery_test(fig, ax,
     labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
               r'EA bound, $\theta_{DV}$',
               r'CoM bound, $\theta_{COM}$',
-              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
-              r'AI time offset, $t_{AI}$',
+              r'Afferent time, $t_{aff}$ (ms)', r'Efferent time, $t_{eff}$ (ms)',
+              r'AI time offset, $t_{AI}$ (ms)',
               r'AI drift offset, $v_{AI}$',
               r'AI drift slope, $w_{AI}$',
               r'AI bound, $\theta_{AI}$',
@@ -1863,11 +1865,12 @@ def plot_param_recovery_test(fig, ax,
         # min_val = min(conf_mat_rec[i, :])
         # min_val_rec = min(conf_mat[i, :])
         min_total = 0
+        ax[i].set_title(labels[i])
         if i == 4 or i == 5 or i == 6:
             ax[i].plot(conf_mat[i, :]*5, conf_mat_rec[i, :]*5,
                        marker='o', color='k', linestyle='')
-            ax[i].set_xlabel(labels[i] + str(' (ms)'), fontsize=12)
-            ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT', fontsize=12)
+            # ax[i].set_xlabel(labels[i] + str(' (ms)'), fontsize=12)
+            # ax[i].set_ylabel(labels[i] + str(' (ms),')  + ' PRT', fontsize=12)
             ax[i].plot([5*min_total*0.4,
                         5*max_total*1.6],
                        [5*min_total*0.4,
@@ -1878,8 +1881,8 @@ def plot_param_recovery_test(fig, ax,
         else:
             ax[i].plot(conf_mat[i, :], conf_mat_rec[i, :],
                        marker='o', color='k', linestyle='')
-            ax[i].set_xlabel(labels[i], fontsize=12)
-            ax[i].set_ylabel(labels[i] + ' PRT', fontsize=12)
+            # ax[i].set_xlabel(labels[i], fontsize=12)
+            # ax[i].set_ylabel(labels[i] + ' PRT', fontsize=12)
             ax[i].plot([min_total*0.4, max_total*1.6],
                        [min_total*0.4, max_total*1.6])
             ax[i].set_xlim(min_total*0.4, max_total*1.6)
@@ -1903,6 +1906,10 @@ def plot_param_recovery_test(fig, ax,
             ax[i].set_yticks(xtcks[:-1], [f'{x:.0e}' for x in xtcks[:-1]])
         else:
             ax[i].set_xticks(xtcks[:-1])    
+        if i > 11:
+            ax[i].set_xlabel('Original parameter')
+        if i % 4 == 0:
+            ax[i].set_ylabel('Inferred parameter')
         #     ax[i].ticklabel_format(style='sci', axis='both',
         #                            scilimits=(5, 1))
     # plt.figure()
@@ -1911,6 +1918,21 @@ def plot_param_recovery_test(fig, ax,
     # print(np.mean(mlist))
     # plt.figure()
     # sns.violinplot(mlist, inner='point')
+    # fig2, ax2 = plt.subplots(1)
+    # t_aff_t_eff = (conf_mat[4, :] + conf_mat[5, :])*5
+    # t_aff_t_eff_rec = (conf_mat_rec[4, :] + conf_mat_rec[5, :])*5
+    # ax2.set_title(linregress(t_aff_t_eff, t_aff_t_eff_rec).rvalue)
+    # ax2.plot(t_aff_t_eff_rec, t_aff_t_eff,
+    #          marker='o', color='k', linestyle='')
+    # ax2.set_xlabel('t_aff + t_eff, original')
+    # ax2.set_ylabel('t_aff + t_eff, recovered')
+    # min_total = 0
+    # max_total = np.max((t_aff_t_eff, t_aff_t_eff_rec))
+    # ax2.plot([min_total*0.4,
+    #           max_total*1.6],
+    #          [min_total*0.4,
+    #           max_total*1.6])
+
 
 
 def plot_param_recovery_test_boxplot_difference(subjects, sv_folder=SV_FOLDER):
