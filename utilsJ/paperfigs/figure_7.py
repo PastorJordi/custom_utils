@@ -34,6 +34,7 @@ from utilsJ.paperfigs import figures_paper as fp
 def get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                  special_trial, extra_label='_1_ro'):
     num_tr = len(gt)
+    print(stim.shape[1])
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt =\
         fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
@@ -165,6 +166,7 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                       'R to L reversal']
     mat_titles_com = ['L to R CoM',
                       'R to L CoM']
+    fig2, ax2 = plt.subplots(ncols=4)
     for i_l, lab in enumerate(extra_labels):
         df_data = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                                special_trial, extra_label=lab)
@@ -172,7 +174,6 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[1+i_l*4], prior_limit=0.1,  # 10% quantile
                                   condition='choice_x_coh', rt_lim=50, alpha=1,
                                   write_arrows=False)
-        fig2, ax2 = plt.subplots(1)
         # fig_1.plot_mt_vs_evidence(df_data, ax2, condition='choice_x_prior', prior_limit=1,
         #                           rt_lim=300, rtmin=150, alpha=1,
         #                           write_arrows=False, num_bins_prior=8)
@@ -181,10 +182,11 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # reac_time = df_data.sound_len.values
         # reac_time = reac_time[(reac_time >= 0) & (reac_time <= 300)]
         # rtbins = np.quantile(reac_time, quants)
-        rtbins = np.linspace(0, 280, 11)
-        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2, column='com_detected',
-                                      bins_rt=rtbins)
-        ax2.set_title(lab)
+        rtbins = np.linspace(0, 280, 6)
+        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='com_detected',
+                                      bins_rt=rtbins, label=lab)
+        ax2[i_l].set_title(lab)
+        ax2[i_l].set_ylabel('p(CoM)')
         del df_mt
         if i_l >= 1:
             mat_titles_rev = ['', '']
@@ -252,7 +254,6 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # ax[4+i_l*6].set_xlabel('       \
         #                        Prior evidence')
         # ax[5+i_l*6].set_xlabel('')
-    ax2.legend()
 
 
 def fig_7_v1(subjects, subjid, stim, zt, coh, gt, trial_index,
