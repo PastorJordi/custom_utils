@@ -593,8 +593,8 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([12.])),  # afferent time
             Uniform(torch.tensor([3.]),
                     torch.tensor([12.])),  # efferent time
-            Uniform(torch.tensor([5.]),
-                    torch.tensor([25.])),  # time offset action
+            Uniform(torch.tensor([4.]),
+                    torch.tensor([24.])),  # time offset action
             Uniform(torch.tensor([1e-2]),
                     torch.tensor([0.1])),  # intercept trial index for action drift
             Uniform(torch.tensor([1e-6]),
@@ -607,8 +607,8 @@ def build_prior_sample_theta(num_simulations):
                     torch.tensor([500.])),  # weight of evidence at second readout
             Uniform(torch.tensor([1e-6]),
                     torch.tensor([0.9])),  # leak
-            Uniform(torch.tensor([1.]),
-                    torch.tensor([80.])),  # std of the MT noise
+            Uniform(torch.tensor([5.]),
+                    torch.tensor([60.])),  # std of the MT noise
             Uniform(torch.tensor([120.]),
                     torch.tensor([400.])),  # MT offset
             Uniform(torch.tensor([0.01]),
@@ -1176,7 +1176,8 @@ def opt_mnle(df, num_simulations, bads=True, training=False, extra_label=""):
                 trial_index[:num_simulations].astype(float)).to(torch.float32)))
         theta_all_inp = theta_all_inp.to(torch.float32)
         # SIMULATION
-        x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, simulate=True)
+        x = simulations_for_mnle(theta_all, stim, zt, coh, trial_index, simulate=True,
+                                 extra_label=extra_label)
         # now we have a matrix of (num_simulations x 3):
         # MT, RT, CHOICE for each simulation
 
@@ -2669,7 +2670,7 @@ if __name__ == '__main__':
                 #                       n_simul_training=int(10e6))
                 # plot_lh_model_network(df, n_trials=10000000)
                 try:
-                    extra_label = '_only_prior'
+                    extra_label = ''
                     parameters = opt_mnle(df=df, num_simulations=num_simulations,
                                           bads=True, training=training, extra_label=extra_label)
                     print('--------------')
