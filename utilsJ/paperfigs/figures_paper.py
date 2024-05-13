@@ -253,7 +253,7 @@ def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
     df_plot_data = pd.DataFrame({'avtrapz': coh, 'hithistory': hit,
                                  'sound_len': sound_len, 'subjid': subjid})
     tachometric(df_plot_data, ax=ax, fill_error=True, cmap='gist_yarg',
-                rtbins=rtbins)
+                rtbins=rtbins, evidence_bins=[0, 0.25, 0.5, 1])
     ax.axhline(y=0.5, linestyle='--', color='k', lw=0.5)
     ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('Accuracy')
@@ -667,6 +667,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = model_variations.trial_ev_vectorized_only_prior_1st_choice
         if 'silent' in extra_label:
             model = edd2.trial_ev_vectorized
+        if 'continuous' in extra_label:
+            model = model_variations.trial_ev_vectorized_n_readouts
     if type(extra_label) is int:
         model = edd2.trial_ev_vectorized
     # dt = 5e-3
@@ -2756,6 +2758,33 @@ def plot_acc_express(df):
     ax.set_ylabel('Accuracy')
     ax.set_yticks([0.5, 0.75, 1])
     ax.set_xticks([0, 0.25, 0.5, 1])
+
+
+def supp_silent(df):
+    fig, ax = plt.subplots(ncols=3, figsize=(10, 4))
+    ax = ax.flatten()
+    subjects = df.subjid.unique()
+    labels = ['RT (ms)', 'MT (ms)']
+    for i_s, subj in enumerate(subjects):
+        df_subj = df.copy().loc[(df.subjid == subj) & (df.special_trial == 2)]
+        df_subj['resp_len'] = df_subj.resp_len*1e3
+        # RT
+        fix_breaks =\
+            np.vstack(np.concatenate([df_subj.sound_len/1000,
+                                      np.concatenate(df_subj.fb.values)-0.3]))
+        sns.kdeplot(fix_breaks.T[0]*1e3, ax=ax[0], alpha=0.3, color='k')
+        # MT
+        mt = df_subj.resp_len.values
+        sns.kdeplot(mt, ax=ax[1], alpha=0.3, color='k')
+        # PCoM RT
+    binned_curve(df.loc[(df.special_trial == 2)], 'sound_len', 'CoM_sugg',
+                 bins=BINS_RT, xpos=np.diff(BINS_RT)[0], ax=ax[2],
+                 errorbar_kw={'color': 'k'})
+    for j in range(2):
+        ax[j].set_xlabel(labels[j])
+    ax[0].set_xlim(-105, 305)
+    ax[1].set_xlim(45, 755)
+    fig.tight_layout()
 
 
 # def plot_rats_humans_model_mt(df, df_sim, pc_name, mt=True):

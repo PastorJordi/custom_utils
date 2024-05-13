@@ -130,9 +130,9 @@ f1 = False
 f2 = False
 f3 = False
 f4 = False
-f5 = False
+f5 = True
 f6 = False
-f7 = True
+f7 = False
 f8 = False
 com_threshold = 8
 if f1 or f2 or f3 or f5 or f7:
@@ -140,7 +140,7 @@ if f1 or f2 or f3 or f5 or f7:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    subjects = ['LE42', 'LE37', 'LE38']
+    # subjects = ['LE42', 'LE37', 'LE38', 'LE39', 'LE40']
     # subjects = ['LE46']  # for params analysis
     # subjects = ['LE42']  # for fig7
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
@@ -192,9 +192,9 @@ if f1 or f2 or f3 or f5 or f7:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    # fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
-    #                         repalt_img=REPALT_IMG)
-    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+                            repalt_img=REPALT_IMG)
+    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
 
 # fig 2
 if f2:
@@ -221,7 +221,7 @@ if f5 or f7:
         special_trial[:] = 2
         extra_label = 'silent'
     else:
-        extra_label = ''
+        extra_label = '_continuous_'
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     if f7:
@@ -309,18 +309,18 @@ if f5 or f7:
         #                           trajectory="trajectory_y", p_val=0.05)
     
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
-        fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
-                                      sv_folder=SV_FOLDER)
+        # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
+        #                               sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
-        # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-        #                   new_data=simulate, save_new_data=save_new_data,
-        #                   coh=coh, sound_len=sound_len, zt=zt,
-        #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-        #                   decision_model=resp_fin, com=com, com_model=com_model,
-        #                   com_model_detected=com_model_detected,
-        #                   means=means, errors=errors, means_model=means_model,
-        #                   errors_model=errors_model, df_sim=df_sim)
+        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+                          new_data=simulate, save_new_data=save_new_data,
+                          coh=coh, sound_len=sound_len, zt=zt,
+                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+                          decision_model=resp_fin, com=com, com_model=com_model,
+                          com_model_detected=com_model_detected,
+                          means=means, errors=errors, means_model=means_model,
+                          errors_model=errors_model, df_sim=df_sim, extra_label=extra_label)
     if f7:
         # index to filter by stim/silent for p(com) vs p(proac) supp figure
         # idx = df.special_trial.values >= 0
@@ -334,6 +334,14 @@ if f5 or f7:
         #                                       extra_labels=['_2_ro_rand_'+str(len(coh)),
         #                                                     '_1_ro_'+str(len(coh)),
         #                                                     len(coh)])
+        fig3, ax_mat = plt.subplots(2)
+        fig3.tight_layout()
+        fig_5.plot_pcom_matrices_model(df.loc[df.sound_len >= 150],
+                                       1, ax_mat, fig3, nbins=7, pos_ax_0=[],
+                                       margin=.03, title='p(reversal)',
+                                       mat_titles=['Left to right reversal',
+                                                   'Right to left reversal'],
+                                       return_matrix=False)
         fig_7.fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
                     special_trial,
                     data_folder=DATA_FOLDER, sv_folder=SV_FOLDER,
@@ -350,7 +358,7 @@ if f6:
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
-    df_data['subjid'] = np.repeat('all', len(choice))
+    # df_data['subjid'] = np.repeat('all', len(choice))
     hit = df_data.hithistory.values*2-1
     subjects = df_data.subjid.unique()
     subjid = df_data.subjid.values
@@ -369,7 +377,7 @@ if f8:
     MT = np.array([len(t) for t in trajs])
     mt_human = np.array(fp.get_human_mt(df_data))
     df_data['resp_len'] = mt_human
-    df_data['coh2'] = coh
+    df_data['coh2'] = np.copy(coh)
     df_data['allpriors'] = df_data.norm_allpriors.values
     # plot_MT_density_comparison(
     #     mt_human[mt_human < 800], MT[MT < 800])
@@ -389,7 +397,7 @@ if f8:
     df_sim['traj'] = df_sim['trajectory_y']
     df_sim['com_detected'] = com_model_detected.astype(bool)
     df_sim['peak_com'] = np.array(x_val_at_updt)
-    df_sim['hithistory'] = np.array(resp_fin == (gt*2-1))*2-1
+    df_sim['hithistory'] = np.array(resp_fin == (gt*2-1))
     df_sim['allpriors'] = df_data.norm_allpriors.values
     df_sim['norm_allpriors'] = df_data.norm_allpriors.values
     df_sim['normallpriors'] = df_sim['norm_allpriors']
@@ -407,7 +415,7 @@ if f8:
     # fig_1.plot_mt_weights_rt_bins(df=df_sim, ax=None, rtbins=np.linspace(100, 300, 8))
     # fig_1.plot_mt_weights_rt_bins(df=df_data, ax=None, rtbins=np.linspace(100, 300, 8))
     fig_5h.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                       new_data=True, save_new_data=True,
+                       new_data=False, save_new_data=False,
                        coh=coh, sound_len=sound_len, zt=zt,
                        hit_model=hit_model, sound_len_model=reaction_time.astype(int),
                        decision_model=resp_fin, com=com, com_model=com_model,
