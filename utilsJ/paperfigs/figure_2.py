@@ -804,9 +804,9 @@ def trajs_splitting_stim(df, ax, data_folder, collapse_sides=True, threshold=300
     for subject in df.subjid.unique():
         out_data_sbj = []
         if not sim:
-            split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_005.npz'
+            split_data = data_folder + str(subject) + '/traj_data/' + str(subject) + '_traj_split_stim_005.npz'
         if sim:
-            split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_005_forward'+extra_label+'.npz'
+            split_data = data_folder + str(subject) + '/sim_data/' + str(subject) + '_traj_split_stim_005_forward'+extra_label+'.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data):

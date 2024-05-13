@@ -98,7 +98,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(238, 303)
-        # ax.set_title('Small prior', fontsize=10, pad=5)
+        ax.set_title('Effect of stimulus', fontsize=10, pad=5)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
@@ -112,7 +112,7 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
         ax.set_ylim(219, 312)
-        # ax.set_title('Silent trials', fontsize=10, pad=5)
+        ax.set_title('Effect of prior', fontsize=10, pad=5)
         # \;\;\; \rightarrow \;\; \it{Supports \; response}
     ax.set_xlim(-1.2, 1.2)
     # ARROWS FOR INC/CONG
@@ -189,8 +189,10 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
         plt.xlabel('normalized variables')
         plt.legend()
     # y_pred = linear_fun(xdata, *popt)
-    # print(np.corrcoef(ydata, y_pred)[0, 1])
-    # print(pearsonr(ydata, y_pred).statistic)
+    # print('R2')
+    # print(np.corrcoef(ydata, y_pred)[0, 1]**2)
+    # print('pval')
+    # print(pearsonr(ydata, y_pred).pvalue)
     return popt, pcov
 
 
@@ -367,7 +369,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
         pv.append(ttest_rel(mt_all_subs, sil).pvalue)
         # pv.append(ttest_1samp(mt_all_subs-np.array(sil), popmean=0).pvalue)
     # formatted_pvalues = [f'p={pvalue:.1e}' for pvalue in pv]
-    formatted_pvalues = [num_ast(pvalue)*'*' for pvalue in pv]
+    formatted_pvalues = [num_ast(pvalue)*'*' if ~np.isnan(pvalue) else '' for pvalue in pv]
     mean_mt_vs_coh = np.nanmean(mt_mat, axis=0)
     sd_mt_vs_coh = np.nanstd(mt_mat, axis=0)/np.sqrt(len(subjects))
     ax.axhline(y=mean_silent, color='k', alpha=0.6)
@@ -391,7 +393,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     ax.text(-0.85, 300, r'$\it{incongruent}$', fontsize=8)
     ax.text(0.07, 293, r'$\longrightarrow $', fontsize=10)
     ax.text(0.07, 300, r'$\it{congruent}$', fontsize=8)
-    # ax.set_title('Large cong. prior', fontsize=10, pad=10)
+    ax.set_title('Net effect of stimulus', fontsize=10, pad=10)
     ax.set_xlim(-1.1, 1.1)
     if not sim:
         ax.set_ylim(218, 302)
@@ -749,6 +751,12 @@ def fig_1_rats_behav(df_data, task_img, repalt_img, sv_folder,
     tachometric(df=df_tachos, ax=ax_tach, fill_error=True, cmap='gist_yarg',
                 labels=labels, rtbins=rtbins,
                 evidence='coh2')
+    # fig2, ax2 = plt.subplots(1)
+    # fp.rm_top_right_lines(ax2)
+    # tachometric(df=df_tachos, ax=ax2, fill_error=True, cmap='gist_yarg',
+    #             labels=labels, rtbins=rtbins,
+    #             evidence='coh2')
+    # ax2.set_xlim(-10, 110)
     del df_tachos
     ax_tach.axvline(x=0, linestyle='--', color='k', lw=0.5)
 
