@@ -1068,12 +1068,12 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
             initial_mu_side = initial_mu * prechoice[i_t]
             prior0 = compute_traj(jerk_lock_ms, mu=initial_mu_side,
                                   resp_len=first_resp_len)
-            init_trajs.append(prior0)  # + np.random.randn(len(prior0))*0.15)
+            init_trajs.append(prior0)  # + np.random.randn(len(prior0))*0.15
             # TRAJ. UPDATE
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint

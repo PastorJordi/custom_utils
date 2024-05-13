@@ -257,7 +257,7 @@ def trial_ev_vectorized_without_1st_readout(zt, stim, coh, trial_index, p_MT_slo
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint
@@ -543,7 +543,7 @@ def trial_ev_vectorized_without_1st_readout_random_1st_choice(zt, stim, coh, tri
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint
@@ -829,7 +829,7 @@ def trial_ev_vectorized_without_2nd_readout(zt, stim, coh, trial_index, p_MT_slo
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint
@@ -1113,7 +1113,7 @@ def trial_ev_vectorized_neg_starting_point(zt, stim, coh, trial_index, p_MT_slop
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint
@@ -1392,7 +1392,7 @@ def trial_ev_vectorized_CoM_without_update(
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint
@@ -1676,7 +1676,7 @@ def trial_ev_vectorized_only_prior_1st_choice(
             try:
                 velocities = np.gradient(prior0)
                 accelerations = np.gradient(velocities)  # acceleration
-                t_updt = int(p_t_eff+second_ind[i_t] - first_ind[i_t])  # time indx
+                t_updt = int(second_ind[i_t] - first_ind[i_t])  # time indx
                 t_updt = int(np.min((t_updt*stim_res, len(velocities)-1)))
                 frst_traj_motor_time.append(t_updt)
                 vel = velocities[t_updt]  # velocity at the timepoint

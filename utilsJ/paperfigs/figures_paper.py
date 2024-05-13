@@ -665,7 +665,7 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = edd2.trial_ev_vectorized
         if '_prior_sign_1_ro_' in extra_label:
             model = model_variations.trial_ev_vectorized_only_prior_1st_choice
-        if 'silent' in extra_label:
+        if 'silent' in extra_label or 'redo' in extra_label:
             model = edd2.trial_ev_vectorized
         if 'continuous' in extra_label:
             model = model_variations.trial_ev_vectorized_n_readouts
@@ -728,6 +728,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     p_com_bound = conf[3]*p_e_bound+jitters[3]*np.random.rand()
     p_t_aff = int(round(conf[4]/factor+jitters[4]*np.random.rand()))
     p_t_eff = int(round(conf[5]/factor++jitters[5]*np.random.rand()))
+    p_t_aff = p_t_aff + p_t_eff
+    p_t_eff = 0
     p_t_a = int(round(conf[6]/factor+jitters[6]*np.random.rand()))
     p_w_a_intercept = conf[7]*factor+jitters[7]*np.random.rand()
     p_w_a_slope = -conf[8]*factor+jitters[8]*np.random.rand()
