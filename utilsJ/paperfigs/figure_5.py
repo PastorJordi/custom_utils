@@ -462,7 +462,7 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, f, nbins=7, pos_ax_0=[],
 
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
-                                      new_data, save_new_data, data_folder):
+                                      new_data, save_new_data, data_folder, extra_label=''):
     ax_cohs = np.array([ax[9], ax[10], ax[8]])
     ax_zt = np.array([ax[5], ax[6], ax[4]])
 
@@ -477,17 +477,17 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             new_data=new_data, data_folder=data_folder,
                             save_new_data=save_new_data,
-                            median=True, prior=True, rt_lim=300, extra_label='')
+                            median=True, prior=True, rt_lim=300, extra_label=extra_label)
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
                             save_new_data=save_new_data,
-                            data_folder=data_folder, median=True, prior=True, extra_label='')
+                            data_folder=data_folder, median=True, prior=True, extra_label=extra_label)
     traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
                         save_new_data=save_new_data,
                         new_data=new_data, data_folder=data_folder,
                         prior_lim=np.quantile(df_sim.norm_allpriors.abs(), 0.1),
-                        rt_lim=50, extra_label='')
+                        rt_lim=50, extra_label=extra_label)
 
 
 def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
@@ -818,7 +818,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                 coh, sound_len, hit_model, sound_len_model, zt,
                 decision_model, com, com_model, com_model_detected,
                 df_sim, means, errors, means_model, errors_model, inset_sz=.06,
-                marginx=-0.02, marginy=0.08, fgsz=(13, 12)):
+                marginx=-0.02, marginy=0.08, fgsz=(13, 12),
+                extra_label=''):
     fig, ax, ax_inset, pos_ax_0 = create_figure_5_model(fgsz=fgsz)
     # select RT > 0 (no FB, as in data)
     hit_model = hit_model[sound_len_model >= 0]
@@ -893,13 +894,14 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=new_data,
                                       save_new_data=save_new_data,
                                       inset_sz=inset_sz, data_folder=data_folder,
-                                      fgsz=fgsz, marginx=marginx, marginy=marginy)
+                                      fgsz=fgsz, marginx=marginx, marginy=marginy,
+                                      extra_label=extra_label)
     # plot splitting time vs RT
     fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
                                threshold=800, sim=True, rtbins=np.linspace(0, 150, 16),
                                connect_points=True, trajectory="trajectory_y",
-                               p_val=0.05, extra_label='')
+                               p_val=0.05, extra_label=extra_label)
     
     subjects = np.unique(subjid)
     ta_te = []

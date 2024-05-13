@@ -243,8 +243,10 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         #                    y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
         #                    y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
         #                    color=colormap[i_ev])
-    x_vals = np.arange(5) if condition == 'prior' else ev_vals
+    x_vals = bins[:-1] + np.diff(bins)/2 if condition == 'prior' else ev_vals
     pval = pearsonr(x_vals, mov_time_list).pvalue
+    # print(pearsonr(x_vals, mov_time_list).statistic)
+    # print(pearsonr(x_vals, mov_time_list).statistic**2)
     lab = f'p={pval:.2e}'
     ax[1].text(0.8, 250, lab)
     ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5, color='k')

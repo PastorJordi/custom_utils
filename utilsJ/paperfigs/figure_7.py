@@ -181,11 +181,22 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # reac_time = df_data.sound_len.values
         # reac_time = reac_time[(reac_time >= 0) & (reac_time <= 300)]
         # rtbins = np.quantile(reac_time, quants)
-        rtbins = np.linspace(0, 280, 6)
+        rtbins = np.linspace(0, 310, 11)
         fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='com_detected',
-                                      bins_rt=rtbins, label=lab)
+                                      bins_rt=rtbins, label='detected')
+        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='CoM_sugg',
+                                      bins_rt=rtbins, label='com', color='r')
+        ax2[i_l].legend()
         ax2[i_l].set_title(lab)
         ax2[i_l].set_ylabel('p(CoM)')
+        fig3, ax_mat = plt.subplots(2)
+        fig3.tight_layout()
+        fig_5.plot_pcom_matrices_model(df_mt.loc[df_mt.sound_len >= 150],
+                                       1, ax_mat, fig3, nbins=7, pos_ax_0=[],
+                                       margin=.03, title='p(reversal)',
+                                       mat_titles=['Left to right reversal',
+                                                   'Right to left reversal'],
+                                       return_matrix=False)
         del df_mt
         if i_l >= 1:
             mat_titles_rev = ['', '']
