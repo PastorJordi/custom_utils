@@ -42,16 +42,17 @@ from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
+from utilsJ.Models import different_models as model_variations
 
-DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -390,7 +391,11 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
                p_w_a_intercept, p_w_a_slope, p_a_bound, p_1st_readout,
                p_2nd_readout, p_leak, p_mt_noise, p_MT_intercept, p_MT_slope,
                num_times_tr=int(1e3), detect_CoMs_th=8, rms_comparison=False,
-               epsilon=1e-6, mnle=True):
+               epsilon=1e-6, mnle=True, extra_label=''):
+    if extra_label == '':
+        model = trial_ev_vectorized
+    if 'only_prior' in extra_label:
+        model = model_variations.trial_ev_vectorized_only_prior_1st_choice
     start_llk = time.time()
     data_augment_factor = 10
     if isinstance(coh, np.ndarray):
@@ -439,22 +444,22 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
             _, _, total_traj, _, _,\
             _, x_val_at_updt, _, _,\
             _, _, _ =\
-            trial_ev_vectorized(zt=zt, stim=stim_temp, coh=coh,
-                                trial_index=trial_index,
-                                p_w_zt=p_w_zt, p_w_stim=p_w_stim,
-                                p_e_bound=p_e_bound, p_com_bound=p_com_bound,
-                                p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
-                                num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
-                                p_w_a_slope=p_w_a_slope,
-                                p_a_bound=p_a_bound,
-                                p_1st_readout=p_1st_readout,
-                                p_2nd_readout=p_2nd_readout,
-                                p_leak=p_leak, p_mt_noise=p_mt_noise,
-                                p_MT_intercept=p_MT_intercept,
-                                p_MT_slope=p_MT_slope,
-                                compute_trajectories=compute_trajectories,
-                                stim_res=stim_res, all_trajs=all_trajs,
-                                compute_mat_and_pcom=False)
+            model(zt=zt, stim=stim_temp, coh=coh,
+                  trial_index=trial_index,
+                  p_w_zt=p_w_zt, p_w_stim=p_w_stim,
+                  p_e_bound=p_e_bound, p_com_bound=p_com_bound,
+                  p_t_aff=p_t_aff, p_t_eff=p_t_eff, p_t_a=p_t_a,
+                  num_tr=num_tr, p_w_a_intercept=p_w_a_intercept,
+                  p_w_a_slope=p_w_a_slope,
+                  p_a_bound=p_a_bound,
+                  p_1st_readout=p_1st_readout,
+                  p_2nd_readout=p_2nd_readout,
+                  p_leak=p_leak, p_mt_noise=p_mt_noise,
+                  p_MT_intercept=p_MT_intercept,
+                  p_MT_slope=p_MT_slope,
+                  compute_trajectories=compute_trajectories,
+                  stim_res=stim_res, all_trajs=all_trajs,
+                  compute_mat_and_pcom=False)
         reaction_time = (first_ind-int(300/stim_res) + p_t_eff)*stim_res
         motor_time = np.array([len(t) for t in total_traj])
         detected_com = np.abs(x_val_at_updt) > detect_CoMs_th
@@ -741,7 +746,7 @@ def fun_theta(theta, data, estimator, n_trials, eps=1e-3, weight_LLH_fb=1):
 
 
 def simulations_for_mnle(theta_all, stim, zt, coh, trial_index,
-                         simulate=False):
+                         simulate=False, extra_label=''):
     # run simulations
     x = torch.tensor(())
     simul_data = SV_FOLDER+'/network/NN_simulations'+str(len(zt))+'.npy'
@@ -785,7 +790,8 @@ def simulations_for_mnle(theta_all, stim, zt, coh, trial_index,
                                     p_2nd_readout, p_leak, p_mt_noise,
                                     p_mt_intercept, p_mt_slope,
                                     rms_comparison=False,
-                                    num_times_tr=1, mnle=True)
+                                    num_times_tr=1, mnle=True,
+                                    extra_label=extra_label)
             except ValueError:
                 x_temp = torch.tensor([[np.nan, np.nan, np.nan]])
             x = torch.cat((x, x_temp))
@@ -1121,7 +1127,7 @@ def prepare_fb_data(df):
     return data
 
 
-def opt_mnle(df, num_simulations, bads=True, training=False):
+def opt_mnle(df, num_simulations, bads=True, training=False, extra_label=""):
     if training:
         # 1st: loading data
         zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
@@ -1196,10 +1202,12 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
                                              x[~nan_mask, :])
         estimator = trainer.train(show_train_summary=True)
         # save the network
-        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", "wb") as fh:
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise" + extra_label + ".p",
+                  "wb") as fh:
             pickle.dump(dict(estimator=estimator,
                              num_simulations=num_simulations), fh)
-        with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise.p", "wb") as fh:
+        with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise" + extra_label + ".p",
+                  "wb") as fh:
             pickle.dump(dict(trainer=trainer,
                              num_simulations=num_simulations), fh)
         print('For a batch of ' + str(num_simulations) +
@@ -1207,10 +1215,12 @@ def opt_mnle(df, num_simulations, bads=True, training=False):
               + ' mins')
     else:
         x_o = []
-        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise.p", 'rb') as f:
+        with open(SV_FOLDER + f"/mnle_n{num_simulations}_no_noise" + extra_label + ".p",
+                  'rb') as f:
             estimator = pickle.load(f)
         if not bads:
-            with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise.p", 'rb') as f:
+            with open(SV_FOLDER + f"/trainer_n{num_simulations}_no_noise" + extra_label + ".p",
+                      'rb') as f:
                 trainer = pickle.load(f)
             trainer = estimator['trainer']
         estimator = estimator['estimator']
@@ -2527,7 +2537,7 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
-    human = True
+    human = False
     if not optimization_mnle:
         stim, zt, coh, gt, com, pright, trial_index =\
             get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
@@ -2622,8 +2632,8 @@ if __name__ == '__main__':
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
             # subjects = ['LE43']  # to run only once and train
-            training = False
-            param_recovery_test = True
+            training = True
+            param_recovery_test = False
             if param_recovery_test:
                 n_samples = 50
                 subjects = ['LE42' for _ in range(n_samples)]
@@ -2659,8 +2669,9 @@ if __name__ == '__main__':
                 #                       n_simul_training=int(10e6))
                 # plot_lh_model_network(df, n_trials=10000000)
                 try:
+                    extra_label = '_only_prior'
                     parameters = opt_mnle(df=df, num_simulations=num_simulations,
-                                          bads=True, training=training)
+                                          bads=True, training=training, extra_label=extra_label)
                     print('--------------')
                     print('p_w_zt: '+str(parameters[0]))
                     print('p_w_stim: '+str(parameters[1]))
@@ -2682,8 +2693,9 @@ if __name__ == '__main__':
                         extra_label = 'virt_params/' +\
                             'parameters_MNLE_BADS_prt_n50_prt_' + str(i_s)
                     else:
-                        extra_label = 'parameters_MNLE_BADS' + subject
-                    np.save(SV_FOLDER + extra_label + '.npy', parameters)
+                        extra_label_subj = 'parameters_MNLE_BADS' + subject
+                    np.save(SV_FOLDER + extra_label_subj + extra_label + '.npy',
+                            parameters)
                 except Exception:
                     continue
         else:
