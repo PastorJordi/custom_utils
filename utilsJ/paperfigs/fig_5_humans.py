@@ -22,7 +22,7 @@ sys.path.append("/home/jordi/Repos/custom_utils/")  # alex idibaps
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply,\
-    binned_curve, com_heatmap
+    binned_curve, com_heatmap, tachometric
 from utilsJ.paperfigs import figure_3 as fig_3
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_1 as fig_1
@@ -258,9 +258,9 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
                             save_new_data=save_new_data,
                             data_folder=data_folder, median=False, prior=True)
-    traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=False, prior=False,
-                        save_new_data=save_new_data,
-                        new_data=new_data, data_folder=data_folder, prior_lim=1)
+    # traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=False, prior=False,
+    #                     save_new_data=save_new_data,
+    #                     new_data=new_data, data_folder=data_folder, prior_lim=10)
 
 
 def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
@@ -565,10 +565,14 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     com_model = com_model[sound_len_model >= 0]
     subjid = df_sim.subjid.values
     # Tachometrics
-    _ = fp.tachometric_data(coh=coh[sound_len_model >= 0], hit=hit_model,
-                            sound_len=sound_len_model[sound_len_model >= 0],
-                            subjid=subjid, ax=ax[1], label='', legend=False,
-                            rtbins=np.linspace(0, 300, num=8))
+    rtbins=np.linspace(0, 300, num=8)
+    labels = ['0', '0.25', '0.5', '1']
+    df_tachos = df_sim.copy()
+    df_tachos['subjid'] = 1
+    # rtbins = np.quantile(df_tachos.sound_len.values, quants)
+    tachometric(df=df_tachos, ax=ax[1], fill_error=True, cmap='gist_yarg',
+                labels=labels, rtbins=rtbins, evidence='coh2')
+    del df_tachos
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
                              label='1'),
@@ -591,8 +595,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # PCoM vs RT
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
     # slowing in MT
-    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=150,
-                          human=True)
+    # fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=150,
+    #                       human=True)
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
@@ -621,10 +625,10 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                       inset_sz=inset_sz, data_folder=data_folder,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
-    fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
-                               data_folder=data_folder, ax=ax[7], collapse_sides=True,
-                               threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
-                               connect_points=True, trajectory="trajectory_y")
+    # fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
+    #                            data_folder=data_folder, ax=ax[7], collapse_sides=True,
+    #                            threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
+    #                            connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
     
     if len(df_sim.subjid.unique()) > 1:
@@ -633,8 +637,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
         subject = df_sim.subjid.unique()[0]
     fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
-    mean_com_traj_simul(df_sim, ax=ax[11], data_folder=data_folder, new_data=new_data,
-                        save_new_data=save_new_data)
+    # mean_com_traj_simul(df_sim, ax=ax[11], data_folder=data_folder, new_data=new_data,
+    #                     save_new_data=save_new_data)
     fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
 
