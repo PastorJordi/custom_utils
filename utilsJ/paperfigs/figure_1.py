@@ -191,8 +191,8 @@ def mt_linear_reg(mt, coh, trial_index, com, prior, plot=False):
     # y_pred = linear_fun(xdata, *popt)
     # print('R2')
     # print(np.corrcoef(ydata, y_pred)[0, 1]**2)
-    # print('pval')
-    # print(pearsonr(ydata, y_pred).pvalue)
+    # print('rho')
+    # print(pearsonr(ydata, y_pred).statistic)
     return popt, pcov
 
 
@@ -241,7 +241,8 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
             pval_t_i = ttest_1samp(w_t_i, popmean=0).pvalue
             pval_array = np.array((pval_zt, pval_coh, pval_t_i))
             formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
-            formatted_pvalues = ['***']*3
+            # formatted_pvalues = ['***']*3
+            formatted_pvalues = [num_ast(decimal)*'*' for decimal in pval_array]
         arr_weights = np.array((w_zt, w_coh, w_t_i))
     else:
         if ttest:
@@ -849,7 +850,7 @@ def plot_mt_weights_rt_bins(df, rtbins=np.linspace(0, 150, 16), ax=None):
                      color='steelblue', marker='o', label='Trial index')
     ax.errorbar(rtbins[:-1]+(rtbins[1]-rtbins[0])/2, ti_weights, ti_err,
                 **error_kws)
-    ax.set_ylabel('Impact on MT')
+    ax.set_ylabel('Impact on movement time')
     ax.set_xlabel('Reaction time (ms)')
     ax.legend()
     ax.axhline(y=0, color='k', linestyle='--', alpha=0.8)
