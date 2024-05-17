@@ -16,6 +16,7 @@ sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.paperfigs import figure_2 as fig_2
 from utilsJ.paperfigs import figure_3 as fig_3
+from utilsJ.paperfigs import figure_1 as fig_1
 from utilsJ.Models import analyses_humans as ah
 from utilsJ.Behavior.plotting import binned_curve
 
@@ -785,7 +786,7 @@ def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
             '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
     if user_id == 'idibaps_alex':
         folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
-    subj = ['general_traj']
+    subj = ['general_traj_all']
     steps = [None]
     # retrieve data
     df_data = ah.traj_analysis(data_folder=folder,
@@ -904,6 +905,48 @@ def plot_trans_lat_weights(decays_all_ac, decays_all_ae, ax):
         a.set_yticklabels(ytckslbls)
 
 
+def supp_plot_weights_linear_reg(user_id, sv_folder, ax, nm='300'):
+    if user_id == 'alex':
+        folder = 'C:\\Users\\alexg\\Onedrive\\Escritorio\\CRM\\Human\\80_20\\'+nm+'ms\\'
+    if user_id == 'alex_CRM':
+        folder = 'C:/Users/agarcia/Desktop/CRM/human/'
+    if user_id == 'idibaps':
+        folder =\
+            '/home/molano/Dropbox/project_Barna/psycho_project/80_20/'+nm+'ms/'
+    if user_id == 'idibaps_alex':
+        folder = '/home/jordi/DATA/Documents/changes_of_mind/humans/'+nm+'ms/'
+    subj = ['general_traj_all']
+    steps = [None]
+    # retrieve data
+    df_data = ah.traj_analysis(data_folder=folder,
+                               subjects=subj, steps=steps, name=nm,
+                               sv_folder=sv_folder)
+    subs = df_data.subjid.unique()
+    norm_allpriors = np.empty((0,))
+    for subj in subs:
+        df_1 = df_data.loc[df_data.subjid == subj]
+        zt_tmp = df_1.norm_allpriors.values
+        norm_allpriors = np.concatenate((norm_allpriors,
+                                         zt_tmp/np.nanmax(abs(zt_tmp))))
+    df_data['norm_allpriors'] = norm_allpriors
+    # idx = (df_data.subjid != 5) & (df_data.subjid != 6)  # & (df_data.subjid != 12)
+    # df_data = df_data.loc[idx]
+    minimum_accuracy = 0.7  # 70%
+    max_median_mt = 400  # ms
+    df_data = acc_filt(df_data, acc_min=minimum_accuracy, mt_max=max_median_mt)
+    df_data.avtrapz /= max(abs(df_data.avtrapz))
+    df_data_2 = df_data.copy()
+    df_data_2['resp_len'] = fp.get_human_mt(df_data_2)
+    df_data_2['coh2'] = df_data_2.avtrapz
+    df_data_2['allpriors'] = df_data_2.norm_allpriors
+    len_task = [len(df_data_2.loc[df_data_2.subjid == subject]) for subject in subs]
+    trial_index = np.empty((0))
+    for j in range(len(len_task)):
+        trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
+    df_data_2['origidx'] = trial_index
+    fig_1.mt_weights(df_data_2, ax=ax, plot=True, means_errs=False, mt=True, t_index_w=True)
+
+
 def supp_human_behavior(user_id, sv_folder):
     decays_ac = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac.npy')
     decays_ac_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac_lat.npy')
@@ -913,7 +956,7 @@ def supp_human_behavior(user_id, sv_folder):
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.6, wspace=0.5)
-    letters = ['a', '', 'b', '']
+    letters = ['a', '', 'b', 'c']
     for n, ax_1 in enumerate(ax):
         fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
         fp.rm_top_right_lines(ax_1)
@@ -922,6 +965,6 @@ def supp_human_behavior(user_id, sv_folder):
                            [decays_ae, decays_ae_lat],
                            [ax[0], ax[1]])
     supp_pcom_rt(user_id='alex', sv_folder=sv_folder, ax=ax[2])
-    ax[3].axis('off')
+    supp_plot_weights_linear_reg(user_id, sv_folder, ax=ax[3], nm='300')
     fig.savefig(sv_folder+'supp_human.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'supp_human.png', dpi=400, bbox_inches='tight')
