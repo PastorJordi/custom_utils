@@ -6,7 +6,7 @@ from scipy.stats import pearsonr
 import statsmodels.api as sm
 import matplotlib as mtp
 from matplotlib.lines import Line2D
-from scipy.stats import sem, ttest_1samp
+from scipy.stats import sem, ttest_1samp, zscore
 from sklearn.linear_model import LogisticRegression
 from scipy.optimize import curve_fit as cfit
 import sys
@@ -193,7 +193,7 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
     w1 = []
     w2 = []
     w3 = []
-    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
+    for i in range(max_MT):  # reversed so it goes backwards in time
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = stim[:, nan_idx]
@@ -202,35 +202,35 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
         if i < 50:
             pop_evidence = stim[0, nan_idx]
         pop_a = pop_a[nan_idx]
-        mod = sm.OLS(pop_a.T, pop_evidence.T).fit()
-        # sm.add_constant(pop_evidence.T)
+        all_x = sm.add_constant(pop_evidence.T)
+        mod = sm.OLS(pop_a.T, all_x).fit()
         p2 = mod.pvalues
         # params = mod.params
-        w1.append(p2[0])
+        w1.append(p2[1])
         if i < 50 and stim.shape[0] > 1:
             w2.append(np.nan)
         if i > 50 and stim.shape[0] > 1:
-            w2.append(p2[1])
+            w2.append(p2[2])
         if stim.shape[0] == 1:
             w2.append(np.nan)
         if i < 100 and stim.shape[0] > 2:
             w3.append(np.nan)
         if i > 100 and stim.shape[0] > 2:
-            w3.append(p2[2])
+            w3.append(p2[3])
         if stim.shape[0] <= 2:
             w3.append(np.nan)
-        if len(p2) == 1 and p2 > pval and i1:
+        if len(p2) == 2 and p2[1] < pval and i1:
             idx_1 = i
             i1 = False
-        if len(p2) > 1:
-            if p2[0] > pval and i1:
+        if len(p2) > 2:
+            if p2[1] < pval and i1:
                 idx_1 = i
                 i1 = False
-            if p2[1] > pval and i2:
+            if p2[2] < pval and i2:
                 idx_2 = i
                 i2 = False
-        if len(p2) > 2:
-            if p2[2] > pval and i3:
+        if len(p2) > 3:
+            if p2[3] < pval and i3:
                 idx_3 = i
                 i3 = False
         if i1 + i2 + i3 == 0:
@@ -239,35 +239,39 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
 
 
 def get_params_lin_reg_frames(mat, stim, max_MT=400, startfrom=700):
+    wzt = []
     w1 = []
     w2 = []
     w3 = []
-    for i in reversed(range(max_MT)):  # reversed so it goes backwards in time
+    inter = []
+    for i in range(max_MT):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = stim[:, nan_idx]
         if i < 100:
-            pop_evidence = stim[:2, nan_idx]
+            pop_evidence = stim[:3, nan_idx]
         if i < 50:
-            pop_evidence = stim[0, nan_idx]
+            pop_evidence = stim[:2, nan_idx]
         pop_a = pop_a[nan_idx]
-        mod = sm.OLS(pop_a.T, pop_evidence.T).fit()
-        # sm.add_constant(pop_evidence.T)
+        x_all = sm.add_constant(pop_evidence.T)
+        mod = sm.OLS(pop_a.T, x_all).fit()
         params = mod.params
-        w1.append(params[0])
-        if i <= 50 and stim.shape[0] > 1:
-            w2.append(0)
-        if i > 50 and stim.shape[0] > 1:
-            w2.append(params[1])
-        if stim.shape[0] == 1:
-            w2.append(0)
-        if i <= 100 and stim.shape[0] > 2:
-            w3.append(0)
-        if i > 100 and stim.shape[0] > 2:
-            w3.append(params[2])
-        if stim.shape[0] <= 2:
-            w3.append(0)
-    return [w1, w2, w3]
+        inter.append(params[0])
+        wzt.append(params[1])
+        w1.append(params[2])
+        if i <= 50 and stim.shape[0] > 2:
+            w2.append(np.nan)
+        if i > 50 and stim.shape[0] > 2:
+            w2.append(params[3])
+        if stim.shape[0] == 2:
+            w2.append(np.nan)
+        if i <= 100 and stim.shape[0] > 3:
+            w3.append(np.nan)
+        if i > 100 and stim.shape[0] > 3:
+            w3.append(params[4])
+        if stim.shape[0] <= 3:
+            w3.append(np.nan)
+    return [inter, wzt, w1, w2, w3]
 
 
 def get_dv_from_params_ttest(params, max_MT=400, pval=0.01):
@@ -296,17 +300,17 @@ def get_dv_from_params_ttest(params, max_MT=400, pval=0.01):
             _, p1 = ttest_1samp(b1[:, i], 0)
             if p1 > pval:
                 i1 = False
-                idx_1 = 400-i
+                idx_1 = i
         if i2:
             _, p2 = ttest_1samp(b2[:, i], 0)
             if p2 > pval:
                 i2 = False
-                idx_2 = 400-i
+                idx_2 = i
         if i3:
             _, p3 = ttest_1samp(b3[:, i], 0)
             if p3 > pval:
                 i3 = False
-                idx_3 = 400-i
+                idx_3 = i
         if i1 + i2 + i3 == 0:
             break
     return [idx_1, idx_2, idx_3]
@@ -402,7 +406,7 @@ def corr_rt_time_prior(df, fig, ax, data_folder, rtbins=np.linspace(0, 150, 16, 
     ax.set_xlabel('Reaction time (ms)')
     # ax.set_ylim(0, 304)
     # ax.set_yticks([])
-    # ax.set_ylabel('Time from stimulus onset (ms)')ç
+    # ax.set_ylabel('Time from stimulus onset (ms)')
     pos = ax.get_position()
     ax.set_xticks([0, 4, 9, 14], [rtbins[0], rtbins[5], rtbins[10], rtbins[15]])
     # ax.set_yticks([0, 100, 200, 300], [300, 200, 100, 0])
@@ -520,7 +524,7 @@ def get_splitting_mat_data(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
 
 
 def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
-                            align='movement', coh=1):  # debugging purposes
+                            align='movement', coh=1, flip=True, pad_end=True):  # debugging purposes
     """
     Create matrix that will be used to compute splitting time.
     Version of function:
@@ -541,39 +545,45 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
             missing_after = upto - missing_pre - row.traj.size
             return np.pad(row.traj, ((missing_pre, missing_after)), "constant",
                         constant_values=(pad_pre, pad_value))
-    
-    
+
     # get matrices
-    if side == 0:
-        coh1 = -coh
-    else:
-        coh1 = coh
+    if coh is not None:
+        if side == 0:
+            coh1 = -coh
+        else:
+            coh1 = coh
     shortpad_kws = {}
     if align == 'sound':
-        shortpad_kws = dict(upto=1400, align='sound')
+        shortpad_kws = dict(upto=800, align='sound')
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
-        & (df.sound_len >= rtbins[rtbin])
-        # & (df.resp_len) # ?
-    ]  # &(df.R_response==side) this goes out
-    idx = (dat.coh2 == coh1) & (dat.rewside == 0)
-    mata_0 = np.vstack(dat.loc[idx].apply(lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
-    idx = (dat.coh2 == -coh1) & (dat.rewside == 1)
-    mata_1 = np.vstack(dat.loc[idx].apply(lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
-    for mat in [mata_0, mata_1]:
-        for i_t, t in enumerate(mat):
-            ind_last_val = np.where(t == t[~np.isnan(t)][-1])[0][0]
-            mat[i_t, ind_last_val:-1] = np.repeat(t[ind_last_val],
-                                                  len(t)-ind_last_val-1)
-    mata = np.vstack([mata_0*-1, mata_1])
-
+        & (df.sound_len >= rtbins[rtbin])]
+    if coh is not None:
+        idx = (dat.coh2 == coh1) & (dat.rewside == 0)
+        mata_0 = np.vstack(dat.loc[idx].apply(
+        lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+        idx = (dat.coh2 == -coh1) & (dat.rewside == 1)
+        mata_1 = np.vstack(dat.loc[idx].apply(
+        lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+        if pad_end:
+            for mat in [mata_0, mata_1]:
+                for i_t, t in enumerate(mat):
+                    ind_last_val = np.where(t == t[~np.isnan(t)][-1])[0][0]
+                    mat[i_t, ind_last_val:-1] = np.repeat(t[ind_last_val],
+                                                          len(t)-ind_last_val-1)
+        mata = np.vstack([mata_0*((-1)**flip), mata_1])
+    if coh is None:
+        mata = np.vstack(dat.apply(
+        lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
+    if flip:
+        mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
     # discard all nan rows # this is not working because a is a copy!
-    mata = mata[~np.isnan(mata).all(axis=1)]
-
-    # if ax is not None:
-    #     ax.plot(np.nanmean(mata, axis=0), **plot_kwargs)
-    return mata
-
+    idx_nan = ~np.isnan(mata).all(axis=1)
+    mata = mata[idx_nan]
+    if coh is None:
+        return mata, idx_nan
+    else:
+        return mata
 
 
 def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
@@ -620,7 +630,7 @@ def plot_trajs_splitting_example(df, ax, rtbin=0, rtbins=np.linspace(0, 150, 2),
         ax.plot(np.arange(matatmp.shape[1]) - startfrom,
                 median_plt, color=colormap[iev], label=lbl)
         medians.append(median_plt)
-        
+
         if iev == 0:
             mat = matatmp
             evl = np.repeat(0, matatmp.shape[0])
@@ -766,7 +776,8 @@ def trajs_splitting_prior(df, ax, data_folder, rtbins=np.linspace(0, 150, 16),
 
 
 def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
-                   rtbin=0, align='sound', trajectory='trajectory_y'):
+                   rtbin=0, align='sound', trajectory='trajectory_y',
+                   flip=True):
     kw = {"trajectory": trajectory}
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
@@ -783,7 +794,8 @@ def retrieve_trajs(df, rtbins=np.linspace(0, 150, 16),
     # mata_1 = np.vstack(dat.loc[idx].apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
     # mata = np.vstack([mata_0*-1, mata_1])
     mata = np.vstack(dat.apply(lambda x: interpolapply(x, **kw), axis=1).values.tolist())
-    mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
+    if flip:
+        mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
     index_nan = ~np.isnan(mata).all(axis=1)
     mata = mata[index_nan]
     return mata, index_nan
@@ -1071,6 +1083,180 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
             ax[i].legend()
 
 
+def plot_lin_reg_weights_frames(df, frame_len=50,
+                                rtbins=np.linspace(0, 150, 4),
+                                trajectory="trajectory_y",
+                                max_MT=400, sim=True):
+    fig, ax = plt.subplots(ncols=len(rtbins)-1, figsize=(16, 5))
+    if len(rtbins)-1 == 1:
+        ax = [ax]
+    # binsize = np.diff(rtbins)[0]
+    subjects = df.subjid.unique()
+    out_data = np.empty((len(rtbins)-1, max_MT, 5))
+    out_data[:] = np.nan
+    err_data = np.empty((len(rtbins)-1, max_MT, 5))
+    err_data[:] = np.nan
+    if sim:
+        startfrom = 0
+    else:
+        startfrom = 700
+    for i in range(rtbins.size-1):
+        out_data_sbj = np.empty((len(subjects), max_MT, 5))
+        out_data_sbj[:] = np.nan
+        for i_s, subject in enumerate(subjects):
+            df_sub = df.copy().loc[df.subjid == subject]
+            reaction_time = df_sub.sound_len.values
+            stimulus = np.array(df_sub.res_sound)
+            prior = df_sub.norm_allpriors.values
+            # category = df_sub.rewside.values*2-1
+            first_frame = [stimulus[i][0] for i in range(len(stimulus))]
+            second_frame = [stimulus[i][1] for i in range(len(stimulus))]
+            third_frame = [stimulus[i][2] for i in range(len(stimulus))]
+            if sim:
+                matatmp, idx =\
+                    get_splitting_mat_simul(df_sub, side=0, rtbin=i,
+                                            rtbins=rtbins,
+                                            align='sound', coh=None, flip=False,
+                                            pad_end=True)
+            else:
+                matatmp, idx =\
+                    retrieve_trajs(df_sub, rtbins=rtbins,
+                                   rtbin=i, align='sound',
+                                   trajectory=trajectory, flip=False)
+            matatmp = zscore(matatmp, axis=None, nan_policy='omit')
+            stim = np.zeros((int(rtbins[i]/frame_len)+1, len(stimulus)))
+            stim[0] = first_frame
+            if rtbins[i] >= 50:
+                stim[1] = second_frame  
+            if rtbins[i] >= 100:
+                stim[2] = third_frame
+            stim = stim[:, (reaction_time >= rtbins[i]) &
+                       (reaction_time < rtbins[i+1])][:, idx]
+            stim = zscore(stim, axis=None, nan_policy='omit')
+            # *\
+            #     category[(reaction_time >= rtbins[i]) &
+            #               (reaction_time < rtbins[i+1])][idx]
+            zt = prior[(reaction_time >= rtbins[i]) &
+                       (reaction_time < rtbins[i+1])][idx]
+            zt = zscore(zt)
+            regs = np.concatenate((zt.reshape(1,-1), stim))
+            params = get_params_lin_reg_frames(matatmp, regs, startfrom=startfrom,
+                                               max_MT=max_MT)
+            out_data_sbj[i_s, :, 0] = np.array(params[1])
+            out_data_sbj[i_s, :, 1] = np.array(params[2])
+            out_data_sbj[i_s, :, 2] = np.array(params[3])
+            out_data_sbj[i_s, :, 3] = np.array(params[4])
+            out_data_sbj[i_s, :, 4] = np.array(params[0])
+        out_data[i, :, :] = np.nanmean(out_data_sbj, axis=0)
+        err_data[i, :, :] = np.nanstd(out_data_sbj, axis=0) / np.sqrt(len(subjects))
+    colors = ['r', 'k', 'b', 'g', 'c']
+    x = np.arange(max_MT)
+    for i in range(len(rtbins)-1):
+        for j in range(5):
+            mean = out_data[i, :, j].T
+            error = err_data[i, :, j].T
+            ax[i].plot(x, mean, color=colors[j])
+            if len(subjects) > 1:
+                ax[i].fill_between(x, mean-error, mean+error, color=colors[j],
+                                   alpha=0.3)
+        ax[i].set_title(f'{rtbins[i]} <= RT < {rtbins[i+1]}')
+        ax[i].set_xlabel('Time from sound onset (ms)')
+    labels = ['prior', '1st', '2nd', '3rd', 'intercept']
+    legendelements = []
+    for i_l, lab in enumerate(labels):
+        legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
+                              label=lab))
+    ax[0].legend(handles=legendelements)
+    ax[0].set_ylabel('Regression weight')
+
+
+def splitting_time_frames_model(df_sim, data_folder, frame_len=50,
+                                rtbins=np.linspace(0, 150, 7),
+                                trajectory="trajectory_y", new_data=True,
+                                pval=0.01, max_MT=400):
+    fig, ax = plt.subplots(ncols=4, figsize=(16, 5))
+    binsize = np.diff(rtbins)[0]
+    subjects = df_sim.subjid.unique()
+    out_data = np.empty((len(rtbins)-1, 3, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        out_data_sbj = np.empty((len(rtbins)-1, 3))
+        out_data_sbj[:] = np.nan
+        split_data = data_folder + subject + '/sim_data/' + subject + '_traj_split_stim_frames.npz'
+        # create folder if it doesn't exist
+        os.makedirs(os.path.dirname(split_data), exist_ok=True)
+        if os.path.exists(split_data) and not new_data:
+            split_data = np.load(split_data, allow_pickle=True)
+            out_data_sbj = split_data['out_data_sbj']
+        else:
+            df_sub = df_sim.loc[df_sim.subjid == subject]
+            reaction_time = df_sub.sound_len.values
+            stimulus = np.array(df_sub.res_sound)
+            category = (df_sub.rewside.values*2-1)
+            first_frame = [stimulus[i][0] for i in range(len(stimulus))]
+            second_frame = [stimulus[i][1] for i in range(len(stimulus))]
+            third_frame = [stimulus[i][2] for i in range(len(stimulus))]
+            for i in range(rtbins.size-1):
+                matatmp, idx = get_splitting_mat_simul(df_sub, side=0, rtbin=i,
+                                                       rtbins=rtbins,
+                                                       align='sound', coh=None)
+                stim = np.zeros((int(i*binsize/frame_len)+1, len(stimulus)))
+                stim[0] = first_frame
+                if i*binsize >= 50:
+                    stim[1] = second_frame  
+                if i*binsize >= 100:
+                    stim[2] = third_frame
+                stim = stim[:, (reaction_time >= rtbins[i]) &
+                           (reaction_time < rtbins[i+1])][:, idx]*\
+                        category[(reaction_time >= rtbins[i]) &
+                                  (reaction_time < rtbins[i+1])][idx]
+                nrt = 0
+                current_split_index =\
+                    get_split_ind_corr_frames(matatmp, stim, pval=pval,
+                                              max_MT=max_MT, startfrom=nrt)
+                out_data_sbj[i, 0] = current_split_index[0]
+                out_data_sbj[i, 1] = current_split_index[1]
+                out_data_sbj[i, 2] = current_split_index[2]
+            np.savez(split_data, out_data_sbj=out_data_sbj)
+        out_data[:, :, i_s] = out_data_sbj
+    ax[0].set_ylabel('Splitting Time (ms)')
+    titles = ['1st frame', '2nd frame', '3rd frame', ' ']
+    splt_data_all = np.empty((len(rtbins)-1, 3))
+    splt_data_all[:] = np.nan
+    err_data_all = np.empty((len(rtbins)-1, 3))
+    err_data_all[:] = np.nan
+    colors = ['r', 'k', 'b']
+    for i in range(len(ax)):
+        ax[i].plot([0, 305], [0, 300], color='k')
+        ax[i].fill_between([0, 300], [0, 300], [0, 0],
+                           color='grey', alpha=0.6)
+        ax[i].set_title(titles[i])
+        ax[i].set_xlim(-5, 305)
+        ax[i].set_ylim(-5, 405)
+        fp.rm_top_right_lines(ax[i])
+        ax[i].set_xlabel('Reaction Time (ms)')
+        if i <= 2:
+            splt_data = np.nanmedian(out_data[:, i, :], axis=1)
+            splt_data_all[:, i] = splt_data
+            err_data = np.nanstd(out_data[:, i, :], axis=1) / np.sqrt(len(subjects))
+            err_data_all[:, i] = err_data
+            ax[i].errorbar(rtbins[:-1]+binsize/2, splt_data, err_data, marker='o',
+                           color='firebrick', ecolor='firebrick')
+            for j in range(len(subjects)):
+                ax[i].plot(rtbins[:-1]+binsize/2, out_data[:, i, j],
+                           marker='o', mfc=(.6, .6, .6, .3), mec=(.6, .6, .6, 1),
+                           mew=1, color=(.6, .6, .6, .3))
+        else:
+            for j in range(splt_data_all.shape[1]):
+                ax[i].plot(rtbins[:-1]+binsize/2, splt_data_all[:, j],
+                           color=colors[j], label=titles[j])
+                ax[i].fill_between(rtbins[:-1]+binsize/2,
+                                   splt_data_all[:, j]-err_data_all[:, j],
+                                   splt_data_all[:, j]+err_data_all[:, j],
+                                   color=colors[j], alpha=0.3)
+            ax[i].legend()
+
+
+
 def logifunc(x,A, B,x01,k1, x02, k2, x03, k3):
     return A / (1 + B*np.exp(-k1*(x[0]-x01)-k2*(x[1]-x02)-k3*(x[2]-x03)))
 
@@ -1097,7 +1283,7 @@ def log_reg_frames(df, frame_len = 50):
 
 
 def log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16)):
-    fig, ax = plt.subplots(1)
+    # fig, ax = plt.subplots(1)
     fig2, ax2 = plt.subplots(3, 5)
     ax2 = ax2.flatten()
     colors = ['r', 'b', 'k']
@@ -1115,12 +1301,12 @@ def log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16)):
                                   (df_sub.sound_len < rtbins[i+1])]
             mat_per_sub[i, :] = log_reg_frames(df=df_sub_2)
         mat_total[:, :, i_s] = mat_per_sub
-        ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[0],
-                color=colors[0], alpha=0.3)
-        ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[1],
-                color=colors[1], alpha=0.3)
-        ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[2],
-                color=colors[2], alpha=0.3)
+        # ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[0],
+        #         color=colors[0], alpha=0.3)
+        # ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[1],
+        #         color=colors[1], alpha=0.3)
+        # ax.plot(rtbins[:-1] + binsize/2, mat_per_sub.T[2],
+        #         color=colors[2], alpha=0.3)
         for t in range(3):
             ax2[i_s].plot(rtbins[:-1] + binsize/2, mat_per_sub.T[t],
                           color=colors[t], label=labels[t]+' frame')
@@ -1129,16 +1315,16 @@ def log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16)):
         fp.rm_top_right_lines(ax2[i_s])
         ax2[i_s].set_xlabel('Reaction time (ms)')
         ax2[i_s].set_ylabel('Logistic Regression weight (a.u.)')
-    weights_mean = np.nanmean(mat_total, axis=2).T
-    weights_err = np.nanstd(mat_total, axis=2).T / np.sqrt(len(subjects))
-    for j in range(3):
-        ax.plot(rtbins[:-1] + binsize/2, weights_mean[j],  # weights_err[j],
-                label=labels[j]+' frame', marker='o', linewidth=2.5,
-                color=colors[j])
-    ax.legend()
-    fp.rm_top_right_lines(ax)
-    ax.set_xlabel('Reaction time (ms)')
-    ax.set_ylabel('Logistic Regression weight (a.u.)')
+    # weights_mean = np.nanmean(mat_total, axis=2).T
+    # weights_err = np.nanstd(mat_total, axis=2).T / np.sqrt(len(subjects))
+    # for j in range(3):
+    #     ax.plot(rtbins[:-1] + binsize/2, weights_mean[j],  # weights_err[j],
+    #             label=labels[j]+' frame', marker='o', linewidth=2.5,
+    #             color=colors[j])
+    # ax.legend()
+    # fp.rm_top_right_lines(ax)
+    # ax.set_xlabel('Reaction time (ms)')
+    # ax.set_ylabel('Logistic Regression weight (a.u.)')
 
 
 def fig_2_trajs(df, rat_nocom_img, data_folder, sv_folder, st_cartoon_img, fgsz=(8, 12),
