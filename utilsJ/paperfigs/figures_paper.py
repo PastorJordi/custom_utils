@@ -2760,31 +2760,142 @@ def plot_acc_express(df):
     ax.set_xticks([0, 0.25, 0.5, 1])
 
 
-def supp_silent(df):
-    fig, ax = plt.subplots(ncols=3, figsize=(10, 4))
+def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg',
+                            color='k'):
+    subjid = df.subjid
+    subjects = np.unique(subjid)
+    com_data = np.empty((len(subjects), len(bins_rt)-1))
+    com_data[:] = np.nan
+    xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
+    for i_s, subject in enumerate(subjects):
+        df_plot = df.loc[subjid == subject]
+        # & (df_sim.norm_allpriors.abs() >= 0.5)]
+        mean_pcom_mod_det = []
+        for i_rt, rt in enumerate(bins_rt[:-1]):
+            df_filt = df_plot.loc[(df_plot.sound_len >= rt) &
+                                  (df_plot.sound_len < bins_rt[i_rt+1])]
+            mean_pcom_mod_det.append(np.nanmean((df_filt[column])))
+        com_data[i_s, :len(mean_pcom_mod_det)] = mean_pcom_mod_det
+        # ax.plot(xpos_plot, mean_pcom_mod_det, color=color, alpha=0.3)
+    # first_vals = com_data[:, 0]
+    # last_vals = com_data[:, -1]
+    # print(ttest_rel(first_vals, last_vals).pvalue)
+    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
+                yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
+                color=color, label=label)
+    ax.set_ylabel('p(reversal) - silent')
+    ax.set_xlabel('Reaction time (ms)')
+
+
+def supp_silent(df, df_sim):
+    """
+    a) p(CoM)
+    b) p(CoM) vs RT
+    c) RT for silent/coh=0
+    d) prop. incong prior
+    """
+    fig, ax = plt.subplots(ncols=3, figsize=(14, 4))
+    plt.subplots_adjust(top=0.95, bottom=0.16, left=0.09, right=0.95,
+                        hspace=0.4, wspace=0.45)
+    labs = ['a', 'b', 'c', 'd']
     ax = ax.flatten()
-    subjects = df.subjid.unique()
-    labels = ['RT (ms)', 'MT (ms)']
-    for i_s, subj in enumerate(subjects):
-        df_subj = df.copy().loc[(df.subjid == subj) & (df.special_trial == 2)]
-        df_subj['resp_len'] = df_subj.resp_len*1e3
-        # RT
-        fix_breaks =\
-            np.vstack(np.concatenate([df_subj.sound_len/1000,
-                                      np.concatenate(df_subj.fb.values)-0.3]))
-        sns.kdeplot(fix_breaks.T[0]*1e3, ax=ax[0], alpha=0.3, color='k')
-        # MT
-        mt = df_subj.resp_len.values
-        sns.kdeplot(mt, ax=ax[1], alpha=0.3, color='k')
-        # PCoM RT
-    binned_curve(df.loc[(df.special_trial == 2)], 'sound_len', 'CoM_sugg',
-                 bins=BINS_RT, xpos=np.diff(BINS_RT)[0], ax=ax[2],
-                 errorbar_kw={'color': 'k'})
-    for j in range(2):
-        ax[j].set_xlabel(labels[j])
-    ax[0].set_xlim(-105, 305)
-    ax[1].set_xlim(45, 755)
-    fig.tight_layout()
+    for i_a, a in enumerate(ax):
+        rm_top_right_lines(a)
+        a.text(-0.1, 1.06, labs[i_a], transform=a.transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    # a)
+    ax_a = ax[0]
+    subjects = df.loc[df.special_trial == 2].subjid.unique()
+    com_coh_0 = []
+    com_silent = []
+    com_coh_0_sim = []
+    com_silent_sim = []
+    column_sim = 'com_detected'
+    column = 'CoM_sugg'
+    for subj in subjects:
+        df_1 = df.copy().loc[(df.subjid == subj) & (df.special_trial == 2)]
+        df_sim_1 = df_sim.copy().loc[(df_sim.subjid == subj) &
+                                     (df_sim.special_trial == 2)]
+        mean_coms = np.nanmean(df_1[column].values)
+        mean_coms_sim = np.nanmean(df_sim_1[column_sim].values)
+        com_silent.append(mean_coms)
+        com_silent_sim.append(mean_coms_sim)
+        df_1 = df.copy().loc[(df.subjid == subj) & (df.special_trial == 0) &
+                             (df.coh2 == 0)]
+        df_sim_1 = df_sim.copy().loc[
+            (df_sim.subjid == subj) & (df_sim.special_trial == 0) &
+            (df_sim.coh2 == 0)]
+        mean_coms = np.nanmean(df_1[column].values)
+        mean_coms_sim = np.nanmean(df_sim_1[column_sim].values)
+        com_coh_0.append(mean_coms)
+        com_coh_0_sim.append(mean_coms_sim)
+    ax_a.plot(com_coh_0, com_silent, color='k', marker='o',
+              linestyle='', label='Data')
+    ax_a.plot(com_coh_0_sim, com_silent_sim, color='grey', marker='o',
+              linestyle='', alpha=0.8, label='Model')
+    ax_a.legend()
+    max_val = np.max((com_silent_sim, com_coh_0_sim))
+    ax_a.plot([0, max_val+0.02], [0, max_val+0.02], color='grey', alpha=0.4)
+    ax_a.set_xticks(np.linspace(0, max_val+0.01, 4))
+    ax_a.set_yticks(np.linspace(0, max_val+0.01, 4))
+    ax_a.set_ylabel('p(reversal | silent)')
+    ax_a.set_xlabel('p(reversal | stim=0)')
+    # b)
+    ax_b = ax[1]
+    # supp_p_com_vs_rt_silent(df.loc[(df.special_trial == 0) & (df.coh2 == 0)],
+    #                         ax_b, bins_rt=BINS_RT, label='coh = 0',
+    #                         column=column, color='r')
+    supp_p_com_vs_rt_silent(df.loc[(df.special_trial == 2)],
+                            ax_b, bins_rt=BINS_RT, label='Data',
+                            column=column, color='k')
+    supp_p_com_vs_rt_silent(df_sim.loc[(df_sim.special_trial == 2)],
+                            ax_b, bins_rt=BINS_RT, label='Model',
+                            column=column_sim, color='silver')
+    ax_b.set_ylabel('p(reversal)')
+    ax_b.set_xlim(-1, 301)
+    # ax_b.legend()
+    # C)
+    ax_c = ax[2]
+    df_prior = df.copy().loc[df.special_trial == 2]
+    df_prior['choice_x_prior'] = df_prior.norm_allpriors
+    df_prior_sim = df_sim.copy().loc[df_sim.special_trial == 2]
+    df_prior_sim['choice_x_prior'] = df_prior_sim.norm_allpriors
+    bins, _, _, _, _ = \
+        get_bin_info(df_prior,
+                     condition='choice_x_prior', prior_limit=1,
+                     after_correct_only=True, rt_lim=300,
+                     fpsmin=29, num_bins_prior=8, rtmin=0, silent=True)
+    nsubs = len(df_prior.subjid.unique())
+    p_right = np.empty((nsubs, len(bins)-1))
+    p_right_sim = np.empty((nsubs, len(bins)-1))
+    for i_s, subject in enumerate(df_prior.subjid.unique()):
+        df_sub = df_prior.loc[df_prior.subjid == subject]
+        df_sub_sim = df_prior_sim.loc[df_prior_sim.subjid == subject]
+        for bin in range(len(bins)-1):
+            pright_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
+                                    (df_sub.choice_x_prior < bins[bin+1]),
+                                    'R_response']
+            p_right[i_s, bin] = np.nanmean(pright_sub)
+            pright_sub = df_sub_sim.loc[
+                (df_sub_sim.choice_x_prior >= bins[bin]) &
+                (df_sub_sim.choice_x_prior < bins[bin+1]), 'R_response']
+            p_right_sim[i_s, bin] = np.nanmean(pright_sub)
+    p_right_all = np.nanmean(p_right, axis=0)
+    p_right_all_sim = np.nanmean(p_right_sim, axis=0)
+    p_right_error_all = np.nanstd(p_right, axis=0) / np.sqrt(nsubs)
+    p_right_error_all_sim = np.nanstd(p_right_sim, axis=0) / np.sqrt(nsubs)
+    prior_x_vals = bins[:-1] + np.diff(bins)/2
+    ax_c.errorbar(prior_x_vals, p_right_all, yerr=p_right_error_all, color='k',
+                  label='Data')
+    ax_c.errorbar(prior_x_vals, p_right_all_sim, yerr=p_right_error_all_sim,
+                  color='silver', label='Model')
+    # ax_c.legend()
+    ax_c.set_xlabel('Prior evidence')
+    ax_c.set_ylabel('p(Right response)')
+    ax_c.set_ylim(-0.02, 1.02)
+    ax_c.set_xticks([prior_x_vals[0], 0,
+                      prior_x_vals[-1]],
+                    ['L', '0', 'R'])
 
 
 # def plot_rats_humans_model_mt(df, df_sim, pc_name, mt=True):
