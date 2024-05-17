@@ -23,6 +23,7 @@ sys.path.append("C:/Users/agarcia/Documents/GitHub/custom_utils")  # Alex CRM
 sys.path.append("/home/molano/custom_utils") # Cluster Manuel
 from utilsJ.Models import extended_ddm_v2 as edd2
 from utilsJ.paperfigs import figures_paper as fp
+from utilsJ.paperfigs.figures_paper import supp_p_com_vs_rt_silent
 from utilsJ.Behavior.plotting import trajectory_thr, interpolapply,\
     binned_curve, com_heatmap
 from utilsJ.paperfigs import figure_7 as fig_7
@@ -278,33 +279,6 @@ def supp_p_detection_vs_rt(df_sim, ax, bins_rt=BINS_RT):
     ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
                 yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
                 color='k')
-    ax.set_xlabel('Reaction time (ms)')
-
-
-def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg',
-                            color='k'):
-    subjid = df.subjid
-    subjects = np.unique(subjid)
-    com_data = np.empty((len(subjects), len(bins_rt)-1))
-    com_data[:] = np.nan
-    xpos_plot = (bins_rt[:-1] + bins_rt[1:]) / 2
-    for i_s, subject in enumerate(subjects):
-        df_plot = df.loc[subjid == subject]
-        # & (df_sim.norm_allpriors.abs() >= 0.5)]
-        mean_pcom_mod_det = []
-        for i_rt, rt in enumerate(bins_rt[:-1]):
-            df_filt = df_plot.loc[(df_plot.sound_len >= rt) &
-                                  (df_plot.sound_len < bins_rt[i_rt+1])]
-            mean_pcom_mod_det.append(np.nanmean((df_filt[column])))
-        com_data[i_s, :len(mean_pcom_mod_det)] = mean_pcom_mod_det
-        # ax.plot(xpos_plot, mean_pcom_mod_det, color=color, alpha=0.3)
-    first_vals = com_data[:, 0]
-    last_vals = com_data[:, -1]
-    print(ttest_rel(first_vals, last_vals).pvalue)
-    ax.errorbar(xpos_plot, np.nanmean(com_data, axis=0),
-                yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
-                color=color, label=label)
-    ax.set_ylabel('p(reversal) - silent')
     ax.set_xlabel('Reaction time (ms)')
 
 
