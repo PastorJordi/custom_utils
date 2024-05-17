@@ -1925,7 +1925,7 @@ def tachometric(
     vals_tach_per_sub = np.empty((len(rtbins)-1, n_subs))
     vals_tach_per_sub[:] = np.nan
     evidence_bins = np.sort(np.round(tmp_df[evidence].abs(), 2).unique())
-    print(evidence_bins)
+    # print(evidence_bins)
     for i in range(evidence_bins.size):
         for i_s, subj in enumerate(df.subjid.unique()):
             tmp = (
@@ -1933,7 +1933,7 @@ def tachometric(
                     (df.subjid == subj)]  # select stim str
                 .groupby('rtbin')[hits].mean()).values
             vals_tach_per_sub[:len(tmp), i_s] = tmp
-        print(i)
+        # print(i)
         vals_total = np.nanmean(vals_tach_per_sub, axis=1)            
         error_total = np.nanstd(vals_tach_per_sub, axis=1)/np.sqrt(n_subs)
         clabel = evidence_bins[i]

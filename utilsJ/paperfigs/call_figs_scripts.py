@@ -140,10 +140,10 @@ if f1 or f2 or f3 or f5 or f7:
     subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                 'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                 'LE44']
-    # subjects = ['LE42', 'LE37', 'LE38', 'LE39', 'LE40']
+    # subjects = ['LE42', 'LE38', 'LE39', 'LE40']
     # subjects = ['LE46']  # for params analysis
-    # subjects = ['LE42']  # for fig7
-    # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
+    subjects = ['LE42']  # for fig7
+    subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -277,7 +277,8 @@ if f5 or f7:
         df_sim['allpriors'] = zt
         df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
         df_sim['normallpriors'] = df_sim['norm_allpriors']
-        df_sim['framerate']=200
+        df_sim['framerate'] = 200
+        df_sim['res_sound'] = df.res_sound
         # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
         #                       n_trajs_plot=150, pixel_precision=1, cmap='Reds')
         # fp.supp_plot_rt_distros_data_model(df, df_sim)
@@ -288,7 +289,7 @@ if f5 or f7:
         means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
         means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
         if not with_fb:
-            df_sim = df_sim[df_sim.sound_len.values >= 0]
+            df_sim = df_sim.loc[df_sim.sound_len.values >= 0]
         # memory save:
         stim = []
         traj_y = []
@@ -302,25 +303,44 @@ if f5 or f7:
         fix_breaks = []
         resp_len = []
         time_trajs = []
+        # fp.supp_silent(df=df, df_sim=df_sim)
         # fig, ax = plt.subplots(1)
         # fig_2.trajs_splitting_stim(df_sim, ax, DATA_FOLDER, collapse_sides=True, threshold=300,
         #                           sim=True,
         #                           rtbins=np.linspace(0, 150, 25), connect_points=False,
         #                           trajectory="trajectory_y", p_val=0.05)
-    
+
         # fig_5.supp_com_analysis(df_sim, sv_folder=SV_FOLDER, pcom_rt=PCOM_RT_IMG)
         # fig_5.supp_p_reversal_silent(df, df_sim, data_folder=DATA_FOLDER,
         #                               sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
-        fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
-                          new_data=simulate, save_new_data=save_new_data,
-                          coh=coh, sound_len=sound_len, zt=zt,
-                          hit_model=hit_model, sound_len_model=reaction_time.astype(int),
-                          decision_model=resp_fin, com=com, com_model=com_model,
-                          com_model_detected=com_model_detected,
-                          means=means, errors=errors, means_model=means_model,
-                          errors_model=errors_model, df_sim=df_sim, extra_label=extra_label)
+        # fig_2.plot_lin_reg_weights_frames(df, frame_len=50,
+        #                                   rtbins=np.linspace(0, 150, 4),
+        #                                   trajectory="trajectory_y",
+        #                                   max_MT=400, sim=False)
+        fig_2.plot_lin_reg_weights_frames(df_sim, frame_len=50,
+                                          rtbins=np.linspace(0, 150, 4),
+                                          trajectory="trajectory_y",
+                                          max_MT=400, sim=True)
+        fig_2.splitting_time_frames_model(df_sim.loc[df_sim.subjid == 'LE42'],
+                                          data_folder=DATA_FOLDER,
+                                          frame_len=50,
+                                          rtbins=np.arange(0, 305, 15),
+                                          trajectory="trajectory_y",
+                                          new_data=True,
+                                          pval=.01, max_MT=400)
+
+        # fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16))
+        # fig_2.log_reg_vs_rt(df_sim, rtbins=np.linspace(0, 150, 16))
+        # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
+        #                   new_data=simulate, save_new_data=save_new_data,
+        #                   coh=coh, sound_len=sound_len, zt=zt,
+        #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
+        #                   decision_model=resp_fin, com=com, com_model=com_model,
+        #                   com_model_detected=com_model_detected,
+        #                   means=means, errors=errors, means_model=means_model,
+        #                   errors_model=errors_model, df_sim=df_sim, extra_label=extra_label)
     if f7:
         # index to filter by stim/silent for p(com) vs p(proac) supp figure
         # idx = df.special_trial.values >= 0
@@ -353,8 +373,9 @@ if f5 or f7:
 if f6:
     print('Plotting Figure 6')
     # human traj plots
+    # fig_6.supp_human_behavior(user_id=pc_name, sv_folder=SV_FOLDER)
     fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
-                       human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
+                        human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
