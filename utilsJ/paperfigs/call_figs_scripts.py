@@ -143,7 +143,7 @@ if f1 or f2 or f3 or f5 or f7:
     # subjects = ['LE42', 'LE38', 'LE39', 'LE40']
     # subjects = ['LE46']  # for params analysis
     subjects = ['LE42']  # for fig7
-    subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
+    # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
         df = edd2.get_data_and_matrix(dfpath=DATA_FOLDER + sbj, return_df=True,
@@ -216,12 +216,13 @@ if f5 or f7:
     with_fb = False
     save_new_data = False
     silent_sim = False
+    artificial_stim = True
     if silent_sim:
         stim[:] = 0  # silent simulation
         special_trial[:] = 2
         extra_label = 'silent'
     else:
-        extra_label = '_continuous_'
+        extra_label = '_continuous_stimulus_'
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     if f7:
@@ -248,6 +249,8 @@ if f5 or f7:
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     # stim[:, int(num_tr):] = 0  # for silent simulation
     if f5:
+        if artificial_stim:
+            stim = fp.stim_generation(coh=coh, stim_res=5)
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
@@ -278,7 +281,7 @@ if f5 or f7:
         df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
         df_sim['normallpriors'] = df_sim['norm_allpriors']
         df_sim['framerate'] = 200
-        df_sim['res_sound'] = df.res_sound
+        df_sim['res_sound'] = [st for st in stim.T]
         # fp.plot_model_density(df_sim, offset=0, df=df, plot_data_trajs=True,
         #                       n_trajs_plot=150, pixel_precision=1, cmap='Reds')
         # fp.supp_plot_rt_distros_data_model(df, df_sim)
@@ -319,18 +322,17 @@ if f5 or f7:
         #                                   rtbins=np.linspace(0, 150, 4),
         #                                   trajectory="trajectory_y",
         #                                   max_MT=400, sim=False)
-        fig_2.plot_lin_reg_weights_frames(df_sim, frame_len=50,
-                                          rtbins=np.linspace(0, 150, 4),
-                                          trajectory="trajectory_y",
-                                          max_MT=400, sim=True)
+        fig_2.plot_lin_reg_weights_continuous_stimulus(df_sim, frame_len=5,
+                                                       rtbins=np.linspace(0, 150, 4),
+                                                       trajectory="trajectory_y",
+                                                       max_MT=400, sim=True)
         fig_2.splitting_time_frames_model(df_sim.loc[df_sim.subjid == 'LE42'],
                                           data_folder=DATA_FOLDER,
-                                          frame_len=50,
+                                          frame_len=5,
                                           rtbins=np.arange(0, 305, 15),
                                           trajectory="trajectory_y",
                                           new_data=True,
-                                          pval=.01, max_MT=400)
-
+                                          pval=.05, max_MT=400)
         # fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16))
         # fig_2.log_reg_vs_rt(df_sim, rtbins=np.linspace(0, 150, 16))
         # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
