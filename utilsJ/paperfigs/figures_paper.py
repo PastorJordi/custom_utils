@@ -669,6 +669,8 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
             model = edd2.trial_ev_vectorized
         if 'continuous' in extra_label:
             model = model_variations.trial_ev_vectorized_n_readouts
+        if 'orig' in extra_label:
+            model = edd2.trial_ev_vectorized
     if type(extra_label) is int:
         model = edd2.trial_ev_vectorized
     # dt = 5e-3
@@ -738,12 +740,11 @@ def run_model(stim, zt, coh, gt, trial_index, human=False,
     p_mt_noise = conf[13]+jitters[13]*np.random.rand()
     p_MT_intercept = conf[14]+jitters[14]*np.random.rand()
     p_MT_slope = conf[15]+jitters[15]*np.random.rand()
-    stim = edd2.data_augmentation(stim=stim.reshape(20, num_tr),
+    stim = edd2.data_augmentation(stim=stim.reshape(stim.shape[0], num_tr),
                                   daf=data_augment_factor)
     stim_res = 50/data_augment_factor
     compute_trajectories = True
     all_trajs = True
-
     stim_temp =\
         np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),
                                         stim.shape[1]))))
@@ -1228,6 +1229,12 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
                  frameon=False, bbox_to_anchor=(1.24, 1.175),
                  labelspacing=0.35)
     ax[1].set_ylim(-2, 71)
+
+
+def stim_generation(coh, stim_res=5, sigma=0.1):
+    timepoints = int(1e3/stim_res)
+    stim = np.clip(coh + sigma*np.random.randn(timepoints, len(coh)), -1, 1)
+    return stim
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,
