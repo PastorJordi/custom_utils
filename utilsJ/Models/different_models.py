@@ -1762,7 +1762,7 @@ def trial_ev_vectorized_n_readouts(zt, stim, coh, trial_index, p_MT_slope, p_MT_
     p_e_noise = np.sqrt(dt)
     p_a_noise = np.sqrt(dt)
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
-    prior = zt*p_w_zt+1e-6*np.random.choice([-1, 1])
+    prior = zt*p_w_zt+1e-6*np.random.choice([-1, 1])  # to avoid getting zt=0
     # instantaneous evidence
     Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
@@ -1852,6 +1852,7 @@ def trial_ev_vectorized_n_readouts(zt, stim, coh, trial_index, p_MT_slope, p_MT_
     RLresp = resp_fin
     prechoice = resp_first
     jerk_lock_ms = 0
+    min_mt = 10
     # initial positions, speed and acc; final position, speed and acc
     initial_mu = np.array([0, 0, 0, 75, 0, 0]).reshape(-1, 1)
     indx_trajs = np.arange(len(first_ind))
@@ -1906,6 +1907,7 @@ def trial_ev_vectorized_n_readouts(zt, stim, coh, trial_index, p_MT_slope, p_MT_
             second_response_len =\
                 float(remaining_m_time -  # offset*com[i_t] -
                       p_2nd_readout*(difference))
+            second_response_len = np.max((second_response_len, min_mt))
             # SECOND readout
             traj_fin = edd2.compute_traj(jerk_lock_ms, mu=mu_update,
                                          resp_len=second_response_len)
