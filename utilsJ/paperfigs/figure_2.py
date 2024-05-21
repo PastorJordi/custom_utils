@@ -229,10 +229,15 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
             if p2[2] < pval and i2:
                 idx_2 = i
                 i2 = False
+        else:
+            i2 = False
+            i3 = False
         if len(p2) > 3:
             if p2[3] < pval and i3:
                 idx_3 = i
                 i3 = False
+        else:
+            i3 = False
         if i1 + i2 + i3 == 0:
             break
     return [idx_1, idx_2, idx_3]
@@ -272,6 +277,20 @@ def get_params_lin_reg_frames(mat, stim, max_MT=400, startfrom=700):
         if stim.shape[0] <= 3:
             w3.append(np.nan)
     return [inter, wzt, w1, w2, w3]
+
+
+def get_params_lin_reg_all_frames(mat, stim, max_MT=400, startfrom=700):
+    mat_regressors = np.empty((stim.shape[1], max_MT))
+    for i in range(max_MT):
+        pop_a = mat[:, startfrom + i]
+        nan_idx = ~np.isnan(pop_a)
+        pop_evidence = stim[:, nan_idx]
+        pop_a = pop_a[nan_idx]
+        x_all = sm.add_constant(pop_evidence.T)
+        mod = sm.OLS(pop_a.T, x_all).fit()
+        params = mod.params
+        mat_regressors[:, i] = params
+    return mat_regressors
 
 
 def get_dv_from_params_ttest(params, max_MT=400, pval=0.01):
@@ -545,7 +564,7 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
             missing_after = upto - missing_pre - row.traj.size
             return np.pad(row.traj, ((missing_pre, missing_after)), "constant",
                         constant_values=(pad_pre, pad_value))
-
+    
     # get matrices
     if coh is not None:
         if side == 0:
@@ -554,7 +573,11 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
             coh1 = coh
     shortpad_kws = {}
     if align == 'sound':
-        shortpad_kws = dict(upto=800, align='sound')
+        lentraj = []
+        for traj in df.traj:
+            lentraj.append(len(lentraj))
+        shortpad_kws = dict(upto=max(lentraj)+int(max(df.sound_len))+1,
+                            align='sound')
     dat = df.loc[
         (df.sound_len < rtbins[rtbin + 1])
         & (df.sound_len >= rtbins[rtbin])]
@@ -1168,6 +1191,93 @@ def plot_lin_reg_weights_frames(df, frame_len=50,
                               label=lab))
     ax[0].legend(handles=legendelements)
     ax[0].set_ylabel('Regression weight')
+
+
+
+def plot_lin_reg_weights_continuous_stimulus(df, frame_len=50,
+                                             rtbins=np.linspace(0, 150, 4),
+                                             trajectory="trajectory_y",
+                                             max_MT=400, sim=True,
+                                             continuous=False):
+    fig, ax = plt.subplots(ncols=len(rtbins)-1, figsize=(16, 5))
+    if len(rtbins)-1 == 1:
+        ax = [ax]
+    # binsize = np.diff(rtbins)[0]
+    if continuous:
+        max_rt = int(max(rtbins)/5)
+    else:
+        max_rt = int(max(rtbins)/50)
+    subjects = df.subjid.unique()
+    out_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
+    out_data[:] = np.nan
+    err_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
+    err_data[:] = np.nan
+    if sim:
+        startfrom = 0
+    else:
+        startfrom = 700
+    for i in range(rtbins.size-1):
+        out_data_sbj = np.empty((len(subjects), max_MT, max_rt + 2))
+        out_data_sbj[:] = np.nan
+        for i_s, subject in enumerate(subjects):
+            df_sub = df.copy().loc[df.subjid == subject]
+            reaction_time = df_sub.sound_len.values
+            stimulus = np.array([st for st in df_sub.res_sound]).T
+            prior = df_sub.norm_allpriors.values
+            # category = df_sub.rewside.values*2-1
+            if sim:
+                matatmp, idx =\
+                    get_splitting_mat_simul(df_sub, side=0, rtbin=i,
+                                            rtbins=rtbins,
+                                            align='sound', coh=None, flip=False,
+                                            pad_end=True)
+            else:
+                matatmp, idx =\
+                    retrieve_trajs(df_sub, rtbins=rtbins,
+                                   rtbin=i, align='sound',
+                                   trajectory=trajectory, flip=False)
+            matatmp = zscore(matatmp, axis=None, nan_policy='omit')
+            stim = stimulus[:max_rt, (reaction_time >= rtbins[i]) &
+                            (reaction_time < rtbins[i+1])][:, idx]
+            stim = zscore(stim, axis=None, nan_policy='omit')
+            # *\
+            #     category[(reaction_time >= rtbins[i]) &
+            #               (reaction_time < rtbins[i+1])][idx]
+            zt = prior[(reaction_time >= rtbins[i]) &
+                       (reaction_time < rtbins[i+1])][idx]
+            zt = zscore(zt)
+            regs = np.concatenate((zt.reshape(1,-1), stim))
+            params = get_params_lin_reg_all_frames(matatmp, regs,
+                                                   max_MT=400,
+                                                   startfrom=startfrom)
+            out_data_sbj[i_s, :, :] = params
+        out_data[i, :, :] = np.nanmean(out_data_sbj, axis=0)
+        err_data[i, :, :] = np.nanstd(out_data_sbj, axis=0) / np.sqrt(len(subjects))
+    colors_0 = ['r', 'k']
+    colors_1 = pl.cm.Blues(np.linspace(0.3, 1, max_rt))
+    x = np.arange(max_MT)
+    for i in range(len(rtbins)-1):
+        for j in range(max_rt+2):
+            mean = out_data[i, :, j].T
+            error = err_data[i, :, j].T
+            if j < 2:
+                colors = colors_0
+            else:
+                colors = colors_1
+            ax[i].plot(x, mean, color=colors[j])
+            if len(subjects) > 1:
+                ax[i].fill_between(x, mean-error, mean+error, color=colors[j],
+                                   alpha=0.3)
+        ax[i].set_title(f'{rtbins[i]} <= RT < {rtbins[i+1]}')
+        ax[i].set_xlabel('Time from sound onset (ms)')
+    # labels = ['intercept', 'prior', '1st', '2nd', '3rd']
+    # legendelements = []
+    # for i_l, lab in enumerate(labels):
+    #     legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
+    #                           label=lab))
+    # ax[0].legend(handles=legendelements)
+    # ax[0].set_ylabel('Regression weight')
+
 
 
 def splitting_time_frames_model(df_sim, data_folder, frame_len=50,
