@@ -280,7 +280,7 @@ def get_params_lin_reg_frames(mat, stim, max_MT=400, startfrom=700):
 
 
 def get_params_lin_reg_all_frames(mat, stim, max_MT=400, startfrom=700):
-    mat_regressors = np.empty((stim.shape[1], max_MT))
+    mat_regressors = np.empty((stim.shape[0]+1, max_MT))
     for i in range(max_MT):
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
@@ -1194,87 +1194,177 @@ def plot_lin_reg_weights_frames(df, frame_len=50,
 
 
 
-def plot_lin_reg_weights_continuous_stimulus(df, frame_len=50,
+def supp_regression_weights_trajectory(data_folder, sv_folder,
+                                       subjects, subjid, stim, zt, coh, gt, trial_index,
+                                       special_trial, extra_labels=['_50_ms_orig_',
+                                                                    '_50_ms_continuous_',
+                                                                    '_orig_stimulus_cont_',
+                                                                    '_continuous_stimulus_']):
+    fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(10, 9))
+    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
+                        hspace=0.35, wspace=0.4)
+    ax = ax.flatten()
+    continuous = False
+    rtbins = np.linspace(50, 70, 2)
+    titles = ['2 r.o.', 'continuous r.o.',
+              '2 r.o.', 'continuous r.o.']
+    ax2 = ax[1].twinx()
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.set_yticks([])
+    ax2.set_ylabel('50 ms frames')
+    ax2 = ax[3].twinx()
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.set_ylabel('5 ms frames')
+    ax2.set_yticks([])
+    for i_l, lab in enumerate(extra_labels):
+        fp.rm_top_right_lines(ax[i_l])
+        ax[i_l].set_title(titles[i_l])
+        ax[i_l].set_xlim(-15, 260)
+        df_sim = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                 special_trial, extra_label=lab)
+        if i_l >= 2:
+            continuous = True
+            coh = np.repeat(0, len(zt))
+            stim = fp.stim_generation(coh=coh, stim_res=5, sigma=0.15,
+                                      new_stim=False)
+        df_sim['res_sound'] = [st for st in stim.T]
+        plot_lin_reg_weights_continuous_stimulus(
+            df_sim.loc[(df_sim.sound_len >= min(rtbins)) &
+                       (df_sim.sound_len <= max(rtbins))],
+            data_folder=data_folder,
+            ax=ax[i_l], frame_len=50, rtbins=rtbins,
+            trajectory="trajectory_y", max_MT=400, sim=True,
+            continuous=continuous, label=lab)
+        del df_sim
+    xticks = np.linspace(0, 200, 3)
+    ax[0].set_xticks(xticks, ['']*3)
+    ax[0].set_ylim(-0.04, 0.96)
+    ax[1].set_ylim(-0.04, 0.96)
+    ax[1].set_xticks(xticks, ['']*3)
+    ax[2].set_xticks(xticks)
+    ax[2].set_ylim(-0.04, 0.275)
+    ax[3].set_ylim(-0.04, 0.275)
+    ax[3].set_xticks(xticks)
+    ax[0].set_ylabel('Regression weights (a.u.)')
+    ax[2].set_ylabel('Regression weights (a.u.)')
+    # legend ax 0
+    labels = ['1st', '2nd']
+    max_rt = 2
+    colors = pl.cm.Blues(np.linspace(0.3, 1, max_rt))
+    legendelements = []
+    for i_l, lab in enumerate(labels):
+        legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
+                              label=lab))
+    ax[0].legend(handles=legendelements, title='Frame')
+    # legend ax 2
+    labels = ['1st', '2nd', '3rd', '4th']
+    max_rt = 4
+    colors = pl.cm.Blues(np.linspace(0.3, 1, max_rt))
+    legendelements = []
+    for i_l, lab in enumerate(labels):
+        legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
+                              label=lab))
+    ax[2].legend(handles=legendelements, title='Frame')
+    ax[2].set_xlabel('Time from stimulus onset (ms)')
+    ax[3].set_xlabel('Time from stimulus onset (ms)')
+    fig.savefig(sv_folder + '/supp_continuous_stimulus.png', dpi=400,
+                bbox_inches='tight')
+    fig.savefig(sv_folder + '/supp_continuous_stimulus.svg', dpi=400,
+                bbox_inches='tight')
+
+
+def plot_lin_reg_weights_continuous_stimulus(df, data_folder, ax=None, frame_len=50,
                                              rtbins=np.linspace(0, 150, 4),
                                              trajectory="trajectory_y",
                                              max_MT=400, sim=True,
-                                             continuous=False):
-    fig, ax = plt.subplots(ncols=len(rtbins)-1, figsize=(16, 5))
+                                             continuous=False, label=''):
+    if len(rtbins) > 2 or ax is None:
+        fig, ax = plt.subplots(ncols=len(rtbins)-1, figsize=(16, 5))
     if len(rtbins)-1 == 1:
         ax = [ax]
     # binsize = np.diff(rtbins)[0]
     if continuous:
         max_rt = int(max(rtbins)/5)
+        max_rt = 4
     else:
-        max_rt = int(max(rtbins)/50)
+        max_rt = int(max(rtbins)/50)+1
+    subject = 'LE42'
+    reg_data = data_folder + '/' + subject + '/regression_weights' + label + '.npy'
+    os.makedirs(os.path.dirname(reg_data), exist_ok=True)
     subjects = df.subjid.unique()
-    out_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
-    out_data[:] = np.nan
-    err_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
-    err_data[:] = np.nan
-    if sim:
-        startfrom = 0
+    if os.path.exists(reg_data):
+        out_data = np.load(reg_data, allow_pickle=True)
+        err_data = np.zeros((out_data.shape[0], out_data.shape[1],
+                             out_data.shape[2]))
     else:
-        startfrom = 700
-    for i in range(rtbins.size-1):
-        out_data_sbj = np.empty((len(subjects), max_MT, max_rt + 2))
-        out_data_sbj[:] = np.nan
-        for i_s, subject in enumerate(subjects):
-            df_sub = df.copy().loc[df.subjid == subject]
-            reaction_time = df_sub.sound_len.values
-            stimulus = np.array([st for st in df_sub.res_sound]).T
-            prior = df_sub.norm_allpriors.values
-            # category = df_sub.rewside.values*2-1
-            if sim:
-                matatmp, idx =\
-                    get_splitting_mat_simul(df_sub, side=0, rtbin=i,
-                                            rtbins=rtbins,
-                                            align='sound', coh=None, flip=False,
-                                            pad_end=True)
-            else:
-                matatmp, idx =\
-                    retrieve_trajs(df_sub, rtbins=rtbins,
-                                   rtbin=i, align='sound',
-                                   trajectory=trajectory, flip=False)
-            matatmp = zscore(matatmp, axis=None, nan_policy='omit')
-            stim = stimulus[:max_rt, (reaction_time >= rtbins[i]) &
-                            (reaction_time < rtbins[i+1])][:, idx]
-            stim = zscore(stim, axis=None, nan_policy='omit')
-            # *\
-            #     category[(reaction_time >= rtbins[i]) &
-            #               (reaction_time < rtbins[i+1])][idx]
-            zt = prior[(reaction_time >= rtbins[i]) &
-                       (reaction_time < rtbins[i+1])][idx]
-            zt = zscore(zt)
-            regs = np.concatenate((zt.reshape(1,-1), stim))
-            params = get_params_lin_reg_all_frames(matatmp, regs,
-                                                   max_MT=400,
-                                                   startfrom=startfrom)
-            out_data_sbj[i_s, :, :] = params
-        out_data[i, :, :] = np.nanmean(out_data_sbj, axis=0)
-        err_data[i, :, :] = np.nanstd(out_data_sbj, axis=0) / np.sqrt(len(subjects))
-    colors_0 = ['r', 'k']
+        out_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
+        out_data[:] = np.nan
+        err_data = np.empty((len(rtbins)-1, max_MT, max_rt + 2))
+        err_data[:] = np.nan
+        if sim:
+            startfrom = 0
+        else:
+            startfrom = 700
+        for i in range(rtbins.size-1):
+            out_data_sbj = np.empty((len(subjects), max_MT, max_rt + 2))
+            out_data_sbj[:] = np.nan
+            for i_s, subject in enumerate(subjects):
+                df_sub = df.copy().loc[df.subjid == subject]
+                reaction_time = df_sub.sound_len.values
+                stimulus = np.array([st for st in df_sub.res_sound]).T
+                prior = df_sub.norm_allpriors.values
+                # category = df_sub.rewside.values*2-1
+                if sim:
+                    matatmp, idx =\
+                        get_splitting_mat_simul(df_sub, side=0, rtbin=i,
+                                                rtbins=rtbins,
+                                                align='sound', coh=None, flip=False,
+                                                pad_end=True)
+                else:
+                    matatmp, idx =\
+                        retrieve_trajs(df_sub, rtbins=rtbins,
+                                       rtbin=i, align='sound',
+                                       trajectory=trajectory, flip=False)
+                matatmp = zscore(matatmp, axis=None, nan_policy='omit')
+                stim = stimulus[:max_rt, (reaction_time >= rtbins[i]) &
+                                (reaction_time < rtbins[i+1])][:, idx]
+                stim = zscore(stim, axis=None, nan_policy='omit')
+                # *\
+                #     category[(reaction_time >= rtbins[i]) &
+                #               (reaction_time < rtbins[i+1])][idx]
+                zt = prior[(reaction_time >= rtbins[i]) &
+                           (reaction_time < rtbins[i+1])][idx]
+                zt = zscore(zt)
+                regs = np.concatenate((zt.reshape(1,-1), stim))
+                params = get_params_lin_reg_all_frames(matatmp, regs,
+                                                       max_MT=400,
+                                                       startfrom=startfrom)
+                out_data_sbj[i_s, :, :] = params.T
+            out_data[i, :, :] = np.nanmean(out_data_sbj, axis=0)
+            err_data[i, :, :] = np.nanstd(out_data_sbj, axis=0) / np.sqrt(len(subjects))
+        np.save(reg_data, out_data)
+    colors_0 = ['k', 'r']
     colors_1 = pl.cm.Blues(np.linspace(0.3, 1, max_rt))
     x = np.arange(max_MT)
     for i in range(len(rtbins)-1):
-        for j in range(max_rt+2):
+        for j in range(2, max_rt+2):
             mean = out_data[i, :, j].T
-            error = err_data[i, :, j].T
             if j < 2:
                 colors = colors_0
+                t = j
             else:
                 colors = colors_1
-            ax[i].plot(x, mean, color=colors[j])
+                t = j-2
+            ax[i].plot(x, mean, color=colors[t])
             if len(subjects) > 1:
+                error = err_data[i, :, j].T
                 ax[i].fill_between(x, mean-error, mean+error, color=colors[j],
                                    alpha=0.3)
-        ax[i].set_title(f'{rtbins[i]} <= RT < {rtbins[i+1]}')
-        ax[i].set_xlabel('Time from sound onset (ms)')
-    # labels = ['intercept', 'prior', '1st', '2nd', '3rd']
-    # legendelements = []
-    # for i_l, lab in enumerate(labels):
-    #     legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
-    #                           label=lab))
+        # ax[i].set_title(f'{rtbins[i]} <= RT < {rtbins[i+1]}')
+        # ax[i].set_xlabel('Time from sound onset (ms)')
+    
     # ax[0].legend(handles=legendelements)
     # ax[0].set_ylabel('Regression weight')
 

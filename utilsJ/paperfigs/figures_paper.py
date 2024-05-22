@@ -1231,10 +1231,51 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
     ax[1].set_ylim(-2, 71)
 
 
-def stim_generation(coh, stim_res=5, sigma=0.1):
-    timepoints = int(1e3/stim_res)
-    stim = np.clip(coh + sigma*np.random.randn(timepoints, len(coh)), -1, 1)
+def stim_generation(coh, data_folder=DATA_FOLDER, stim_res=5, sigma=0.1,
+                    new_stim=False):
+    stim_data = data_folder + 'artificial_stimulus.npy'
+    os.makedirs(os.path.dirname(stim_data), exist_ok=True)
+    if os.path.exists(stim_data) and not new_stim:
+        stim = np.load(stim_data)
+    else:
+        timepoints = int(1e3/stim_res)
+        stim = np.clip(coh + sigma*np.random.randn(timepoints, len(coh)), -1, 1)
+        np.save(stim_data, stim)
     return stim
+
+
+def get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                 special_trial, extra_label='_1_ro'):
+    num_tr = len(gt)
+    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
+        _, trajs, x_val_at_updt =\
+        run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                       trial_index=trial_index, num_tr=num_tr,
+                                       subject_list=subjects, subjid=subjid,
+                                       simulate=False, extra_label=extra_label)
+    MT = [len(t) for t in trajs]
+    df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
+                           'sound_len': reaction_time,
+                           'rewside': (gt + 1)/2,
+                           'R_response': (resp_fin+1)/2,
+                           'resp_len': np.array(MT)*1e-3})
+    df_sim['CoM_sugg'] = com_model.astype(bool)
+    df_sim['traj_d1'] = [np.diff(t) for t in trajs]
+    df_sim['subjid'] = subjid
+    df_sim['origidx'] = trial_index
+    df_sim['special_trial'] = special_trial
+    df_sim['traj'] = df_sim['trajectory_y']
+    df_sim['com_detected'] = com_model_detected.astype(bool)
+    df_sim['peak_com'] = np.array(x_val_at_updt)
+    df_sim['hithistory'] = np.array(resp_fin == gt)
+    df_sim['allpriors'] = zt
+    df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
+    df_sim['normallpriors'] = df_sim['norm_allpriors']
+    df_sim['framerate']=200
+    df_sim['dW_lat'] = 0
+    df_sim['dW_trans'] = zt
+    df_sim['aftererror'] = False
+    return df_sim
 
 
 def run_simulation_different_subjs(stim, zt, coh, gt, trial_index, subject_list,

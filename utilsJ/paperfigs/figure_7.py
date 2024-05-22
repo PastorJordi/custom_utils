@@ -31,40 +31,6 @@ from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 
 
-def get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                 special_trial, extra_label='_1_ro'):
-    num_tr = len(gt)
-    hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
-        _, trajs, x_val_at_updt =\
-        fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
-                                          trial_index=trial_index, num_tr=num_tr,
-                                          subject_list=subjects, subjid=subjid,
-                                          simulate=False, extra_label=extra_label)
-    MT = [len(t) for t in trajs]
-    df_sim = pd.DataFrame({'coh2': coh, 'avtrapz': coh, 'trajectory_y': trajs,
-                           'sound_len': reaction_time,
-                           'rewside': (gt + 1)/2,
-                           'R_response': (resp_fin+1)/2,
-                           'resp_len': np.array(MT)*1e-3})
-    df_sim['CoM_sugg'] = com_model.astype(bool)
-    df_sim['traj_d1'] = [np.diff(t) for t in trajs]
-    df_sim['subjid'] = subjid
-    df_sim['origidx'] = trial_index
-    df_sim['special_trial'] = special_trial
-    df_sim['traj'] = df_sim['trajectory_y']
-    df_sim['com_detected'] = com_model_detected.astype(bool)
-    df_sim['peak_com'] = np.array(x_val_at_updt)
-    df_sim['hithistory'] = np.array(resp_fin == gt)
-    df_sim['allpriors'] = zt
-    df_sim['norm_allpriors'] = fp.norm_allpriors_per_subj(df_sim)
-    df_sim['normallpriors'] = df_sim['norm_allpriors']
-    df_sim['framerate']=200
-    df_sim['dW_lat'] = 0
-    df_sim['dW_trans'] = zt
-    df_sim['aftererror'] = False
-    return df_sim
-
-
 def plot_trajs_cond_stim(df, data_folder, ax, extra_label):
     fig_5.traj_cond_coh_simul(df_sim=df, ax=ax, median=True, prior=False,
                               save_new_data=False,
@@ -95,8 +61,8 @@ def plot_traj_cond_different_models(subjects, subjid, stim, zt, coh, gt, trial_i
     for a in ax:
         fp.rm_top_right_lines(a)
     for i_l, lab in enumerate(extra_labels):
-        df_sim = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                              special_trial, extra_label=str(lab))
+        df_sim = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                 special_trial, extra_label=str(lab))
         plot_trajs_cond_prior(df=df_sim, data_folder=data_folder,
                               ax=[ax[n_labs+i_l], ax[int(n_labs*2)+i_l], ax[i_l], ax2], extra_label=str(lab))
         # ax[n_labs+i_l].set_ylim(0, 0.58)
@@ -122,8 +88,8 @@ def plot_mt_different_models(subjects, subjid, stim, zt, coh, gt, trial_index,
     for a in ax:
         fp.rm_top_right_lines(a)
     for i_l, lab in enumerate(extra_labels):
-        df_data = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                               special_trial, extra_label=lab)
+        df_data = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                  special_trial, extra_label=lab)
         # fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[i_l], prior_min=0.8, rt_max=50,
         #                       sim=True)
         # MT VS PRIOR
@@ -167,8 +133,8 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                       'R to L CoM']
     fig2, ax2 = plt.subplots(ncols=4)
     for i_l, lab in enumerate(extra_labels):
-        df_data = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                               special_trial, extra_label=lab)
+        df_data = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                  special_trial, extra_label=lab)
         df_mt = df_data.copy()
         fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[1+i_l*4], prior_limit=0.1,  # 10% quantile
                                   condition='choice_x_coh', rt_lim=50, alpha=1,
