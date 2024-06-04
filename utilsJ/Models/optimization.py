@@ -908,15 +908,15 @@ def get_lb():
     lb_aff = 3
     lb_eff = 3
     lb_t_a = 4
-    lb_w_zt = 0
+    lb_w_zt = 0.05
     lb_w_st = 0
-    lb_e_bound = 0.3
+    lb_e_bound = 1.2
     lb_com_bound = 0
     lb_w_intercept = 0.01
     lb_w_slope = 1e-6
     lb_a_bound = 0.1
-    lb_1st_r = 25
-    lb_2nd_r = 25
+    lb_1st_r = 75
+    lb_2nd_r = 75
     lb_leak = 0
     lb_mt_n = 1
     lb_mt_int = 120
@@ -980,9 +980,9 @@ def get_ub():
     ub_w_slope = 1e-3
     ub_a_bound = 4
     ub_1st_r = 500
-    ub_2nd_r = 400
-    ub_leak = 0.14
-    ub_mt_n = 20
+    ub_2nd_r = 500
+    ub_leak = 0.13
+    ub_mt_n = 18
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -1033,19 +1033,19 @@ def get_pub():
         List with plausible upper bounds.
 
     """
-    pub_aff = 9
-    pub_eff = 9
-    pub_t_a = 16
-    pub_w_zt = 0.7
+    pub_aff = 7
+    pub_eff = 7
+    pub_t_a = 12
+    pub_w_zt = 0.8
     pub_w_st = 0.14
-    pub_e_bound = 2.6
-    pub_com_bound = 0.2
+    pub_e_bound = 3.5
+    pub_com_bound = 0.15
     pub_w_intercept = 0.08
     pub_w_slope = 1e-4
     pub_a_bound = 3
-    pub_1st_r = 400
-    pub_2nd_r = 400
-    pub_leak = 0.1
+    pub_1st_r = 300
+    pub_2nd_r = 300
+    pub_leak = 0.11
     pub_mt_n = 13
     pub_mt_int = 320
     pub_mt_slope = 0.12
@@ -1065,20 +1065,20 @@ def get_plb():
         List with plausible lower bounds.
 
     """
-    plb_aff = 4
-    plb_eff = 4
-    plb_t_a = 12
-    plb_w_zt = 2e-2
+    plb_aff = 5
+    plb_eff = 5
+    plb_t_a = 4
+    plb_w_zt = 0.2
     plb_w_st = 8e-3
-    plb_e_bound = 0.5
-    plb_com_bound = 1e-3
+    plb_e_bound = 1.6
+    plb_com_bound = 1e-2
     plb_w_intercept = 0.03
     plb_w_slope = 1.5e-5
     plb_a_bound = 2.2
-    plb_1st_r = 40
-    plb_2nd_r = 40
-    plb_leak = 1e-5
-    plb_mt_n = 10
+    plb_1st_r = 90
+    plb_2nd_r = 90
+    plb_leak = 0.07
+    plb_mt_n = 8
     plb_mt_int = 290
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
@@ -1093,10 +1093,11 @@ def nonbox_constraints_bads(x):
     # ~ min. action RT peak can't be < -150 ms
     # cond4 = x_1[:, 0]*3.5/x_1[:, 2] > 0.7
     # ub for prior. i.e. prior*p_zt can't be > 70% of the bound
-    cond5 = x_1[:, 1] < 1e-2  # lb for stim
-    cond4 = x[:,0] < 1e-2 # lb for prior
-    # cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
-    return np.bool_(cond4 + cond5)  # cond1
+    # cond5 = x_1[:, 1] < 1e-2  # lb for stim
+    # cond4 = x[:,0] < 5e-2 # lb for prior
+    cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
+    cond7 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) > 16  # aff + eff > 80 ms
+    return np.bool_(cond6 + cond7)  # cond1
 
 
 def gumbel_plotter():
@@ -1105,13 +1106,13 @@ def gumbel_plotter():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     val = np.arange(1, 81, 10)
-    val = [1]
+    val = [10, 15, 20]
     for v in val:
         norm = []
         gumb = []
-        for i in range(500000):
+        for i in range(200000):
             norm.append(v*np.random.randn())
-        for i in range(500000):
+        for i in range(200000):
             gumb.append(v*np.random.gumbel())
         sns.kdeplot(np.array(norm)[~np.isnan(norm)], color='k',
                     ax=ax, label='Normal')
@@ -1292,14 +1293,22 @@ def opt_mnle(df, num_simulations, bads=True, training=False, extra_label=""):
 
 
 def parameter_recovery_test_data_frames(df, subjects, extra_label=''):
+    zt = np.nansum(df[["dW_lat", "dW_trans"]].values, axis=1)
+    coh = np.array(df.coh2)
+    stim = np.array([stim for stim in df.res_sound])
+    if stim.shape[0] != 20:
+        stim = stim.T
+    gt = np.array(df.rewside) * 2 - 1
+    subjects = ['Virtual_rat_random_params']
+    subjid = np.array(subjects*len(coh))
+    trial_index = np.array(df.origidx)
     hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
         _, trajs, x_val_at_updt =\
-        fp.run_simulation_different_subjs(stim=None, zt=None, coh=None, gt=None,
-                                          trial_index=None, num_tr=len(df),
-                                          subject_list=subjects, subjid=None,
+        fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
+                                          trial_index=trial_index, num_tr=len(df),
+                                          subject_list=subjects, subjid=subjid,
                                           simulate=False,
                                           extra_label=extra_label)
-    
     MT = [len(t) for t in trajs]
     df['sound_len'] = reaction_time
     df['resp_len'] = np.array(MT)*1e-3
@@ -2659,10 +2668,10 @@ if __name__ == '__main__':
         num_simulations = int(10e6)  # number of simulations to train the network
         if not human:
             # load real data
-            subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
+            subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            subjects = ['LE43']  # to run only once and train
+            # subjects = ['LE43']  # to run only once and train
             training = False
             param_recovery_test = False
             if param_recovery_test:
@@ -2768,4 +2777,33 @@ if __name__ == '__main__':
                         iterations=iterations, scaling_value=scaling_value)
 
 
-# RT < p_t_aff : proactive trials
+# # RT < p_t_aff : proactive trials
+# num_simulations=int(5e5)
+# for cohval, ztval, tival in zip([0, 1, 0.5, 0.25, 0.5, 0.25],
+#                                 [1.5, 0.05, -1.5, .5, 1.5, 0.5],
+#                                 [400, 400, 400, 10, 400, 800]):
+#     stim = np.array(
+#                 [stim for stim in df.res_sound])[df.coh2.values == cohval][0]
+#     theta = get_x0()
+#     theta = torch.reshape(torch.tensor(theta),
+#                                   (1, len(theta))).to(torch.float32)
+#     theta = theta.repeat(num_simulations, 1)
+#     stim = np.array(
+#                 [np.concatenate((stim, stim)) for i in range(len(theta))])
+#     trial_index = np.repeat(tival, len(theta))
+#     x = simulations_for_mnle(theta_all=np.array(theta), stim=stim,
+#                               zt=np.repeat(ztval, len(theta)),
+#                               coh=np.repeat(cohval, len(theta)),
+#                               trial_index=trial_index, simulate=True)
+#     np.save(SV_FOLDER + '/10M/coh{}_zt{}_ti{}.npy'
+#                     .format(cohval, ztval, tival), x)
+#             # let's compute prob for each bin
+#     mat_0 = matrix_probs(x[x[:, 2] == 0])
+#     mat_1 = matrix_probs(x[x[:, 2] == 1])
+#     np.save(SV_FOLDER + '/10M/mat0_coh{}_zt{}_ti{}.npy'
+#                     .format(cohval, ztval, tival), mat_0)
+#     np.save(SV_FOLDER + '/10M/mat1_coh{}_zt{}_ti{}.npy'
+#                     .format(cohval, ztval, tival), mat_1)
+#     x = []
+#     mat_0 = []
+#     mat_1 = []
