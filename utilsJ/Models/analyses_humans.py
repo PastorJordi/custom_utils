@@ -9,6 +9,7 @@ import pandas as pd
 # import helper_functions as hf
 # import plotting_functions as pf
 from scipy.optimize import curve_fit
+from numpy import logical_and as and_
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
@@ -271,6 +272,7 @@ def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
     valid = valid[ind_af_er]
     prior = np.nansum((df_regressors['T++'], df_regressors['T++']), axis=0)/2
     prior = prior[ind_af_er]
+    blocks = blocks[ind_af_er]
     pos_x = data_traj['answer_positionsX']
     pos_y = data_traj['answer_positionsY']
     answer_times = [x for x in data_traj['answer_times']
@@ -318,6 +320,7 @@ def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
     CoM_sugg = com_list[indx]
     norm_allpriors = prior[indx]/max(abs(prior[indx]))
     R_response = choice[indx]
+    blocks = blocks[indx]
     for i, e_val in enumerate(avtrapz):
         if abs(e_val) > 1:
             avtrapz[i] = np.sign(e_val)
@@ -331,7 +334,8 @@ def data_processing(data_tr, data_traj, rgrss_folder, sv_folder,
                             'traj_y': pos_y[indx],
                             'subjid': subjid[indx],
                             'com_peak': np.array(com_peak)[indx],
-                            'time_com': np.array(time_com)[indx]})
+                            'time_com': np.array(time_com)[indx],
+                            'blocks': blocks})
     if plot:
         fig, ax = plt.subplots(1)
         bins = np.linspace(0, 350, 8)  # rt bins
@@ -720,3 +724,359 @@ def copy_files(ori_f, fin_f):
         f = ori_f+sbj+'/'
         cp(name='trajectories.csv')
         cp(name='trials.csv')
+
+
+def psycho_curves_rep_alt(df_data, ax):
+    
+    # MEAN PSYCHO-CURVES FOR REP/ALT, AFTER CORRECT/ERROR
+    rojo = np.array((228, 26, 28))/255
+    azul = np.array((55, 126, 184))/255
+    colors = [rojo, azul]
+    ttls = ['']
+    bias_final = []
+    slope_final = []
+    subjects = df_data.subjid.unique()
+    fig2, ax2 = plt.subplots(ncols=3)
+    lbs = ['after error', 'after correct']
+    median_rep_alt = np.empty((len(subjects), 2, 7))
+    cohs_rep_alt = np.empty((len(subjects), 2, 7))
+    for i_s, subj in enumerate(subjects):
+        df_sub = df_data.loc[df_data.subjid == subj]
+        ev = df_sub.avtrapz
+        choice_12 = df_sub.R_response.values + 1
+        blocks = df_sub.blocks
+        perf = df_sub.hithistory
+        prev_perf = np.concatenate((np.array([0]), perf[:-1]))
+        all_means = []
+        all_xs = []
+        biases = []
+        for i_b, blk in enumerate([1, 2]):  # blk = 1 --> alt / blk = 2 --> rep
+            p = 1
+            alpha = 1 if p == 0 else 1
+            lnstyl = '-' if p == 0 else '-'
+            plt_opts = {'color': colors[i_b],
+                        'alpha': alpha, 'linestyle': lnstyl}
+            # rep/alt
+            popt, pcov, ev_mask, repeat_mask =\
+                bias_psychometric(choice=choice_12.copy(), ev=-ev.copy(),
+                                     mask=and_(prev_perf == p,
+                                               blocks == blk),
+                                     maxfev=100000)
+            # this is to avoid rounding differences
+            ev_mask = np.round(ev_mask, 2)
+            d =\
+                plot_psycho_curve(ev=ev_mask, choice=repeat_mask,
+                                     popt=popt, ax=ax2[p],
+                                     color_scatter=colors[i_b],
+                                     label=lbs[p], plot_errbars=True,
+                                     **plt_opts)
+            means = d['means']
+            xs = d['xs']
+            all_means.append(means)
+            all_xs.append(xs)
+            biases.append(popt[1])
+        median_rep_alt[i_s] = np.array([np.array(a) for a in all_means])
+        cohs_rep_alt[i_s] = np.array([np.array(a) for a in all_xs])
+    plt.close(fig2)
+    labels = ['Alternating', 'Repeating']
+    for i_b, blk in enumerate([1, 2]):
+        ip = 0
+        p = 1
+        if i_b == 0:
+            ax.axvline(x=0., linestyle='--', lw=0.2,
+                             color=(.5, .5, .5))
+            ax.axhline(y=0.5, linestyle='--', lw=0.2,
+                             color=(.5, .5, .5))
+            ax.set_title(ttls[ip])
+            ax.set_yticks([0, 0.5, 1])
+            tune_panel(ax=ax, xlabel='Repeating stimulus evidence',
+                       ylabel='p(Repeat response)')
+        ax.plot(cohs_rep_alt[:, i_b, :].flatten(),
+                median_rep_alt[:, i_b, :].flatten(),
+                color=colors[i_b], alpha=0.2, linestyle='',
+                marker='+')
+        medians = np.median(median_rep_alt, axis=0)[i_b]
+        sems = np.std(median_rep_alt, axis=0)[i_b] /\
+            np.sqrt(median_rep_alt.shape[0])
+        ax.errorbar(cohs_rep_alt[0][0], medians, sems,
+                    color=colors[i_b], marker='.', linestyle='',
+                    label=labels[i_b])
+        ev_gen = cohs_rep_alt[0, i_b, :].flatten()
+        popt, pcov = curve_fit(probit_lapse_rates,
+                               ev_gen,
+                               np.median(median_rep_alt, axis=0)[i_b],
+                               maxfev=10000)
+        bias_final.append(popt[1])
+        slope_final.append(popt[0])
+        x_fit = np.linspace(-np.max(ev), np.max(ev), 20)
+        y_fit = probit_lapse_rates(x_fit, popt[0], popt[1], popt[2],
+                                   popt[3])
+        ax.plot(x_fit, y_fit, color=colors[i_b])
+    ax.legend()
+
+
+def tune_panel(ax, xlabel, ylabel, font=10):
+    ax.set_xlabel(xlabel, fontsize=font)
+    ax.set_ylabel(ylabel, fontsize=font)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+
+def probit(x, beta, alpha):
+    from scipy.special import erf
+    """
+    Return probit function with parameters alpha and beta.
+
+    Parameters
+    ----------
+    x : float
+        independent variable.
+    beta : float
+        sensitiviy.
+    alpha : TYPE
+        bias term.
+
+    Returns
+    -------
+    probit : float
+        probit value for the given x, beta and alpha.
+
+    """
+    probit = 1/2*(1+erf((beta*x+alpha)/np.sqrt(2)))
+    return probit
+
+
+def probit_lapse_rates(x, beta, alpha, piL, piR):
+    """
+    Return probit with lapse rates.
+
+    Parameters
+    ----------
+    x : float
+        independent variable.
+    beta : float
+        sensitiviy.
+    alpha : TYPE
+        bias term.
+    piL : float
+        lapse rate for left side.
+    piR : TYPE
+        lapse rate for right side.
+
+    Returns
+    -------
+    probit : float
+        probit value for the given x, beta and alpha and lapse rates.
+
+    """
+    piL = 0
+    piR = 0
+    probit_lr = piR + (1 - piL - piR) * probit(x, beta, alpha)
+    return probit_lr
+
+
+def plot_psycho_curve(ev, choice, popt, ax, color_scatter, plot_errbars=False,
+                      **plt_opts):
+    """
+    Plot psycho-curves (fits and props) using directly the fit parameters.
+
+    THIS FUNCTION ASSUMES PUTATIVE EVIDENCE (it will compute response proportions
+                                             for all values of ev)
+
+    Parameters
+    ----------
+    ev : array
+        array with **putative** evidence for each trial.
+    choice : array
+        array with choices made by agent.
+    popt : list
+        list containing fitted parameters (beta, alpha, piL, piR).
+    ax : axis
+        where to plot.
+    **plt_opts : dict
+        plotting options.
+
+    Returns
+    -------
+    means : list
+        response means for each evidence value.
+    sems : list
+        sem for the responses.
+    x : array
+        evidences values for which the means/sems are computed.
+    y_fit : array
+        y values for the fit.
+    x_fit : array
+        x values for the fit.
+
+    """
+    x_fit = np.linspace(np.min(ev), np.max(ev), 20)
+    y_fit = probit_lapse_rates(x_fit, popt[0], popt[1], popt[2], popt[3])
+    ax.plot(x_fit, y_fit, markersize=6, **plt_opts)
+    means = []
+    sems = []
+    n_samples = []
+    for e in np.unique(ev):
+        means.append(np.mean(choice[ev == e]))
+        sems.append(np.std(choice[ev == e])/np.sqrt(np.sum(ev == e)))
+        n_samples.append(np.sum(ev == e))
+    x = np.unique(ev)
+    plt_opts['linestyle'] = ''
+    if 'label' in plt_opts.keys():
+        del plt_opts['label']
+    if plot_errbars:
+        ax.errorbar(x, means, sems, **plt_opts)
+    ax.scatter(x, means, marker='.', alpha=1, s=60, c=color_scatter)
+    ax.plot([0, 0], [0, 1], '--', lw=0.2, color=(.5, .5, .5))
+    d_list = [means, sems, x, y_fit, x_fit, n_samples]
+    d_str = ['means, sems, xs, y_fit, x_fit, n_samples']
+    d = list_to_dict(d_list, d_str)
+    return d
+
+
+
+def plot_rep_alt_psycho_curve(choice_12, ev, prev_perf, blocks,
+                              rep_alt_panel, lbs):
+    from numpy import logical_and as and_
+    rojo = np.array((228, 26, 28))/255
+    azul = np.array((55, 126, 184))/255
+    colors = [rojo, azul]
+    all_means = []
+    all_xs = []
+    biases = []
+    for i_b, blk in enumerate([1, 2]):  # blk = 1 --> alt / blk = 2 --> rep
+        for p in [0, 1]:
+            plt.sca(rep_alt_panel[p])
+            alpha = 1 if p == 0 else 1
+            lnstyl = '-' if p == 0 else '-'
+            plt_opts = {'color': colors[i_b],
+                        'alpha': alpha, 'linestyle': lnstyl}
+            # rep/alt
+            popt, pcov, ev_mask, repeat_mask =\
+                bias_psychometric(choice=choice_12.copy(), ev=-ev.copy(),
+                                  mask=and_(prev_perf == p,
+                                            blocks == blk),
+                                  maxfev=100000)
+            # this is to avoid rounding differences
+            ev_mask = np.round(ev_mask, 2)
+            d =\
+                plot_psycho_curve(ev=ev_mask, choice=repeat_mask,
+                                  popt=popt, ax=rep_alt_panel[p],
+                                  color_scatter=colors[i_b],
+                                  label=lbs[p], plot_errbars=True,
+                                  **plt_opts)
+            means = d['means']
+            xs = d['xs']
+            if blk == 1:
+                if p == 1:
+                    x_alt_ac = d['x_fit']
+                    y_alt_ac = d['y_fit']
+                else:
+                    x_alt_ae = d['x_fit']
+                    y_alt_ae = d['y_fit']
+            elif blk == 2:
+                if p == 1:
+                    x_rep_ac = d['x_fit']
+                    y_rep_ac = d['y_fit']
+                else:
+                    x_rep_ae = d['x_fit']
+                    y_rep_ae = d['y_fit']
+            all_means.append(means)
+            all_xs.append(xs)
+            biases.append(popt[1])
+    d_curves = {'x_alt_ac': x_alt_ac, 'y_alt_ac': y_alt_ac,
+                'x_rep_ac': x_rep_ac, 'y_rep_ac': y_rep_ac,
+                'x_alt_ae': x_alt_ae, 'y_alt_ae': y_alt_ae,
+                'x_rep_ae': x_rep_ae, 'y_rep_ae': y_rep_ae}
+    return all_means, all_xs, biases, d_curves  # TODO: return bias (popt[1])
+
+
+def list_to_dict(lst, string):
+    """
+    Transform a list of variables into a dictionary.
+
+    Parameters
+    ----------
+    lst : list
+        list with all variables.
+    string : str
+        string containing the names, separated by commas.
+
+    Returns
+    -------
+    d : dict
+        dictionary with items in which the keys and the values are specified
+        in string and lst values respectively.
+
+    """
+    string = string[0]
+    string = string.replace(']', '')
+    string = string.replace('[', '')
+    string = string.replace('\\', '')
+    string = string.replace(' ', '')
+    string = string.replace('\t', '')
+    string = string.replace('\n', '')
+    string = string.split(',')
+    d = {s: v for s, v in zip(string, lst)}
+    return d
+
+def bias_psychometric(choice, ev, mask=None, maxfev=10000):
+    """
+    Compute repeating bias by fitting probit function.
+
+    Parameters
+    ----------
+    choice : array
+        array of choices made bythe network.
+    ev : array
+        array with (signed) stimulus evidence.
+    mask : array, optional
+        array of booleans indicating the trials on which the bias
+    # should be computed (None)
+
+    Returns
+    -------
+    popt : array
+        Optimal values for the parameters so that the sum of the squared
+        residuals of probit(xdata) - ydata is minimized
+    pcov : 2d array
+        The estimated covariance of popt. The diagonals provide the variance
+        of the parameter estimate. To compute one standard deviation errors
+        on the parameters use ``perr = np.sqrt(np.diag(pcov))``.
+
+        How the `sigma` parameter affects the estimated covariance
+        depends on `absolute_sigma` argument, as described above.
+
+        If the Jacobian matrix at the solution doesn't have a full rank, then
+        'lm' method returns a matrix filled with ``np.inf``, on the other hand
+        'trf'  and 'dogbox' methods use Moore-Penrose pseudoinverse to compute
+        the covariance matrix.
+
+    """
+    choice = choice.astype(float)
+    choice[and_(choice != 1, choice != 2)] = np.nan
+    repeat = get_repetitions(choice).astype(float)
+    repeat[np.isnan(choice)] = np.nan
+    # choice_repeating is just the original right_choice mat
+    # but shifted one element to the left.
+    choice_repeating = conc(
+        (np.array(np.random.choice([1, 2])).reshape(1, ),
+         choice[:-1]))
+    # the rep. evidence is the original evidence with a negative sign
+    # if the repeating side is the left one
+    rep_ev = ev*(-1)**(choice_repeating == 2)
+    if mask is None:
+        mask = ~np.isnan(repeat)
+    else:
+        mask = and_(~np.isnan(repeat), mask)
+    rep_ev_mask = rep_ev[mask]  # xdata
+    repeat_mask = repeat[mask]  # ydata
+    try:
+        # Use non-linear least squares to fit probit to xdata, ydata
+        popt, pcov = curve_fit(probit_lapse_rates, rep_ev_mask,
+                               repeat_mask, maxfev=maxfev)
+    except RuntimeError as err:
+        print(err)
+        popt = [np.nan, np.nan, np.nan, np.nan]
+        pcov = 0
+    return popt, pcov, rep_ev_mask, repeat_mask

@@ -670,6 +670,7 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     print(len(df_data.subjid.unique()))
     print(df_data.subjid.unique())
     # create figure
+    ah.psycho_curves_rep_alt(df_data)
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
@@ -808,6 +809,7 @@ def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
     ax.set_ylabel('p(reversal)')
     ax.set_ylim(0, 0.12)
     ax.get_legend().remove()
+    return df_data
 
 
 def inset_express(df_data, ax_inset=None, rtlim=50):
@@ -952,19 +954,20 @@ def supp_human_behavior(user_id, sv_folder):
     decays_ac_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac_lat.npy')
     decays_ae = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae.npy')
     decays_ae_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae_lat.npy')
-    fig, ax = plt.subplots(2, 2)
+    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
     ax = ax.flatten()
+    ax[-1].axis('off')
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
                         hspace=0.6, wspace=0.5)
-    letters = ['a', '', 'b', 'c']
+    letters = ['a', 'b', '', 'c', 'd', '']
     for n, ax_1 in enumerate(ax):
-        fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.25)
+        fp.add_text(ax=ax_1, letter=letters[n], x=-0.12, y=1.12)
         fp.rm_top_right_lines(ax_1)
-
     plot_trans_lat_weights([decays_ac, decays_ac_lat],
                            [decays_ae, decays_ae_lat],
-                           [ax[0], ax[1]])
-    supp_pcom_rt(user_id='alex', sv_folder=sv_folder, ax=ax[2])
-    supp_plot_weights_linear_reg(user_id, sv_folder, ax=ax[3], nm='300')
+                           [ax[1], ax[2]])
+    df_data = supp_pcom_rt(user_id='alex', sv_folder=sv_folder, ax=ax[3])
+    ah.psycho_curves_rep_alt(df_data, ax[0])
+    supp_plot_weights_linear_reg(user_id, sv_folder, ax=ax[4], nm='300')
     fig.savefig(sv_folder+'supp_human.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'supp_human.png', dpi=400, bbox_inches='tight')
