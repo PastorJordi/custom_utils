@@ -216,19 +216,18 @@ if f5 or f7:
     with_fb = False
     save_new_data = False
     silent_sim = False
-    artificial_stim = True
     if silent_sim:
         stim[:] = 0  # silent simulation
         special_trial[:] = 2
         extra_label = 'silent'
     else:
-        extra_label = '_continuous_stimulus_'
+        extra_label =  'orig_v1'
     print('Plotting Figure 5')
     # we can add extra silent to get cleaner fig5 prior traj
     if f7:
         n_sil = 0  # int(400000 - len(df))
     else:
-        n_sil = 0
+        n_sil = 0  # int(100000 - len(df))
     # trials where there was no sound... i.e. silent for simul
     stim[df.soundrfail, :] = 0
     num_tr = int(len(decision))
@@ -249,8 +248,6 @@ if f5 or f7:
     stim = np.resize(stim[:, :int(num_tr)], (20, num_tr + n_sil))
     # stim[:, int(num_tr):] = 0  # for silent simulation
     if f5:
-        if artificial_stim:
-            stim = fp.stim_generation(coh=coh, stim_res=5)
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             _, trajs, x_val_at_updt =\
             fp.run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
@@ -289,10 +286,17 @@ if f5 or f7:
         # fp.plot_rt_sim(df_sim)
         # fp.plot_fb_per_subj_from_df(df)
         # fig_3.supp_com_marginal(df=df_sim, sv_folder=SV_FOLDER)
-        means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
-        means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
-        if not with_fb:
-            df_sim = df_sim.loc[df_sim.sound_len.values >= 0]
+        # fig_2.supp_regression_weights_trajectory(DATA_FOLDER, SV_FOLDER, 
+        #                                           subjects, subjid, stim, zt, coh,
+        #                                           gt, trial_index,
+        #                                           special_trial, extra_labels=['_50_ms_orig_',
+        #                                                                       '_50_ms_continuous_',
+        #                                                                       '_orig_stimulus_cont_',
+        #                                                                       '_continuous_stimulus_'])
+        # means, errors = fig_1.mt_weights(df, means_errs=True, ax=None)
+        # means_model, errors_model = fig_1.mt_weights(df_sim, means_errs=True, ax=None)
+        # if not with_fb:
+        #     df_sim = df_sim.loc[df_sim.sound_len.values >= 0]
         # memory save:
         stim = []
         traj_y = []
@@ -306,7 +310,7 @@ if f5 or f7:
         fix_breaks = []
         resp_len = []
         time_trajs = []
-        # fp.supp_silent(df=df, df_sim=df_sim)
+        fp.supp_silent(df=df, df_sim=df_sim)
         # fig, ax = plt.subplots(1)
         # fig_2.trajs_splitting_stim(df_sim, ax, DATA_FOLDER, collapse_sides=True, threshold=300,
         #                           sim=True,
@@ -318,21 +322,25 @@ if f5 or f7:
         #                               sv_folder=SV_FOLDER)
         # fig_5.supp_model_trial_index(df_sim)
         # actual plot
-        # fig_2.plot_lin_reg_weights_frames(df, frame_len=50,
+        # fig_2.plot_lin_reg_weights_frames(df.loc[df.coh2.abs() <= 0.25], frame_len=50,
         #                                   rtbins=np.linspace(0, 150, 4),
         #                                   trajectory="trajectory_y",
         #                                   max_MT=400, sim=False)
-        fig_2.plot_lin_reg_weights_continuous_stimulus(df_sim, frame_len=5,
-                                                       rtbins=np.linspace(0, 150, 4),
-                                                       trajectory="trajectory_y",
-                                                       max_MT=400, sim=True)
-        fig_2.splitting_time_frames_model(df_sim.loc[df_sim.subjid == 'LE42'],
-                                          data_folder=DATA_FOLDER,
-                                          frame_len=5,
-                                          rtbins=np.arange(0, 305, 15),
-                                          trajectory="trajectory_y",
-                                          new_data=True,
-                                          pval=.05, max_MT=400)
+        # rtbins=np.linspace(50, 110, 4)
+        # fig_2.plot_lin_reg_weights_continuous_stimulus(df_sim.loc[(df_sim.sound_len >= min(rtbins)) & 
+        #                                                           (df_sim.sound_len <= max(rtbins))],
+        #                                                frame_len=5,
+        #                                                rtbins=rtbins,
+        #                                                trajectory="trajectory_y",
+        #                                                max_MT=400, sim=True,
+        #                                                continuous=True)
+        # fig_2.splitting_time_frames_model(df_sim.loc[df_sim.subjid == 'LE42'],
+        #                                   data_folder=DATA_FOLDER,
+        #                                   frame_len=5,
+        #                                   rtbins=np.arange(0, 305, 15),
+        #                                   trajectory="trajectory_y",
+        #                                   new_data=True,
+        #                                   pval=.05, max_MT=400)
         # fig_2.log_reg_vs_rt(df, rtbins=np.linspace(0, 150, 16))
         # fig_2.log_reg_vs_rt(df_sim, rtbins=np.linspace(0, 150, 16))
         # fig_5.fig_5_model(sv_folder=SV_FOLDER, data_folder=DATA_FOLDER,
@@ -377,7 +385,7 @@ if f6:
     # human traj plots
     # fig_6.supp_human_behavior(user_id=pc_name, sv_folder=SV_FOLDER)
     fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
-                        human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
+                       human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1
