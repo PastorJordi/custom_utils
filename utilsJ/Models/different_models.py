@@ -1879,11 +1879,12 @@ def trial_ev_vectorized_n_readouts(zt, stim, coh, trial_index, p_MT_slope, p_MT_
         t_updt_0 = int(second_ind[i_t] - first_ind[i_t])  # time indx
         frst_traj_motor_time.append(t_updt_0)
         # TRAJ. UPDATES
-        com_bound_signed = (-resp_first[i_t])*p_com_bound
-        response_along_time = np.sign(E[first_ind[i_t]:second_ind[i_t]+1, i_t]-com_bound_signed)
+        response_along_time = [resp_first[i_t]]
         mt_final_trajectory = first_resp_len
         for t in range(1, t_updt_0+1):
             t_idx = first_ind[i_t] + t
+            com_bound_signed = (-response_along_time[t-1])*p_com_bound
+            response_along_time.append(np.sign(E[t_idx, i_t]-com_bound_signed))
             velocities = np.gradient(prior0)
             accelerations = np.gradient(velocities)  # acceleration
             t_updt = int(np.min((t*stim_res, len(velocities)-1)))
@@ -1901,11 +1902,9 @@ def trial_ev_vectorized_n_readouts(zt, stim, coh, trial_index, p_MT_slope, p_MT_
             updt_ev = np.clip(E[t_idx, i_t], a_min=-bound, a_max=bound)
             # second_response_len: motor time update influenced by difference
             # between the evidence at second readout and the signed p_com_bound
-            com_bound_signed = (-sign_)*p_com_bound
             difference = (updt_ev - E[t_idx-1, i_t])*sign_
-            # offset = 120
             second_response_len =\
-                float(remaining_m_time -  # offset*com[i_t] -
+                float(remaining_m_time -
                       p_2nd_readout*(difference))
             second_response_len = np.max((second_response_len, min_mt))
             # SECOND readout
