@@ -849,16 +849,16 @@ def theta_for_lh_plot_v2():
 def get_x0():
     p_t_aff = 6
     p_t_eff = 6
-    p_t_a = 16  # 90 ms (18) PSIAM fit includes p_t_eff
-    p_w_zt = 0.2
+    p_t_a = 12  # 90 ms (18) PSIAM fit includes p_t_eff
+    p_w_zt = 0.5
     p_w_stim = 0.12
     p_e_bound = 2.
     p_com_bound = 0.1
     p_w_a_intercept = 0.05
     p_w_a_slope = 2e-5
     p_a_bound = 2.6
-    p_1st_readout = 40
-    p_2nd_readout = 80
+    p_1st_readout = 100
+    p_2nd_readout = 120
     p_leak = 0.06
     p_mt_noise = 12
     p_MT_intercept = 320
@@ -867,6 +867,7 @@ def get_x0():
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
             p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
             p_MT_intercept, p_MT_slope]
+
 
 
 
@@ -1499,7 +1500,7 @@ def plot_network_model_comparison(df, ax, sv_folder=SV_FOLDER, num_simulations=i
                 ax[1].set_xticks([])
             # plt.colorbar(im1, fraction=0.04)
             p_ch0_model = np.nanmean(x[:,2] == 0)
-            p_fb_model = np.nanmean(x[:, 1] < 300)
+            p_fb_model = np.nanmean(x[:, 1][x[:, 1] > 200] < 300)
             p_ch1_model = 1-p_ch0_model
             p_ch0_nn = np.nansum(mat_0_nn)/np.nansum(mat_0_nn+mat_1_nn)
             p_ch1_nn = np.nansum(mat_1_nn)/np.nansum(mat_0_nn+mat_1_nn)
@@ -1692,7 +1693,7 @@ def plot_nn_to_nn_comparison_model_diff(n_trials=[2000000, 10000000]):
         p += 1
 
 
-def plot_nn_to_nn_comparison(n_trials=10000000):
+def plot_nn_to_nn_comparison(n_trials=10000000, sv_folder=SV_FOLDER):
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=(12, 12))
     ax = ax.flatten()
     plt.subplots_adjust(top=0.9, bottom=0.15, left=0.12, right=0.95,
@@ -1800,6 +1801,9 @@ def plot_nn_to_nn_comparison(n_trials=10000000):
     supp_plot_dist_vs_n(ax=[ax[12], ax[14]])
     ax[12].text(-0.15, 1.2, letters[-2], transform=ax[12].transAxes,
                fontsize=16, fontweight='bold', va='top', ha='right')
+    fig.savefig(sv_folder+'supp_fig_5.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_fig_5.png', dpi=400, bbox_inches='tight')
+    
 
 
 def plot_nn_to_nn_kldistance(n_trials=10000000):
@@ -1894,7 +1898,7 @@ def rm_top_right_lines(ax, right=True):
     ax.spines['top'].set_visible(False)
 
 
-def supp_plot_lh_model_network(df, n_trials=2000000):
+def supp_plot_lh_model_network(df, sv_folder=SV_FOLDER, n_trials=10000000):
     fig, ax = plt.subplots(6, 4, figsize=(8, 12))
     plt.subplots_adjust(top=0.95, bottom=0.1, left=0.12, right=0.95,
                         hspace=0.4, wspace=0.4)
@@ -1940,6 +1944,8 @@ def supp_plot_lh_model_network(df, n_trials=2000000):
                                       plot_nn_alone=False, xt=xt)
         # ax[3*i].set_title(labels[i])
         i += 1
+    fig.savefig(sv_folder+'supp_fig_4.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_fig_4.png', dpi=400, bbox_inches='tight')
 
 
 def bhatt_dist(p, q):
@@ -2656,7 +2662,7 @@ if __name__ == '__main__':
             subjects = ['LE43', 'LE42', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE43']  # to run only once and train
+            subjects = ['LE43']  # to run only once and train
             training = False
             param_recovery_test = False
             if param_recovery_test:
@@ -2692,7 +2698,7 @@ if __name__ == '__main__':
                 # plot_lh_model_network(df, n_trials=10000000)
                 # plot_kl_vs_zt_coh(df, theta=theta_for_lh_plot(), num_simulations=int(1e5),
                 #                       n_simul_training=int(10e6))
-                # plot_lh_model_network(df, n_trials=10000000)
+                # supp_plot_lh_model_network(df, n_trials=10000000)
                 try:
                     extra_label = ''
                     parameters = opt_mnle(df=df, num_simulations=num_simulations,
