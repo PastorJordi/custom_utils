@@ -1144,7 +1144,6 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
             rt_vals, rt_bins, None
 
 
-
 def trial_ev_vectorized_single_readout(
         zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, p_w_zt,
         p_w_stim, p_e_bound, p_com_bound, p_t_eff, p_t_aff,
