@@ -598,8 +598,8 @@ def get_splitting_mat_simul(df, side, rtbin=0, rtbins=np.linspace(0, 150, 7),
     if coh is None:
         mata = np.vstack(dat.apply(
         lambda row: shortpad2(row, **shortpad_kws), axis=1).values.tolist())
-    if flip:
-        mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
+    # if flip:
+    #     mata = mata * (dat.rewside.values*2-1).reshape(-1, 1)
     # discard all nan rows # this is not working because a is a copy!
     idx_nan = ~np.isnan(mata).all(axis=1)
     mata = mata[idx_nan]
@@ -1205,7 +1205,7 @@ def supp_regression_weights_trajectory(data_folder, sv_folder,
                         hspace=0.35, wspace=0.4)
     ax = ax.flatten()
     continuous = False
-    rtbins = np.linspace(50, 70, 2)
+    rtbins = np.linspace(50, 60, 2)
     titles = ['2 r.o.', 'continuous r.o.',
               '2 r.o.', 'continuous r.o.']
     ax2 = ax[1].twinx()
@@ -1221,31 +1221,32 @@ def supp_regression_weights_trajectory(data_folder, sv_folder,
     for i_l, lab in enumerate(extra_labels):
         fp.rm_top_right_lines(ax[i_l])
         ax[i_l].set_title(titles[i_l])
-        ax[i_l].set_xlim(-15, 260)
-        df_sim = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                                 special_trial, extra_label=lab)
+        ax[i_l].set_xlim(-15, 150)
         if i_l >= 2:
             continuous = True
             coh = np.repeat(0, len(zt))
             stim = fp.stim_generation(coh=coh, stim_res=5, sigma=0.15,
                                       new_stim=False)
+        df_sim = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                 special_trial, extra_label=lab)
         df_sim['res_sound'] = [st for st in stim.T]
         plot_lin_reg_weights_continuous_stimulus(
             df_sim.loc[(df_sim.sound_len >= min(rtbins)) &
-                       (df_sim.sound_len <= max(rtbins))],
+                       (df_sim.sound_len <= max(rtbins)) &
+                       (~df_sim.CoM_sugg)],
             data_folder=data_folder,
             ax=ax[i_l], frame_len=50, rtbins=rtbins,
             trajectory="trajectory_y", max_MT=400, sim=True,
             continuous=continuous, label=lab)
         del df_sim
-    xticks = np.linspace(0, 200, 3)
-    ax[0].set_xticks(xticks, ['']*3)
-    ax[0].set_ylim(-0.04, 0.96)
-    ax[1].set_ylim(-0.04, 0.96)
-    ax[1].set_xticks(xticks, ['']*3)
+    xticks = np.linspace(0, 150, 4)
+    ax[0].set_xticks(xticks, ['']*len(xticks))
+    ax[0].set_ylim(-0.04, 0.65)
+    ax[1].set_ylim(-0.04, 0.65)
+    ax[1].set_xticks(xticks, ['']*len(xticks))
     ax[2].set_xticks(xticks)
-    ax[2].set_ylim(-0.04, 0.275)
-    ax[3].set_ylim(-0.04, 0.275)
+    ax[2].set_ylim(-0.005, 0.03)
+    ax[3].set_ylim(-0.005, 0.03)
     ax[3].set_xticks(xticks)
     ax[0].set_ylabel('Regression weights (a.u.)')
     ax[2].set_ylabel('Regression weights (a.u.)')
@@ -1259,13 +1260,13 @@ def supp_regression_weights_trajectory(data_folder, sv_folder,
                               label=lab))
     ax[0].legend(handles=legendelements, title='Frame')
     # legend ax 2
-    labels = ['1st', '2nd', '3rd', '4th']
-    max_rt = 4
+    labels = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
+    max_rt = int(max(rtbins)/5)
     colors = pl.cm.Blues(np.linspace(0.3, 1, max_rt))
     legendelements = []
-    for i_l, lab in enumerate(labels):
+    for i_l in range(max_rt):
         legendelements.append(Line2D([0], [0], color=colors[i_l], lw=2,
-                              label=lab))
+                              label=labels[i_l]))
     ax[2].legend(handles=legendelements, title='Frame')
     ax[2].set_xlabel('Time from stimulus onset (ms)')
     ax[3].set_xlabel('Time from stimulus onset (ms)')
@@ -1287,14 +1288,15 @@ def plot_lin_reg_weights_continuous_stimulus(df, data_folder, ax=None, frame_len
     # binsize = np.diff(rtbins)[0]
     if continuous:
         max_rt = int(max(rtbins)/5)
-        max_rt = 4
+        # max_rt = 10
     else:
         max_rt = int(max(rtbins)/50)+1
     subject = 'LE42'
     reg_data = data_folder + '/' + subject + '/regression_weights' + label + '.npy'
     os.makedirs(os.path.dirname(reg_data), exist_ok=True)
     subjects = df.subjid.unique()
-    if os.path.exists(reg_data):
+    # if os.path.exists(reg_data):
+    if False:
         out_data = np.load(reg_data, allow_pickle=True)
         err_data = np.zeros((out_data.shape[0], out_data.shape[1],
                              out_data.shape[2]))
@@ -1351,6 +1353,8 @@ def plot_lin_reg_weights_continuous_stimulus(df, data_folder, ax=None, frame_len
     for i in range(len(rtbins)-1):
         for j in range(2, max_rt+2):
             mean = out_data[i, :, j].T
+            if continuous:
+                mean[mean > 0.02] = 0.02
             if j < 2:
                 colors = colors_0
                 t = j
@@ -1362,9 +1366,15 @@ def plot_lin_reg_weights_continuous_stimulus(df, data_folder, ax=None, frame_len
                 error = err_data[i, :, j].T
                 ax[i].fill_between(x, mean-error, mean+error, color=colors[j],
                                    alpha=0.3)
+    if label == '_orig_stimulus_cont_' or label == '_continuous_stimulus_':
+        plt.figure()
+        thres = 0.001
+        out_data = out_data**(out_data < thres)*(out_data > thres)
+        out_data = out_data[:, :200, :]
+        plt.imshow(out_data[0].T, aspect='auto', interpolation=None,
+                   vmin=0, vmax=thres)
         # ax[i].set_title(f'{rtbins[i]} <= RT < {rtbins[i+1]}')
         # ax[i].set_xlabel('Time from sound onset (ms)')
-    
     # ax[0].legend(handles=legendelements)
     # ax[0].set_ylabel('Regression weight')
 
