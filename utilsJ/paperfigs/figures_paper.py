@@ -54,7 +54,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex'
+pc_name = 'alex_CRM'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -1421,6 +1421,7 @@ def binning_mt(df):
             mat_mt[i_s, i_zt] = np.nanmean(mt_sub)
     return mat_mt  # if you want mean across subjects, np.nanmean(mat_mt, axis=0)
 
+
 def norm_allpriors_per_subj(df):
     norm_allpriors = np.empty((0,))
     for subj in df.subjid.unique():
@@ -2175,10 +2176,12 @@ def supp_plot_rt_distros_data_model(df, df_sim, sv_folder):
             fix_breaks_2 = fix_breaks[index]*1e3
             rt_model = df_sim_1.sound_len.values[coh == ev]
             sns.kdeplot(fix_breaks_2.reshape(-1),
-                        color=colormap[iev], ax=ax[labs_data[i_s]])
+                        color=colormap[iev], ax=ax[labs_data[i_s]],
+                        bw_adjust=1.5)
             sns.kdeplot(rt_model,
-                        color=cmap_model[iev], ax=ax[labs_model[i_s]])
-        ax[labs_data[i_s]].set_xticks([])        
+                        color=cmap_model[iev], ax=ax[labs_model[i_s]],
+                        bw_adjust=1.5)
+        ax[labs_data[i_s]].set_xticks([])
         ax[labs_data[i_s]].set_title(subj)
         ax[labs_data[i_s]].set_xlim(-205, 410)
         ax[labs_model[i_s]].set_xlim(-205, 410)
@@ -2277,7 +2280,8 @@ def mt_diff_rev_nonrev(df):
     print(np.nanstd(mt_x_sub_rev)*1e3/np.sqrt(15))
 
 
-def supp_mt_per_rat(df, df_sim, title=''):
+def supp_mt_per_rat(df, df_sim, title='',
+                    sv_folder=SV_FOLDER):
     fig, ax = plt.subplots(5, 3)
     ax = ax.flatten()
     for a in ax:
@@ -2312,6 +2316,8 @@ def supp_mt_per_rat(df, df_sim, title=''):
         ax[i_s].set_ylim(0, 0.0085)
     ax[0].legend()
     fig.suptitle(title)
+    fig.savefig(sv_folder+'supp_fig_7.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_fig_7.png', dpi=400, bbox_inches='tight')
 
 
 def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
