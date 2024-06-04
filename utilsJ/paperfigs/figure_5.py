@@ -689,9 +689,9 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
         val_vel_subs[:len(vals_thr_vel), i_s] = vals_thr_vel
     y_vals = val_mt_subs.flatten()
     x_vals = np.repeat(xvals_zt, len(subjects.unique()))
-    pval = pearsonr(x_vals, y_vals).pvalue
-    lab = f'p={pval:.2e}'
-    ax[2].text(-1, 265, lab)
+    # pval = pearsonr(x_vals, y_vals).pvalue
+    # lab = f'p={pval:.2e}'
+    # ax[2].text(-1, 265, lab)
     for i_ev, ev in enumerate(bins_ref):
         if prior and ev == 1.01:
             break

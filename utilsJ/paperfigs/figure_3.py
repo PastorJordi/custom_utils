@@ -970,7 +970,7 @@ def fig_3_CoMs(df, rat_com_img, sv_folder, data_folder, figsize=(11, 9),
     fig.savefig(sv_folder+'fig3.png', dpi=400, bbox_inches='tight')
 
 
-def supp_com_marginal(df, sv_folder):
+def supp_com_marginal(df, sv_folder, sim=False):
     fig, ax = plt.subplots(nrows=5, ncols=6,
                            figsize=(13, 10),
                            gridspec_kw={'top': 0.92, 'bottom': 0.08,
@@ -981,6 +981,8 @@ def supp_com_marginal(df, sv_folder):
         ax[i_ax*2].text(1.25, 1.25, subj, transform=ax[i_ax*2].transAxes, fontsize=16,
                         va='top', ha='right')
         df_1 = df.loc[df.subjid == subj]
+        if sim:
+            df['CoM_sugg'] = df.com_detected
         nbins = 7
         matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
         matrix_side_1 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=1)
