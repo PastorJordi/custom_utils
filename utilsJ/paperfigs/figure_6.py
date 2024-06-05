@@ -954,7 +954,7 @@ def supp_human_behavior(user_id, sv_folder):
     decays_ac_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ac_lat.npy')
     decays_ae = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae.npy')
     decays_ae_lat = np.load('C:/Users/alexg/Onedrive/Escritorio/CRM/data/decays_ae_lat.npy')
-    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
+    fig, ax = plt.subplots(2, 3, figsize=(11, 7))
     ax = ax.flatten()
     ax[-1].axis('off')
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,

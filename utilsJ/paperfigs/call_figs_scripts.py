@@ -126,11 +126,11 @@ def check_distros(df, df_sim):
 
 
 plt.close('all')
-f1 = False
+f1 = True
 f2 = False
 f3 = False
 f4 = False
-f5 = True
+f5 = False
 f6 = False
 f7 = False
 f8 = False
@@ -142,7 +142,7 @@ if f1 or f2 or f3 or f5 or f7:
                 'LE44']
     # subjects = ['LE42', 'LE38', 'LE39', 'LE40']
     # subjects = ['LE46']  # for params analysis
-    subjects = ['LE42']  # for fig7
+    # subjects = ['LE42']  # for fig7
     # subjects = ['LE42', 'LE43', 'LE44', 'LE45', 'LE46', 'LE47']  # for silent
     df_all = pd.DataFrame()
     for sbj in subjects:
@@ -192,9 +192,10 @@ if f1 or f2 or f3 or f5 or f7:
 # fig 1
 if f1:
     print('Plotting Figure 1')
-    fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
-                            repalt_img=REPALT_IMG)
-    # fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER)
+    # fig_1.fig_1_rats_behav(df_data=df, task_img=TASK_IMG, sv_folder=SV_FOLDER,
+    #                         repalt_img=REPALT_IMG)
+    fig_1.supp_trial_index_analysis(df=df, data_folder=DATA_FOLDER,
+                                    sv_folder=SV_FOLDER)
 
 # fig 2
 if f2:
@@ -383,9 +384,9 @@ if f5 or f7:
 if f6:
     print('Plotting Figure 6')
     # human traj plots
-    # fig_6.supp_human_behavior(user_id=pc_name, sv_folder=SV_FOLDER)
-    fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
-                       human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
+    fig_6.supp_human_behavior(user_id=pc_name, sv_folder=SV_FOLDER)
+    # fig_6.fig_6_humans(user_id=pc_name, sv_folder=SV_FOLDER,
+    #                    human_task_img=HUMAN_TASK_IMG, max_mt=1000, nm='300')
 if f8:
     df_data = fp.get_human_data(user_id=pc_name, sv_folder=SV_FOLDER)
     choice = df_data.R_response.values*2-1

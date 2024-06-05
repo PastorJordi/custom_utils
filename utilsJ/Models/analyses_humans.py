@@ -790,7 +790,7 @@ def psycho_curves_rep_alt(df_data, ax):
             ax.set_title(ttls[ip])
             ax.set_yticks([0, 0.5, 1])
             tune_panel(ax=ax, xlabel='Repeating stimulus evidence',
-                       ylabel='p(Repeat response)')
+                       ylabel='p(repeat response)')
         ax.plot(cohs_rep_alt[:, i_b, :].flatten(),
                 median_rep_alt[:, i_b, :].flatten(),
                 color=colors[i_b], alpha=0.2, linestyle='',
@@ -799,8 +799,7 @@ def psycho_curves_rep_alt(df_data, ax):
         sems = np.std(median_rep_alt, axis=0)[i_b] /\
             np.sqrt(median_rep_alt.shape[0])
         ax.errorbar(cohs_rep_alt[0][0], medians, sems,
-                    color=colors[i_b], marker='.', linestyle='',
-                    label=labels[i_b])
+                    color=colors[i_b], marker='.', linestyle='')
         ev_gen = cohs_rep_alt[0, i_b, :].flatten()
         popt, pcov = curve_fit(probit_lapse_rates,
                                ev_gen,
@@ -811,15 +810,9 @@ def psycho_curves_rep_alt(df_data, ax):
         x_fit = np.linspace(-np.max(ev), np.max(ev), 20)
         y_fit = probit_lapse_rates(x_fit, popt[0], popt[1], popt[2],
                                    popt[3])
-        ax.plot(x_fit, y_fit, color=colors[i_b])
-    ax.legend()
-
-
-def tune_panel(ax, xlabel, ylabel, font=10):
-    ax.set_xlabel(xlabel, fontsize=font)
-    ax.set_ylabel(ylabel, fontsize=font)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
+        ax.plot(x_fit, y_fit, color=colors[i_b], label=labels[i_b])
+    ax.legend(title='Context', bbox_to_anchor=(0.5, 1.12), frameon=False,
+              handlelength=1.2)
 
 
 def probit(x, beta, alpha):
