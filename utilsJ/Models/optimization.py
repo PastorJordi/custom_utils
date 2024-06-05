@@ -44,15 +44,15 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 from utilsJ.Models import different_models as model_variations
 
-DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -859,16 +859,14 @@ def get_x0():
     p_a_bound = 2.6
     p_1st_readout = 100
     p_2nd_readout = 120
-    p_leak = 0.06
-    p_mt_noise = 12
+    p_leak = 0.08
+    p_mt_noise = 9
     p_MT_intercept = 320
     p_MT_slope = 0.07
     return [p_w_zt, p_w_stim, p_e_bound, p_com_bound, p_t_aff,
             p_t_eff, p_t_a, p_w_a_intercept, p_w_a_slope, p_a_bound,
             p_1st_readout, p_2nd_readout, p_leak, p_mt_noise,
             p_MT_intercept, p_MT_slope]
-
-
 
 
 def get_x0_v2():
@@ -894,7 +892,6 @@ def get_x0_v2():
             p_MT_intercept, p_MT_slope]
 
 
-
 def get_lb():
     """
     Returns list with hard lower bounds (LB) for BADS optimization.
@@ -910,7 +907,7 @@ def get_lb():
     lb_t_a = 4
     lb_w_zt = 0.05
     lb_w_st = 0
-    lb_e_bound = 1.2
+    lb_e_bound = 1.3
     lb_com_bound = 0
     lb_w_intercept = 0.01
     lb_w_slope = 1e-6
@@ -975,14 +972,14 @@ def get_ub():
     ub_w_zt = 1
     ub_w_st = 0.18
     ub_e_bound = 4
-    ub_com_bound = 0.4
+    ub_com_bound = 0.3
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.13
-    ub_mt_n = 18
+    ub_leak = 0.1
+    ub_mt_n = 12
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -1043,10 +1040,10 @@ def get_pub():
     pub_w_intercept = 0.08
     pub_w_slope = 1e-4
     pub_a_bound = 3
-    pub_1st_r = 300
-    pub_2nd_r = 300
-    pub_leak = 0.11
-    pub_mt_n = 13
+    pub_1st_r = 400
+    pub_2nd_r = 400
+    pub_leak = 0.08
+    pub_mt_n = 11
     pub_mt_int = 320
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -1077,7 +1074,7 @@ def get_plb():
     plb_a_bound = 2.2
     plb_1st_r = 90
     plb_2nd_r = 90
-    plb_leak = 0.07
+    plb_leak = 0.05
     plb_mt_n = 8
     plb_mt_int = 290
     plb_mt_slope = 0.04
