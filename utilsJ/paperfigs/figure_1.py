@@ -250,15 +250,16 @@ def plot_mt_weights_violins(w_coh, w_t_i, w_zt, ax, mt=True,
             pval_coh = ttest_1samp(w_coh, popmean=0).pvalue
             pval_array = np.array((pval_zt, pval_coh))
             formatted_pvalues = [f'p={pvalue:.2e}' for pvalue in pval_array]
-            formatted_pvalues = ['***']*2
+            formatted_pvalues = [num_ast(decimal)*'*' for decimal in pval_array]
         arr_weights = np.array((w_zt, w_coh))
+    x, y = [0.11, 0.11, 0.11], [0.2, 0.2, 0.52]
     for i in range(len(labels)):
         ax.plot(np.repeat(i, len(arr_weights[i])) +
                 0.1*np.random.randn(len(arr_weights[i])),
                 arr_weights[i], color='k', marker='o', linestyle='',
                 markersize=2)
         if ttest:
-            ax.text(i-0.08, 0.2, formatted_pvalues[i])
+            ax.text(i-x[i], y[i], formatted_pvalues[i])
         if len(w_coh) > 1:
             ax.collections[0].set_edgecolor('k')
     if t_index_w:
@@ -873,7 +874,7 @@ def supp_trajs_cond_trial_index(df, data_folder, ax):
     plt.close(fig)
 
 
-def supp_trial_index_analysis(df, data_folder):
+def supp_trial_index_analysis(df, data_folder, sv_folder):
     fig, ax = plt.subplots(ncols=2, nrows=2)
     fig.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.12, left=0.09, right=0.95,
@@ -889,3 +890,5 @@ def supp_trial_index_analysis(df, data_folder):
     ax[2].set_ylim(-0.05, 0.455)
     plot_mt_weights_rt_bins(df=df, ax=ax[3])
     mt_weights(df=df, ax=ax[1], plot=True, t_index_w=True, means_errs=False)
+    fig.savefig(sv_folder+'supp_fig_1.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'supp_fig_1.png', dpi=400, bbox_inches='tight')
