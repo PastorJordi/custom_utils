@@ -905,17 +905,17 @@ def get_lb():
     lb_aff = 3
     lb_eff = 3
     lb_t_a = 4
-    lb_w_zt = 0.05
-    lb_w_st = 0
-    lb_e_bound = 1.3
-    lb_com_bound = 0
+    lb_w_zt = 0.
+    lb_w_st = 0.
+    lb_e_bound = 0.01
+    lb_com_bound = 0.
     lb_w_intercept = 0.01
     lb_w_slope = 1e-6
-    lb_a_bound = 0.1
-    lb_1st_r = 75
-    lb_2nd_r = 75
+    lb_a_bound = 1
+    lb_1st_r = 1
+    lb_2nd_r = 1
     lb_leak = 0
-    lb_mt_n = 1
+    lb_mt_n = 5
     lb_mt_int = 120
     lb_mt_slope = 0.01
     return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
@@ -968,20 +968,20 @@ def get_ub():
     """
     ub_aff = 12
     ub_eff = 12
-    ub_t_a = 22
+    ub_t_a = 24
     ub_w_zt = 1
-    ub_w_st = 0.18
+    ub_w_st = 0.8
     ub_e_bound = 4
-    ub_com_bound = 0.3
-    ub_w_intercept = 0.12
-    ub_w_slope = 1e-3
+    ub_com_bound = 1
+    ub_w_intercept = 0.1
+    ub_w_slope = 5e-5
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.1
-    ub_mt_n = 12
-    ub_mt_int = 370
-    ub_mt_slope = 0.6
+    ub_leak = 0.9
+    ub_mt_n = 60
+    ub_mt_int = 400
+    ub_mt_slope = 0.5
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
             ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
             ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
