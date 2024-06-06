@@ -1094,6 +1094,7 @@ def nonbox_constraints_bads(x):
     # cond4 = x[:,0] < 5e-2 # lb for prior
     cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
     cond7 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) > 16  # aff + eff > 80 ms
+    # cond8 = np.round(x[:, 6]) > 4
     return np.bool_(cond6 + cond7)  # cond1
 
 
