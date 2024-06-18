@@ -478,12 +478,12 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
     matrix_nocom_tr = np.empty((len(subjects), max_ind))
     matrix_nocom_tr[:] = np.nan
     for i_s, subject in enumerate(subjects):
-        traj_data = data_folder+subject+'/sim_data/'+subject +\
+        traj_data_path = data_folder+subject+'/sim_data/'+subject +\
             '_mean_com_trajs.npz'
         # create folder if it doesn't exist
-        os.makedirs(os.path.dirname(traj_data), exist_ok=True)
-        if os.path.exists(traj_data) and not new_data:
-            traj_data = np.load(traj_data, allow_pickle=True)
+        os.makedirs(os.path.dirname(traj_data_path), exist_ok=True)
+        if os.path.exists(traj_data_path) and not new_data:
+            traj_data = np.load(traj_data_path, allow_pickle=True)
             mean_com_und_traj = traj_data['mean_com_und_traj']
             mean_nocom_tr = traj_data['mean_nocom_tr']
             mean_com_traj = traj_data['mean_com_traj']
@@ -514,7 +514,7 @@ def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
         if save_new_data:
             data = {'mean_com_traj': mean_com_traj, 'mean_nocom_tr': mean_nocom_tr,
                     'mean_com_und_traj': mean_com_und_traj}
-            np.savez(traj_data, **data)
+            np.savez(traj_data_path, **data)
         matrix_com_tr[i_s, :len(mean_com_traj)] = mean_com_traj
         matrix_nocom_tr[i_s, :len(mean_nocom_tr)] = mean_nocom_tr
         matrix_com_und_tr[i_s, :len(mean_com_und_traj)] = mean_com_und_traj
@@ -828,15 +828,15 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                  'com_model_detected': com_model_detected})
     zt_model = df_sim.norm_allpriors.values
     # PCoM vs RT
-    ax2 = ax[-1].twinx()
-    ax2.spines['right'].set_color('red')
-    ax2.tick_params(axis='y', colors='red')
-    ax2.spines['top'].set_visible(False)
-    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax2)
-    ax2.yaxis.label.set_color('red')
-    ax2.set_ylim(0, 0.27)
-    ax[-1].set_ylim(-0.005, 0.102)
-    ax[-1].set_yticks([0, 0.04, 0.08])
+    # ax2 = ax[-1].twinx()
+    # ax2.spines['right'].set_color('red')
+    # ax2.tick_params(axis='y', colors='red')
+    # ax2.spines['top'].set_visible(False)
+    plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
+    # ax2.yaxis.label.set_color('red')
+    # ax2.set_ylim(0, 0.27)
+    ax[-1].set_ylim(-0.005, 0.121)
+    ax[-1].set_yticks([0, 0.04, 0.08, 0.12])
     # slowing in MT
     fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=50,
                           sim=True)
