@@ -949,7 +949,7 @@ def trial_ev_vectorized(zt, stim, coh, trial_index, p_MT_slope, p_MT_intercept, 
     p_e_noise = np.sqrt(dt)
     p_a_noise = np.sqrt(dt)
     fixation = int(fixation_ms / stim_res)  # ms/stim_resolution
-    prior = zt*p_w_zt
+    prior = zt*p_w_zt + np.random.choice([-1 ,1], stim.shape[1])*1e-6
     # instantaneous evidence
     Ve = np.concatenate((np.zeros((p_t_aff + fixation, num_tr)), stim*p_w_stim))
     max_integration_time = Ve.shape[0]-1
