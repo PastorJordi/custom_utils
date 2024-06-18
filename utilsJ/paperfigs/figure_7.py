@@ -131,7 +131,8 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                       'R to L reversal']
     mat_titles_com = ['L to R CoM',
                       'R to L CoM']
-    fig2, ax2 = plt.subplots(ncols=4)
+    # fig2, ax2 = plt.subplots(ncols=4)
+    fig4, ax4 = plt.subplots(ncols=4)
     for i_l, lab in enumerate(extra_labels):
         df_data = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                                   special_trial, extra_label=lab)
@@ -147,22 +148,22 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # reac_time = df_data.sound_len.values
         # reac_time = reac_time[(reac_time >= 0) & (reac_time <= 300)]
         # rtbins = np.quantile(reac_time, quants)
-        rtbins = np.linspace(0, 310, 11)
-        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='com_detected',
-                                      bins_rt=rtbins, label='detected')
-        fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='CoM_sugg',
-                                      bins_rt=rtbins, label='com', color='r')
-        ax2[i_l].legend()
-        ax2[i_l].set_title(lab)
-        ax2[i_l].set_ylabel('p(CoM)')
-        fig3, ax_mat = plt.subplots(2)
-        fig3.tight_layout()
-        fig_5.plot_pcom_matrices_model(df_mt.loc[df_mt.sound_len >= 150],
-                                       1, ax_mat, fig3, nbins=7, pos_ax_0=[],
-                                       margin=.03, title='p(reversal)',
-                                       mat_titles=['Left to right reversal',
-                                                   'Right to left reversal'],
-                                       return_matrix=False)
+        # rtbins = np.linspace(0, 310, 11)
+        # fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='com_detected',
+        #                               bins_rt=rtbins, label='detected')
+        # fig_5.supp_p_com_vs_rt_silent(df_data, ax=ax2[i_l], column='CoM_sugg',
+        #                               bins_rt=rtbins, label='com', color='r')
+        # ax2[i_l].legend()
+        # ax2[i_l].set_title(lab)
+        # ax2[i_l].set_ylabel('p(CoM)')
+        # fig3, ax_mat = plt.subplots(2)
+        # fig3.tight_layout()
+        # fig_5.plot_pcom_matrices_model(df_mt.loc[df_mt.sound_len >= 100],
+        #                                1, ax_mat, fig3, nbins=7, pos_ax_0=[],
+        #                                margin=.03, title='p(reversal)',
+        #                                mat_titles=['Left to right reversal',
+        #                                            'Right to left reversal'],
+        #                                return_matrix=False)
         del df_mt
         if i_l >= 1:
             mat_titles_rev = ['', '']
@@ -201,6 +202,7 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         cbar = plt.colorbar(im, cax=cbar_ax)
         cbar.ax.set_title('         '+'p(CoM)', fontsize=8.5, pad=10)
         cbar.ax.set_yticks([0, 0.25, 0.5])
+        # com_original = df_data.copy()['CoM_sugg'].values
         df_data['CoM_sugg'] = df_data.com_detected
         mat0, mat1 = fig_5.plot_pcom_matrices_model(df_model=df_data,
                                                     n_subjs=len(df_data.subjid.unique()),
@@ -210,10 +212,10 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                                                     mat_titles=mat_titles_rev,
                                                     return_matrix=True)
         # vmax = np.nanmax(mat0+mat1)
-        vmax = 0.075
+        # vmax = 0.04
         # if vmax == 0:
         #     vmax = 1.1e-2
-        im = ax[4*i_l+3].imshow(mat0+mat1, vmin=0, vmax=vmax, cmap='magma')
+        im = ax[4*i_l+3].imshow(mat0+mat1, vmin=0, cmap='magma')
         # ax[4*i_l+3].yaxis.set_ticks_position('none')
         # ax[4*i_l+3].set_ylabel('Stimulus evidence')
         pos = ax[4*i_l+3].get_position()
@@ -221,7 +223,7 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                                 pos.width/15, pos.height/1.5])
         cbar = plt.colorbar(im, cax=cbar_ax)
         cbar.ax.set_title('         '+'p(reversal)', fontsize=8.5, pad=10)
-        del df_data
+        
         # ax[4+i_l*6].set_ylabel('')
         # ax[5+i_l*6].set_ylabel('')
         # ax[2+i_l*6].set_xlabel('       \
@@ -230,6 +232,31 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         # ax[4+i_l*6].set_xlabel('       \
         #                        Prior evidence')
         # ax[5+i_l*6].set_xlabel('')
+        # df_data['CoM_sugg'] = com_original
+        fig_1.plot_mt_weights_rt_bins(df=df_data.loc[~df_data.CoM_sugg],
+                                      ax=ax4[i_l],
+                                      rtbins=np.linspace(0, 150, 26))
+
+
+def plot_pcom_vs_prior(df_data, ax):
+    df_side = df_data.copy()
+    com_side = df_side.copy().CoM_sugg.values
+    prior_side = df_side.copy().norm_allpriors.values *\
+        (df_data.R_response.values*2-1)
+    com_vals = []
+    bins_zt = np.copy(np.array([np.quantile(prior_side, quant)
+                                for quant in np.arange(0., 1.05, 0.05)]))
+    prior_x_vals = bins_zt[:-1] + np.diff(bins_zt)/2
+    for i_zt, zt in enumerate(bins_zt[:-1]):
+        coms_per_prior = com_side[(prior_side >= zt) &
+                                  (prior_side < bins_zt[i_zt+1])]
+        com_vals.append(np.nanmean(np.copy(coms_per_prior)))
+    ax.plot(prior_x_vals, com_vals, color='k')
+    del df_side
+    ax.legend()
+    ax.set_xlabel('Prior towards response')
+    ax.set_ylabel('p(rev)')
+
 
 
 def fig_7_v1(subjects, subjid, stim, zt, coh, gt, trial_index,
@@ -345,10 +372,14 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
                    fontweight='bold', va='top', ha='right')
         a.text(-0.41, 1.22, general_labels[i_ax], transform=a.transAxes,
                fontsize=16, fontweight='bold', va='top', ha='right')
+    # titles = ['Full model',
+    #           'Random initial choice',
+    #           'No trajectory update',
+    #           'No vigor update']
     titles = ['Full model',
-              'Random initial choice',
-              'No trajectory update',
-              'No vigor update']
+              'No vigor update',
+              'Only prior on 1st r.o.',
+              'Continuous read-out']
     plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
         subjects, subjid, stim, zt, coh, gt, trial_index,
         special_trial, data_folder, ax=ax, fig=fig,
@@ -365,12 +396,12 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
         ax[i*4+1].set_xlabel('')
     ax[1].set_ylim(240, 290)
     ax[1].set_yticks([240, 260, 280])
-    ax[5].set_ylim(190, 240)
-    ax[5].set_yticks([200, 220, 240])
-    ax[9].set_ylim(230, 280)
-    ax[9].set_yticks([240, 260, 280])
-    ax[13].set_ylim(250, 300)
-    ax[13].set_yticks([260, 280, 300])
+    ax[5].set_ylim(240, 280)
+    ax[5].set_yticks([240, 260, 280])
+    ax[9].set_ylim(250, 300)
+    ax[9].set_yticks([260, 280, 300])
+    ax[13].set_ylim(240, 290)
+    ax[13].set_yticks([240, 260, 280])
     ax[13].set_xlabel('Stimulus evidence\ntowards response')
     # df_mt = df.copy()
     # fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax, prior_limit=0.1,  # 10% quantile
@@ -466,8 +497,8 @@ def plot_psycho_acc_reversals(df, subjects, subjid, stim, zt, coh, gt, trial_ind
         if i_l == 0:
             df_sim = df.copy()
         else:
-            df_sim = get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
-                                                  special_trial, extra_label=extra_lab)
+            df_sim = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
+                                                     special_trial, extra_label=extra_lab)
             sim = True
         plot_acc_vs_stim_different_models(df=df_sim, ax=ax, color=colors[i_l],
                                           label=labels[i_l], sim=sim)
