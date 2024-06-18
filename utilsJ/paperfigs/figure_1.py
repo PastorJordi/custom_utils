@@ -97,8 +97,9 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(-1.05, 300, r'$\it{incongruent}$', fontsize=7.5)
             ax.text(0.09, 294.5, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 300, r'$\it{congruent}$', fontsize=7.5)
+            ax.set_title('Effect of stimulus', fontsize=10, pad=5)
+            ax.text(-1.07, 242, "low prior\ntrials", fontsize=8)
         ax.set_ylim(238, 303)
-        ax.set_title('Effect of stimulus', fontsize=10, pad=5)
     elif condition == 'choice_x_prior':
         mt_time = fp.binning_mt_prior(df, bins)
         plot_bins = bins[:-1] + np.diff(bins)/2
@@ -111,8 +112,9 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             ax.text(-1.05, 306, r'$\it{incongruent}$', fontsize=7.5)
             ax.text(0.09, 299, r'$\longrightarrow $', fontsize=10)
             ax.text(0.09, 306, r'$\it{congruent}$', fontsize=7.5)
+            ax.set_title('Effect of prior', fontsize=10, pad=5)
+            ax.text(-1.07, 225, "silent trials", fontsize=8)
         ax.set_ylim(219, 312)
-        ax.set_title('Effect of prior', fontsize=10, pad=5)
         # \;\;\; \rightarrow \;\; \it{Supports \; response}
     ax.set_xlim(-1.2, 1.2)
     # ARROWS FOR INC/CONG
@@ -333,10 +335,8 @@ def num_ast(decimal):
         return 1
     if decimal < 0.01 and decimal >= 0.001:
         return 2
-    if decimal < 0.001 and decimal >= 0.0001:
+    if decimal < 0.001:
         return 3
-    if decimal < 0.0001:
-        return 4
 
 
 def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
@@ -399,6 +399,7 @@ def plot_mt_vs_stim(df, ax, prior_min=0.1, rt_max=50, human=False, sim=False):
     ax.set_xlim(-1.1, 1.1)
     if not sim:
         ax.set_ylim(218, 302)
+        ax.text(-1.05, 224, "strong\ncongruent prior", fontsize=8)
     else:
         ax.set_ylim(195, 307)
 
@@ -888,7 +889,7 @@ def supp_trial_index_analysis(df, data_folder, sv_folder):
     supp_trajs_cond_trial_index(df=df, data_folder=data_folder,
                                 ax=[ax[0], ax[2]])
     ax[2].set_ylim(-0.05, 0.455)
-    plot_mt_weights_rt_bins(df=df, ax=ax[3])
+    plot_mt_weights_rt_bins(df=df, ax=ax[3], rtbins=np.linspace(0, 150, 16))
     mt_weights(df=df, ax=ax[1], plot=True, t_index_w=True, means_errs=False)
     fig.savefig(sv_folder+'supp_fig_1.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'supp_fig_1.png', dpi=400, bbox_inches='tight')
