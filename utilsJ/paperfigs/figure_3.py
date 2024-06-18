@@ -167,7 +167,7 @@ def plot_coms_single_session(df, ax):
     ax.axhline(y=75, linestyle='--', color='Green', lw=1)
     ax.axhline(y=-75, linestyle='--', color='Purple', lw=1)
     ax.axhline(y=0, linestyle='--', color='k', lw=0.5)
-    ax.set_title('Example session')
+    ax.set_title('Individual trajectories')
     conv_factor = 0.07
     ticks = np.array([-6, -3, 0, 3, 6])/conv_factor
     ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
@@ -671,7 +671,7 @@ def mean_com_traj(df, ax, data_folder, condition='choice_x_prior', prior_limit=1
     conv_factor = 0.07
     ticks = np.array([-3, 0, 3, 6])/conv_factor
     ax.set_yticks(ticks, np.int64(np.round(ticks*conv_factor, 2)))
-    ax.set_title('Avg. accross rats')
+    ax.set_title('Average trajectories')
 
 
 def com_heatmap_marginal_pcom_side_mat(
@@ -731,8 +731,8 @@ def com_heatmap_marginal_pcom_side_mat(
             com_mat_list += [cmat]
             number_mat_list += [cnmat]
 
-        mat = np.stack(com_mat_list).mean(axis=0)
-        nmat = np.stack(number_mat_list).mean(axis=0)
+        mat = np.nanmean(np.stack(com_mat_list), axis=0)
+        nmat = np.nanmean(np.stack(number_mat_list), axis=0)
 
     mat = np.flipud(mat)
     nmat = np.flipud(nmat)
@@ -982,6 +982,7 @@ def supp_com_marginal(df, sv_folder, sim=False):
                         va='top', ha='right')
         df_1 = df.loc[df.subjid == subj]
         if sim:
+            com_orig = df.CoM_sugg.values
             df['CoM_sugg'] = df.com_detected
         nbins = 7
         matrix_side_0 = com_heatmap_marginal_pcom_side_mat(df=df_1, side=0)
@@ -993,7 +994,13 @@ def supp_com_marginal(df, sv_folder, sim=False):
         ax_mat[1].set_position([pos_com_0.x0 + pos_com_0.width*1.4, pos_com_0.y0,
                                 pos_com_0.width, pos_com_0.height])
         # L-> R
-        vmax = max(np.max(matrix_side_0), np.max(matrix_side_1))
+        if np.nansum(matrix_side_0) == 0 or\
+                np.nansum(matrix_side_1) == 0:
+            matrix_side_0[:] = 0
+            matrix_side_1[:] = 0
+            vmax = 0.05
+        else:
+            vmax = np.nanmax((np.nanmax(matrix_side_0), np.nanmax(matrix_side_1)))
         im = ax[i_ax*2].imshow(matrix_side_1, vmin=0, vmax=vmax, cmap='magma')
         # plt.sca(ax[i_ax*2])
         # plt.colorbar(im, fraction=0.04)
@@ -1013,6 +1020,8 @@ def supp_com_marginal(df, sv_folder, sim=False):
         if i_ax >= 12:
             ax[i_ax*2].set_xlabel('Prior evidence')
             ax[i_ax*2+1].set_xlabel('Prior evidence')
+    if sim:
+        df['CoM_sugg'] = com_orig
     fig.savefig(sv_folder+'fig_supp_com_marginal.svg', dpi=400,
                 bbox_inches='tight')
     fig.savefig(sv_folder+'fig_supp_com_marginal.png', dpi=400,
