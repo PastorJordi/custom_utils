@@ -190,53 +190,29 @@ def get_split_ind_corr_frames(mat, stim, pval=0.01, max_MT=400, startfrom=700):
     i2 = True
     idx_3 = np.nan
     i3 = True
-    w1 = []
-    w2 = []
-    w3 = []
+    # w1 = []
+    # w2 = []
+    # w3 = []
     for i in range(max_MT):  # reversed so it goes backwards in time
         pop_a = mat[:, startfrom + i]
         nan_idx = ~np.isnan(pop_a)
         pop_evidence = stim[:, nan_idx]
-        if i < 100:
-            pop_evidence = stim[:2, nan_idx]
-        if i < 50:
-            pop_evidence = stim[0, nan_idx]
         pop_a = pop_a[nan_idx]
-        all_x = sm.add_constant(pop_evidence.T)
+        # all_x = sm.add_constant(pop_evidence.T)
+        all_x = pop_evidence.T
         mod = sm.OLS(pop_a.T, all_x).fit()
         p2 = mod.pvalues
+        # w2.append(p2[0])
+        # w1.append(p2[1])
         # params = mod.params
-        w1.append(p2[1])
-        if i < 50 and stim.shape[0] > 1:
-            w2.append(np.nan)
-        if i > 50 and stim.shape[0] > 1:
-            w2.append(p2[2])
-        if stim.shape[0] == 1:
-            w2.append(np.nan)
-        if i < 100 and stim.shape[0] > 2:
-            w3.append(np.nan)
-        if i > 100 and stim.shape[0] > 2:
-            w3.append(p2[3])
-        if stim.shape[0] <= 2:
-            w3.append(np.nan)
-        if len(p2) == 2 and p2[1] < pval and i1:
+        if p2[1] < pval and i1:
             idx_1 = i
             i1 = False
-        if len(p2) > 2:
-            if p2[1] < pval and i1:
-                idx_1 = i
-                i1 = False
-            if p2[2] < pval and i2:
-                idx_2 = i
-                i2 = False
-        else:
+        if p2[2] < pval and i2:
+            idx_2 = i
             i2 = False
-            i3 = False
-        if len(p2) > 3:
-            if p2[3] < pval and i3:
-                idx_3 = i
-                i3 = False
-        else:
+        if p2[3] < pval and i3:
+            idx_3 = i
             i3 = False
         if i1 + i2 + i3 == 0:
             break
@@ -974,6 +950,7 @@ def splitting_time_frames_ttest_across(df, frame_len=50, rtbins=np.linspace(0, 1
         for i_s, subject in enumerate(subjects):
             df_sub = df.loc[df.subjid == subject]
             reaction_time = df_sub.sound_len.values
+            prior = df_sub.norm_allpriors.values
             stimulus = np.array(df_sub.res_sound)
             category = df_sub.rewside.values*2-1
             first_frame = [stimulus[i][0] for i in range(len(stimulus))]
@@ -989,13 +966,16 @@ def splitting_time_frames_ttest_across(df, frame_len=50, rtbins=np.linspace(0, 1
             if i*binsize >= 100:
                 stim[2] = third_frame
             stim = stim[:, (reaction_time >= rtbins[i]) &
-                       (reaction_time < rtbins[i+1])][:, idx] *\
-                category[(reaction_time >= rtbins[i]) &
-                         (reaction_time < rtbins[i+1])][idx]
-            params = get_params_lin_reg_frames(matatmp, stim)
-            out_data_sbj[i_s, :, 0] = np.array(params[0])
-            out_data_sbj[i_s, :, 1] = np.array(params[1])
-            out_data_sbj[i_s, :, 2] = np.array(params[2])
+                       (reaction_time < rtbins[i+1])][:, idx]
+            stim = zscore(stim, axis=None, nan_policy='omit')
+            zt = prior[(reaction_time >= rtbins[i]) &
+                       (reaction_time < rtbins[i+1])][idx]
+            zt = zscore(zt)
+            regs = np.concatenate((zt.reshape(1,-1), stim))
+            params = get_params_lin_reg_frames(matatmp, regs)
+            out_data_sbj[i_s, :, 0] = np.array(params[2])
+            out_data_sbj[i_s, :, 1] = np.array(params[3])
+            out_data_sbj[i_s, :, 2] = np.array(params[4])
         splitting_index =\
             get_dv_from_params_ttest(params=out_data_sbj, max_MT=max_MT, pval=pval)
         for j in range(out_data.shape[1]):
@@ -1022,17 +1002,67 @@ def splitting_time_frames_ttest_across(df, frame_len=50, rtbins=np.linspace(0, 1
             ax[i].legend()
 
 
+def supp_plot_splitting_time_first_2_frames(df, data_folder, frame_len, subjects,
+                                            rtbins=np.linspace(0, 150, 6),
+                                            trajectory="trajectory_y",
+                                            max_MT=400):
+    fig, ax = plt.subplots(1)
+    binsize = np.diff(rtbins)[0]
+    # subjects = df.subjid.unique()
+    fp.rm_top_right_lines(ax)
+    out_data = np.empty((len(rtbins)-1, 3, len(subjects)))
+    for i_s, subject in enumerate(subjects):
+        split_path = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_frames_005_small_bins.npz'
+        os.makedirs(os.path.dirname(split_path), exist_ok=True)
+        split_data = np.load(split_path, allow_pickle=True)
+        out_data_sbj = split_data['out_data_sbj']
+        out_data[:, :, i_s] = out_data_sbj
+    splt_data_all = np.empty((len(rtbins)-1, 2))
+    splt_data_all[:] = np.nan
+    err_data_all = np.empty((len(rtbins)-1, 2))
+    err_data_all[:] = np.nan
+    colors = ['r', 'b', 'k']
+    titles = ['1st frame', '2nd frame', '3rd frame', ' ']
+    for i in range(2):
+        splt_data = np.nanmedian(out_data[:, i, :], axis=1)
+        splt_data_all[:, i] = splt_data
+        err_data = np.nanstd(out_data[:, i, :], axis=1) / np.sqrt(len(subjects))
+        err_data_all[:, i] = err_data
+    ax.plot(rtbins[:-1]+binsize/2, splt_data_all[:, 0],
+            color=colors[0], label=titles[0])
+    ax.fill_between(rtbins[:-1]+binsize/2,
+            splt_data_all[:, 0]-err_data_all[:, 0],
+            splt_data_all[:, 0]+err_data_all[:, 0],
+            color=colors[0], alpha=0.3)
+    ax.plot(rtbins[2:-1]+binsize/2, splt_data_all[2:, 1],
+            color=colors[1], label=titles[1])
+    ax.fill_between(rtbins[2:-1]+binsize/2,
+            splt_data_all[2:, 1]-err_data_all[2:, 1],
+            splt_data_all[2:, 1]+err_data_all[2:, 1],
+            color=colors[1], alpha=0.3)
+    ax.plot([0, 160], [0, 160], color='k')
+    ax.fill_between([0, 160], [0, 160], [0, 0],
+                    color='grey', alpha=0.6)
+    ax.set_ylabel('Splitting time (ms)')
+    ax.set_xlabel('Reaction time (ms)')
+    ax.axvline(x=62.5, linestyle='--', color='k', alpha=0.5)
+    ax.legend(loc='upper left')
+    ax.set_yticks([0, 100, 200, 300])
+    ax.set_xticks([0, 50, 100, 150])
+
+
 def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 150, 7),
                           trajectory="trajectory_y", new_data=True, pval=0.01,
                           max_MT=400):
-    fig, ax = plt.subplots(ncols=4)
+    fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(10, 8))
+    ax = ax.flatten()
     binsize = np.diff(rtbins)[0]
     subjects = df.subjid.unique()
     out_data = np.empty((len(rtbins)-1, 3, len(subjects)))
     for i_s, subject in enumerate(subjects):
         out_data_sbj = np.empty((len(rtbins)-1, 3))
         out_data_sbj[:] = np.nan
-        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_frames.npz'
+        split_data = data_folder + subject + '/traj_data/' + subject + '_traj_split_stim_frames_005_small_bins.npz'
         # create folder if it doesn't exist
         os.makedirs(os.path.dirname(split_data), exist_ok=True)
         if os.path.exists(split_data) and not new_data:
@@ -1042,6 +1072,7 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
             df_sub = df.loc[df.subjid == subject]
             reaction_time = df_sub.sound_len.values
             stimulus = np.array(df_sub.res_sound)
+            prior = df_sub.norm_allpriors.values
             category = df_sub.rewside.values*2-1
             first_frame = [stimulus[i][0] for i in range(len(stimulus))]
             second_frame = [stimulus[i][1] for i in range(len(stimulus))]
@@ -1049,8 +1080,9 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
             for i in range(rtbins.size-1):
                 matatmp, idx =\
                     retrieve_trajs(df_sub, rtbins=rtbins,
-                                   rtbin=i, align='sound', trajectory=trajectory)
-                stim = np.zeros((int(i*binsize/frame_len)+1, len(stimulus)))
+                                   rtbin=i, align='sound', trajectory=trajectory,
+                                   flip=True)
+                stim = np.zeros((3, len(stimulus)))
                 stim[0] = first_frame
                 if i*binsize >= 50:
                     stim[1] = second_frame  
@@ -1058,10 +1090,17 @@ def splitting_time_frames(df, data_folder, frame_len=50, rtbins=np.linspace(0, 1
                     stim[2] = third_frame
                 stim = stim[:, (reaction_time >= rtbins[i]) &
                            (reaction_time < rtbins[i+1])][:, idx] *\
-                    category[(reaction_time >= rtbins[i]) &
-                             (reaction_time < rtbins[i+1])][idx]
+                                category[(reaction_time >= rtbins[i]) &
+                                          (reaction_time < rtbins[i+1])][idx]
+                stim = zscore(stim, axis=None, nan_policy='omit')
+                zt = prior[(reaction_time >= rtbins[i]) &
+                           (reaction_time < rtbins[i+1])][idx] *\
+                                category[(reaction_time >= rtbins[i]) &
+                                          (reaction_time < rtbins[i+1])][idx]
+                zt = zscore(zt)
+                regs = np.concatenate((zt.reshape(1,-1), stim))
                 current_split_index =\
-                    get_split_ind_corr_frames(matatmp, stim, pval=pval,
+                    get_split_ind_corr_frames(matatmp, regs, pval=pval,
                                               max_MT=max_MT)
                 out_data_sbj[i, 0] = current_split_index[0]
                 out_data_sbj[i, 1] = current_split_index[1]
