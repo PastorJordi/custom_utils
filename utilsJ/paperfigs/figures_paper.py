@@ -11,13 +11,14 @@ import sys, os
 from sklearn.metrics import roc_curve
 from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import confusion_matrix
-from scipy.stats import ttest_rel, linregress
+from scipy.stats import ttest_rel, linregress, ttest_1samp
 from matplotlib.lines import Line2D
 from statsmodels.stats.proportion import proportion_confint
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, TABLEAU_COLORS
 from skimage import exposure
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, chisquare
 import scipy
+from scipy.special import rel_entr
 # from scipy import interpolate
 # import shutil
 
@@ -54,7 +55,7 @@ plt.rcParams['font.sans-serif'] = 'Helvetica'
 matplotlib.rcParams['lines.markersize'] = 3
 
 # ---GLOBAL VARIABLES
-pc_name = 'alex_CRM'
+pc_name = 'alex'
 if pc_name == 'alex':
     RAT_COM_IMG = 'C:/Users/Alexandre/Desktop/CRM/rat_image/001965.png'
     SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
@@ -245,6 +246,69 @@ def get_bin_info(df, condition, prior_limit=0.25, after_correct_only=True, rt_li
         colormap = pl.cm.jet(np.linspace(0., 1, n_iters))
     return bins, bintype, indx_trajs, n_iters, colormap
 
+
+def get_lb():
+    """
+    Returns list with hard lower bounds (LB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard lower bounds.
+
+    """
+    lb_aff = 3
+    lb_eff = 3
+    lb_t_a = 4
+    lb_w_zt = 0.05
+    lb_w_st = 0
+    lb_e_bound = 1.3
+    lb_com_bound = 0
+    lb_w_intercept = 0.01
+    lb_w_slope = 1e-6
+    lb_a_bound = 0.1
+    lb_1st_r = 75
+    lb_2nd_r = 75
+    lb_leak = 0
+    lb_mt_n = 1
+    lb_mt_int = 120
+    lb_mt_slope = 0.01
+    return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
+            lb_eff, lb_t_a, lb_w_intercept, lb_w_slope, lb_a_bound,
+            lb_1st_r, lb_2nd_r, lb_leak, lb_mt_n,
+            lb_mt_int, lb_mt_slope]
+
+
+def get_ub():
+    """
+    Returns list with hard upper bounds (UB) for BADS optimization.
+
+    Returns
+    -------
+    list
+        List with hard upper bounds.
+
+    """
+    ub_aff = 12
+    ub_eff = 12
+    ub_t_a = 22
+    ub_w_zt = 1
+    ub_w_st = 0.18
+    ub_e_bound = 4
+    ub_com_bound = 0.3
+    ub_w_intercept = 0.12
+    ub_w_slope = 1e-3
+    ub_a_bound = 4
+    ub_1st_r = 500
+    ub_2nd_r = 500
+    ub_leak = 0.1
+    ub_mt_n = 12
+    ub_mt_int = 370
+    ub_mt_slope = 0.6
+    return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
+            ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
+            ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
+            ub_mt_int, ub_mt_slope]
 
 
 def tachometric_data(coh, hit, sound_len, subjid, ax, label='Data',
@@ -1268,12 +1332,12 @@ def get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_inde
     df_sim['com_detected'] = com_model_detected.astype(bool)
     df_sim['peak_com'] = np.array(x_val_at_updt)
     df_sim['hithistory'] = np.array(resp_fin == gt)
-    df_sim['allpriors'] = zt
-    df_sim['norm_allpriors'] = norm_allpriors_per_subj(df_sim)
-    df_sim['normallpriors'] = df_sim['norm_allpriors']
+    df_sim['allpriors'] = np.copy(zt)
+    df_sim['norm_allpriors'] = np.copy(norm_allpriors_per_subj(df_sim))
+    df_sim['normallpriors'] = np.copy(df_sim['norm_allpriors'])
     df_sim['framerate']=200
     df_sim['dW_lat'] = 0
-    df_sim['dW_trans'] = zt
+    df_sim['dW_trans'] = np.copy(zt)
     df_sim['aftererror'] = False
     return df_sim
 
@@ -1781,7 +1845,7 @@ def plot_params_all_subs_rats_humans(subjects, subjectsh, sv_folder=SV_FOLDER, d
 
 
 def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
-    fig, ax = plt.subplots(4, 4)
+    fig, ax = plt.subplots(4, 4, figsize=(12, 10))
     plt.subplots_adjust(top=0.92, bottom=0.08, left=0.08, right=0.92,
                         hspace=0.5, wspace=0.4)
     if diff_col:
@@ -1794,26 +1858,39 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
               r'EA bound, $\theta_{DV}$',
               r'CoM bound, $\theta_{COM}$',
-              r'Afferent time, $t_{aff}$', r'Efferent time, $t_{eff}$',
+              r'Afferent time, $t_{aff}$',
+              r'Efferent time, $t_{eff}$',
               r'AI time offset, $t_{AI}$',
               r'AI drift offset, $v_{AI}$',
               r'AI drift slope, $w_{AI}$',
               r'AI bound, $\theta_{AI}$',
               r'DV weight 1st readout, $\beta_{DV}$',
-              r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
+              r'DV weight update, $\beta_u$',
+              r'Leak, $\lambda$',
               # r'MT noise variance, $\sigma_{MT}$',
               r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
     conf_mat = np.empty((len(labels), len(subjects)))
+    upper_bounds = np.delete(get_ub(), -3)
+    lower_bounds = np.delete(get_lb(), -3)
+    for i_b in [4, 5, 6]:
+        upper_bounds[i_b] = upper_bounds[i_b]*5
+        lower_bounds[i_b] = lower_bounds[i_b]*5
+    for i_b in [1, 7, 8]:
+        upper_bounds[i_b] = upper_bounds[i_b]/5
+        lower_bounds[i_b] = lower_bounds[i_b]/5
     for i_s, subject in enumerate(subjects):
         conf = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subject + '.npy')
         conf[1] = conf[1] / 5
         conf[7] = conf[7] / 5
-        conf[8] = conf[8] / 5
+        conf[8] = conf[8] / 5  # over 5 ms resolution
+        # conf_mat[:, i_s] = conf  #np.delete(conf, [5, 12, 13])
         conf_mat[:, i_s] = np.delete(conf, -3)
     for i in range(len(labels)):
+        # ax[i].axvline(upper_bounds[i], color='k', linestyle='--')
+        # ax[i].axvline(lower_bounds[i], color='k', linestyle='--')
         if i == 4 or i == 5 or i == 6:
             sns.violinplot(conf_mat[i, :]*5, ax=ax[i], orient='h', color='lightskyblue',
-                           fmt='g', linewidth=0)
+                           fmt='g', linewidth=0, bw_adjust=10)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s]*5,
                            0.1*np.random.randn(),
@@ -1822,7 +1899,7 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
             ax[i].set_xlabel(labels[i] + str(' (ms)'))
         else:
             sns.violinplot(conf_mat[i, :], ax=ax[i], orient='h', color='lightskyblue',
-                           fmt='g', linewidth=0)
+                           fmt='g', linewidth=0, bw_adjust=10)
             for i_s in range(len(subjects)):
                 ax[i].plot(conf_mat[i, i_s],
                            0.1*np.random.randn(),
@@ -1831,7 +1908,19 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
             ax[i].set_xlabel(labels[i])
         ax[i].set_yticks([])
         ax[i].spines['left'].set_visible(False)
+        # if i == 8 or i == 0:
+        #     ax[i].set_xscale('log')
+        # if i == 5:
+        #     ax[i].set_xlim(13, 18)
+        # if i == 12:
+        #     ax[i].set_xlim(0.09, 0.11)
+        # if i == 13:
+        #     ax[i].set_xlim(11, 13)
     ax[-1].axis('off')
+    # for i in [-3, -2, -1]:
+    #     ax[i].axis('off')
+    fig.savefig(sv_folder+'/supp_params_distro.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_params_distro.png', dpi=400, bbox_inches='tight')
 
 
 def plot_corr_matrix_prt(ax,
@@ -2282,7 +2371,9 @@ def mt_diff_rev_nonrev(df):
 
 def supp_mt_per_rat(df, df_sim, title='',
                     sv_folder=SV_FOLDER):
-    fig, ax = plt.subplots(5, 3)
+    fig, ax = plt.subplots(5, 3, figsize=(8, 10))
+    plt.subplots_adjust(top=0.95, bottom=0.05, left=0.075, right=0.98,
+                        hspace=0.2, wspace=0.3)
     ax = ax.flatten()
     for a in ax:
         rm_top_right_lines(a)
@@ -2297,9 +2388,9 @@ def supp_mt_per_rat(df, df_sim, title='',
         mt_rat = df_1.resp_len.values*1e3
         mt_model = df_sim_1.resp_len.values*1e3
         sns.kdeplot(mt_rat, color='k', ax=ax[i_s],
-                    label='Rats')
+                    label='Rats', bw_adjust=3)
         sns.kdeplot(mt_model, color='r', ax=ax[i_s],
-                    label='Model')
+                    label='Model', bw_adjust=3)
         # sns.kdeplot(mt_com_sim, color=COLOR_COM, ax=ax[i_s],
         #             label='Model Rev.', linestyle='--')
         # sns.kdeplot(mt_nocom_sim, color=COLOR_NO_COM, ax=ax[i_s],
@@ -2313,9 +2404,10 @@ def supp_mt_per_rat(df, df_sim, title='',
             ax[i_s].set_yticks([])
         ax[i_s].set_title(subj)
         ax[i_s].set_xlim(-5, 725)
-        ax[i_s].set_ylim(0, 0.0085)
+        ax[i_s].set_ylim(0, 0.0095)
     ax[0].legend()
     fig.suptitle(title)
+    fig.tight_layout()
     fig.savefig(sv_folder+'supp_fig_7.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'supp_fig_7.png', dpi=400, bbox_inches='tight')
 
@@ -2413,7 +2505,8 @@ def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
             if i >= 6:
                 ax2[i].set_xlabel('Time (ms)')
             if plot_data_trajs:
-                index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev)  # index of filtered
+                index = (zt >= zt_vals[ip2]) & (zt < zt_vals[ip2+1]) & (coh == ev) &\
+                    (df.subjid == 'LE38') # index of filtered
                 # to extract interpolated trajs in mat --> these aren't signed
                 _, _, _, mat, idx, _ =\
                 trajectory_thr(df.loc[index], 'choice_x_prior', bins,
@@ -2427,6 +2520,7 @@ def plot_model_density(df_sim, sv_folder=SV_FOLDER, df=None, offset=0,
                 mtime = df.loc[idx[0]].resp_len.values
                 n_trajs = mat_0.shape[0]
                 # we select the number of trajectories that we want
+                np.random.seed(3)
                 index_trajs_plot = np.random.choice(np.arange(n_trajs), n_trajs_plot)
                 for ind in index_trajs_plot:
                     traj = mat_0[ind, :]
@@ -2841,7 +2935,7 @@ def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg'
     ax.set_xlabel('Reaction time (ms)')
 
 
-def supp_silent(df, df_sim):
+def supp_silent(df, df_sim, sv_folder):
     """
     a) p(CoM)
     b) p(CoM) vs RT
@@ -2950,6 +3044,135 @@ def supp_silent(df, df_sim):
     ax_c.set_xticks([prior_x_vals[0], 0,
                       prior_x_vals[-1]],
                     ['L', '0', 'R'])
+    fig.savefig(sv_folder+'/supp_silent.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_silent.png', dpi=400, bbox_inches='tight')
+
+def bhatt_dist(p, q):
+    return -np.log(np.sum(np.sqrt(p*q)))
+
+
+def plot_chi2_shuffled_data(ax, df, df_sim, bhat=False, column='sound_len',
+                            sv_folder=SV_FOLDER):
+    subjects = df.subjid.unique()
+    data_path = sv_folder + 'shuffle_matrix_chi2_' + column + '.npy'
+    orig_path = sv_folder + 'orig_chi2_' + column + '.npy'
+    # create folder if it doesn't exist
+    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    if os.path.exists(data_path):
+        chi_subj_to_data = np.load(orig_path)
+        chi_shuffle_subjs = np.load(data_path)
+    else:
+        chi_subj_to_data = []
+        chi_shuffle_subjs = np.empty((len(subjects), len(subjects)-1))
+        if column == 'resp_len':
+            minrt = 50
+            maxrt = 800
+            n_bins = 50
+        else:
+            minrt = -150
+            maxrt = 300
+            n_bins = 100
+        rtbins = np.linspace(minrt, maxrt, n_bins)
+        for i_s, subj1 in enumerate(subjects):
+            rt_sim_s1 = df_sim.copy().loc[df_sim.subjid == subj1, column].values
+            rt_s1 = df.copy().loc[df.subjid == subj1, column].values
+            if column == 'resp_len':
+                rt_sim_s1 *= 1e3
+                rt_s1 *= 1e3
+            frec_sim_s1, _ = np.histogram(rt_sim_s1, bins=rtbins)
+            frec_data, _ = np.histogram(rt_s1, bins=rtbins)
+            idx = np.copy(frec_data) > 0
+            frec_data = frec_data[idx]
+            frec_sim_s1 = frec_sim_s1[idx]
+            if bhat:
+                frec_data = frec_data / np.sum(frec_data)
+                frec_sim_s1 = frec_sim_s1 / np.sum(frec_sim_s1)
+                chi2_s1 = bhatt_dist(frec_data, frec_sim_s1)
+            else:    
+                chi2_s1 = np.nansum([(-frec_data+frec_sim_s1)**2 / (frec_data)])
+            chi_subj_to_data.append(chi2_s1)
+            for i_s2, subj2 in enumerate(subjects[subjects != subj1]):
+                rt_sim_s2 = df_sim.copy().loc[df_sim.subjid == subj2, column].values
+                if column == 'resp_len':
+                    rt_sim_s2 *= 1e3
+                frec_sim_s2, _ = np.histogram(rt_sim_s2, bins=rtbins)
+                frec_sim_s2 = frec_sim_s2[idx]
+                if bhat:
+                    frec_sim_s2 = frec_sim_s2 / np.sum(frec_sim_s2)
+                    chi2 = bhatt_dist(frec_data, frec_sim_s2)
+                else:
+                    chi2 = np.nansum([(-frec_data+frec_sim_s2)**2 / (frec_data)])
+                chi_shuffle_subjs[i_s, i_s2] = chi2
+        np.save(orig_path, np.array(chi_subj_to_data))
+        np.save(data_path, chi_shuffle_subjs)
+    # fig, ax = plt.subplots(1)
+    shuffled = chi_shuffle_subjs.flatten()
+    sns.barplot([chi_subj_to_data, shuffled],
+                palette=sns.color_palette("Paired"), ax=ax)
+    colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    for i_s, subj1 in enumerate(subjects):
+        x1 = 0*np.random.randn()
+        chi2_s1 = chi_subj_to_data[i_s]
+        color = colors[i_s]
+        ax.plot(x1, chi2_s1, color=color, marker='o', linestyle='',
+                markersize=5)
+        for i_s2, subj2 in enumerate(subjects[subjects != subj1]):
+            x2 = 1 + 0.1*np.random.randn()
+            chi2 = chi_shuffle_subjs[i_s, i_s2]
+            ax.plot(x2, chi2, color=color, marker='o', linestyle='',
+                    markersize=3)
+            ax.plot([x1, x2], [chi2_s1, chi2], color='k', alpha=0.1)
+    ax.set_xticks([0, 1], ['individual', 'shuffled'])
+    if column == 'resp_len':
+        title = 'Movement time'
+    if column == 'sound_len':
+        title = 'Reaction time'
+    if bhat:
+        ax.set_ylabel('Bhat distance')
+        ax.set_title(title, fontsize=10)
+    else:
+        ax.set_ylabel(r'$\chi^2$')
+        ax.set_yscale('log')
+        ax.set_title(title, fontsize=10)
+    # shuffled_orig = chi_shuffle_subjs - np.array(chi_subj_to_data).reshape(15, 1)
+    # fig2, ax2 = plt.subplots(1)
+    # sns.barplot(shuffled_orig.flatten())
+    # colors = pl.cm.jet(np.linspace(0., 1, len(subjects)))
+    # for i in range(shuffled_orig.shape[0]):
+    #     ax2.plot(np.random.randn(len(subjects)-1)*0.1, shuffled_orig[i, :],
+    #              color=colors[i], marker='o', linestyle='')
+    # # ax2.set_yscale('log')
+    # ax2.set_ylabel(r'$\chi^2_{shuffled} - \chi^2_{orig}$')
+    # ax2.set_xlim(-.8, .8)
+    # ax2.set_xticks([])
+    # pvals = []
+    # for i in range(shuffled_orig.shape[0]):
+    #     s, pv = ttest_1samp(shuffled_orig[i], popmean=0)
+    #     pvals.append(pv)
+    # plt.figure()
+    # sns.violinplot(pvals)
+    # fig3, ax3 = plt.subplots(1)
+    # trials_per_sub = [np.sum(df.subjid == subj) for subj in subjects]
+    # for i in range(len(trials_per_sub)):
+    #     ax3.plot(np.repeat(trials_per_sub[i], 14), shuffled_orig[i, :], color=colors[i],
+    #              linestyle='', marker='o')
+    # ax3.set_ylabel(r'$\chi^2_{shuffled} - \chi^2_{orig}$')
+    # ax3.set_xlabel('N trials')
+    # ax3.set_yscale('log')
+
+def supp_plot_chi2(df, df_sim, sv_folder):
+    fig, ax = plt.subplots(ncols=2)
+    fig.subplots_adjust(wspace=0.4, hspace=0.1, left=0.05, right=0.95, bottom=0.1)
+    ax = ax.flatten()
+    for a in ax:
+        rm_top_right_lines(a)
+    plot_chi2_shuffled_data(ax[0], df, df_sim, bhat=False, column='sound_len',
+                            sv_folder=sv_folder)
+    plot_chi2_shuffled_data(ax[1], df, df_sim, bhat=False, column='resp_len',
+                            sv_folder=sv_folder)
+    fig.savefig(sv_folder+'/supp_chi2.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_chi2.png', dpi=400, bbox_inches='tight')
+
 
 
 # def plot_rats_humans_model_mt(df, df_sim, pc_name, mt=True):
