@@ -44,15 +44,15 @@ from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 from utilsJ.Models import different_models as model_variations
 
-# DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
+DATA_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/data/'  # Alex
 # DATA_FOLDER = '/home/garciaduran/data/'  # Cluster Alex
 # DATA_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/data_clean/'  # Jordi
-DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
+# DATA_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/data/'  # Alex CRM
 
-# SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
+SV_FOLDER = 'C:/Users/alexg/Onedrive/Escritorio/CRM/'  # Alex
 # SV_FOLDER = '/home/garciaduran/opt_results/'  # Cluster Alex
 # SV_FOLDER = '/home/jordi/DATA/Documents/changes_of_mind/opt_results/' # Jordi
-SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
+# SV_FOLDER = 'C:/Users/agarcia/Desktop/CRM/Alex/paper/'  # Alex CRM
 
 BINS = np.arange(1, 320, 20)
 CTE = 1/2 * 1/600 * 1/995  # contaminants
@@ -857,9 +857,9 @@ def get_x0():
     p_w_a_intercept = 0.05
     p_w_a_slope = 2e-5
     p_a_bound = 2.6
-    p_1st_readout = 100
-    p_2nd_readout = 120
-    p_leak = 0.08
+    p_1st_readout = 200
+    p_2nd_readout = 170
+    p_leak = 0.05
     p_mt_noise = 9
     p_MT_intercept = 320
     p_MT_slope = 0.07
@@ -905,17 +905,17 @@ def get_lb():
     lb_aff = 3
     lb_eff = 3
     lb_t_a = 4
-    lb_w_zt = 0.05
-    lb_w_st = 0
-    lb_e_bound = 1.3
+    lb_w_zt = 1e-4
+    lb_w_st = 1e-4
+    lb_e_bound = 0.01
     lb_com_bound = 0
     lb_w_intercept = 0.01
     lb_w_slope = 1e-6
-    lb_a_bound = 0.1
+    lb_a_bound = 1
     lb_1st_r = 75
-    lb_2nd_r = 75
-    lb_leak = 0
-    lb_mt_n = 1
+    lb_2nd_r = 50
+    lb_leak = 1e-6
+    lb_mt_n = 5
     lb_mt_int = 120
     lb_mt_slope = 0.01
     return [lb_w_zt, lb_w_st, lb_e_bound, lb_com_bound, lb_aff,
@@ -944,9 +944,9 @@ def get_lb_human():
     lb_w_intercept = 0.01
     lb_w_slope = 1e-6
     lb_a_bound = 0.1
-    lb_1st_r = 25
-    lb_2nd_r = 25
-    lb_leak = 0
+    lb_1st_r = 75
+    lb_2nd_r = 75
+    lb_leak = 0.04
     lb_mt_n = 1
     lb_mt_int = 120
     lb_mt_slope = 0.01
@@ -968,20 +968,20 @@ def get_ub():
     """
     ub_aff = 12
     ub_eff = 12
-    ub_t_a = 22
+    ub_t_a = 24
     ub_w_zt = 1
-    ub_w_st = 0.18
+    ub_w_st = 0.8
     ub_e_bound = 4
-    ub_com_bound = 0.3
-    ub_w_intercept = 0.12
-    ub_w_slope = 1e-3
+    ub_com_bound = 1
+    ub_w_intercept = 0.1
+    ub_w_slope = 5e-5
     ub_a_bound = 4
     ub_1st_r = 500
     ub_2nd_r = 500
-    ub_leak = 0.1
-    ub_mt_n = 12
-    ub_mt_int = 370
-    ub_mt_slope = 0.6
+    ub_leak = 0.08
+    ub_mt_n = 10
+    ub_mt_int = 400
+    ub_mt_slope = 0.5
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
             ub_eff, ub_t_a, ub_w_intercept, ub_w_slope, ub_a_bound,
             ub_1st_r, ub_2nd_r, ub_leak, ub_mt_n,
@@ -1008,10 +1008,10 @@ def get_ub_human():
     ub_w_intercept = 0.12
     ub_w_slope = 1e-3
     ub_a_bound = 4
-    ub_1st_r = 400
-    ub_2nd_r = 400
+    ub_1st_r = 500
+    ub_2nd_r = 500
     ub_leak = 0.15
-    ub_mt_n = 20
+    ub_mt_n = 15
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -1030,11 +1030,11 @@ def get_pub():
         List with plausible upper bounds.
 
     """
-    pub_aff = 7
-    pub_eff = 7
-    pub_t_a = 12
+    pub_aff = 10
+    pub_eff = 10
+    pub_t_a = 18
     pub_w_zt = 0.8
-    pub_w_st = 0.14
+    pub_w_st = 0.5
     pub_e_bound = 3.5
     pub_com_bound = 0.15
     pub_w_intercept = 0.08
@@ -1043,7 +1043,7 @@ def get_pub():
     pub_1st_r = 400
     pub_2nd_r = 400
     pub_leak = 0.08
-    pub_mt_n = 11
+    pub_mt_n = 20
     pub_mt_int = 320
     pub_mt_slope = 0.12
     return [pub_w_zt, pub_w_st, pub_e_bound, pub_com_bound, pub_aff,
@@ -1064,9 +1064,9 @@ def get_plb():
     """
     plb_aff = 5
     plb_eff = 5
-    plb_t_a = 4
+    plb_t_a = 7
     plb_w_zt = 0.2
-    plb_w_st = 8e-3
+    plb_w_st = 0.04
     plb_e_bound = 1.6
     plb_com_bound = 1e-2
     plb_w_intercept = 0.03
@@ -1076,7 +1076,7 @@ def get_plb():
     plb_2nd_r = 90
     plb_leak = 0.05
     plb_mt_n = 8
-    plb_mt_int = 290
+    plb_mt_int = 260
     plb_mt_slope = 0.04
     return [plb_w_zt, plb_w_st, plb_e_bound, plb_com_bound, plb_aff,
             plb_eff, plb_t_a, plb_w_intercept, plb_w_slope, plb_a_bound,
@@ -1094,8 +1094,8 @@ def nonbox_constraints_bads(x):
     # cond4 = x[:,0] < 5e-2 # lb for prior
     cond6 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) < 8  # aff + eff < 40 ms
     cond7 = np.int32(x_1[:, 4]) + np.int32(x_1[:, 5]) > 16  # aff + eff > 80 ms
+    # cond8 = np.round(x[:, 6]) > 4
     return np.bool_(cond6 + cond7)  # cond1
-
 
 def gumbel_plotter():
     # fits = scipy.stats.gumbel_r.fit(df.resp_len.values*1000)
@@ -1254,10 +1254,12 @@ def opt_mnle(df, num_simulations, bads=True, training=False, extra_label=""):
         x0 = get_x0()
         print('Initial guess is: ' + str(x0))
         time_start = time.time()
-        lb = get_lb()
-        ub = get_ub()
+        lb = np.array(get_lb())
+        ub = np.array(get_ub())
         pub = get_pub()
         plb = get_plb()
+        plb = lb + (-lb+ub)/10
+        pub = ub - (-lb+ub)/10
         # get fixation break (FB) data
         data = prepare_fb_data(df=df)
         print('Optimizing')
@@ -2526,7 +2528,8 @@ def human_fitting(df, subject, sv_folder=SV_FOLDER,  num_simulations=int(10e6)):
     coh = df_data.avtrapz.values*5
     zt = df_data.norm_allpriors.values*3
     times = df_data.times.values
-    trial_index = np.arange(len(df_data)) + 1
+    # trial_index = np.arange(len(df_data)) + 1
+    trial_index = df_data.origidx.values
     motor_time = []
     for tr in range(len(choice)):
         ind_time = [True if t != '' else False for t in times[tr]]
@@ -2547,18 +2550,20 @@ def human_fitting(df, subject, sv_folder=SV_FOLDER,  num_simulations=int(10e6)):
     estimator = estimator['estimator']
     x0 = get_x0()
     print('Initial guess is: ' + str(x0))
-    lb = get_lb_human()
-    ub = get_ub_human()
+    lb = np.array(get_lb_human())
+    ub = np.array(get_ub_human())
     pub = get_pub()
     plb = get_plb()
+    plb = lb + (-lb+ub)/10
+    pub = ub - (-lb+ub)/10
     print('Optimizing')
     n_trials = len(data)
     # define fun_target as function to optimize
     # returns -LLH( data | parameters )
     fun_target = lambda x: fun_theta(x, data, estimator, n_trials)
     # define optimizer (BADS)
-    bads = BADS(fun_target, x0, lb, ub, plb, pub,
-                non_box_cons=nonbox_constraints_bads)
+    bads = BADS(fun_target, x0, lb, ub, plb, pub)
+    # non_box_cons=nonbox_constraints_bads)
     # optimization
     optimize_result = bads.optimize()
     print(optimize_result.total_time)
@@ -2574,7 +2579,7 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
-    human = False
+    human = True
     if not optimization_mnle:
         stim, zt, coh, gt, com, pright, trial_index =\
             get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
@@ -2738,8 +2743,14 @@ if __name__ == '__main__':
         else:
             df = get_human_data(user_id='alex')
             subjects = df.subjid.values
+            len_task = [len(df.loc[df.subjid == subject]) for subject in np.unique(subjects)]
+            trial_index = np.empty((0))
+            for j in range(len(len_task)):
+                trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
+            df['origidx'] = trial_index
             df['subjid'] = np.repeat('all', len(subjects))
             for subject in np.unique(df.subjid.unique()):
+                print('Fitting human subject ' + str(subject))
                 parameters = human_fitting(df=df, subject=subject,
                                            num_simulations=num_simulations)
                 print('--------------')
