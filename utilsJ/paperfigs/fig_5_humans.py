@@ -220,8 +220,8 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
     ax_mat[1].yaxis.set_ticks_position('none')
     for ax_i in [ax_mat[0], ax_mat[1]]:
         ax_i.set_xlabel('Prior evidence')
-        ax_i.set_xticks([0, 3, 6], ['-1', '0', '1'])
-    ax_mat[0].set_yticks([0, 3, 6], ['1', '0', '-1'])
+        ax_i.set_xticks([0, 3, 6], ['L', '0', 'R'])
+    ax_mat[0].set_yticks([0, 3, 6], ['R', '0', 'L'])
     ax_mat[1].set_yticks([0, 3, 6], ['']*3)
     ax_mat[0].set_ylabel('Stimulus evidence')
     # ax_mat[0].set_position([pos_ax_0.x0 + pos_ax_0.width/10, pos_ax_0.y0,
@@ -233,13 +233,14 @@ def plot_pcom_matrices_model(df_model, n_subjs, ax_mat, pos_ax_0, f, nbins=7,
     cbar_ax = f.add_axes([pos.x0+pos.width+margin/2, pos.y0+margin/6,
                       pos.width/15, pos.height/1.5])
     cbar = plt.colorbar(im, cax=cbar_ax)
-    cbar.set_label('p(detected CoM)', labelpad=12)
+    cbar_ax.set_title('       p(reversal)', fontsize=9)
 
 
 def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, marginy,
                                       new_data, save_new_data, data_folder):
-    ax_cohs = np.array([ax[9], ax[10], ax[8]])
-    ax_zt = np.array([ax[5], ax[6], ax[4]])
+    fig2, ax2 = plt.subplots(1)
+    ax_cohs = np.array([ax[5], ax2, ax[4]])
+    ax_zt = np.array([ax[3], ax2, ax[2]])
 
     ax_inset = fp.add_inset(ax=ax_cohs[1], inset_sz=inset_sz, fgsz=fgsz,
                          marginx=marginx, marginy=marginy, right=True)
@@ -252,15 +253,16 @@ def plot_trajs_cond_on_prior_and_stim(df_sim, ax, inset_sz, fgsz, marginx, margi
         traj_cond_coh_simul(df_sim=df_sim[df_sim.special_trial == 2], ax=ax_zt,
                             new_data=new_data, data_folder=data_folder,
                             save_new_data=save_new_data,
-                            median=False, prior=True, rt_lim=300)
+                            median=True, prior=True, rt_lim=300)
     else:
         print('No silent trials')
         traj_cond_coh_simul(df_sim=df_sim, ax=ax_zt, new_data=new_data,
                             save_new_data=save_new_data,
-                            data_folder=data_folder, median=False, prior=True)
-    # traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=False, prior=False,
-    #                     save_new_data=save_new_data,
-    #                     new_data=new_data, data_folder=data_folder, prior_lim=10)
+                            data_folder=data_folder, median=True, prior=True)
+    traj_cond_coh_simul(df_sim=df_sim, ax=ax_cohs, median=True, prior=False,
+                        save_new_data=save_new_data,
+                        new_data=new_data, data_folder=data_folder, prior_lim=10)
+    plt.close(fig2)
 
 
 def mean_com_traj_simul(df_sim, data_folder, new_data, save_new_data, ax):
@@ -445,22 +447,23 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
                     if sum(vals_traj) == 0:
                         continue
                     vals_traj = np.concatenate((vals_traj,
-                                                np.repeat(600, max_mt-len(vals_traj))))
-                    vals_vel = df_sim.traj_d1[index].values[tr] *\
-                        (signed_response[index][tr]*2 - 1)
+                                                np.repeat(np.max(np.abs(vals_traj)),
+                                                          max_mt-len(vals_traj))))
+                    # vals_vel = np.diff(vals_traj) *\
+                    #     (signed_response[index][tr]*2 - 1)
                     vals_vel = np.diff(vals_traj)
                     traj_all[tr, :len(vals_traj)] = vals_traj
                     vel_all[tr, :len(vals_vel)] = vals_vel
-                try:
-                    index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
-                                          > traj_all.shape[0] - 50)[0][0]
-                    mean_traj = func_final(traj_all[:, :index_vel], axis=0)
-                    std_traj = np.nanstd(traj_all[:, :index_vel],
-                                          axis=0) / np.sqrt(len(subjects.unique()))
-                except Exception:
-                    mean_traj = func_final(traj_all, axis=0)
-                    std_traj = np.nanstd(traj_all, axis=0) /\
-                        np.sqrt(len(subjects.unique()))
+                # try:
+                #     index_vel = np.where(np.sum(np.isnan(traj_all), axis=0)
+                #                           > traj_all.shape[0] - 50)[0][0]
+                #     mean_traj = func_final(traj_all[:, :index_vel], axis=0)
+                #     std_traj = np.nanstd(traj_all[:, :index_vel],
+                #                           axis=0) / np.sqrt(len(subjects.unique()))
+                # except Exception:
+                mean_traj = func_final(traj_all, axis=0)
+                std_traj = np.nanstd(traj_all, axis=0) /\
+                    np.sqrt(len(subjects.unique()))
                 val_traj = np.mean(df_sim['resp_len'].values[index])*1e3
                 vals_thr_traj.append(val_traj)
                 mean_vel = func_final(vel_all, axis=0)
@@ -497,13 +500,14 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
             xval = xvals_zt[i_ev]
         else:
             xval = ev
-        ax[2].errorbar(xval, val_traj, std_mt, color=colormap[i_ev], marker='o')
-        ax[3].errorbar(xval, val_vel, std_vel_points, color=colormap[i_ev],
-                       marker='o')
         if not prior:
             label = labels_coh[i_ev]
         if prior:
             label = labels_zt[i_ev]
+        ax[2].plot(xval, val_traj, color=colormap[i_ev], marker='o',
+                   linestyle='', label=label, markersize=4, zorder=10)
+        ax[3].errorbar(xval, val_vel, std_vel_points, color=colormap[i_ev],
+                       marker='o')
         ax[0].plot(np.arange(len(mean_traj)), mean_traj, label=label,
                    color=colormap[i_ev])
         ax[0].fill_between(x=np.arange(len(mean_traj)),
@@ -523,7 +527,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if prior:
         leg_title = 'Prior'
         ax[2].plot(xvals_zt, np.nanmean(val_traj_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
+                   color='k', linestyle='--', alpha=0.6, zorder=0)
         ax[3].plot(xvals_zt, np.nanmean(val_vel_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
         ax[2].set_xlabel('Prior')
@@ -531,13 +535,14 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
     if not prior:
         leg_title = 'Stimulus'
         ax[2].plot(bins_coh, np.nanmean(val_traj_subs, axis=1),
-                   color='k', linestyle='--', alpha=0.6)
+                   color='k', linestyle='--', alpha=0.6, zorder=0)
         ax[3].plot(bins_coh,  np.nanmean(val_vel_subs, axis=1),
                    color='k', linestyle='--', alpha=0.6)
         ax[2].set_xlabel('Stimulus')
         ax[3].set_xlabel('Stimulus')
-    ax[0].legend(title=leg_title, labelspacing=0.15,
-                 loc='center left', bbox_to_anchor=(0.7, 0.45))
+    ax[2].legend(title=leg_title, labelspacing=0.15,
+                 loc='center left', bbox_to_anchor=(0.7, 0.65),
+                 frameon=False)
     ax[0].set_ylabel('Position')
     ax[0].set_xlabel('Time from movement onset (ms)')
     # ax[0].set_title('Mean trajectory', fontsize=10)
@@ -571,7 +576,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     df_tachos['subjid'] = 1
     # rtbins = np.quantile(df_tachos.sound_len.values, quants)
     tachometric(df=df_tachos, ax=ax[1], fill_error=True, cmap='gist_yarg',
-                labels=labels, rtbins=rtbins, evidence='coh2')
+                labels=labels, rtbins=rtbins, evidence='coh2',
+                evidence_bins=[0, 0.25, 0.5, 1])
     del df_tachos
     colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
     legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
@@ -595,8 +601,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
     # PCoM vs RT
     plot_com_vs_rt_f5(df_plot_pcom=df_plot_pcom, ax=ax[-1], ax2=ax[-1])
     # slowing in MT
-    # fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=150,
-    #                       human=True)
+    fig_1.plot_mt_vs_stim(df=df_sim, ax=ax[3], prior_min=0.8, rt_max=150,
+                          human=True)
     # P(right) matrix
     plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
                       decision_model=decision_model, subjid=subjid, coh=coh,
@@ -625,10 +631,10 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                                       inset_sz=inset_sz, data_folder=data_folder,
                                       fgsz=fgsz, marginx=marginx, marginy=marginy)
     # plot splitting time vs RT
-    # fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
-    #                            data_folder=data_folder, ax=ax[7], collapse_sides=True,
-    #                            threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
-    #                            connect_points=True, trajectory="trajectory_y")
+    fig_2.trajs_splitting_stim(df_sim.loc[df_sim.special_trial == 0],
+                                data_folder=data_folder, ax=ax[7], collapse_sides=True,
+                                threshold=500, sim=True, rtbins=np.linspace(0, 150, 16),
+                                connect_points=True, trajectory="trajectory_y")
     # plot mean com traj
     
     if len(df_sim.subjid.unique()) > 1:
@@ -637,8 +643,8 @@ def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
         subject = df_sim.subjid.unique()[0]
     fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
-    # mean_com_traj_simul(df_sim, ax=ax[11], data_folder=data_folder, new_data=new_data,
-    #                     save_new_data=save_new_data)
+    mean_com_traj_simul(df_sim, ax=ax[11], data_folder=data_folder, new_data=new_data,
+                        save_new_data=save_new_data)
     fig.savefig(sv_folder+subject+'/fig5h.png', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+subject+'/fig5h.svg', dpi=400, bbox_inches='tight')
 
@@ -660,3 +666,85 @@ def supp_model_trial_index(df_sim):
     fig_1.plot_mt_weights_rt_bins(df=df_sim, ax=ax[3])
     fig_1.mt_weights(df=df_sim, ax=ax[1], plot=True, t_index_w=True,
                      means_errs=False)
+
+
+def supp_model_human(df_sim, data_folder, sv_folder):
+    """
+    p(right) matrix, tachometrics
+    MT vs stim, trajs stim
+    MT vs prior, trajs prior
+    p(CoM) matrices
+    """
+    df_sim = df_sim.copy().loc[df_sim.sound_len >= 0]
+    fgsz = (7, 11)
+    fig, ax = plt.subplots(ncols=2, nrows=4, figsize=fgsz)
+    plt.subplots_adjust(top=0.95, bottom=0.06, left=0.09, right=0.95,
+                        hspace=0.4, wspace=0.5)
+    ax = ax.flatten()
+    labs = ['a', 'b', 'c', '', 'd', '', 'e', '']
+    for n, a in enumerate(ax):
+        fp.rm_top_right_lines(a)
+        a.text(-0.1, 1.2, labs[n], transform=a.transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
+    # p(right)
+    sound_len_model = df_sim.sound_len.values
+    decision_model = df_sim.R_response.values*2-1
+    subjid = df_sim.subjid.values
+    coh = df_sim.coh2.values
+    zt_model = df_sim.norm_allpriors.values
+    plot_pright_model(df_sim=df_sim, sound_len_model=sound_len_model,
+                      decision_model=decision_model, subjid=subjid, coh=coh,
+                      zt_model=zt_model, ax=ax[0])
+    # Tachometrics
+    rtbins=np.linspace(0, 300, num=12)
+    labels = ['0', '0.25', '0.5', '1']
+    df_tachos = df_sim.copy()
+    df_tachos['subjid'] = 1
+    # rtbins = np.quantile(df_tachos.sound_len.values, quants)
+    tachometric(df=df_tachos, ax=ax[1], fill_error=True, cmap='gist_yarg',
+                labels=labels, rtbins=rtbins, evidence='coh2',
+                evidence_bins=[0, 0.25, 0.5, 1])
+    del df_tachos
+    colormap = pl.cm.gist_gray_r(np.linspace(0.4, 1, 4))
+    legendelements = [Line2D([0], [0], color=colormap[3], lw=2,
+                             label='1'),
+                      Line2D([0], [0], color=colormap[2], lw=2,
+                             label='0.5'),
+                      Line2D([0], [0], color=colormap[1], lw=2,
+                             label='0.25'),
+                      Line2D([0], [0], color=colormap[0], lw=2,
+                             label='0')]
+    ax[1].legend(handles=legendelements, fontsize=8, loc='center left',
+                 bbox_to_anchor=(0.96, 0.5), title='Stimulus')
+    ax[1].set_xlabel('Reaction time (ms)')
+    ax[1].set_ylabel('Accuracy')
+    # MT/trajs
+    # plot trajs and MT conditioned on stim/prior
+    inset_sz=.06
+    marginx=-0.02
+    marginy=0.08
+    plot_trajs_cond_on_prior_and_stim(df_sim=df_sim, ax=ax, new_data=True,
+                                      save_new_data=True,
+                                      inset_sz=inset_sz, data_folder=data_folder,
+                                      fgsz=fgsz, marginx=marginx, marginy=marginy)
+    # matrices
+    com_model_detected = df_sim.com_detected.values
+    df_model = pd.DataFrame({'avtrapz': coh[sound_len_model >= 0],
+                             'CoM_sugg': com_model_detected,
+                             'norm_allpriors': zt_model/max(abs(zt_model)),
+                             'R_response': (decision_model+1)/2, 'subjid': subjid})
+    df_model = df_model.loc[~df_model.norm_allpriors.isna()]
+    nbins = 7
+    # plot Pcoms matrices
+    ax_mat = [ax[6], ax[7]]
+    pos_ax_0 = ax[6].get_position()
+    n_subjs = len(df_sim.subjid.unique())
+    # PCoM matrices
+    plot_pcom_matrices_model(df_model=df_model, n_subjs=n_subjs,
+                             ax_mat=ax_mat, pos_ax_0=pos_ax_0, nbins=nbins,
+                             f=fig)
+    fig.savefig(sv_folder+'/fig5h.png', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/fig5h.svg', dpi=400, bbox_inches='tight')
+    
+    
+        
