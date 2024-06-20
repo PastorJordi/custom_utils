@@ -40,6 +40,7 @@ import utilsJ.Models.dirichletMultinomialEstimation as dme
 from skimage.transform import resize
 from scipy.special import rel_entr
 from utilsJ.paperfigs import figure_1 as fig1
+from utilsJ.paperfigs import figure_6 as fig_6
 from utilsJ.paperfigs import figures_paper as fp
 from utilsJ.Models import analyses_humans as ah
 from utilsJ.Models import different_models as model_variations
@@ -946,7 +947,7 @@ def get_lb_human():
     lb_a_bound = 0.1
     lb_1st_r = 75
     lb_2nd_r = 75
-    lb_leak = 0.04
+    lb_leak = 0.
     lb_mt_n = 1
     lb_mt_int = 120
     lb_mt_slope = 0.01
@@ -1011,7 +1012,7 @@ def get_ub_human():
     ub_1st_r = 500
     ub_2nd_r = 500
     ub_leak = 0.15
-    ub_mt_n = 15
+    ub_mt_n = 20
     ub_mt_int = 370
     ub_mt_slope = 0.6
     return [ub_w_zt, ub_w_st, ub_e_bound, ub_com_bound, ub_aff,
@@ -1289,6 +1290,22 @@ def opt_mnle(df, num_simulations, bads=True, training=False, extra_label=""):
         return mnle_samples
     # at this point, we should re-simulate the model with all trials
     # and compare distros
+
+
+def create_parameters_prt(sv_folder=SV_FOLDER, n_sims=50):
+    ub = np.array(get_ub())
+    lb = np.array(get_lb())
+    plb = lb + (-lb+ub)/10
+    pub = ub - (-lb+ub)/10
+    for i in range(n_sims):
+        pars = []
+        for j in range(len(lb)):
+            par = np.random.uniform(low=plb[j], high=pub[j])
+            pars.append(par)
+        pars = np.array(pars)
+        path = sv_folder + '/virt_params/parameters_MNLE_BADS_prt_n50_prt_' + str(i) + '.npy'
+        np.save(path, pars)
+        
 
 
 def parameter_recovery_test_data_frames(df, subjects, extra_label=''):
@@ -2579,7 +2596,7 @@ if __name__ == '__main__':
     plotting = False
     plot_rms_llk = False
     single_run = False
-    human = True
+    human = False
     if not optimization_mnle:
         stim, zt, coh, gt, com, pright, trial_index =\
             get_data(dfpath=DATA_FOLDER + 'LE43', after_correct=True,
@@ -2673,9 +2690,9 @@ if __name__ == '__main__':
             subjects = ['LE42', 'LE43', 'LE38', 'LE39', 'LE85', 'LE84', 'LE45',
                         'LE40', 'LE46', 'LE86', 'LE47', 'LE37', 'LE41', 'LE36',
                         'LE44']
-            # subjects = ['LE43']  # to run only once and train
+            subjects = ['LE42']  # to run only once and train
             training = False
-            param_recovery_test = False
+            param_recovery_test = True
             if param_recovery_test:
                 n_samples = 50
                 subjects = ['LE42' for _ in range(n_samples)]
@@ -2748,7 +2765,10 @@ if __name__ == '__main__':
             for j in range(len(len_task)):
                 trial_index = np.concatenate((trial_index, np.arange(len_task[j])+1))
             df['origidx'] = trial_index
-            df['subjid'] = np.repeat('all', len(subjects))
+            minimum_accuracy = 0.7  # 70%
+            max_median_mt = 400  # ms
+            df_data = fig_6.acc_filt(df, acc_min=minimum_accuracy, mt_max=max_median_mt)
+            # df['subjid'] = np.repeat('all', len(subjects))
             for subject in np.unique(df.subjid.unique()):
                 print('Fitting human subject ' + str(subject))
                 parameters = human_fitting(df=df, subject=subject,
