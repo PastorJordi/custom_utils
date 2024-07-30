@@ -244,12 +244,13 @@ def human_trajs_cond(congruent_coh, decision, trajs, prior, bins, times, ax,
         #                    y1=mean_traj[yvals <= max_px]-std_traj[yvals <= max_px],
         #                    y2=mean_traj[yvals <= max_px]+std_traj[yvals <= max_px],
         #                    color=colormap[i_ev])
-    x_vals = bins[:-1] + np.diff(bins)/2 if condition == 'prior' else ev_vals
-    pval = pearsonr(x_vals, mov_time_list).pvalue
+    x_vals = np.arange(5) if condition == 'prior' else ev_vals
+    # bins[:-1] + np.diff(bins)/2
+    # pval = pearsonr(x_vals, mov_time_list).pvalue
     # print(pearsonr(x_vals, mov_time_list).statistic)
     # print(pearsonr(x_vals, mov_time_list).statistic**2)
-    lab = f'p={pval:.2e}'
-    ax[1].text(0.8, 250, lab)
+    # lab = f'p={pval:.2e}'
+    # ax[1].text(0.8, 250, lab)
     ax[1].plot(x_vals, mov_time_list, ls='-', lw=0.5, color='k')
     # ax[0].axhline(600, color='k', linestyle='--', alpha=0.4)
     ax[0].set_xlim(-0.1, 490)
@@ -667,10 +668,12 @@ def fig_6_humans(user_id, human_task_img, sv_folder, nm='300',
     max_median_mt = 400  # ms
     df_data = acc_filt(df_data, acc_min=minimum_accuracy, mt_max=max_median_mt)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
+    df_data.loc[df_data.subjid == 9, 'subjid'] = 8  # one subject did two sessions of 1h
     print(len(df_data.subjid.unique()))
     print(df_data.subjid.unique())
+    print([len(df_data.loc[df_data.subjid == sub])
+           for sub in df_data.subjid.unique()])
     # create figure
-    ah.psycho_curves_rep_alt(df_data)
     fig, ax = plt.subplots(nrows=4, ncols=4, figsize=fgsz)
     ax = ax.flatten()
     plt.subplots_adjust(top=0.95, bottom=0.09, left=0.09, right=0.95,
@@ -794,6 +797,20 @@ def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
                                subjects=subj, steps=steps, name=nm,
                                sv_folder=sv_folder)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
+    norm_allpriors = np.empty((0,))
+    subs = df_data.subjid.unique()
+    for subj in subs:
+        df_1 = df_data.loc[df_data.subjid == subj]
+        zt_tmp = df_1.norm_allpriors.values
+        norm_allpriors = np.concatenate((norm_allpriors,
+                                         zt_tmp/np.nanmax(abs(zt_tmp))))
+    df_data['norm_allpriors'] = norm_allpriors
+    # idx = (df_data.subjid != 5) & (df_data.subjid != 6)  # & (df_data.subjid != 12)
+    # df_data = df_data.loc[idx]
+    minimum_accuracy = 0.7  # 70%
+    max_median_mt = 400  # ms
+    df_data = acc_filt(df_data, acc_min=minimum_accuracy, mt_max=max_median_mt)
+    df_data.loc[df_data.subjid == 9, 'subjid'] = 8
     com_list = df_data.CoM_sugg
     reaction_time = df_data.sound_len
     ev = df_data.avtrapz
@@ -807,7 +824,7 @@ def supp_pcom_rt(user_id, sv_folder, ax, nm='300'):
                  errorbar_kw={'marker': 'o', 'color': 'k'})
     ax.set_xlabel('Reaction time (ms)')
     ax.set_ylabel('p(reversal)')
-    ax.set_ylim(0, 0.12)
+    ax.set_ylim(0, 0.16)
     ax.get_legend().remove()
     return df_data
 
@@ -846,10 +863,10 @@ def plot_trans_lat_weights(decays_all_ac, decays_all_ae, ax):
                  'fntsz': 10, 'color_ae': (0, 0, 0), 'lstyle_ac': '-',
                  'lstyle_ae': '-', 'marker': ''}
     # plot_opts.update(kwargs)
-    decays_ac = decays_all_ac[0]
-    decays_ac_lat = decays_all_ac[1]
-    decays_ae = decays_all_ae[0]
-    decays_ae_lat = decays_all_ae[1]
+    decays_ac = np.delete(decays_all_ac[0], 9, axis=0)
+    decays_ac_lat = np.delete(decays_all_ac[1], 9, axis=0)
+    decays_ae = np.delete(decays_all_ae[0], 9, axis=0)
+    decays_ae_lat = np.delete(decays_all_ae[1], 9, axis=0)
     fntsz = plot_opts['fntsz']
     del plot_opts['fntsz']
     ax[0].set_ylabel('T++ weight', fontsize=fntsz)
@@ -937,6 +954,7 @@ def supp_plot_weights_linear_reg(user_id, sv_folder, ax, nm='300'):
     max_median_mt = 400  # ms
     df_data = acc_filt(df_data, acc_min=minimum_accuracy, mt_max=max_median_mt)
     df_data.avtrapz /= max(abs(df_data.avtrapz))
+    df_data.loc[df_data.subjid == 9, 'subjid'] = 8
     df_data_2 = df_data.copy()
     df_data_2['resp_len'] = fp.get_human_mt(df_data_2)
     df_data_2['coh2'] = df_data_2.avtrapz
@@ -967,6 +985,7 @@ def supp_human_behavior(user_id, sv_folder):
                            [decays_ae, decays_ae_lat],
                            [ax[1], ax[2]])
     df_data = supp_pcom_rt(user_id='alex', sv_folder=sv_folder, ax=ax[3])
+    df_data.loc[df_data.subjid == 9, 'subjid'] = 8
     ah.psycho_curves_rep_alt(df_data, ax[0])
     supp_plot_weights_linear_reg(user_id, sv_folder, ax=ax[4], nm='300')
     fig.savefig(sv_folder+'supp_human.svg', dpi=400, bbox_inches='tight')
