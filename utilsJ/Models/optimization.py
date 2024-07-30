@@ -401,16 +401,11 @@ def simulation(stim, zt, coh, trial_index, gt, com, pright, p_w_zt,
     data_augment_factor = 10
     if isinstance(coh, np.ndarray):
         num_tr = stim.shape[1]
-        indx_sh = np.arange(len(zt))
-        np.random.shuffle(indx_sh)
-        stim = stim[:, indx_sh]
-        zt = zt[indx_sh]
-        coh = coh[indx_sh]
         # num_tr = 5
         stim = stim[:, :int(num_tr)]
         zt = zt[:int(num_tr)]
         coh = coh[:int(num_tr)]
-        com = com[:int(num_tr)]
+        # com = com[:int(num_tr)]
         trial_index = trial_index[:int(num_tr)]
         stim = data_augmentation(stim=stim, daf=data_augment_factor)
         stim_temp = np.concatenate((stim, np.zeros((int(p_t_aff+p_t_eff),

@@ -200,9 +200,9 @@ if f1:
 if f2:
     print('Plotting Figure 2')
     
-    # fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
-    #                   sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
-    #                   st_cartoon_img=ST_CARTOON_IMG)
+    fig_2.fig_2_trajs(df=df.loc[df.soundrfail == 0], data_folder=DATA_FOLDER,
+                      sv_folder=SV_FOLDER, rat_nocom_img=RAT_noCOM_IMG,
+                      st_cartoon_img=ST_CARTOON_IMG)
     # fig_2.splitting_time_frames_ttest_across(df, frame_len=50, rtbins=np.linspace(0, 150, 7),
     #                                          trajectory="trajectory_y", pval=0.05,
     #                                          max_MT=400)
@@ -365,9 +365,7 @@ if f5 or f7:
         #                   coh=coh, sound_len=sound_len, zt=zt,
         #                   hit_model=hit_model, sound_len_model=reaction_time.astype(int),
         #                   decision_model=resp_fin, com=com, com_model=com_model,
-        #                   com_model_detected=com_model_detected,
-        #                   means=means, errors=errors, means_model=means_model,
-        #                   errors_model=errors_model, df_sim=df_sim, extra_label=extra_label)
+        #                   com_model_detected=com_model_detected, df_sim=df_sim, extra_label=extra_label)
     if f7:
         # index to filter by stim/silent for p(com) vs p(proac) supp figure
         # idx = df.special_trial.values >= 0

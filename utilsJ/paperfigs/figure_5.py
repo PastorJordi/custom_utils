@@ -791,7 +791,7 @@ def traj_cond_coh_simul(df_sim, data_folder, new_data, save_new_data,
 def fig_5_model(sv_folder, data_folder, new_data, save_new_data,
                 coh, sound_len, hit_model, sound_len_model, zt,
                 decision_model, com, com_model, com_model_detected,
-                df_sim, means, errors, means_model, errors_model, inset_sz=.06,
+                df_sim, inset_sz=.06,
                 marginx=-0.02, marginy=0.08, fgsz=(13, 12),
                 extra_label=''):
     fig, ax, ax_inset, pos_ax_0 = create_figure_5_model(fgsz=fgsz)
