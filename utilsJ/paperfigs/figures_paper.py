@@ -950,7 +950,7 @@ def supp_parameter_analysis(stim, zt, coh, gt, trial_index, subjects,
     # params_to_explore = [[9]] + [np.round(np.logspace(0, 3, 11), 2)]
     # plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
     #                                      subjid, params_to_explore, ax=ax[2])
-    params_to_explore = [[9]] + [np.round(np.linspace(1, 14, 14), 2)]
+    params_to_explore = [[9]] + [np.round(np.linspace(0.1, 5, 11), 2)]
     plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
                        subjid, params_to_explore, ax=ax[3],
                        param_title=r'$\theta_{AI}$', idx=idx)
@@ -1048,6 +1048,8 @@ def plot_pcom_vs_param(stim, zt, coh, gt, trial_index, subjects,
 def plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
                        subjid, params_to_explore, ax=None,
                        param_title=r'$\theta_{AI}$', idx=None):
+    if ax is None:
+        fig, ax = plt.subplots(1)
     rm_top_right_lines(ax)
     ax.set_ylabel('P(CoM)')
     ax.set_xlabel('P(proactive)')
@@ -1062,7 +1064,7 @@ def plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
     colormap = pl.cm.magma(np.linspace(0., 0.9, len(params_to_explore[1])))
     for ind in range(len(params_to_explore[1])):
         param_value = params_to_explore[1][ind]        
-        param_iter = str(param_ind)+'_'+str(param_value)
+        param_iter = str(param_ind)+'_'+str(param_value)+'_v2'
         hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
             pro_vs_re, trajs, x_val_at_updt =\
                 run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
@@ -1105,9 +1107,10 @@ def plot_pcom_vs_proac(stim, zt, coh, gt, trial_index, subjects,
                         aspect=12)
     cbar.ax.set_title(r'$\theta_{AI}$')
     ax.set_xticks([0, 0.4, 0.8])
-    ind = np.where(params_to_explore[1] == 2)[0][0]
-    ax.arrow(proac[ind]-0.16, com_all[ind], 0.1, 0, color='k', head_width=0.015)
-    ax.text(proac[ind]-0.28, com_all[ind], r'$\theta_{AI}^*$')
+    ind = np.where(np.round(params_to_explore[1], 3) == 1.08)[0][0]
+    ax.arrow(proac[ind]-0.075, com_all[ind], 0.045, 0, color='k', head_width=0.001,
+             width=0.0001, head_length=0.015)
+    ax.text(proac[ind]-0.12, com_all[ind], r'$\theta_{AI}^*$')
 
 
 def plot_mt_vs_coh_changing_action_bound(stim, zt, coh, gt, trial_index, subjects,
@@ -1179,7 +1182,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
     param_eff = params_to_explore_eff[0][0]
     colormap = pl.cm.BrBG(np.linspace(0.1, 1, len(params_to_explore_eff[1])))
     subject = str(np.unique(subjid)[0])
-    sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_splitting_matrix_params_2_5ms_bin.npy'
+    sim_data = DATA_FOLDER + subject + '/sim_data/' + subject + '_splitting_matrix_params_2_5ms_bin_final.npy'
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(sim_data), exist_ok=True)
     if os.path.exists(sim_data):
@@ -1193,7 +1196,7 @@ def change_params_exploration_and_plot(stim, zt, coh, gt, trial_index, subjects,
             aff_value = params_to_explore_aff[1][ind_aff]
             for ind_eff in range(len(params_to_explore_eff[1])):
                 eff_value = params_to_explore_aff[1][ind_eff]
-                param_iter = str(param_aff)+'_'+str(aff_value)+'_'+str(param_eff)+'_'+str(eff_value)+'_res_1ms'
+                param_iter = str(param_aff)+'_'+str(aff_value)+'_'+str(param_eff)+'_'+str(eff_value)+'_res_1_ms'
                 hit_model, reaction_time, com_model_detected, resp_fin, com_model,\
                     _, trajs, x_val_at_updt =\
                         run_simulation_different_subjs(stim=stim, zt=zt, coh=coh, gt=gt,
@@ -1628,19 +1631,28 @@ def mt_vs_stim_cong(df, rtbins=np.linspace(0, 80, 9), matrix=False, vigor=True,
     ax.set_title(title)
 
 
-def supp_parameter_recovery_test(margin=.6):
+def supp_parameter_recovery_test(margin=.6, n_sims=100):
     fig, ax = plt.subplots(4, 4, figsize=(14, 12))
     ax = ax.flatten()
+    ax[0].text(-0.2, 1.26, 'a', transform=ax[0].transAxes, fontsize=16,
+               fontweight='bold', va='top', ha='right')
     plot_param_recovery_test(fig, ax,
-            subjects=['Virtual_rat_random_params' for _ in range(50)],
+            subjects=['Virtual_rat_random_params' for _ in range(n_sims)],
             sv_folder=SV_FOLDER, corr=True)
     pos = ax[12].get_position()
-    cbar_ax = fig.add_axes([pos.x0+pos.width/2, pos.y0-pos.height-margin,
-                            pos.width*5, pos.height*4])
-    plot_corr_matrix_prt(cbar_ax,
-            subjects=['Virtual_rat_random_params' for _ in range(50)],
+    cbar_ax = fig.add_axes([pos.x0+pos.width/1.3, pos.y0-pos.height-margin/1.8,
+                            pos.width*2.5, pos.height*2.5])
+    cbar_ax.text(-0.06, 1.09, 'b', transform=cbar_ax.transAxes, fontsize=16,
+                 fontweight='bold', va='top', ha='right')
+    cbar_ax_2 = fig.add_axes([pos.x0+pos.width*3.5, pos.y0-pos.height-margin/1.8,
+                              pos.width*2.5, pos.height*2.5])
+    cbar_ax_2.text(-0.06, 1.09, 'c', transform=cbar_ax_2.transAxes, fontsize=16,
+                   fontweight='bold', va='top', ha='right')
+    plot_corr_matrix_prt(cbar_ax_2, cbar_ax,
+            subjects=['Virtual_rat_random_params' for _ in range(n_sims)],
             sv_folder=SV_FOLDER)
     fig.savefig(SV_FOLDER + 'supp_prt.png', dpi=500, bbox_inches='tight')
+    fig.savefig(SV_FOLDER + 'supp_prt.svg', dpi=500, bbox_inches='tight')
 
 
 def supp_com_threshold_matrices(df):
@@ -1923,7 +1935,7 @@ def supp_plot_params_all_subs(subjects, sv_folder=SV_FOLDER, diff_col=False):
     fig.savefig(sv_folder+'/supp_params_distro.png', dpi=400, bbox_inches='tight')
 
 
-def plot_corr_matrix_prt(ax,
+def plot_corr_matrix_prt(ax, ax2,
         subjects=['Virtual_rat_random_params' for _ in range(50)],
         sv_folder=SV_FOLDER):
     labels = [r'Prior weight, $z_P$', r'Stimulus drift, $a_P$',
@@ -1938,6 +1950,18 @@ def plot_corr_matrix_prt(ax,
               r'DV weight update, $\beta_u$', r'Leak, $\lambda$',
               r'MT noise variance, $\sigma_{MT}$',
               r'MT offset, $\beta_0$', r'MT slope, $\beta_{TI}$']
+    labels_reduced = [r'$z_P$', r'$a_P$',
+                      r'$\theta_{DV}$',
+                      r'$\theta_{COM}$',
+                      r'$t_{aff}$', r'$t_{eff}$',
+                      r'$t_{AI}$',
+                      r'$v_{AI}$',
+                      r'$w_{AI}$',
+                      r'$\theta_{AI}$',
+                      r'$\beta_{DV}$',
+                      r'$\beta_u$', r'$\lambda$',
+                      r'$\sigma_{MT}$',
+                      r'$\beta_0$', r'$\beta_{TI}$']
     conf_mat = np.empty((len(labels), len(subjects)))
     conf_mat_rec = np.empty((len(labels), len(subjects)))
     for i_s, subject in enumerate(subjects):
@@ -1954,13 +1978,22 @@ def plot_corr_matrix_prt(ax,
     for i in range(len(labels)):
         for j in range(len(labels)):
             corr_mat[i, j] = np.corrcoef(conf_mat[i, :], conf_mat_rec[j, :])[1][0]
-    im = ax.imshow(corr_mat.T, cmap='coolwarm', vmin=-1, vmax=1)
+    im = ax.imshow(corr_mat.T, cmap='bwr', vmin=-1, vmax=1)
     plt.colorbar(im, ax=ax, label='Correlation')
     ax.set_xticks(np.arange(16), labels, rotation='270', fontsize=12)
-    ax.set_yticks(np.arange(16), labels, fontsize=12)
-    ax.set_ylabel('Inferred parameters', fontsize=14)
+    ax.set_yticks(np.arange(16), labels_reduced, fontsize=12)
     ax.set_xlabel('Original parameters', fontsize=14)
-
+    mat_corr = np.corrcoef(conf_mat_rec, rowvar=True)
+    mat_corr *= np.tri(*mat_corr.shape, k=-1)
+    im = ax2.imshow(mat_corr,
+                    cmap='bwr', vmin=-1, vmax=1)
+    ax2.step(np.arange(0, 17)-0.5, np.arange(0, 17)-0.5, color='k',
+             linewidth=.7)
+    rm_top_right_lines(ax2)
+    ax2.set_xticks(np.arange(16), labels, rotation='270', fontsize=12)
+    ax2.set_yticks(np.arange(16), labels, fontsize=12)
+    ax2.set_xlabel('Inferred parameters', fontsize=14)
+    ax2.set_ylabel('Inferred parameters', fontsize=14)
 
 
 def plot_param_recovery_test(fig, ax,
@@ -2005,7 +2038,7 @@ def plot_param_recovery_test(fig, ax,
         # min_val = min(conf_mat_rec[i, :])
         # min_val_rec = min(conf_mat[i, :])
         min_total = 0
-        ax[i].set_title(labels[i])
+        ax[i].set_title(labels[i], pad=12)
         if i == 4 or i == 5 or i == 6:
             ax[i].plot(conf_mat[i, :]*5, conf_mat_rec[i, :]*5,
                        marker='o', color='k', linestyle='')
@@ -2059,18 +2092,46 @@ def plot_param_recovery_test(fig, ax,
     # plt.figure()
     # sns.violinplot(mlist, inner='point')
     # fig2, ax2 = plt.subplots(1)
-    # t_aff_t_eff = (conf_mat[4, :] + conf_mat[5, :])*5
-    # t_aff_t_eff_rec = (conf_mat_rec[4, :] + conf_mat_rec[5, :])*5
+    # t_aff_t_eff = (conf_mat[5, :] + conf_mat[4, :])*5
+    # t_aff_t_eff_rec = (conf_mat_rec[5, :] + conf_mat_rec[4, :])*5
     # ax2.set_title(linregress(t_aff_t_eff, t_aff_t_eff_rec).rvalue)
     # ax2.plot(t_aff_t_eff_rec, t_aff_t_eff,
-    #          marker='o', color='k', linestyle='')
-    # ax2.set_xlabel('t_aff + t_eff, original')
-    # ax2.set_ylabel('t_aff + t_eff, recovered')
+    #           marker='o', color='k', linestyle='')
+    # ax2.set_xlabel('t_eff + t_AI, original')
+    # ax2.set_ylabel('t_eff + t_AI, recovered')
     # min_total = 0
     # max_total = np.max((t_aff_t_eff, t_aff_t_eff_rec))
     # ax2.plot([min_total*0.4,
     #           max_total*1.6],
-    #          [min_total*0.4,
+    #           [min_total*0.4,
+    #           max_total*1.6])
+    # fig2, ax2 = plt.subplots(1)
+    # bound_divided_time = (conf_mat[9, :] / (conf_mat[7, :]) )
+    # bound_divided_time_rec = (conf_mat_rec[9, :]/(conf_mat_rec[7, :]))
+    # ax2.set_title(np.corrcoef(bound_divided_time, bound_divided_time_rec)[0][1])
+    # ax2.plot(bound_divided_time, bound_divided_time_rec,
+    #           marker='o', color='k', linestyle='')
+    # ax2.set_xlabel(r'$\frac{\theta_{AI}}{v_{AI}}$, original')
+    # ax2.set_ylabel(r'$\frac{\theta_{AI}}{v_{AI}}$, recovered')
+    # min_total = 0
+    # max_total = np.max((bound_divided_time, bound_divided_time_rec))
+    # ax2.plot([min_total*0.4,
+    #           max_total*1.6],
+    #           [min_total*0.4,
+    #           max_total*1.6])
+    # fig2, ax2 = plt.subplots(1)
+    # bound_divided_time = ( (conf_mat[6, :]*conf_mat[-1, :]) )
+    # bound_divided_time_rec = (conf_mat_rec[6, :]*conf_mat_rec[-1, :])
+    # ax2.set_title(linregress(bound_divided_time, bound_divided_time_rec).rvalue)
+    # ax2.plot(bound_divided_time, bound_divided_time_rec,
+    #           marker='o', color='k', linestyle='')
+    # ax2.set_xlabel(r'$\frac{\theta_{AI}}{v_{AI}}$, original')
+    # ax2.set_ylabel(r'$\frac{\theta_{AI}}{v_{AI}}$, recovered')
+    # min_total = 0
+    # max_total = np.max((bound_divided_time, bound_divided_time_rec))
+    # ax2.plot([min_total*0.4,
+    #           max_total*1.6],
+    #           [min_total*0.4,
     #           max_total*1.6])
 
 
@@ -2909,7 +2970,7 @@ def plot_acc_express(df):
 
 
 def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg',
-                            color='k'):
+                            color='k', adjusted_error=False):
     subjid = df.subjid
     subjects = np.unique(subjid)
     com_data = np.empty((len(subjects), len(bins_rt)-1))
@@ -2928,11 +2989,165 @@ def supp_p_com_vs_rt_silent(df, ax, bins_rt=BINS_RT, label='', column='CoM_sugg'
     # first_vals = com_data[:, 0]
     # last_vals = com_data[:, -1]
     # print(ttest_rel(first_vals, last_vals).pvalue)
-    ax.errorbar(xpos_plot, np.nanmedian(com_data, axis=0),
-                yerr=np.nanstd(com_data, axis=0)/np.sqrt(len(subjects)),
+    if adjusted_error:
+        yval = np.nanmean(com_data, axis=0)
+        adj_factor_per_sub = - com_data + yval
+        mean_val = com_data + adj_factor_per_sub
+        error = np.nanstd(mean_val, axis=0)/np.sqrt(len(subjects))
+        
+    else:
+        yval = np.nanmedian(com_data, axis=0)
+        error = np.nanstd(com_data, axis=0)/np.sqrt(len(subjects))
+    ax.errorbar(xpos_plot, yval,
+                yerr=error,
                 color=color, label=label)
     ax.set_ylabel('p(reversal) - silent')
     ax.set_xlabel('Reaction time (ms)')
+
+
+def prev_vs_prior_cong(df, df_sim, ax):
+    nsubs = len(df.subjid.unique())
+    df_prior = df.copy().loc[df.special_trial == 2]
+    # df_prior['choice_x_prior'] = df_prior.norm_allpriors
+    df_prior['choice_x_prior'] = df_prior.norm_allpriors*(df_prior.R_response.values*2-1)
+    df_prior_sim = df_sim.copy().loc[df_sim.special_trial == 2]
+    # df_prior_sim['choice_x_prior'] = df_prior_sim.norm_allpriors
+    df_prior_sim['choice_x_prior'] = df_prior_sim.norm_allpriors*(df_prior_sim.R_response.values*2-1)
+    bins_data, _, _, _, _ = \
+        get_bin_info(df_prior,
+                     condition='choice_x_prior', prior_limit=1,
+                     after_correct_only=True, rt_lim=300,
+                     fpsmin=29, num_bins_prior=8, rtmin=0, silent=True)
+    bins_sim, _, _, _, _ = \
+        get_bin_info(df_prior_sim,
+                     condition='choice_x_prior', prior_limit=1,
+                     after_correct_only=True, rt_lim=300,
+                     fpsmin=29, num_bins_prior=8, rtmin=0, silent=True)
+    bins_data = np.array([-1, -0.3, -0.1, 0.1, 0.3, 1])
+    bins_sim = bins_data
+    p_rev_sil = np.empty((nsubs, len(bins_data)-1))
+    p_rev_sil_sim = np.empty((nsubs, len(bins_sim)-1))
+    for i_s, subject in enumerate(df_prior.subjid.unique()):
+        df_sub = df_prior.loc[df_prior.subjid == subject]
+        df_sub_sim = df_prior_sim.loc[df_prior_sim.subjid == subject]
+        # df_sub_nonsilent = df_prior_nonsilent.loc[df_prior_nonsilent.subjid == subject]
+        # df_sub_sim_nonsilent = df_prior_sim_nonsilent.loc[df_prior_sim_nonsilent.subjid == subject]
+        for bin in range(len(bins_data)-1):
+            prev_sub = df_sub.loc[(df_sub.choice_x_prior >= bins_data[bin]) &
+                                    (df_sub.choice_x_prior < bins_data[bin+1]) &
+                                    (df_sub.special_trial == 2),
+                                    'CoM_sugg']
+            p_rev_sil[i_s, bin] = np.nanmean(prev_sub)
+            prev_sub = df_sub_sim.loc[
+                (df_sub_sim.choice_x_prior >= bins_sim[bin]) &
+                (df_sub_sim.choice_x_prior < bins_sim[bin+1]) &
+                (df_sub_sim.special_trial == 2), 'com_detected']
+            p_rev_sil_sim[i_s, bin] = np.nanmean(prev_sub)
+    prior_x_vals = bins_data[:-1] + np.diff(bins_data)/2
+    prior_x_vals_mod = bins_sim[:-1] + np.diff(bins_sim)/2 + 0.02
+    # fig2, ax2 = plt.subplots(1)
+    ax2 = ax
+    # for i in range(nsubs):
+    #     ax2.plot(prior_x_vals, p_rev_sil[i], color='k', alpha=0.4)
+    #     ax2.plot(prior_x_vals_mod, p_rev_sil_sim[i], color='r', alpha=0.4)
+    p_rev_sil_all = np.nanmedian(p_rev_sil, axis=0)
+    p_rev_sil_all_err = np.nanstd(p_rev_sil, axis=0) / np.sqrt(6)
+    p_rev_sil_all_sim = np.nanmedian(p_rev_sil_sim, axis=0)
+    p_rev_sil_all_sim_err = np.nanstd(p_rev_sil_sim, axis=0) / np.sqrt(6)
+    ax2.errorbar(prior_x_vals, p_rev_sil_all, p_rev_sil_all_err,
+                  color='k', label='silent - data')
+    ax2.errorbar(prior_x_vals_mod, p_rev_sil_all_sim, p_rev_sil_all_sim_err,
+                  color='gray', label='silent - model')
+    rm_top_right_lines(ax2)
+    ax2.set_xlabel('Prior evidence towards response')
+    # ax2.legend()
+    ax2.set_ylabel('p(reversal)')
+
+
+def prev_vs_prior_evidence(df, df_sim, ax):
+    nsubs = len(df.subjid.unique())
+    df_prior = df.copy().loc[df.special_trial == 2]
+    df_prior['choice_x_prior'] = df_prior.norm_allpriors
+    df_prior_sim = df_sim.copy().loc[df_sim.special_trial == 2]
+    df_prior_sim['choice_x_prior'] = df_prior_sim.norm_allpriors
+    bins_data, _, _, _, _ = \
+        get_bin_info(df_prior,
+                     condition='choice_x_prior', prior_limit=1,
+                     after_correct_only=True, rt_lim=300,
+                     fpsmin=29, num_bins_prior=8, rtmin=0, silent=True)
+    bins_sim, _, _, _, _ = \
+        get_bin_info(df_prior_sim,
+                     condition='choice_x_prior', prior_limit=1,
+                     after_correct_only=True, rt_lim=300,
+                     fpsmin=29, num_bins_prior=8, rtmin=0, silent=True)
+    bins_data = np.linspace(0, 1, 4)  # np.array([-1, -0.3, -0.1, 0.1, 0.3, 1])
+    bins_sim = bins_data
+    p_rev_sil = np.empty((nsubs, len(bins_data)-1))
+    p_rev_sil_sim = np.empty((nsubs, len(bins_sim)-1))
+    p_com_sil_sim = np.empty((nsubs, len(bins_sim)-1))
+    for i_s, subject in enumerate(df_prior.subjid.unique()):
+        df_sub = df_prior.loc[df_prior.subjid == subject]
+        df_sub_sim = df_prior_sim.loc[df_prior_sim.subjid == subject]
+        # df_sub_nonsilent = df_prior_nonsilent.loc[df_prior_nonsilent.subjid == subject]
+        # df_sub_sim_nonsilent = df_prior_sim_nonsilent.loc[df_prior_sim_nonsilent.subjid == subject]
+        for bin in range(len(bins_data)-1):
+            prev_sub = df_sub.loc[(df_sub.choice_x_prior >= bins_data[bin]) &
+                                    (df_sub.choice_x_prior < bins_data[bin+1]) &
+                                    (df_sub.special_trial == 2),
+                                    'CoM_sugg']
+            p_rev_sil[i_s, bin] = np.nanmean(prev_sub)
+            prev_sub = df_sub_sim.loc[
+                (df_sub_sim.choice_x_prior >= bins_sim[bin]) &
+                (df_sub_sim.choice_x_prior < bins_sim[bin+1]) &
+                (df_sub_sim.special_trial == 2), 'com_detected']
+            p_rev_sil_sim[i_s, bin] = np.nanmean(prev_sub)
+            prev_sub = df_sub_sim.loc[
+                (df_sub_sim.choice_x_prior >= bins_sim[bin]) &
+                (df_sub_sim.choice_x_prior < bins_sim[bin+1]) &
+                (df_sub_sim.special_trial == 2), 'CoM_sugg']
+            p_com_sil_sim[i_s, bin] = np.nanmean(prev_sub)
+    prior_x_vals = bins_data[:-1] + np.diff(bins_data)/2
+    prior_x_vals_mod = bins_sim[:-1] + np.diff(bins_sim)/2 + 0.02
+    # fig2, ax2 = plt.subplots(1)
+    ax2 = ax
+    # for i in range(nsubs):
+    #     ax2.plot(prior_x_vals, p_rev_sil[i], color='k', alpha=0.4)
+    #     ax2.plot(prior_x_vals_mod, p_rev_sil_sim[i], color='r', alpha=0.4)
+    p_rev_sil_all = np.nanmean(p_rev_sil, axis=0)
+    p_rev_sil_all_err = np.nanstd(p_rev_sil, axis=0) / np.sqrt(6)
+    p_rev_sil_all_sim = np.nanmean(p_rev_sil_sim, axis=0)
+    p_rev_sil_all_sim_err = np.nanstd(p_rev_sil_sim, axis=0) / np.sqrt(6)
+    p_com_sil_all_sim = np.nanmean(p_com_sil_sim, axis=0)
+    p_com_sil_all_sim_err = np.nanstd(p_com_sil_sim, axis=0) / np.sqrt(6)
+    ax2.errorbar(prior_x_vals, p_rev_sil_all, p_rev_sil_all_err,
+                  color='k', label='Rats')
+    ax2.errorbar(prior_x_vals_mod, p_rev_sil_all_sim, p_rev_sil_all_sim_err,
+                  color='gray', label='Model, reversals')
+    axtwin = ax2.twinx()
+    axtwin.errorbar(prior_x_vals_mod+0.02, p_com_sil_all_sim,
+                    p_com_sil_all_sim_err,
+                    color='r', label='Model, CoMs')
+    axtwin.set_ylim(0, 0.33)
+    axtwin.spines['right'].set_color('red')
+    axtwin.tick_params(axis='y', colors='red')
+    ax2.spines['top'].set_visible(False)
+    axtwin.set_ylabel('p(CoM)', color='red')
+    axtwin.spines['top'].set_visible(False)
+    axtwin.yaxis.label.set_color('red')
+    rm_top_right_lines(ax2)
+    ax2.set_xlabel('Prior evidence')
+    ax2.set_xticks([0, 0.5, 1])
+    ax2.set_ylim(0, 0.085)
+    ax2.set_yticks([0, 0.02, 0.04, 0.06])
+    axtwin.set_yticks([0, 0.1, 0.2, 0.3])
+    legendelements = [Line2D([0], [0], color='k', lw=2,
+                             label='Rats'),
+                      Line2D([0], [0], color='grey', lw=2,
+                             label='Model reversals'),
+                      Line2D([0], [0], color='r', lw=2,
+                             label='Model CoMs')]
+    ax.legend(handles=legendelements, loc='upper right',
+              bbox_to_anchor=(0.9, 1.05), frameon=False)
 
 
 def supp_silent(df, df_sim, sv_folder):
@@ -2942,24 +3157,27 @@ def supp_silent(df, df_sim, sv_folder):
     c) RT for silent/coh=0
     d) prop. incong prior
     """
-    fig, ax = plt.subplots(ncols=3, figsize=(14, 4))
+    fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(9, 8))
     plt.subplots_adjust(top=0.95, bottom=0.16, left=0.09, right=0.95,
                         hspace=0.4, wspace=0.45)
-    labs = ['a', 'b', 'c', 'd']
+    labs = ['a', 'b', 'c', 'd', 'e', '']
     ax = ax.flatten()
     for i_a, a in enumerate(ax):
         rm_top_right_lines(a)
-        a.text(-0.1, 1.06, labs[i_a], transform=a.transAxes, fontsize=16,
+        a.text(-0.12, 1.1, labs[i_a], transform=a.transAxes, fontsize=16,
                fontweight='bold', va='top', ha='right')
+    # ax[-1].axis('off')
     # a)
     ax_a = ax[0]
     subjects = df.loc[df.special_trial == 2].subjid.unique()
+    column_sim = 'com_detected'
+    column = 'CoM_sugg'
     com_coh_0 = []
     com_silent = []
     com_coh_0_sim = []
     com_silent_sim = []
-    column_sim = 'com_detected'
-    column = 'CoM_sugg'
+    i = 0
+    colormap = pl.cm.jet(np.linspace(0., 1, len(df.subjid.unique())))
     for subj in subjects:
         df_1 = df.copy().loc[(df.subjid == subj) & (df.special_trial == 2)]
         df_sim_1 = df_sim.copy().loc[(df_sim.subjid == subj) &
@@ -2977,15 +3195,25 @@ def supp_silent(df, df_sim, sv_folder):
         mean_coms_sim = np.nanmean(df_sim_1[column_sim].values)
         com_coh_0.append(mean_coms)
         com_coh_0_sim.append(mean_coms_sim)
-    ax_a.plot(com_coh_0, com_silent, color='k', marker='o',
-              linestyle='', label='Data')
-    ax_a.plot(com_coh_0_sim, com_silent_sim, color='grey', marker='o',
-              linestyle='', alpha=0.8, label='Model')
-    ax_a.legend()
+        ax_a.plot(com_coh_0[i], com_silent[i], marker='o',
+                  linestyle='', color=colormap[i], markersize=6)
+        ax_a.plot(com_coh_0_sim[i], com_silent_sim[i], marker='^',
+                  linestyle='', color=colormap[i], markersize=6)
+        i += 1
+    # ax_a.plot(com_coh_0, com_silent, color='k', marker='o',
+    #           linestyle='', label='Data')
+    # ax_a.plot(com_coh_0_sim, com_silent_sim, color='grey', marker='o',
+    #           linestyle='', alpha=0.8, label='Model')
+    legendelements = [Line2D([0], [0], color='k', linestyle='', marker='o',
+                             markersize=7, label='Rats'),
+                      Line2D([0], [0], color='k', linestyle='', marker='^',
+                             markersize=7, label='Model')]
+    ax_a.legend(handles=legendelements, frameon=False)
+    # ax_a.legend()
     max_val = np.max((com_silent_sim, com_coh_0_sim))
-    ax_a.plot([0, max_val+0.02], [0, max_val+0.02], color='grey', alpha=0.4)
-    ax_a.set_xticks(np.linspace(0, max_val+0.01, 4))
-    ax_a.set_yticks(np.linspace(0, max_val+0.01, 4))
+    ax_a.plot([0, max_val+0.005], [0, max_val+0.005], color='grey', alpha=0.4)
+    ax_a.set_xticks([0, 0.03, 0.06])
+    ax_a.set_yticks([0, 0.03, 0.06])
     ax_a.set_ylabel('p(reversal | silent)')
     ax_a.set_xlabel('p(reversal | stim=0)')
     # b)
@@ -2994,20 +3222,41 @@ def supp_silent(df, df_sim, sv_folder):
     #                         ax_b, bins_rt=BINS_RT, label='coh = 0',
     #                         column=column, color='r')
     supp_p_com_vs_rt_silent(df.loc[(df.special_trial == 2)],
-                            ax_b, bins_rt=BINS_RT, label='Data',
+                            ax_b, bins_rt=BINS_RT, label='Rats',
                             column=column, color='k')
     supp_p_com_vs_rt_silent(df_sim.loc[(df_sim.special_trial == 2)],
                             ax_b, bins_rt=BINS_RT, label='Model',
                             column=column_sim, color='silver')
+    # axtwin = ax_b.twinx()
+    # axtwin.spines['right'].set_color('red')
+    # axtwin.tick_params(axis='y', colors='red')
+    # ax_b.spines['top'].set_visible(False)
+    # axtwin.set_ylabel('p(CoM)', color='red')
+    # axtwin.spines['top'].set_visible(False)
+    # axtwin.yaxis.label.set_color('red')
+    # supp_p_com_vs_rt_silent(df_sim.loc[(df_sim.special_trial == 2)],
+    #                         axtwin, bins_rt=BINS_RT, label='Model',
+    #                         column=column, color='red')
+    # axtwin.set_ylim(0, 0.32)
     ax_b.set_ylabel('p(reversal)')
     ax_b.set_xlim(-1, 301)
-    # ax_b.legend()
+    ax_b.set_yticks([0, 0.02, 0.04])
+    ax_b.legend(frameon=False)
+    # p(rev) vs prior
+    prev_vs_prior_evidence(df, df_sim, ax[2])
+    ax[2].set_ylabel('p(reversal)')
     # C)
-    ax_c = ax[2]
+    ax_c = ax[3]
     df_prior = df.copy().loc[df.special_trial == 2]
     df_prior['choice_x_prior'] = df_prior.norm_allpriors
+    # df_prior['choice_x_prior_2'] = df_prior.norm_allpriors*(df_prior.R_response.values*2-1)
+    # df_prior_nonsilent = df.copy().loc[df.special_trial == 0]
+    # df_prior_nonsilent['choice_x_prior'] = df_prior_nonsilent.norm_allpriors  # *(df_prior_nonsilent.R_response.values*2-1)
     df_prior_sim = df_sim.copy().loc[df_sim.special_trial == 2]
     df_prior_sim['choice_x_prior'] = df_prior_sim.norm_allpriors
+    # df_prior_sim['choice_x_prior_2'] = df_prior_sim.norm_allpriors*(df_prior_sim.R_response.values*2-1)
+    # df_prior_sim_nonsilent = df_sim.copy().loc[df_sim.special_trial == 0]
+    # df_prior_sim_nonsilent['choice_x_prior'] = df_prior_sim_nonsilent.norm_allpriors   # *(df_prior_sim_nonsilent.R_response.values*2-1)
     bins, _, _, _, _ = \
         get_bin_info(df_prior,
                      condition='choice_x_prior', prior_limit=1,
@@ -3016,9 +3265,15 @@ def supp_silent(df, df_sim, sv_folder):
     nsubs = len(df_prior.subjid.unique())
     p_right = np.empty((nsubs, len(bins)-1))
     p_right_sim = np.empty((nsubs, len(bins)-1))
+    # p_rev_coh0 = np.empty((nsubs, len(bins)-1))
+    # p_rev_coh0_sim = np.empty((nsubs, len(bins)-1))
+    # p_rev_sil = np.empty((nsubs, len(bins)-1))
+    # p_rev_sil_sim = np.empty((nsubs, len(bins)-1))
     for i_s, subject in enumerate(df_prior.subjid.unique()):
         df_sub = df_prior.loc[df_prior.subjid == subject]
         df_sub_sim = df_prior_sim.loc[df_prior_sim.subjid == subject]
+        # df_sub_nonsilent = df_prior_nonsilent.loc[df_prior_nonsilent.subjid == subject]
+        # df_sub_sim_nonsilent = df_prior_sim_nonsilent.loc[df_prior_sim_nonsilent.subjid == subject]
         for bin in range(len(bins)-1):
             pright_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
                                     (df_sub.choice_x_prior < bins[bin+1]),
@@ -3028,13 +3283,60 @@ def supp_silent(df, df_sim, sv_folder):
                 (df_sub_sim.choice_x_prior >= bins[bin]) &
                 (df_sub_sim.choice_x_prior < bins[bin+1]), 'R_response']
             p_right_sim[i_s, bin] = np.nanmean(pright_sub)
+            # prev_sub = df_sub.loc[(df_sub.choice_x_prior >= bins[bin]) &
+            #                         (df_sub.choice_x_prior < bins[bin+1]) &
+            #                         (df_sub.special_trial == 2),
+            #                         'CoM_sugg']
+            # p_rev_sil[i_s, bin] = np.nanmean(prev_sub)
+            # prev_sub = df_sub_sim.loc[
+            #     (df_sub_sim.choice_x_prior >= bins[bin]) &
+            #     (df_sub_sim.choice_x_prior < bins[bin+1]) &
+            #     (df_sub_sim.special_trial == 2), 'com_detected']
+            # p_rev_sil_sim[i_s, bin] = np.nanmean(prev_sub)
+            # prev_sub = df_sub_nonsilent.loc[
+            #     (df_sub_nonsilent.choice_x_prior >= bins[bin]) &
+            #     (df_sub_nonsilent.choice_x_prior < bins[bin+1]) &
+            #     (df_sub_nonsilent.coh2 == 0) &
+            #     (df_sub_nonsilent.special_trial == 0),
+            #     'CoM_sugg']
+            # p_rev_coh0[i_s, bin] = np.nanmean(prev_sub)
+            # prev_sub = df_sub_sim_nonsilent.loc[
+            #     (df_sub_sim_nonsilent.choice_x_prior >= bins[bin]) &
+            #     (df_sub_sim_nonsilent.choice_x_prior < bins[bin+1]) &
+            #     (df_sub_sim_nonsilent.coh2 == 0) &
+            #     (df_sub_sim_nonsilent.special_trial == 0),
+            #     'com_detected']
+            # p_rev_coh0_sim[i_s, bin] = np.nanmean(prev_sub)
+    # prior_x_vals = bins_zt[:-1] + np.diff(bins_zt)/2
+    # prior_x_vals_mod = bins_zt_mod[:-1] + np.diff(bins_zt_mod)/2
+    prior_x_vals = bins[:-1] + np.diff(bins)/2
+    # fig2, ax2 = plt.subplots(1)
+    # p_rev_sil_all = np.nanmean(p_rev_sil, axis=0)
+    # p_rev_sil_all_err = np.nanstd(p_rev_sil, axis=0) / np.sqrt(6)
+    # p_rev_sil_all_sim = np.nanmean(p_rev_sil_sim, axis=0)
+    # p_rev_sil_all_sim_err = np.nanstd(p_rev_sil_sim, axis=0) / np.sqrt(6)
+    # p_rev_coh0_all = np.nanmean(p_rev_coh0, axis=0)
+    # p_rev_coh0_all_err = np.nanstd(p_rev_coh0, axis=0) / np.sqrt(6)
+    # p_rev_coh0_all_sim = np.nanmean(p_rev_coh0_sim, axis=0)
+    # p_rev_coh0_all_sim_err = np.nanstd(p_rev_coh0_sim, axis=0) / np.sqrt(6)
+    # ax2.errorbar(prior_x_vals, p_rev_sil_all, p_rev_sil_all_err,
+    #              color='k', label='silent - data')
+    # ax2.errorbar(prior_x_vals, p_rev_sil_all_sim, p_rev_sil_all_sim_err,
+    #              color='gray', label='silent - model')
+    # ax2.errorbar(prior_x_vals, p_rev_coh0_all, p_rev_coh0_all_err,
+    #              color='red', label='stim = 0 - data')
+    # ax2.errorbar(prior_x_vals, p_rev_coh0_all_sim, p_rev_coh0_all_sim_err,
+    #              color='lightpink', label='stim = 0 - model')
+    # rm_top_right_lines(ax2)
+    # ax2.set_xlabel('Prior evidence')
+    # ax2.legend()
+    # ax2.set_ylabel('p(reversal)')
     p_right_all = np.nanmean(p_right, axis=0)
     p_right_all_sim = np.nanmean(p_right_sim, axis=0)
     p_right_error_all = np.nanstd(p_right, axis=0) / np.sqrt(nsubs)
     p_right_error_all_sim = np.nanstd(p_right_sim, axis=0) / np.sqrt(nsubs)
-    prior_x_vals = bins[:-1] + np.diff(bins)/2
     ax_c.errorbar(prior_x_vals, p_right_all, yerr=p_right_error_all, color='k',
-                  label='Data')
+                  label='Rats')
     ax_c.errorbar(prior_x_vals, p_right_all_sim, yerr=p_right_error_all_sim,
                   color='silver', label='Model')
     # ax_c.legend()
@@ -3044,8 +3346,12 @@ def supp_silent(df, df_sim, sv_folder):
     ax_c.set_xticks([prior_x_vals[0], 0,
                       prior_x_vals[-1]],
                     ['L', '0', 'R'])
+    # d)
+    # prev_vs_prior_cong(df.loc[df.special_trial == 2],
+    #                    df_sim.loc[df_sim.special_trial == 2], ax=ax[2])
     fig.savefig(sv_folder+'/supp_silent.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/supp_silent.png', dpi=400, bbox_inches='tight')
+
 
 def bhatt_dist(p, q):
     return -np.log(np.sum(np.sqrt(p*q)))
@@ -3054,8 +3360,8 @@ def bhatt_dist(p, q):
 def plot_chi2_shuffled_data(ax, df, df_sim, bhat=False, column='sound_len',
                             sv_folder=SV_FOLDER):
     subjects = df.subjid.unique()
-    data_path = sv_folder + 'shuffle_matrix_chi2_' + column + '.npy'
-    orig_path = sv_folder + 'orig_chi2_' + column + '.npy'
+    data_path = sv_folder + 'shuffle_matrix_chi2_' + column + 'final.npy'
+    orig_path = sv_folder + 'orig_chi2_' + column + 'final.npy'
     # create folder if it doesn't exist
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
     if os.path.exists(data_path):
@@ -3089,7 +3395,7 @@ def plot_chi2_shuffled_data(ax, df, df_sim, bhat=False, column='sound_len',
                 frec_sim_s1 = frec_sim_s1 / np.sum(frec_sim_s1)
                 chi2_s1 = bhatt_dist(frec_data, frec_sim_s1)
             else:    
-                chi2_s1 = np.nansum([(-frec_data+frec_sim_s1)**2 / (frec_data)])
+                chi2_s1 = 0.5*np.nansum([(-frec_data+frec_sim_s1)**2 / (frec_data+frec_sim_s1)])
             chi_subj_to_data.append(chi2_s1)
             for i_s2, subj2 in enumerate(subjects[subjects != subj1]):
                 rt_sim_s2 = df_sim.copy().loc[df_sim.subjid == subj2, column].values
@@ -3101,7 +3407,7 @@ def plot_chi2_shuffled_data(ax, df, df_sim, bhat=False, column='sound_len',
                     frec_sim_s2 = frec_sim_s2 / np.sum(frec_sim_s2)
                     chi2 = bhatt_dist(frec_data, frec_sim_s2)
                 else:
-                    chi2 = np.nansum([(-frec_data+frec_sim_s2)**2 / (frec_data)])
+                    chi2 = 0.5*np.nansum([(-frec_data+frec_sim_s2)**2 / (frec_data+frec_sim_s2)])
                 chi_shuffle_subjs[i_s, i_s2] = chi2
         np.save(orig_path, np.array(chi_subj_to_data))
         np.save(data_path, chi_shuffle_subjs)
@@ -3160,6 +3466,7 @@ def plot_chi2_shuffled_data(ax, df, df_sim, bhat=False, column='sound_len',
     # ax3.set_xlabel('N trials')
     # ax3.set_yscale('log')
 
+
 def supp_plot_chi2(df, df_sim, sv_folder):
     fig, ax = plt.subplots(ncols=2)
     fig.subplots_adjust(wspace=0.4, hspace=0.1, left=0.05, right=0.95, bottom=0.1)
@@ -3173,6 +3480,23 @@ def supp_plot_chi2(df, df_sim, sv_folder):
     fig.savefig(sv_folder+'/supp_chi2.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/supp_chi2.png', dpi=400, bbox_inches='tight')
 
+
+def plot_pcom_data_vs_sim(df, df_sim):
+    fig, ax = plt.subplots(1)
+    rm_top_right_lines(ax)
+    ax.set_xlabel('p(reversal), data')
+    ax.set_ylabel('p(reversal), model')
+    subjects = df.subjid.unique()
+    data_list = []
+    model_list = []
+    for subj in subjects:
+        com_data = np.nanmean(df.loc[df.subjid == subj, 'CoM_sugg'])
+        data_list.append(com_data)
+        com_model = np.nanmean(df_sim.loc[df_sim.subjid == subj, 'com_detected'])
+        model_list.append(com_model)
+        # com_model = np.load(SV_FOLDER + 'parameters_MNLE_BADS' + subj + '.npy')[3]
+        ax.plot(com_data, com_model, marker='o', color='k',
+                markersize=4)
 
 
 # def plot_rats_humans_model_mt(df, df_sim, pc_name, mt=True):
@@ -3267,4 +3591,4 @@ def supp_plot_chi2(df, df_sim, sv_folder):
 #                 a.set_ylabel('')
 #             # a.set_ylim(180, 310)
 #             # a.set_yticks([200, 250, 300])
-        
+
