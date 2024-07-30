@@ -139,10 +139,23 @@ def plot_mt_vs_evidence(df, ax, condition='choice_x_coh', prior_limit=0.25,
             x_vals = np.concatenate((x_vals, plot_bins))
         pval = pearsonr(x_vals, y_vals).pvalue
         lab = f'p={pval:.2e}'
-        if condition == 'choice_x_prior':
-            ax.text(-1, 235, lab)
+        # if condition == 'choice_x_prior':
+        #     ax.text(-1, 235, lab)
+        y_vals_neg = np.array([mt_time[:, i].flatten() for i in range(4)]).flatten()
+        y_vals_pos = np.array([mt_time[:, i].flatten() for i in range(3, 7)]).flatten()
+        x_vals = np.repeat(plot_bins, mt_time.shape[0])
+        x_vals_pos = x_vals[mt_time.shape[0]*3:]
+        x_vals_neg = x_vals[:mt_time.shape[0]*(3+1)]
         if condition == 'choice_x_coh':
-            ax.text(-1, 250, lab)
+            # ax.text(-1, 250, lab)
+            pval = pearsonr(x_vals_pos, y_vals_pos).pvalue
+            lab = f'p={pval:.2e}'
+            print('congruent correlation:')
+            print(lab)
+            pval = pearsonr(x_vals_neg, y_vals_neg).pvalue
+            lab = f'p={pval:.2e}'
+            print('incongruent correlation:')
+            print(lab)
     ax.set_ylabel('Movement time (ms)')
     ax.set_xticks([-1, 0, 1], [VAR_INC, '0', VAR_CON])
     ax.plot(plot_bins, np.mean(mt_time, axis=0), color='k', ls='-', lw=0.5,
@@ -893,3 +906,4 @@ def supp_trial_index_analysis(df, data_folder, sv_folder):
     mt_weights(df=df, ax=ax[1], plot=True, t_index_w=True, means_errs=False)
     fig.savefig(sv_folder+'supp_fig_1.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'supp_fig_1.png', dpi=400, bbox_inches='tight')
+
