@@ -132,7 +132,7 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
     mat_titles_com = ['L to R CoM',
                       'R to L CoM']
     # fig2, ax2 = plt.subplots(ncols=4)
-    fig4, ax4 = plt.subplots(ncols=4)
+    # fig4, ax4 = plt.subplots(ncols=4)
     for i_l, lab in enumerate(extra_labels):
         df_data = fp.get_simulated_data_extra_lab(subjects, subjid, stim, zt, coh, gt, trial_index,
                                                   special_trial, extra_label=lab)
@@ -140,6 +140,11 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax[1+i_l*4], prior_limit=0.1,  # 10% quantile
                                   condition='choice_x_coh', rt_lim=50, alpha=1,
                                   write_arrows=False)
+        # fig_1.plot_mt_vs_stim(df_mt, ax2[i_l], prior_min=0.8, rt_max=50, human=False, sim=False)
+        # fig_1.plot_mt_vs_evidence(df=df_mt, ax=ax2[i_l], prior_limit=1,  # 10% quantile
+        #                           condition='choice_x_prior', rt_lim=300, alpha=1,
+        #                           write_arrows=False, rtmin=150)
+        # ax2[i_l].set_title(lab)
         # fig_1.plot_mt_vs_evidence(df_data, ax2, condition='choice_x_prior', prior_limit=1,
         #                           rt_lim=300, rtmin=150, alpha=1,
         #                           write_arrows=False, num_bins_prior=8)
@@ -211,11 +216,11 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
                                                     f=fig, title='p(reversal)',
                                                     mat_titles=mat_titles_rev,
                                                     return_matrix=True)
-        # vmax = np.nanmax(mat0+mat1)
+        vmax = np.nanmax(mat0+mat1)
         # vmax = 0.04
-        # if vmax == 0:
-        #     vmax = 1.1e-2
-        im = ax[4*i_l+3].imshow(mat0+mat1, vmin=0, cmap='magma')
+        if vmax == 0:
+            vmax = 1.1e-2
+        im = ax[4*i_l+3].imshow(mat0+mat1, vmin=0, vmax=vmax, cmap='magma')
         # ax[4*i_l+3].yaxis.set_ticks_position('none')
         # ax[4*i_l+3].set_ylabel('Stimulus evidence')
         pos = ax[4*i_l+3].get_position()
@@ -233,9 +238,9 @@ def plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(subjects, subjid, s
         #                        Prior evidence')
         # ax[5+i_l*6].set_xlabel('')
         # df_data['CoM_sugg'] = com_original
-        fig_1.plot_mt_weights_rt_bins(df=df_data.loc[~df_data.CoM_sugg],
-                                      ax=ax4[i_l],
-                                      rtbins=np.linspace(0, 150, 26))
+        # fig_1.plot_mt_weights_rt_bins(df=df_data.loc[~df_data.CoM_sugg],
+        #                               ax=ax4[i_l],
+        #                               rtbins=np.linspace(0, 150, 26))
 
 
 def plot_pcom_vs_prior(df_data, ax):
@@ -372,14 +377,14 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
                    fontweight='bold', va='top', ha='right')
         a.text(-0.41, 1.22, general_labels[i_ax], transform=a.transAxes,
                fontsize=16, fontweight='bold', va='top', ha='right')
-    # titles = ['Full model',
-    #           'Random initial choice',
-    #           'No trajectory update',
-    #           'No vigor update']
     titles = ['Full model',
-              'No vigor update',
-              'Only prior on 1st r.o.',
-              'Continuous read-out']
+              'Random initial choice',
+              'No trajectory update',
+              'No vigor update']
+    # titles = ['Full model',
+    #           'No vigor update',
+    #           'Prior-based initial trajectory',
+    #           'Continuous update']
     plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
         subjects, subjid, stim, zt, coh, gt, trial_index,
         special_trial, data_folder, ax=ax, fig=fig,
@@ -394,13 +399,19 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
         ax[i*4+1].set_position([pos.x0, pos.y0+(pos.height-pos.width)/2,
                                 pos.width, pos.width])
         ax[i*4+1].set_xlabel('')
-    ax[1].set_ylim(240, 290)
+    ax[1].set_ylim(240, 280)
     ax[1].set_yticks([240, 260, 280])
-    ax[5].set_ylim(240, 280)
-    ax[5].set_yticks([240, 260, 280])
-    ax[9].set_ylim(250, 300)
-    ax[9].set_yticks([260, 280, 300])
-    ax[13].set_ylim(240, 290)
+    # ax[5].set_ylim(240, 280)
+    # ax[5].set_yticks([240, 260, 280])
+    # ax[9].set_ylim(250, 300)
+    # ax[9].set_yticks([260, 280, 300])
+    # ax[13].set_ylim(240, 290)
+    # ax[13].set_yticks([240, 260, 280])
+    ax[5].set_ylim(190, 240)
+    ax[5].set_yticks([200, 220, 240])
+    ax[9].set_ylim(210, 260)
+    ax[9].set_yticks([220, 240, 260])
+    ax[13].set_ylim(240, 280)
     ax[13].set_yticks([240, 260, 280])
     ax[13].set_xlabel('Stimulus evidence\ntowards response')
     # df_mt = df.copy()
@@ -423,6 +434,60 @@ def fig_7(subjects, subjid, stim, zt, coh, gt, trial_index,
 
     fig.savefig(sv_folder+'/fig7.svg', dpi=400, bbox_inches='tight')
     fig.savefig(sv_folder+'/fig7.png', dpi=400, bbox_inches='tight')
+
+
+def supp_prior_only_continuous(subjects, subjid, stim, zt, coh, gt, trial_index,
+                               special_trial, data_folder, sv_folder,
+                               extra_labels=['_prior_sign_1_ro_',
+                                             '_50_ms_continuous_']):
+    fig, ax = plt.subplots(ncols=4, nrows=2, figsize=(12, 7))
+    plt.subplots_adjust(top=0.91, bottom=0.12, left=0.09, right=0.95,
+                        hspace=0.5, wspace=0.5)
+    ax = ax.flatten()
+    labs = ['i', 'ii', 'iii', 'iv',
+            'i', 'ii', 'iii', 'iv']
+    general_labels = ['a', '', '', '',
+                      'b', '', '', '']
+    for i_ax, a in enumerate(ax):
+        if (i_ax-1) % 4 == 0 or (i_ax) % 4 == 0:
+            fp.rm_top_right_lines(a)
+            a.text(-0.31, 1.12, labs[i_ax], transform=a.transAxes, fontsize=14,
+                   fontweight='bold', va='top', ha='right')
+        else:
+            a.text(-0.31, 1.17, labs[i_ax], transform=a.transAxes, fontsize=14,
+                   fontweight='bold', va='top', ha='right')
+        a.text(-0.41, 1.22, general_labels[i_ax], transform=a.transAxes,
+               fontsize=16, fontweight='bold', va='top', ha='right')
+    titles = ['Continuous update', 'Prior-based initial trajectory']
+    plot_mt_vs_stim_cong_and_prev_pcom_mats_different_models(
+        subjects, subjid, stim, zt, coh, gt, trial_index,
+        special_trial, data_folder, ax=ax, fig=fig,
+        extra_labels=extra_labels)
+    yvals_text = [0.7, 1.1, 1.1, 1.1]
+    for i in range(2):
+        # ax[i*4].set_title(titles[i])
+        ax[i*4].text(-0.68, yvals_text[i], titles[i], transform=ax[i*4].transAxes,
+                     fontsize=14, va='top', rotation='vertical')
+        ax[i*4].axis('off')
+        pos = ax[i*4+1].get_position()
+        # ax[i*4+1].set_position([pos.x0, pos.y0+(pos.height-pos.width)/2,
+        #                         pos.width, pos.width])
+        # ax[i*4+1].set_xlabel('')
+    ax[1].set_ylim(240, 290)
+    ax[1].set_yticks([240, 260, 280])
+    ax[5].set_ylim(240, 290)
+    ax[5].set_yticks([240, 260, 280])
+    ax[5].set_xlabel('Stimulus evidence\ntowards response')
+    ax[1].text(-0.4, 283, r'$\longleftarrow $', fontsize=10)
+    ax[1].text(-0.98, 287, r'$\it{incongruent}$', fontsize=8)
+    ax[1].text(0.07, 283, r'$\longrightarrow $', fontsize=10)
+    ax[1].text(0.07, 287, r'$\it{congruent}$', fontsize=8)
+    ax[6].set_xticks([0, 3, 6], ['L', '0', 'R'])
+    ax[7].set_xticks([0, 3, 6], ['L', '0', 'R'])
+    ax[6].set_xlabel('Prior evidence')
+    ax[7].set_xlabel('Prior evidence')
+    fig.savefig(sv_folder+'/supp_alternative.svg', dpi=400, bbox_inches='tight')
+    fig.savefig(sv_folder+'/supp_alternative.png', dpi=400, bbox_inches='tight')
 
 
 def plot_mt_vs_evidence_diff_rts(df, ax, condition='choice_x_coh', prior_limit=0.25,
